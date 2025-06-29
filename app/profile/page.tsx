@@ -8,7 +8,6 @@ import { useState, FormEvent, useRef } from "react"
 // 定义各类考试成绩的接口
 interface ToeflScore {
   total: number;
-  date: string;
   reading: number;
   listening: number;
   speaking: number;
@@ -17,7 +16,6 @@ interface ToeflScore {
 
 interface IeltsScore {
   total: number;
-  date: string;
   listening: number;
   reading: number;
   writing: number;
@@ -26,10 +24,27 @@ interface IeltsScore {
 
 interface GreScore {
   total: number;
-  date: string;
   math: number;
   verbal: number;
   writing: number;
+}
+
+// 定义获奖记录接口
+interface Award {
+  title: string;
+  organization: string;
+  level: string;
+  date: string;
+  colorIndex: number;
+}
+
+// 定义实习经历接口
+interface Internship {
+  title: string;
+  company: string;
+  period: string;
+  description: string;
+  colorIndex: number;
 }
 
 export default function Profile() {
@@ -37,10 +52,35 @@ export default function Profile() {
   const [selectedScoreType, setSelectedScoreType] = useState("");
   const [editMode, setEditMode] = useState(false);
   
+  // 添加获奖记录和实习经历的表单状态
+  const [showAwardForm, setShowAwardForm] = useState(false);
+  const [showInternshipForm, setShowInternshipForm] = useState(false);
+  const [editingAward, setEditingAward] = useState<Award | null>(null);
+  const [editingInternship, setEditingInternship] = useState<Internship | null>(null);
+  
+  // 删除确认窗口状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteItemType, setDeleteItemType] = useState<"award" | "internship" | "score" | null>(null);
+  const [deleteItemIndex, setDeleteItemIndex] = useState<number | null>(null);
+  const [deleteScoreType, setDeleteScoreType] = useState<string | null>(null);
+  
+  // 颜色数组，用于生成随机颜色
+  const colorPairs = [
+    { bg: "bg-red-100", text: "text-red-600" },
+    { bg: "bg-blue-100", text: "text-blue-600" },
+    { bg: "bg-green-100", text: "text-green-600" },
+    { bg: "bg-yellow-100", text: "text-yellow-600" },
+    { bg: "bg-purple-100", text: "text-purple-600" },
+    { bg: "bg-pink-100", text: "text-pink-600" },
+    { bg: "bg-indigo-100", text: "text-indigo-600" },
+    { bg: "bg-orange-100", text: "text-orange-600" },
+    { bg: "bg-teal-100", text: "text-teal-600" },
+    { bg: "bg-cyan-100", text: "text-cyan-600" },
+  ];
+  
   // 各类考试成绩的状态
   const [toeflScore, setToeflScore] = useState<ToeflScore>({
     total: 0,
-    date: "",
     reading: 0,
     listening: 0,
     speaking: 0,
@@ -49,7 +89,6 @@ export default function Profile() {
   
   const [ieltsScore, setIeltsScore] = useState<IeltsScore>({
     total: 0,
-    date: "",
     listening: 0,
     reading: 0,
     writing: 0,
@@ -58,14 +97,57 @@ export default function Profile() {
   
   const [greScore, setGreScore] = useState<GreScore>({
     total: 0,
-    date: "",
     math: 0,
     verbal: 0,
     writing: 0
   });
   
+  // 获奖记录和实习经历的状态
+  const [awards, setAwards] = useState<Award[]>([
+    {
+      title: "三好学生",
+      organization: "2023-2024学年",
+      level: "校级",
+      date: "2024年6月",
+      colorIndex: 0
+    },
+    {
+      title: "数学竞赛二等奖",
+      organization: "全国高中数学联赛",
+      level: "省级",
+      date: "2023年10月",
+      colorIndex: 1
+    },
+    {
+      title: "优秀班干部",
+      organization: "2022-2023学年",
+      level: "校级",
+      date: "2023年6月",
+      colorIndex: 2
+    }
+  ]);
+  
+  const [internships, setInternships] = useState<Internship[]>([
+    {
+      title: "教学助理实习生",
+      company: "新东方教育科技集团",
+      period: "2024年7月 - 2024年8月",
+      description: "协助数学老师进行课程准备和学生辅导，参与教学活动设计",
+      colorIndex: 3
+    },
+    {
+      title: "志愿者",
+      company: "北京市图书馆",
+      period: "2023年12月 - 2024年2月",
+      description: "协助图书管理和读者服务，参与文化活动组织",
+      colorIndex: 4
+    }
+  ]);
+  
   // 表单引用
   const formRef = useRef<HTMLFormElement>(null);
+  const awardFormRef = useRef<HTMLFormElement>(null);
+  const internshipFormRef = useRef<HTMLFormElement>(null);
   
   const handleAddScore = () => {
     setEditMode(false);
@@ -84,6 +166,190 @@ export default function Profile() {
     setEditMode(false);
   };
   
+  // 添加获奖记录处理函数
+  const handleAddAward = () => {
+    setEditingAward(null);
+    setShowAwardForm(true);
+  };
+  
+  const handleEditAward = (award: Award) => {
+    setEditingAward(award);
+    setShowAwardForm(true);
+  };
+  
+  const handleCancelAward = () => {
+    setShowAwardForm(false);
+    setEditingAward(null);
+  };
+  
+  const handleAwardSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const newAward: Award = {
+      title: formData.get("title") as string,
+      organization: formData.get("organization") as string,
+      level: formData.get("level") as string,
+      date: formData.get("date") as string,
+      colorIndex: editingAward ? editingAward.colorIndex : getRandomColorIndex(awards.map(item => item.colorIndex))
+    };
+    
+    if (editingAward) {
+      // 更新现有奖项
+      setAwards(awards.map(award => 
+        award === editingAward ? newAward : award
+      ));
+    } else {
+      // 添加新奖项
+      setAwards([...awards, newAward]);
+    }
+    
+    setShowAwardForm(false);
+    setEditingAward(null);
+  };
+  
+  // 添加实习经历处理函数
+  const handleAddInternship = () => {
+    setEditingInternship(null);
+    setShowInternshipForm(true);
+  };
+  
+  const handleEditInternship = (internship: Internship) => {
+    setEditingInternship(internship);
+    setShowInternshipForm(true);
+  };
+  
+  const handleCancelInternship = () => {
+    setShowInternshipForm(false);
+    setEditingInternship(null);
+  };
+  
+  const handleInternshipSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const newInternship: Internship = {
+      title: formData.get("title") as string,
+      company: formData.get("company") as string,
+      period: formData.get("period") as string,
+      description: formData.get("description") as string,
+      colorIndex: editingInternship ? editingInternship.colorIndex : getRandomColorIndex(internships.map(item => item.colorIndex))
+    };
+    
+    if (editingInternship) {
+      // 更新现有实习
+      setInternships(internships.map(internship => 
+        internship === editingInternship ? newInternship : internship
+      ));
+    } else {
+      // 添加新实习
+      setInternships([...internships, newInternship]);
+    }
+    
+    setShowInternshipForm(false);
+    setEditingInternship(null);
+  };
+  
+  // 获取随机颜色索引，确保不与已有颜色相邻
+  const getRandomColorIndex = (existingIndices: number[]): number => {
+    // 如果没有现有颜色，返回随机颜色
+    if (existingIndices.length === 0) {
+      return Math.floor(Math.random() * colorPairs.length);
+    }
+    
+    // 找出所有可用的颜色索引（与现有颜色不相邻）
+    const availableIndices = [];
+    for (let i = 0; i < colorPairs.length; i++) {
+      // 检查该颜色是否与任何现有颜色相邻（差值为1）
+      const isAdjacent = existingIndices.some(existingIndex => {
+        return Math.abs(existingIndex - i) <= 1 || 
+               (existingIndex === 0 && i === colorPairs.length - 1) ||
+               (existingIndex === colorPairs.length - 1 && i === 0);
+      });
+      
+      if (!isAdjacent && !existingIndices.includes(i)) {
+        availableIndices.push(i);
+      }
+    }
+    
+    // 如果没有可用颜色，返回随机颜色
+    if (availableIndices.length === 0) {
+      let randomIndex;
+      do {
+        randomIndex = Math.floor(Math.random() * colorPairs.length);
+      } while (existingIndices.includes(randomIndex));
+      return randomIndex;
+    }
+    
+    // 从可用颜色中随机选择一个
+    return availableIndices[Math.floor(Math.random() * availableIndices.length)];
+  };
+  
+  // 处理删除确认
+  const handleDeleteConfirm = (type: "award" | "internship", index: number) => {
+    setDeleteItemType(type);
+    setDeleteItemIndex(index);
+    setShowDeleteConfirm(true);
+  };
+  
+  // 处理删除语言成绩确认
+  const handleDeleteScoreConfirm = (type: string) => {
+    setDeleteItemType("score");
+    setDeleteScoreType(type);
+    setShowDeleteConfirm(true);
+  };
+  
+  // 执行删除操作
+  const confirmDelete = () => {
+    if (deleteItemType === "award" && deleteItemIndex !== null) {
+      setAwards(awards.filter((_, index) => index !== deleteItemIndex));
+    } else if (deleteItemType === "internship" && deleteItemIndex !== null) {
+      setInternships(internships.filter((_, index) => index !== deleteItemIndex));
+    } else if (deleteItemType === "score" && deleteScoreType) {
+      if (deleteScoreType === "toefl") {
+        setToeflScore({
+          total: 0,
+          reading: 0,
+          listening: 0,
+          speaking: 0,
+          writing: 0
+        });
+      } else if (deleteScoreType === "ielts") {
+        setIeltsScore({
+          total: 0,
+          listening: 0,
+          reading: 0,
+          writing: 0,
+          speaking: 0
+        });
+      } else if (deleteScoreType === "gre") {
+        setGreScore({
+          total: 0,
+          math: 0,
+          verbal: 0,
+          writing: 0
+        });
+      }
+    }
+    
+    setShowDeleteConfirm(false);
+    setDeleteItemType(null);
+    setDeleteItemIndex(null);
+    setDeleteScoreType(null);
+  };
+  
+  // 取消删除操作
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeleteItemType(null);
+    setDeleteItemIndex(null);
+    setDeleteScoreType(null);
+  };
+  
   const handleScoreSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -91,7 +357,6 @@ export default function Profile() {
     const formData = new FormData(form);
     
     const total = Number(formData.get("total"));
-    const date = formData.get("date") as string;
     
     if (selectedScoreType === "toefl") {
       const reading = Number(formData.get("reading"));
@@ -101,7 +366,6 @@ export default function Profile() {
       
       setToeflScore({
         total,
-        date,
         reading,
         listening,
         speaking,
@@ -115,7 +379,6 @@ export default function Profile() {
       
       setIeltsScore({
         total,
-        date,
         listening,
         reading,
         writing,
@@ -128,7 +391,6 @@ export default function Profile() {
       
       setGreScore({
         total,
-        date,
         math,
         verbal,
         writing
@@ -138,18 +400,6 @@ export default function Profile() {
     setShowScoreForm(false);
     setSelectedScoreType("");
     setEditMode(false);
-  };
-  
-  // 格式化日期显示
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "暂无";
-    
-    try {
-      const date = new Date(dateString);
-      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
-    } catch (e) {
-      return "暂无";
-    }
   };
 
   return (
@@ -193,22 +443,6 @@ export default function Profile() {
                       (selectedScoreType === "toefl" ? toeflScore.total : 
                        selectedScoreType === "ielts" ? ieltsScore.total : 
                        selectedScoreType === "gre" ? greScore.total : 0) : ""
-                    }
-                    required 
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">考试日期</label>
-                  <input 
-                    name="date"
-                    type="date" 
-                    className="w-full p-2 border rounded-md" 
-                    defaultValue={
-                      editMode ? 
-                      (selectedScoreType === "toefl" ? toeflScore.date : 
-                       selectedScoreType === "ielts" ? ieltsScore.date : 
-                       selectedScoreType === "gre" ? greScore.date : "") : ""
                     }
                     required 
                   />
@@ -353,6 +587,172 @@ export default function Profile() {
           </div>
         </div>
       )}
+      
+      {/* 获奖记录表单 */}
+      {showAwardForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{editingAward ? "编辑获奖记录" : "添加获奖记录"}</h3>
+              <Button variant="ghost" size="icon" onClick={handleCancelAward} className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <form ref={awardFormRef} onSubmit={handleAwardSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">奖项名称</label>
+                  <input 
+                    name="title"
+                    type="text" 
+                    className="w-full p-2 border rounded-md" 
+                    defaultValue={editingAward?.title || ""}
+                    required 
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">颁发单位/学年</label>
+                  <input 
+                    name="organization"
+                    type="text" 
+                    className="w-full p-2 border rounded-md" 
+                    defaultValue={editingAward?.organization || ""}
+                    required 
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">级别</label>
+                  <select 
+                    name="level"
+                    className="w-full p-2 border rounded-md" 
+                    defaultValue={editingAward?.level || ""}
+                    required
+                  >
+                    <option value="">请选择级别</option>
+                    <option value="国家级">国家级</option>
+                    <option value="省级">省级</option>
+                    <option value="市级">市级</option>
+                    <option value="校级">校级</option>
+                    <option value="其他">其他</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">获奖日期</label>
+                  <input 
+                    name="date"
+                    type="text" 
+                    placeholder="例如：2024年6月"
+                    className="w-full p-2 border rounded-md" 
+                    defaultValue={editingAward?.date || ""}
+                    required 
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={handleCancelAward}>取消</Button>
+                  <Button type="submit">保存</Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* 实习经历表单 */}
+      {showInternshipForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{editingInternship ? "编辑实习经历" : "添加实习经历"}</h3>
+              <Button variant="ghost" size="icon" onClick={handleCancelInternship} className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <form ref={internshipFormRef} onSubmit={handleInternshipSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">职位名称</label>
+                  <input 
+                    name="title"
+                    type="text" 
+                    className="w-full p-2 border rounded-md" 
+                    defaultValue={editingInternship?.title || ""}
+                    required 
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">公司/组织</label>
+                  <input 
+                    name="company"
+                    type="text" 
+                    className="w-full p-2 border rounded-md" 
+                    defaultValue={editingInternship?.company || ""}
+                    required 
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">实习时间</label>
+                  <input 
+                    name="period"
+                    type="text" 
+                    placeholder="例如：2024年7月 - 2024年8月"
+                    className="w-full p-2 border rounded-md" 
+                    defaultValue={editingInternship?.period || ""}
+                    required 
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">工作描述</label>
+                  <textarea 
+                    name="description"
+                    className="w-full p-2 border rounded-md h-24" 
+                    defaultValue={editingInternship?.description || ""}
+                    required 
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={handleCancelInternship}>取消</Button>
+                  <Button type="submit">保存</Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* 删除确认窗口 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 mx-4">
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold">确认删除</h3>
+              <p className="text-muted-foreground mt-2">
+                {deleteItemType === "award" ? "您确定要删除这条获奖记录吗？" : 
+                 deleteItemType === "internship" ? "您确定要删除这条实习经历吗？" :
+                 deleteItemType === "score" && deleteScoreType === "toefl" ? "您确定要删除托福成绩吗？" :
+                 deleteItemType === "score" && deleteScoreType === "ielts" ? "您确定要删除雅思成绩吗？" :
+                 deleteItemType === "score" && deleteScoreType === "gre" ? "您确定要删除GRE成绩吗？" : 
+                 "您确定要删除这条记录吗？"}
+                此操作无法撤销。
+              </p>
+            </div>
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" onClick={cancelDelete}>取消</Button>
+              <Button variant="destructive" onClick={confirmDelete}>删除</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold">我的信息</h1>
@@ -367,7 +767,7 @@ export default function Profile() {
                 <Award className="h-5 w-5" />
                 获奖记录
               </div>
-              <Button size="sm" className="flex items-center gap-2">
+              <Button size="sm" className="flex items-center gap-2" onClick={handleAddAward}>
                 <Plus className="h-4 w-4" />
                 添加获奖
               </Button>
@@ -376,68 +776,36 @@ export default function Profile() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 border rounded-lg group hover:bg-gray-50">
-                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <Award className="h-6 w-6 text-yellow-600" />
+              {awards.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  当前栏暂无信息
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold">三好学生</h4>
-                  <p className="text-sm text-muted-foreground">2023-2024学年 • 校级</p>
+              ) : (
+                <div className={`space-y-4 ${awards.length > 3 ? "max-h-[400px] overflow-y-auto pr-2" : ""}`}>
+                  {awards.map((award, index) => (
+                    <div key={index} className="flex items-center gap-4 p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className={`w-12 h-12 ${colorPairs[award.colorIndex].bg} rounded-full flex items-center justify-center`}>
+                        <Award className={`h-6 w-6 ${colorPairs[award.colorIndex].text}`} />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{award.title}</h4>
+                        <p className="text-sm text-muted-foreground">{award.organization} • {award.level}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{award.date}</span>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditAward(award)}>
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("award", index)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">2024年6月</span>
-                  <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-4 p-4 border rounded-lg group hover:bg-gray-50">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Award className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold">数学竞赛二等奖</h4>
-                  <p className="text-sm text-muted-foreground">全国高中数学联赛 • 省级</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">2023年10月</span>
-                  <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-4 p-4 border rounded-lg group hover:bg-gray-50">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Award className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold">优秀班干部</h4>
-                  <p className="text-sm text-muted-foreground">2022-2023学年 • 校级</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">2023年6月</span>
-                  <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -449,7 +817,7 @@ export default function Profile() {
                 <Briefcase className="h-5 w-5" />
                 实习经历
               </div>
-              <Button size="sm" className="flex items-center gap-2">
+              <Button size="sm" className="flex items-center gap-2" onClick={handleAddInternship}>
                 <Plus className="h-4 w-4" />
                 添加实习
               </Button>
@@ -458,45 +826,35 @@ export default function Profile() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-start gap-4 p-4 border rounded-lg group hover:bg-gray-50">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Briefcase className="h-6 w-6 text-blue-600" />
+              {internships.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  当前栏暂无信息
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold">教学助理实习生</h4>
-                  <p className="text-sm text-muted-foreground mb-1">新东方教育科技集团</p>
-                  <p className="text-xs text-muted-foreground">2024年7月 - 2024年8月</p>
-                  <p className="text-sm mt-2">协助数学老师进行课程准备和学生辅导，参与教学活动设计</p>
+              ) : (
+                <div className={`space-y-4 ${internships.length > 3 ? "max-h-[400px] overflow-y-auto pr-2" : ""}`}>
+                  {internships.map((internship, index) => (
+                    <div key={index} className="flex items-start gap-4 p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className={`w-12 h-12 ${colorPairs[internship.colorIndex].bg} rounded-full flex items-center justify-center`}>
+                        <Briefcase className={`h-6 w-6 ${colorPairs[internship.colorIndex].text}`} />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{internship.title}</h4>
+                        <p className="text-sm text-muted-foreground mb-1">{internship.company}</p>
+                        <p className="text-xs text-muted-foreground">{internship.period}</p>
+                        <p className="text-sm mt-2">{internship.description}</p>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditInternship(internship)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("internship", index)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                  <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 border rounded-lg group hover:bg-gray-50">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Briefcase className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold">志愿者</h4>
-                  <p className="text-sm text-muted-foreground mb-1">北京市图书馆</p>
-                  <p className="text-xs text-muted-foreground">2023年12月 - 2024年2月</p>
-                  <p className="text-sm mt-2">协助图书管理和读者服务，参与文化活动组织</p>
-                </div>
-                <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                  <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -517,83 +875,94 @@ export default function Profile() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="p-4 border rounded-lg group hover:bg-gray-50">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                      <Languages className="h-4 w-4 text-red-600" />
+              {toeflScore.total === 0 && ieltsScore.total === 0 && greScore.total === 0 ? (
+                <div className="text-center py-8 text-muted-foreground md:col-span-2 lg:col-span-3">
+                  当前栏暂无信息
+                </div>
+              ) : (
+                <>
+                  {toeflScore.total > 0 && (
+                    <div className="p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                            <Languages className="h-4 w-4 text-red-600" />
+                          </div>
+                          <h4 className="font-semibold">托福 TOEFL</h4>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleEditScore("toefl")}>
+                            <Edit className="h-2 w-2" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleDeleteScoreConfirm("toefl")}>
+                            <Trash2 className="h-2 w-2" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-red-600">{toeflScore.total}</div>
+                        <div className="text-xs text-muted-foreground">
+                          阅读:{toeflScore.reading} | 听力:{toeflScore.listening} | 口语:{toeflScore.speaking} | 写作:{toeflScore.writing}
+                        </div>
+                      </div>
                     </div>
-                    <h4 className="font-semibold">托福 TOEFL</h4>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleEditScore("toefl")}>
-                      <Edit className="h-2 w-2" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0">
-                      <Trash2 className="h-2 w-2" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-2xl font-bold text-red-600">{toeflScore.total}</div>
-                  <div className="text-xs text-muted-foreground">考试日期: {formatDate(toeflScore.date)}</div>
-                  <div className="text-xs text-muted-foreground">
-                    阅读:{toeflScore.reading} | 听力:{toeflScore.listening} | 口语:{toeflScore.speaking} | 写作:{toeflScore.writing}
-                  </div>
-                </div>
-              </div>
+                  )}
 
-              <div className="p-4 border rounded-lg group hover:bg-gray-50">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Languages className="h-4 w-4 text-blue-600" />
+                  {ieltsScore.total > 0 && (
+                    <div className="p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <Languages className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <h4 className="font-semibold">雅思 IELTS</h4>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleEditScore("ielts")}>
+                            <Edit className="h-2 w-2" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleDeleteScoreConfirm("ielts")}>
+                            <Trash2 className="h-2 w-2" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-blue-600">{ieltsScore.total}</div>
+                        <div className="text-xs text-muted-foreground">
+                          听力:{ieltsScore.listening} | 阅读:{ieltsScore.reading} | 写作:{ieltsScore.writing} | 口语:{ieltsScore.speaking}
+                        </div>
+                      </div>
                     </div>
-                    <h4 className="font-semibold">雅思 IELTS</h4>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleEditScore("ielts")}>
-                      <Edit className="h-2 w-2" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0">
-                      <Trash2 className="h-2 w-2" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-2xl font-bold text-blue-600">{ieltsScore.total}</div>
-                  <div className="text-xs text-muted-foreground">考试日期: {formatDate(ieltsScore.date)}</div>
-                  <div className="text-xs text-muted-foreground">
-                    听力:{ieltsScore.listening} | 阅读:{ieltsScore.reading} | 写作:{ieltsScore.writing} | 口语:{ieltsScore.speaking}
-                  </div>
-                </div>
-              </div>
+                  )}
 
-              <div className="p-4 border rounded-lg group hover:bg-gray-50">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Languages className="h-4 w-4 text-purple-600" />
+                  {greScore.total > 0 && (
+                    <div className="p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                            <Languages className="h-4 w-4 text-purple-600" />
+                          </div>
+                          <h4 className="font-semibold">GRE</h4>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleEditScore("gre")}>
+                            <Edit className="h-2 w-2" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleDeleteScoreConfirm("gre")}>
+                            <Trash2 className="h-2 w-2" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-purple-600">{greScore.total}</div>
+                        <div className="text-xs text-muted-foreground">
+                          数学:{greScore.math} | 语文:{greScore.verbal} | 写作:{greScore.writing}
+                        </div>
+                      </div>
                     </div>
-                    <h4 className="font-semibold">GRE</h4>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleEditScore("gre")}>
-                      <Edit className="h-2 w-2" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0">
-                      <Trash2 className="h-2 w-2" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-2xl font-bold text-purple-600">{greScore.total}</div>
-                  <div className="text-xs text-muted-foreground">考试日期: {formatDate(greScore.date)}</div>
-                  <div className="text-xs text-muted-foreground">
-                    数学:{greScore.math} | 语文:{greScore.verbal} | 写作:{greScore.writing}
-                  </div>
-                </div>
-              </div>
+                  )}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
