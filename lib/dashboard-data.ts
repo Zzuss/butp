@@ -1,5 +1,10 @@
 import { supabase } from './supabase'
-import { calculateBUPTGPA, getGradeFromGPA } from './utils'
+import { 
+  convertGradeToScore, 
+  calculateWeightedAverage, 
+  calculateWeightedGPA,
+  processCourseGrades 
+} from './gpa-calculator'
 
 export interface DashboardStats {
   averageGrade: number
@@ -40,23 +45,26 @@ export async function getDashboardStats(studentId: string): Promise<DashboardSta
       }
     }
 
-    const validResults = results.filter(r => r.Grade && !isNaN(parseFloat(r.Grade)))
-    const totalCourses = validResults.length
-    const completedCourses = validResults.filter(r => parseFloat(r.Grade) >= 60).length
+    // 转换数据格式以适配GPA计算函数
+    const coursesForGPA = results.map(r => ({
+      grade: r.Grade,
+      credit: r.Credit
+    }))
     
-    const totalScore = validResults.reduce((sum, r) => sum + parseFloat(r.Grade), 0)
-    const averageGrade = totalCourses > 0 ? totalScore / totalCourses : 0
+    // 使用新的GPA计算函数处理所有课程
+    const processedCourses = processCourseGrades(coursesForGPA)
+    const totalCourses = processedCourses.length
     
-    const gpaPoints = validResults.reduce((sum, r) => {
-      const score = parseFloat(r.Grade)
-      const credit = parseFloat(r.Credit || '1')
-      const gpa = calculateBUPTGPA(score)
-      
-      return sum + (gpa * credit)
-    }, 0)
-
-    const totalCredits = validResults.reduce((sum, r) => sum + parseFloat(r.Credit || '1'), 0)
-    const finalGPA = totalCredits > 0 ? gpaPoints / totalCredits : 0
+    // 计算通过课程数（60分及以上）
+    const completedCourses = processedCourses.filter(course => 
+      course.numericScore !== null && course.numericScore >= 60
+    ).length
+    
+    // 使用学分加权平均分
+    const averageGrade = calculateWeightedAverage(coursesForGPA)
+    
+    // 使用北邮官方GPA算法
+    const finalGPA = calculateWeightedGPA(coursesForGPA)
 
     return {
       averageGrade: Math.round(averageGrade * 10) / 10,
@@ -89,19 +97,30 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
     if (!results) return []
 
     return results
-      .filter(r => r.Course_Name && r.Grade && !isNaN(parseFloat(r.Grade)))
+      .filter(r => r.Course_Name && r.Grade)
       .map(r => {
-        const score = parseFloat(r.Grade)
-        const gpa = calculateBUPTGPA(score)
-        const grade = getGradeFromGPA(gpa)
+        const numericScore = convertGradeToScore(r.Grade)
+        
+        if (numericScore === null) {
+          return null
+        }
+        
+        let grade = 'F'
+        if (numericScore >= 95) grade = 'A+'
+        else if (numericScore >= 90) grade = 'A'
+        else if (numericScore >= 85) grade = 'B+'
+        else if (numericScore >= 80) grade = 'B'
+        else if (numericScore >= 75) grade = 'C+'
+        else if (numericScore >= 70) grade = 'C'
+        else if (numericScore >= 60) grade = 'D'
         
         return {
           subject: r.Course_Name,
-          score: Math.round(score),
-          grade,
-          gpa: Math.round(gpa * 100) / 100 // 添加绩点信息
+          score: Math.round(numericScore),
+          grade
         }
       })
+      .filter(item => item !== null) as SubjectGrade[]
   } catch (error) {
     console.error('Error fetching subject grades:', error)
     return []
@@ -124,25 +143,29 @@ export async function getProgressData(studentId: string): Promise<ProgressData[]
 
     const groupedBySemester = results.reduce((acc, result) => {
       const semester = result.Semester_Offered
-      const grade = parseFloat(result.Grade || '0')
+      const numericScore = convertGradeToScore(result.Grade)
       
       if (!acc[semester]) {
-        acc[semester] = { scores: [], totalCourses: 0 }
+        acc[semester] = { scores: [], totalCourses: 0, courses: [] }
       }
       
-      if (!isNaN(grade)) {
-        acc[semester].scores.push(grade)
+      if (numericScore !== null) {
+        acc[semester].scores.push(numericScore)
         acc[semester].totalCourses++
+        acc[semester].courses.push({
+          grade: result.Grade,
+          credit: '1' // 默认学分，实际应该从数据库获取
+        })
       }
       
       return acc
-    }, {} as Record<string, { scores: number[], totalCourses: number }>)
+    }, {} as Record<string, { scores: number[], totalCourses: number, courses: Array<{grade: string | null, credit: string}> }>)
 
     return Object.entries(groupedBySemester)
       .map(([semester, data]) => ({
         semester,
-        averageScore: data.scores.length > 0 
-          ? Math.round((data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length) * 10) / 10
+        averageScore: data.courses.length > 0 
+          ? Math.round(calculateWeightedAverage(data.courses) * 10) / 10
           : 0,
         totalCourses: data.totalCourses
       }))
@@ -168,26 +191,30 @@ export async function getCourseCategories(studentId: string): Promise<{ category
 
     const groupedByCategory = results.reduce((acc, result) => {
       const category = result.Course_Type || '其他'
-      const grade = parseFloat(result.Grade || '0')
+      const numericScore = convertGradeToScore(result.Grade)
       
       if (!acc[category]) {
-        acc[category] = { scores: [], count: 0 }
+        acc[category] = { scores: [], count: 0, courses: [] }
       }
       
-      if (!isNaN(grade)) {
-        acc[category].scores.push(grade)
+      if (numericScore !== null) {
+        acc[category].scores.push(numericScore)
         acc[category].count++
+        acc[category].courses.push({
+          grade: result.Grade,
+          credit: '1' // 默认学分，实际应该从数据库获取
+        })
       }
       
       return acc
-    }, {} as Record<string, { scores: number[], count: number }>)
+    }, {} as Record<string, { scores: number[], count: number, courses: Array<{grade: string | null, credit: string}> }>)
 
     return Object.entries(groupedByCategory)
       .map(([category, data]) => ({
         category,
         count: data.count,
-        averageGrade: data.scores.length > 0 
-          ? Math.round((data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length) * 10) / 10
+        averageGrade: data.courses.length > 0 
+          ? Math.round(calculateWeightedAverage(data.courses) * 10) / 10
           : 0
       }))
       .sort((a, b) => b.count - a.count)
