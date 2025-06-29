@@ -3,7 +3,8 @@ import {
   convertGradeToScore, 
   calculateWeightedAverage, 
   calculateWeightedGPA,
-  processCourseGrades 
+  processCourseGrades,
+  calculateBUPTGPA
 } from './gpa-calculator'
 
 export interface DashboardStats {
@@ -117,7 +118,8 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
         return {
           subject: r.Course_Name,
           score: Math.round(numericScore),
-          grade
+          grade,
+          gpa: Math.round(calculateBUPTGPA(numericScore) * 100) / 100
         }
       })
       .filter(item => item !== null) as SubjectGrade[]
