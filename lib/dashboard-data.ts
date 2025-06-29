@@ -11,6 +11,7 @@ export interface SubjectGrade {
   subject: string
   score: number
   grade: string
+  gpaPoint: number
 }
 
 export interface ProgressData {
@@ -50,15 +51,12 @@ export async function getDashboardStats(studentId: string): Promise<DashboardSta
       const credit = parseFloat(r.Credit || '1')
       let gpa = 0
       
-      if (score >= 95) gpa = 4.0
-      else if (score >= 90) gpa = 3.7
-      else if (score >= 85) gpa = 3.3
-      else if (score >= 80) gpa = 3.0
-      else if (score >= 75) gpa = 2.7
-      else if (score >= 70) gpa = 2.3
-      else if (score >= 65) gpa = 2.0
-      else if (score >= 60) gpa = 1.7
-      else gpa = 0
+      if (score >= 60) {
+        gpa = 4 - 3 * Math.pow(100 - score, 2) / 1600
+        gpa = Math.round(gpa * 100) / 100
+      } else {
+        gpa = 0
+      }
       
       return sum + (gpa * credit)
     }, 0)
@@ -101,6 +99,12 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
       .map(r => {
         const score = parseFloat(r.Grade)
         let grade = 'F'
+        let gpaPoint = 0
+        
+        if (score >= 60) {
+          gpaPoint = 4 - 3 * Math.pow(100 - score, 2) / 1600
+          gpaPoint = Math.round(gpaPoint * 100) / 100
+        }
         
         if (score >= 95) grade = 'A+'
         else if (score >= 90) grade = 'A'
@@ -113,7 +117,8 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
         return {
           subject: r.Course_Name,
           score: Math.round(score),
-          grade
+          grade,
+          gpaPoint
         }
       })
   } catch (error) {
