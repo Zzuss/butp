@@ -1,8 +1,30 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Award, Briefcase, Languages, Plus, Edit, Trash2 } from "lucide-react"
+import { useState, FormEvent } from "react"
 
 export default function Profile() {
+  const [showScoreForm, setShowScoreForm] = useState(false);
+  const [selectedScoreType, setSelectedScoreType] = useState("");
+  
+  const handleAddScore = () => {
+    setShowScoreForm(true);
+  };
+  
+  const handleCancelAdd = () => {
+    setShowScoreForm(false);
+    setSelectedScoreType("");
+  };
+  
+  const handleScoreSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    // 这里可以添加提交逻辑
+    setShowScoreForm(false);
+    setSelectedScoreType("");
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -159,7 +181,7 @@ export default function Profile() {
                 <Languages className="h-5 w-5" />
                 语言成绩
               </div>
-              <Button size="sm" className="flex items-center gap-2">
+              <Button size="sm" className="flex items-center gap-2" onClick={handleAddScore}>
                 <Plus className="h-4 w-4" />
                 添加成绩
               </Button>
@@ -167,6 +189,106 @@ export default function Profile() {
             <CardDescription>托福、雅思、GRE等标准化考试成绩</CardDescription>
           </CardHeader>
           <CardContent>
+            {showScoreForm && (
+              <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+                <h4 className="font-semibold mb-3">添加/更新成绩</h4>
+                <form onSubmit={handleScoreSubmit}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">考试类型</label>
+                      <select 
+                        className="w-full p-2 border rounded-md" 
+                        value={selectedScoreType}
+                        onChange={(e) => setSelectedScoreType(e.target.value)}
+                        required
+                      >
+                        <option value="">请选择考试类型</option>
+                        <option value="toefl">托福 TOEFL</option>
+                        <option value="ielts">雅思 IELTS</option>
+                        <option value="gre">GRE</option>
+                        <option value="sat">SAT</option>
+                        <option value="act">ACT</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-1">总分</label>
+                      <input type="number" className="w-full p-2 border rounded-md" required />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-1">考试日期</label>
+                      <input type="date" className="w-full p-2 border rounded-md" required />
+                    </div>
+                    
+                    {selectedScoreType === "toefl" && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">阅读</label>
+                          <input type="number" className="w-full p-2 border rounded-md" max="30" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">听力</label>
+                          <input type="number" className="w-full p-2 border rounded-md" max="30" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">口语</label>
+                          <input type="number" className="w-full p-2 border rounded-md" max="30" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">写作</label>
+                          <input type="number" className="w-full p-2 border rounded-md" max="30" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedScoreType === "ielts" && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">听力</label>
+                          <input type="number" step="0.5" className="w-full p-2 border rounded-md" max="9" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">阅读</label>
+                          <input type="number" step="0.5" className="w-full p-2 border rounded-md" max="9" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">写作</label>
+                          <input type="number" step="0.5" className="w-full p-2 border rounded-md" max="9" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">口语</label>
+                          <input type="number" step="0.5" className="w-full p-2 border rounded-md" max="9" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedScoreType === "gre" && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">数学</label>
+                          <input type="number" className="w-full p-2 border rounded-md" max="170" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">语文</label>
+                          <input type="number" className="w-full p-2 border rounded-md" max="170" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">写作</label>
+                          <input type="number" step="0.5" className="w-full p-2 border rounded-md" max="6" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button type="button" variant="outline" onClick={handleCancelAdd}>取消</Button>
+                      <Button type="submit">保存</Button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            )}
+            
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <div className="p-4 border rounded-lg group hover:bg-gray-50">
                 <div className="flex items-center justify-between mb-2">
@@ -177,7 +299,10 @@ export default function Profile() {
                     <h4 className="font-semibold">托福 TOEFL</h4>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0">
+                    <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => {
+                      setSelectedScoreType("toefl");
+                      setShowScoreForm(true);
+                    }}>
                       <Edit className="h-2 w-2" />
                     </Button>
                     <Button size="sm" variant="outline" className="h-6 w-6 p-0">
@@ -186,10 +311,10 @@ export default function Profile() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold text-red-600">108</div>
-                  <div className="text-xs text-muted-foreground">考试日期: 2024年3月15日</div>
+                  <div className="text-2xl font-bold text-red-600">0</div>
+                  <div className="text-xs text-muted-foreground">考试日期: 暂无</div>
                   <div className="text-xs text-muted-foreground">
-                    阅读:28 | 听力:27 | 口语:26 | 写作:27
+                    阅读:0 | 听力:0 | 口语:0 | 写作:0
                   </div>
                 </div>
               </div>
@@ -203,7 +328,10 @@ export default function Profile() {
                     <h4 className="font-semibold">雅思 IELTS</h4>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0">
+                    <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => {
+                      setSelectedScoreType("ielts");
+                      setShowScoreForm(true);
+                    }}>
                       <Edit className="h-2 w-2" />
                     </Button>
                     <Button size="sm" variant="outline" className="h-6 w-6 p-0">
@@ -212,10 +340,10 @@ export default function Profile() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold text-blue-600">7.5</div>
-                  <div className="text-xs text-muted-foreground">考试日期: 2024年1月20日</div>
+                  <div className="text-2xl font-bold text-blue-600">0</div>
+                  <div className="text-xs text-muted-foreground">考试日期: 暂无</div>
                   <div className="text-xs text-muted-foreground">
-                    听力:8.0 | 阅读:8.5 | 写作:7.0 | 口语:7.0
+                    听力:0 | 阅读:0 | 写作:0 | 口语:0
                   </div>
                 </div>
               </div>
@@ -229,7 +357,10 @@ export default function Profile() {
                     <h4 className="font-semibold">GRE</h4>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                    <Button size="sm" variant="outline" className="h-6 w-6 p-0">
+                    <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => {
+                      setSelectedScoreType("gre");
+                      setShowScoreForm(true);
+                    }}>
                       <Edit className="h-2 w-2" />
                     </Button>
                     <Button size="sm" variant="outline" className="h-6 w-6 p-0">
@@ -238,10 +369,10 @@ export default function Profile() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold text-purple-600">325</div>
-                  <div className="text-xs text-muted-foreground">考试日期: 2024年5月10日</div>
+                  <div className="text-2xl font-bold text-purple-600">0</div>
+                  <div className="text-xs text-muted-foreground">考试日期: 暂无</div>
                   <div className="text-xs text-muted-foreground">
-                    数学:168 | 语文:157 | 写作:4.0
+                    数学:0 | 语文:0 | 写作:0
                   </div>
                 </div>
               </div>
