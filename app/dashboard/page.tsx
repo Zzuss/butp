@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getDashboardStats, getSubjectGrades, getProgressData, getCourseCategories } from "@/lib/dashboard-data"
-import { StudentSelector } from "@/components/student-selector"
-import { type Student } from "@/lib/student-data"
+import { useSimpleAuth } from "@/contexts/simple-auth-context"
 
 interface DashboardData {
   stats: Awaited<ReturnType<typeof getDashboardStats>>
@@ -14,15 +13,15 @@ interface DashboardData {
 }
 
 export default function Dashboard() {
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const { currentStudent } = useSimpleAuth()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (selectedStudent) {
-      loadDashboardData(selectedStudent.SNH)
+    if (currentStudent) {
+      loadDashboardData(currentStudent.id)
     }
-  }, [selectedStudent])
+  }, [currentStudent])
 
   async function loadDashboardData(studentId: string) {
     setLoading(true)
@@ -42,17 +41,13 @@ export default function Dashboard() {
     }
   }
 
-  if (!selectedStudent) {
+  if (!currentStudent) {
     return (
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">数据总览</h1>
-          <p className="text-muted-foreground">查看学生的学习数据和表现统计</p>
+          <p className="text-muted-foreground">请先登录查看学习数据</p>
         </div>
-        <StudentSelector 
-          onStudentSelect={setSelectedStudent}
-          selectedStudent={selectedStudent}
-        />
       </div>
     )
   }
@@ -62,12 +57,8 @@ export default function Dashboard() {
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">数据总览</h1>
-          <p className="text-muted-foreground">正在加载 {selectedStudent.displayName} 的数据...</p>
+          <p className="text-muted-foreground">正在加载 {currentStudent.name} 的数据...</p>
         </div>
-        <StudentSelector 
-          onStudentSelect={setSelectedStudent}
-          selectedStudent={selectedStudent}
-        />
         <div className="mt-6 flex items-center justify-center h-32">
           <div className="text-muted-foreground">数据加载中...</div>
         </div>
@@ -85,18 +76,12 @@ export default function Dashboard() {
     { name: '通过', value: attendanceRate, color: '#10b981' },
     { name: '未通过', value: 100 - attendanceRate, color: '#ef4444' },
   ];
+  
   return (
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">数据总览</h1>
-        <p className="text-muted-foreground">查看 {selectedStudent.displayName} 的学习数据和表现统计</p>
-      </div>
-
-      <div className="mb-6">
-        <StudentSelector 
-          onStudentSelect={setSelectedStudent}
-          selectedStudent={selectedStudent}
-        />
+        <p className="text-muted-foreground">查看 {currentStudent.name} 的学习数据和表现统计</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -158,7 +143,7 @@ export default function Dashboard() {
                 <div key={item.subject} className="flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{item.subject}</span>
-                    <span className="text-xs text-muted-foreground">等级: {item.grade} (绩点: {item.gpa})</span>
+                    <span className="text-xs text-muted-foreground">等级: {item.grade}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-32 bg-gray-200 rounded-full h-2">

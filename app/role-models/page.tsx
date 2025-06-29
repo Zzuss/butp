@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { User, GraduationCap, Briefcase, MapPin, Star, MessageCircle, Building, School, Award, BookOpen, Layers, Globe, ChevronLeft, ChevronRight } from "lucide-react"
+import { GraduationCap, Briefcase, MapPin, Star, MessageCircle, Building, School, Award, BookOpen, Layers, Globe } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollableContainer } from "../../components/ui/scrollable-container"
 
@@ -166,7 +166,29 @@ function Badge({ children, variant = "secondary" }: { children: React.ReactNode,
   )
 }
 
-function CompanyCard({ model }: { model: any }) {
+interface CompanyModel {
+  id: number
+  name: string
+  position: string
+  location: string
+  academics: {
+    gpa: string
+    courses: string[]
+  }
+  competitions: string[]
+  internships: string[]
+  englishScores: {
+    toefl: string
+    ielts: string
+  }
+  skills: string[]
+  tags: string[]
+  description: string
+  rating: number
+  consultations: number
+}
+
+function CompanyCard({ model }: { model: CompanyModel }) {
   return (
     <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0">
       <CardHeader>
@@ -243,7 +265,31 @@ function CompanyCard({ model }: { model: any }) {
   )
 }
 
-function SchoolCard({ model }: { model: any }) {
+interface SchoolModel {
+  id: number
+  name: string
+  graduateMajor: string
+  location: string
+  academics: {
+    gpa: string
+    courses: string[]
+  }
+  competitions: string[]
+  research: string[]
+  englishScores: {
+    toefl: string
+    ielts: string
+    gre: string
+    sat?: string
+  }
+  skills: string[]
+  tags: string[]
+  description: string
+  rating: number
+  consultations: number
+}
+
+function SchoolCard({ model }: { model: SchoolModel }) {
   return (
     <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0">
       <CardHeader>

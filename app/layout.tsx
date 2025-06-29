@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SimpleAuthProvider } from "@/contexts/simple-auth-context";
+import { SimpleAuthGuard } from "@/components/auth/simple-auth-guard";
 import { AppSidebar } from "@/components/layout/sidebar";
 
 export const metadata: Metadata = {
@@ -15,12 +17,16 @@ export default function RootLayout({
   return (
     <html lang="zh" className="light">
       <body className="antialiased">
-        <div className="flex h-screen">
-          <AppSidebar />
-          <main className="flex-1 overflow-y-auto">
-            {children}
-          </main>
-        </div>
+        <SimpleAuthProvider>
+          <SimpleAuthGuard>
+            <div className="flex h-screen">
+              <AppSidebar />
+              <main className="flex-1 overflow-y-auto">
+                {children}
+              </main>
+            </div>
+          </SimpleAuthGuard>
+        </SimpleAuthProvider>
       </body>
     </html>
   );
