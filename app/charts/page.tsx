@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts"
 
 // 测试数据
@@ -146,7 +146,6 @@ export default function ChartsPage() {
                   axisLine={false}
                   tickMargin={8}
                 />
-                <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar 
                   dataKey="desktop" 
                   fill="var(--color-desktop)" 
@@ -185,8 +184,7 @@ export default function ChartsPage() {
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  </PieChart>
+                    </PieChart>
               </ChartContainer>
             </CardContent>
           </Card>
@@ -212,8 +210,7 @@ export default function ChartsPage() {
                     axisLine={false}
                     tickMargin={8}
                   />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line 
+                    <Line 
                     type="monotone" 
                     dataKey="visits" 
                     stroke="var(--color-visits)" 
@@ -248,7 +245,6 @@ export default function ChartsPage() {
                   axisLine={false}
                   tickMargin={8}
                 />
-                <ChartTooltip content={<ChartTooltipContent />} />
                 <Area 
                   type="monotone" 
                   dataKey="sales" 
@@ -286,7 +282,6 @@ export default function ChartsPage() {
                   domain={[0, 150]} 
                   tick={false}
                 />
-                <ChartTooltip content={<ChartTooltipContent />} />
                 <Radar 
                   name="学生A" 
                   dataKey="A" 
