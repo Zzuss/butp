@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { User, Mail, Phone, Calendar, MapPin, GraduationCap, Award, Briefcase, Languages, Plus, Edit, Trash2 } from "lucide-react"
+import { Award, Briefcase, Languages, Plus, Edit, Trash2 } from "lucide-react"
 
 export default function Profile() {
   return (
@@ -11,82 +11,6 @@ export default function Profile() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              基本信息
-            </CardTitle>
-            <CardDescription>您的个人基本信息</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg">张三</h3>
-                <p className="text-sm text-muted-foreground">学号: 2024001001</p>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>zhangsan@student.edu.cn</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>138-8888-8888</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>2006年3月15日</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>北京市海淀区</span>
-              </div>
-            </div>
-
-            <Button className="w-full">编辑信息</Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5" />
-              学业信息
-            </CardTitle>
-            <CardDescription>您的学业相关信息</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">年级</label>
-                <p className="text-lg">高三年级</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">班级</label>
-                <p className="text-lg">三班</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">专业方向</label>
-                <p className="text-lg">理科</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">入学时间</label>
-                <p className="text-lg">2021年9月</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">班主任</label>
-                <p className="text-lg">李老师</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
