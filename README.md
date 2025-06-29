@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 主题设置
+
+本项目已配置为始终使用浅色模式，即使在系统设置为深色模式的情况下也是如此。这是通过在HTML根元素上添加`light`类名并在CSS中设置相应的变量值来实现的。
+
 ## Getting Started
 
 First, run the development server:
