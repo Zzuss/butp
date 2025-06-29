@@ -7,7 +7,8 @@ import {
   BarChart3, 
   Users, 
   TrendingUp,
-  GraduationCap
+  GraduationCap,
+  PieChart
 } from "lucide-react"
 import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/components/ui/sidebar"
 
@@ -31,6 +32,11 @@ const sidebarItems = [
     title: "分析模块",
     href: "/analysis",
     icon: TrendingUp,
+  },
+  {
+    title: "图表测试",
+    href: "/charts",
+    icon: PieChart,
   },
 ]
 
