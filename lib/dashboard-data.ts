@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { calculateBUPTGPA, getGradeFromGPA } from './utils'
 
 export interface DashboardStats {
   averageGrade: number
@@ -11,7 +12,7 @@ export interface SubjectGrade {
   subject: string
   score: number
   grade: string
-  gpaPoint: number
+  gpa: number
 }
 
 export interface ProgressData {
@@ -49,14 +50,7 @@ export async function getDashboardStats(studentId: string): Promise<DashboardSta
     const gpaPoints = validResults.reduce((sum, r) => {
       const score = parseFloat(r.Grade)
       const credit = parseFloat(r.Credit || '1')
-      let gpa = 0
-      
-      if (score >= 60) {
-        gpa = 4 - 3 * Math.pow(100 - score, 2) / 1600
-        gpa = Math.round(gpa * 100) / 100
-      } else {
-        gpa = 0
-      }
+      const gpa = calculateBUPTGPA(score)
       
       return sum + (gpa * credit)
     }, 0)
@@ -98,27 +92,14 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
       .filter(r => r.Course_Name && r.Grade && !isNaN(parseFloat(r.Grade)))
       .map(r => {
         const score = parseFloat(r.Grade)
-        let grade = 'F'
-        let gpaPoint = 0
-        
-        if (score >= 60) {
-          gpaPoint = 4 - 3 * Math.pow(100 - score, 2) / 1600
-          gpaPoint = Math.round(gpaPoint * 100) / 100
-        }
-        
-        if (score >= 95) grade = 'A+'
-        else if (score >= 90) grade = 'A'
-        else if (score >= 85) grade = 'B+'
-        else if (score >= 80) grade = 'B'
-        else if (score >= 75) grade = 'C+'
-        else if (score >= 70) grade = 'C'
-        else if (score >= 60) grade = 'D'
+        const gpa = calculateBUPTGPA(score)
+        const grade = getGradeFromGPA(gpa)
         
         return {
           subject: r.Course_Name,
           score: Math.round(score),
           grade,
-          gpaPoint
+          gpa: Math.round(gpa * 100) / 100 // 添加绩点信息
         }
       })
   } catch (error) {

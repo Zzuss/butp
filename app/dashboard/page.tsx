@@ -158,7 +158,7 @@ export default function Dashboard() {
                 <div key={item.subject} className="flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{item.subject}</span>
-                    <span className="text-xs text-muted-foreground">等级: {item.grade} | 绩点: {item.gpaPoint}</span>
+                    <span className="text-xs text-muted-foreground">等级: {item.grade} (绩点: {item.gpa})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-32 bg-gray-200 rounded-full h-2">
@@ -206,28 +206,6 @@ export default function Dashboard() {
                 <div className="text-sm text-muted-foreground">
                   已通过 {stats.completedCourses} / 总共 {stats.totalCourses} 门课程
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>北邮GPA算法</CardTitle>
-            <CardDescription>绩点计算方法</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-sm">
-                <p className="mb-2 font-medium">计算公式:</p>
-                <p className="mb-2 text-muted-foreground">绩点 = 4 - 3 * (100-X)² / 1600</p>
-                <p className="mb-2 text-muted-foreground">其中X为百分制成绩(60≦X≦100)</p>
-                <p className="mb-1 text-muted-foreground">• 100分 = 4.0绩点</p>
-                <p className="mb-1 text-muted-foreground">• 90分 = 3.4绩点</p>
-                <p className="mb-1 text-muted-foreground">• 80分 = 2.5绩点</p>
-                <p className="mb-1 text-muted-foreground">• 70分 = 1.9绩点</p>
-                <p className="mb-1 text-muted-foreground">• 60分 = 1.0绩点</p>
-                <p className="text-muted-foreground">• 60分以下 = 0绩点</p>
               </div>
             </div>
           </CardContent>

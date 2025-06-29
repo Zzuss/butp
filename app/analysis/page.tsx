@@ -214,7 +214,7 @@ export default function Analysis() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 mb-6">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>学习时间分析</CardTitle>
@@ -257,41 +257,6 @@ export default function Analysis() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>北邮GPA分析</CardTitle>
-            <CardDescription>分数与绩点对应关系</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-sm">
-                <p className="mb-2 font-medium">计算公式:</p>
-                <p className="mb-3 text-muted-foreground">绩点 = 4 - 3 * (100-X)² / 1600</p>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  {[100, 95, 90, 85, 80, 75, 70, 65, 60].map(score => {
-                    const gpa = score >= 60 ? 
-                      (4 - 3 * Math.pow(100 - score, 2) / 1600).toFixed(2) : 
-                      "0.00";
-                    return (
-                      <div key={score} className="flex justify-between items-center p-2 border rounded">
-                        <span>{score}分</span>
-                        <span className="font-semibold text-blue-600">{gpa}</span>
-                      </div>
-                    );
-                  })}
-                  <div className="flex justify-between items-center p-2 border rounded bg-gray-50">
-                    <span>&lt;60分</span>
-                    <span className="font-semibold text-red-600">0.00</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-1">
         <Card>
           <CardHeader>
             <CardTitle>改进建议</CardTitle>
