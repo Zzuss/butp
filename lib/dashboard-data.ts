@@ -19,6 +19,7 @@ export interface SubjectGrade {
   score: number
   grade: string
   gpa: number
+  credit: number
 }
 
 export interface ProgressData {
@@ -88,12 +89,13 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
   try {
     const query = supabase
       .from('academic_results')
-      .select('Course_Name, Grade')
+      .select('Course_Name, Grade, Credit')
       .not('Course_Name', 'is', null)
       .not('Grade', 'is', null)
       .eq('SNH', studentId)
+      .order('Course_Name', { ascending: true })
     
-    const { data: results } = await query.limit(limit)
+    const { data: results } = limit ? await query.limit(limit) : await query
 
     if (!results) return []
 
@@ -119,7 +121,8 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
           subject: r.Course_Name,
           score: Math.round(numericScore),
           grade,
-          gpa: Math.round(calculateBUPTGPA(numericScore) * 100) / 100
+          gpa: Math.round(calculateBUPTGPA(numericScore) * 100) / 100,
+          credit: parseFloat(r.Credit) || 1 // 解析学分，如果为空则默认为1
         }
       })
       .filter(item => item !== null) as SubjectGrade[]
