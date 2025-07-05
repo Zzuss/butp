@@ -1,3 +1,5 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { GraduationCap, Briefcase, MapPin, Star, Building, School, Award, BookOpen, Layers, Globe } from "lucide-react"
@@ -555,7 +557,7 @@ interface CompanyModel {
 
 function CompanyCard({ model }: { model: CompanyModel }) {
   return (
-    <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0">
+    <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0 flex flex-col h-full">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -576,7 +578,7 @@ function CompanyCard({ model }: { model: CompanyModel }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1 flex flex-col">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -612,11 +614,11 @@ function CompanyCard({ model }: { model: CompanyModel }) {
           ))}
         </div>
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground flex-1 overflow-auto">
           {model.description}
         </p>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 mt-auto">
           <Button size="sm">
             查看详情
           </Button>
@@ -652,7 +654,7 @@ interface SchoolModel {
 
 function SchoolCard({ model }: { model: SchoolModel }) {
   return (
-    <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0">
+    <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0 flex flex-col h-full">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -673,7 +675,7 @@ function SchoolCard({ model }: { model: SchoolModel }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1 flex flex-col">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -709,11 +711,11 @@ function SchoolCard({ model }: { model: SchoolModel }) {
           ))}
         </div>
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground flex-1 overflow-auto">
           {model.description}
         </p>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 mt-auto">
           <Button size="sm">
             查看详情
           </Button>
@@ -721,6 +723,56 @@ function SchoolCard({ model }: { model: SchoolModel }) {
       </CardContent>
     </Card>
   )
+}
+
+// 公司行组件
+function CompanyRow({ company, positions }: { company: string, positions: Record<string, CompanyModel[]> }) {
+  return (
+    <div className="mb-12">
+      <div className="flex items-center gap-2 mb-4">
+        <Building className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-semibold">{company}</h2>
+      </div>
+      <ScrollableContainer>
+        {Object.entries(positions).map(([position, models]) => (
+          models.map((model) => (
+            <div key={`${company}-${position}-${model.id}`} className="mr-4 min-w-[350px]">
+              <div className="mb-2 flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+                <span className="text-base font-medium">{position}</span>
+              </div>
+              <CompanyCard model={model} />
+            </div>
+          ))
+        ))}
+      </ScrollableContainer>
+    </div>
+  );
+}
+
+// 学校行组件
+function SchoolRow({ school, majors }: { school: string, majors: Record<string, SchoolModel[]> }) {
+  return (
+    <div className="mb-12">
+      <div className="flex items-center gap-2 mb-4">
+        <School className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-semibold">{school}</h2>
+      </div>
+      <ScrollableContainer>
+        {Object.entries(majors).map(([major, models]) => (
+          models.map((model) => (
+            <div key={`${school}-${major}-${model.id}`} className="mr-4 min-w-[350px]">
+              <div className="mb-2 flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                <span className="text-base font-medium">{major}</span>
+              </div>
+              <SchoolCard model={model} />
+            </div>
+          ))
+        ))}
+      </ScrollableContainer>
+    </div>
+  );
 }
 
 export default function RoleModels() {
@@ -739,49 +791,13 @@ export default function RoleModels() {
         
         <TabsContent value="companies">
           {Object.entries(companyModels).map(([company, positions]) => (
-            <div key={company} className="mb-12">
-              <div className="flex items-center gap-2 mb-4">
-                <Building className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">{company}</h2>
-              </div>
-              <ScrollableContainer>
-                {Object.entries(positions).map(([position, models]) => (
-                  models.map((model) => (
-                    <div key={model.id} className="mr-4 min-w-[350px]">
-                      <div className="mb-2 flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-base font-medium">{position}</span>
-                      </div>
-                      <CompanyCard model={model} />
-                    </div>
-                  ))
-                ))}
-              </ScrollableContainer>
-            </div>
+            <CompanyRow key={company} company={company} positions={positions} />
           ))}
         </TabsContent>
         
         <TabsContent value="schools">
           {Object.entries(schoolModels).map(([school, majors]) => (
-            <div key={school} className="mb-12">
-              <div className="flex items-center gap-2 mb-4">
-                <School className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">{school}</h2>
-              </div>
-              <ScrollableContainer>
-                {Object.entries(majors).map(([major, models]) => (
-                  models.map((model) => (
-                    <div key={model.id} className="mr-4 min-w-[350px]">
-                      <div className="mb-2 flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-base font-medium">{major}</span>
-                      </div>
-                      <SchoolCard model={model} />
-                    </div>
-                  ))
-                ))}
-              </ScrollableContainer>
-            </div>
+            <SchoolRow key={school} school={school} majors={majors} />
           ))}
         </TabsContent>
       </Tabs>
