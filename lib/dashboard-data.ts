@@ -93,13 +93,12 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
       .not('Course_Name', 'is', null)
       .not('Grade', 'is', null)
       .eq('SNH', studentId)
-      .order('Course_Name', { ascending: true })
     
     const { data: results } = limit ? await query.limit(limit) : await query
 
     if (!results) return []
 
-    return results
+    const processedResults = results
       .filter(r => r.Course_Name && r.Grade)
       .map(r => {
         const numericScore = convertGradeToScore(r.Grade)
@@ -126,6 +125,9 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
         }
       })
       .filter(item => item !== null) as SubjectGrade[]
+    
+    // 按照分数从高到低排序
+    return processedResults.sort((a, b) => b.score - a.score).slice(0, limit)
   } catch (error) {
     console.error('Error fetching subject grades:', error)
     return []

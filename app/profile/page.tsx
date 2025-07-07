@@ -192,7 +192,7 @@ export default function Profile() {
       title: formData.get("title") as string,
       organization: formData.get("organization") as string,
       level: formData.get("level") as string,
-      date: formData.get("date") as string,
+      date: (formData.get("date") as string) || "",
       colorIndex: editingAward ? editingAward.colorIndex : getRandomColorIndex(awards.map(item => item.colorIndex))
     };
     
@@ -235,7 +235,7 @@ export default function Profile() {
     const newInternship: Internship = {
       title: formData.get("title") as string,
       company: formData.get("company") as string,
-      period: formData.get("period") as string,
+      period: (formData.get("period") as string) || "",
       description: formData.get("description") as string,
       colorIndex: editingInternship ? editingInternship.colorIndex : getRandomColorIndex(internships.map(item => item.colorIndex))
     };
@@ -356,13 +356,23 @@ export default function Profile() {
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
     
-    const total = Number(formData.get("total"));
+    // 安全解析数值函数
+    const parseNumericValue = (value: FormDataEntryValue | null): number => {
+      if (value === null) return 0;
+      const strValue = value.toString().trim();
+      if (strValue === '') return 0;
+      
+      const numValue = parseFloat(strValue);
+      return isNaN(numValue) ? 0 : numValue;
+    };
+    
+    const total = parseNumericValue(formData.get("total"));
     
     if (selectedScoreType === "toefl") {
-      const reading = Number(formData.get("reading"));
-      const listening = Number(formData.get("listening"));
-      const speaking = Number(formData.get("speaking"));
-      const writing = Number(formData.get("writing"));
+      const reading = parseNumericValue(formData.get("reading"));
+      const listening = parseNumericValue(formData.get("listening"));
+      const speaking = parseNumericValue(formData.get("speaking"));
+      const writing = parseNumericValue(formData.get("writing"));
       
       setToeflScore({
         total,
@@ -372,10 +382,10 @@ export default function Profile() {
         writing
       });
     } else if (selectedScoreType === "ielts") {
-      const listening = Number(formData.get("listening"));
-      const reading = Number(formData.get("reading"));
-      const writing = Number(formData.get("writing"));
-      const speaking = Number(formData.get("speaking"));
+      const listening = parseNumericValue(formData.get("listening"));
+      const reading = parseNumericValue(formData.get("reading"));
+      const writing = parseNumericValue(formData.get("writing"));
+      const speaking = parseNumericValue(formData.get("speaking"));
       
       setIeltsScore({
         total,
@@ -385,9 +395,9 @@ export default function Profile() {
         speaking
       });
     } else if (selectedScoreType === "gre") {
-      const math = Number(formData.get("math"));
-      const verbal = Number(formData.get("verbal"));
-      const writing = Number(formData.get("writing"));
+      const math = parseNumericValue(formData.get("math"));
+      const verbal = parseNumericValue(formData.get("verbal"));
+      const writing = parseNumericValue(formData.get("writing"));
       
       setGreScore({
         total,
@@ -419,7 +429,7 @@ export default function Profile() {
                   <label className="block text-sm font-medium mb-1">考试类型</label>
                   <select 
                     name="type"
-                    className="w-full p-2 border rounded-md" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     value={selectedScoreType}
                     onChange={(e) => setSelectedScoreType(e.target.value)}
                     disabled={editMode}
@@ -436,8 +446,10 @@ export default function Profile() {
                   <label className="block text-sm font-medium mb-1">总分</label>
                   <input 
                     name="total"
-                    type="number" 
-                    className="w-full p-2 border rounded-md" 
+                    type="text" 
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={
                       editMode ? 
                       (selectedScoreType === "toefl" ? toeflScore.total : 
@@ -454,9 +466,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">阅读</label>
                       <input 
                         name="reading"
-                        type="number" 
-                        className="w-full p-2 border rounded-md" 
-                        max="30" 
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="最高30分"
                         defaultValue={editMode ? toeflScore.reading : ""}
                       />
                     </div>
@@ -464,9 +478,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">听力</label>
                       <input 
                         name="listening"
-                        type="number" 
-                        className="w-full p-2 border rounded-md" 
-                        max="30" 
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="最高30分"
                         defaultValue={editMode ? toeflScore.listening : ""}
                       />
                     </div>
@@ -474,9 +490,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">口语</label>
                       <input 
                         name="speaking"
-                        type="number" 
-                        className="w-full p-2 border rounded-md" 
-                        max="30" 
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="最高30分"
                         defaultValue={editMode ? toeflScore.speaking : ""}
                       />
                     </div>
@@ -484,9 +502,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">写作</label>
                       <input 
                         name="writing"
-                        type="number" 
-                        className="w-full p-2 border rounded-md" 
-                        max="30" 
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="最高30分"
                         defaultValue={editMode ? toeflScore.writing : ""}
                       />
                     </div>
@@ -499,10 +519,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">听力</label>
                       <input 
                         name="listening"
-                        type="number" 
-                        step="0.5" 
-                        className="w-full p-2 border rounded-md" 
-                        max="9" 
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="例如: 7.5"
                         defaultValue={editMode ? ieltsScore.listening : ""}
                       />
                     </div>
@@ -510,10 +531,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">阅读</label>
                       <input 
                         name="reading"
-                        type="number" 
-                        step="0.5" 
-                        className="w-full p-2 border rounded-md" 
-                        max="9" 
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="例如: 7.5"
                         defaultValue={editMode ? ieltsScore.reading : ""}
                       />
                     </div>
@@ -521,10 +543,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">写作</label>
                       <input 
                         name="writing"
-                        type="number" 
-                        step="0.5" 
-                        className="w-full p-2 border rounded-md" 
-                        max="9" 
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="例如: 7.5"
                         defaultValue={editMode ? ieltsScore.writing : ""}
                       />
                     </div>
@@ -532,10 +555,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">口语</label>
                       <input 
                         name="speaking"
-                        type="number" 
-                        step="0.5" 
-                        className="w-full p-2 border rounded-md" 
-                        max="9" 
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="例如: 7.5"
                         defaultValue={editMode ? ieltsScore.speaking : ""}
                       />
                     </div>
@@ -548,9 +572,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">数学</label>
                       <input 
                         name="math"
-                        type="number" 
-                        className="w-full p-2 border rounded-md" 
-                        max="170" 
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="最高170分"
                         defaultValue={editMode ? greScore.math : ""}
                       />
                     </div>
@@ -558,9 +584,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">语文</label>
                       <input 
                         name="verbal"
-                        type="number" 
-                        className="w-full p-2 border rounded-md" 
-                        max="170" 
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="最高170分"
                         defaultValue={editMode ? greScore.verbal : ""}
                       />
                     </div>
@@ -568,10 +596,11 @@ export default function Profile() {
                       <label className="block text-sm font-medium mb-1">写作</label>
                       <input 
                         name="writing"
-                        type="number" 
-                        step="0.5" 
-                        className="w-full p-2 border rounded-md" 
-                        max="6" 
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="例如: 4.5"
                         defaultValue={editMode ? greScore.writing : ""}
                       />
                     </div>
@@ -605,9 +634,8 @@ export default function Profile() {
                   <input 
                     name="title"
                     type="text" 
-                    className="w-full p-2 border rounded-md" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingAward?.title || ""}
-                    required 
                   />
                 </div>
                 
@@ -616,9 +644,8 @@ export default function Profile() {
                   <input 
                     name="organization"
                     type="text" 
-                    className="w-full p-2 border rounded-md" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingAward?.organization || ""}
-                    required 
                   />
                 </div>
                 
@@ -626,9 +653,8 @@ export default function Profile() {
                   <label className="block text-sm font-medium mb-1">级别</label>
                   <select 
                     name="level"
-                    className="w-full p-2 border rounded-md" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingAward?.level || ""}
-                    required
                   >
                     <option value="">请选择级别</option>
                     <option value="国家级">国家级</option>
@@ -640,14 +666,13 @@ export default function Profile() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">获奖日期</label>
+                  <label className="block text-sm font-medium mb-1">获奖日期 (选填)</label>
                   <input 
                     name="date"
                     type="text" 
                     placeholder="例如：2024年6月"
-                    className="w-full p-2 border rounded-md" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingAward?.date || ""}
-                    required 
                   />
                 </div>
                 
@@ -661,12 +686,12 @@ export default function Profile() {
         </div>
       )}
       
-      {/* 实习经历表单 */}
+      {/* 工作经历表单 */}
       {showInternshipForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 mx-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">{editingInternship ? "编辑实习经历" : "添加实习经历"}</h3>
+              <h3 className="text-lg font-semibold">{editingInternship ? "编辑工作经历" : "添加工作经历"}</h3>
               <Button variant="ghost" size="icon" onClick={handleCancelInternship} className="h-8 w-8">
                 <X className="h-4 w-4" />
               </Button>
@@ -674,47 +699,50 @@ export default function Profile() {
             <form ref={internshipFormRef} onSubmit={handleInternshipSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">职位名称</label>
+                  <label className="block text-sm font-medium mb-1">职位名称 *</label>
                   <input 
                     name="title"
                     type="text" 
-                    className="w-full p-2 border rounded-md" 
+                    required
+                    placeholder="例如：教学助理实习生"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingInternship?.title || ""}
-                    required 
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">公司/组织</label>
+                  <label className="block text-sm font-medium mb-1">公司/组织 *</label>
                   <input 
                     name="company"
                     type="text" 
-                    className="w-full p-2 border rounded-md" 
+                    required
+                    placeholder="例如：新东方教育科技集团"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingInternship?.company || ""}
-                    required 
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">实习时间</label>
+                  <label className="block text-sm font-medium mb-1">工作时间 (选填)</label>
                   <input 
                     name="period"
                     type="text" 
                     placeholder="例如：2024年7月 - 2024年8月"
-                    className="w-full p-2 border rounded-md" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingInternship?.period || ""}
-                    required 
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">工作描述</label>
-                  <textarea 
-                    name="description"
-                    className="w-full p-2 border rounded-md h-24" 
-                    defaultValue={editingInternship?.description || ""}
-                    required 
-                  />
+                  <label className="block text-sm font-medium mb-1">工作描述 *</label>
+                                      <textarea 
+                      name="description"
+                      required
+                      rows={4}
+                      placeholder="请简要描述您的工作内容和收获"
+                      className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                      defaultValue={editingInternship?.description || ""}
+                    />
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-4">
@@ -738,7 +766,7 @@ export default function Profile() {
               <h3 className="text-lg font-semibold">确认删除</h3>
               <p className="text-muted-foreground mt-2">
                 {deleteItemType === "award" ? "您确定要删除这条获奖记录吗？" : 
-                 deleteItemType === "internship" ? "您确定要删除这条实习经历吗？" :
+                 deleteItemType === "internship" ? "您确定要删除这条工作经历吗？" :
                  deleteItemType === "score" && deleteScoreType === "toefl" ? "您确定要删除托福成绩吗？" :
                  deleteItemType === "score" && deleteScoreType === "ielts" ? "您确定要删除雅思成绩吗？" :
                  deleteItemType === "score" && deleteScoreType === "gre" ? "您确定要删除GRE成绩吗？" : 
@@ -781,18 +809,18 @@ export default function Profile() {
                   当前栏暂无信息
                 </div>
               ) : (
-                <div className={`space-y-4 ${awards.length > 3 ? "max-h-[400px] overflow-y-auto pr-2" : ""}`}>
+                <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 ${awards.length > 4 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
                   {awards.map((award, index) => (
                     <div key={index} className="flex items-center gap-4 p-4 border rounded-lg group hover:bg-gray-50">
                       <div className={`w-12 h-12 ${colorPairs[award.colorIndex].bg} rounded-full flex items-center justify-center`}>
                         <Award className={`h-6 w-6 ${colorPairs[award.colorIndex].text}`} />
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold">{award.title}</h4>
+                        <h4 className="font-semibold text-base">{award.title}</h4>
                         <p className="text-sm text-muted-foreground">{award.organization} • {award.level}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{award.date ? award.date : "——"}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">{award.date}</span>
                         <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                           <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditAward(award)}>
                             <Edit className="h-3 w-3" />
@@ -815,11 +843,11 @@ export default function Profile() {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5" />
-                实习经历
+                工作经历
               </div>
               <Button size="sm" className="flex items-center gap-2" onClick={handleAddInternship}>
                 <Plus className="h-4 w-4" />
-                添加实习
+                添加工作
               </Button>
             </CardTitle>
             <CardDescription>您的实习和工作经历</CardDescription>
@@ -831,26 +859,28 @@ export default function Profile() {
                   当前栏暂无信息
                 </div>
               ) : (
-                <div className={`space-y-4 ${internships.length > 3 ? "max-h-[400px] overflow-y-auto pr-2" : ""}`}>
+                <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 ${internships.length > 4 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
                   {internships.map((internship, index) => (
-                    <div key={index} className="flex items-start gap-4 p-4 border rounded-lg group hover:bg-gray-50">
-                      <div className={`w-12 h-12 ${colorPairs[internship.colorIndex].bg} rounded-full flex items-center justify-center`}>
-                        <Briefcase className={`h-6 w-6 ${colorPairs[internship.colorIndex].text}`} />
+                    <div key={index} className="flex flex-col p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className="flex items-start gap-4 mb-2">
+                        <div className={`w-12 h-12 ${colorPairs[internship.colorIndex].bg} rounded-full flex items-center justify-center`}>
+                          <Briefcase className={`h-6 w-6 ${colorPairs[internship.colorIndex].text}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base">{internship.title}</h4>
+                          <p className="text-sm text-muted-foreground mb-1">{internship.company}</p>
+                          <p className="text-xs text-muted-foreground">{internship.period ? internship.period : "——"}</p>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditInternship(internship)}>
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("internship", index)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{internship.title}</h4>
-                        <p className="text-sm text-muted-foreground mb-1">{internship.company}</p>
-                        <p className="text-xs text-muted-foreground">{internship.period}</p>
-                        <p className="text-sm mt-2">{internship.description}</p>
-                      </div>
-                      <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                        <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditInternship(internship)}>
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("internship", index)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      <p className="text-sm mt-2 pl-16">{internship.description}</p>
                     </div>
                   ))}
                 </div>
