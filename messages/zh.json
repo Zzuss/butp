@@ -1,0 +1,70 @@
+{
+  "login": {
+    "title": "Build Your Toolbox",
+    "subtitle": "BuTP",
+    "description": "请选择您的学生账号登录系统",
+    "selectStudent": "选择学生账号",
+    "selectPlaceholder": "请选择学生...",
+    "loginButton": "登录系统",
+    "loggingIn": "登录中...",
+    "demoSystem": "演示系统 • 仅供学习使用"
+  },
+  "sidebar": {
+    "profile": "我的信息",
+    "dashboard": "数据总览",
+    "roleModels": "Role Model",
+    "analysis": "分析模块",
+    "charts": "图表测试",
+    "logout": "退出登录"
+  },
+  "dashboard": {
+    "title": "数据总览",
+    "description": "查看 {name} 的学习数据和表现统计",
+    "averageScore": "平均分数",
+    "overallAverage": "总体平均成绩",
+    "passRate": "通过率",
+    "coursePassRate": "课程通过率",
+    "completedCourses": "已修课程",
+    "totalCourses": "总课程数量",
+    "gpa": "GPA",
+    "creditPoints": "学分绩点",
+    "subjectGrades": "各科成绩",
+    "recentGrades": "最近课程成绩分布",
+    "viewMore": "查看更多",
+    "level": "等级",
+    "courseStatistics": "课程统计",
+    "coursePassStatus": "课程通过情况",
+    "passed": "通过",
+    "notPassed": "未通过",
+    "semesterTrends": "学期成绩趋势",
+    "semesterAverageScores": "各学期平均成绩变化趋势",
+    "courses": "门课程",
+    "courseTypeDistribution": "课程类型分布",
+    "differentTypesPerformance": "不同类型课程的成绩表现",
+    "average": "平均分",
+    "todoList": "打卡清单",
+    "addTodo": "添加任务",
+    "addTodoPlaceholder": "添加新任务...",
+    "noTodos": "暂无任务，添加您的第一个任务！",
+    "completedTasks": "已完成任务",
+    "markComplete": "完成",
+    "delete": "删除"
+  },
+  "profile": {
+    "title": "我的信息",
+    "description": "查看和管理您的个人信息",
+    "basicInfo": "基本信息",
+    "studentId": "学号",
+    "name": "姓名",
+    "class": "班级",
+    "major": "专业",
+    "awards": "获奖记录",
+    "noAwards": "暂无获奖记录",
+    "workExperience": "工作经历",
+    "noWorkExperience": "暂无工作经历"
+  },
+  "analysis": {
+    "title": "分析模块",
+    "description": "深入分析您的学习表现，提供个性化改进建议"
+  }
+} 

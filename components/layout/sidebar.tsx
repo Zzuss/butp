@@ -19,34 +19,7 @@ import {
 import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
-
-const sidebarItems = [
-  {
-    title: "我的信息",
-    href: "/profile",
-    icon: User,
-  },
-  {
-    title: "数据总览",
-    href: "/dashboard",
-    icon: BarChart3,
-  },
-  {
-    title: "Role Model",
-    href: "/role-models",
-    icon: Users,
-  },
-  {
-    title: "分析模块",
-    href: "/analysis",
-    icon: TrendingUp,
-  },
-  {
-    title: "图表测试",
-    href: "/charts",
-    icon: PieChart,
-  },
-]
+import { useTranslations } from 'next-intl'
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -54,6 +27,36 @@ export function AppSidebar() {
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const t = useTranslations('sidebar')
+
+  // 定义侧边栏项目
+  const sidebarItems = [
+    {
+      title: t('profile'),
+      href: "/profile",
+      icon: User,
+    },
+    {
+      title: t('dashboard'),
+      href: "/dashboard",
+      icon: BarChart3,
+    },
+    {
+      title: t('roleModels'),
+      href: "/role-models",
+      icon: Users,
+    },
+    {
+      title: t('analysis'),
+      href: "/analysis",
+      icon: TrendingUp,
+    },
+    {
+      title: t('charts'),
+      href: "/charts",
+      icon: PieChart,
+    },
+  ]
 
   // 检测是否为移动设备
   useEffect(() => {
@@ -170,7 +173,7 @@ export function AppSidebar() {
                   className="w-full flex items-center gap-2"
                 >
                   <LogOut className="h-4 w-4" />
-                  退出登录
+                  {t('logout')}
                 </Button>
               </>
             ) : (
@@ -182,7 +185,7 @@ export function AppSidebar() {
                   variant="outline" 
                   size="icon"
                   onClick={logout}
-                  title="退出登录"
+                  title={t('logout')}
                   className="w-8 h-8"
                 >
                   <LogOut className="h-4 w-4" />

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getDashboardStats, getSubjectGrades, getProgressData, getCourseCategories } from "@/lib/dashboard-data"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { useTranslations } from 'next-intl'
+import { TodoList } from '@/components/ui/todo-list'
 import Link from 'next/link'
 
 interface DashboardData {
@@ -17,6 +19,7 @@ export default function Dashboard() {
   const { currentStudent } = useSimpleAuth()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(false)
+  const t = useTranslations('dashboard')
 
   useEffect(() => {
     if (currentStudent) {
@@ -46,8 +49,8 @@ export default function Dashboard() {
     return (
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">数据总览</h1>
-          <p className="text-muted-foreground">请先登录查看学习数据</p>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description', { name: '' })}</p>
         </div>
       </div>
     )
@@ -57,8 +60,8 @@ export default function Dashboard() {
     return (
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">数据总览</h1>
-          <p className="text-muted-foreground">正在加载 {currentStudent.name} 的数据...</p>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description', { name: currentStudent.name })}</p>
         </div>
         <div className="mt-6 flex items-center justify-center h-32">
           <div className="text-muted-foreground">数据加载中...</div>
@@ -74,59 +77,61 @@ export default function Dashboard() {
     : 0
 
   const attendanceData = [
-    { name: '通过', value: attendanceRate, color: '#10b981' },
-    { name: '未通过', value: 100 - attendanceRate, color: '#ef4444' },
+    { name: t('passed'), value: attendanceRate, color: '#10b981' },
+    { name: t('notPassed'), value: 100 - attendanceRate, color: '#ef4444' },
   ];
   
   return (
     <div className="p-2 sm:p-4 md:p-6">
       <div className="mb-4 md:mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold">数据总览</h1>
-        <p className="text-sm md:text-base text-muted-foreground">查看 {currentStudent.name} 的学习数据和表现统计</p>
+        <h1 className="text-2xl md:text-3xl font-bold">{t('title')}</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
+          {t('description', { name: currentStudent.name })}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-4 mb-4 md:mb-6 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">平均分数</CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">{t('averageScore')}</CardTitle>
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-2">
             <div className="text-xl md:text-2xl font-bold">{stats.averageGrade}</div>
             <p className="text-xs text-muted-foreground">
-              总体平均成绩
+              {t('overallAverage')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">通过率</CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">{t('passRate')}</CardTitle>
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-2">
             <div className="text-xl md:text-2xl font-bold">{attendanceRate}%</div>
             <p className="text-xs text-muted-foreground">
-              课程通过率
+              {t('coursePassRate')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">已修课程</CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">{t('completedCourses')}</CardTitle>
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-2">
             <div className="text-xl md:text-2xl font-bold">{stats.totalCourses}</div>
             <p className="text-xs text-muted-foreground">
-              总课程数量
+              {t('totalCourses')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">GPA</CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">{t('gpa')}</CardTitle>
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-2">
             <div className="text-xl md:text-2xl font-bold">{stats.gpaPoints}</div>
             <p className="text-xs text-muted-foreground">
-              学分绩点
+              {t('creditPoints')}
             </p>
           </CardContent>
         </Card>
@@ -136,14 +141,14 @@ export default function Dashboard() {
         <Card className="col-span-full md:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between px-3 md:px-6 py-3 md:py-4">
             <div>
-              <CardTitle className="text-base md:text-lg">各科成绩</CardTitle>
-              <CardDescription className="text-xs md:text-sm">最近课程成绩分布</CardDescription>
+              <CardTitle className="text-base md:text-lg">{t('subjectGrades')}</CardTitle>
+              <CardDescription className="text-xs md:text-sm">{t('recentGrades')}</CardDescription>
             </div>
             <Link 
               href="/grades" 
               className="px-2 py-1 md:px-3 md:py-1.5 bg-blue-600 text-white text-xs md:text-sm rounded-md hover:bg-blue-700 transition-colors"
             >
-              查看更多
+              {t('viewMore')}
             </Link>
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-3 md:py-4">
@@ -152,7 +157,7 @@ export default function Dashboard() {
                 <div key={item.subject} className="flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="text-xs md:text-sm font-medium">{item.subject}</span>
-                    <span className="text-xs text-muted-foreground">等级: {item.grade}</span>
+                    <span className="text-xs text-muted-foreground">{t('level')}: {item.grade}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-20 md:w-32 bg-gray-200 rounded-full h-2">
@@ -175,8 +180,8 @@ export default function Dashboard() {
 
         <Card className="col-span-full md:col-span-1">
           <CardHeader className="px-3 md:px-6 py-3 md:py-4">
-            <CardTitle className="text-base md:text-lg">课程统计</CardTitle>
-            <CardDescription className="text-xs md:text-sm">课程通过情况</CardDescription>
+            <CardTitle className="text-base md:text-lg">{t('courseStatistics')}</CardTitle>
+            <CardDescription className="text-xs md:text-sm">{t('coursePassStatus')}</CardDescription>
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-3 md:py-4">
             <div className="space-y-3 md:space-y-4">
@@ -194,21 +199,25 @@ export default function Dashboard() {
               ))}
               <div className="mt-4 md:mt-6 text-center">
                 <div className="text-2xl md:text-3xl font-bold text-green-600">{attendanceRate}%</div>
-                <div className="text-xs md:text-sm text-muted-foreground">课程通过率</div>
+                <div className="text-xs md:text-sm text-muted-foreground">{t('coursePassRate')}</div>
               </div>
               <div className="mt-3 md:mt-4 text-center">
                 <div className="text-xs md:text-sm text-muted-foreground">
-                  已通过 {stats.completedCourses} / 总共 {stats.totalCourses} 门课程
+                  {t('passed')} {stats.completedCourses} / {t('totalCourses')} {stats.totalCourses} {t('courses')}
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        <div className="col-span-full md:col-span-2">
+          <TodoList />
+        </div>
+
         <Card className="col-span-full">
           <CardHeader className="px-3 md:px-6 py-3 md:py-4">
-            <CardTitle className="text-base md:text-lg">学期成绩趋势</CardTitle>
-            <CardDescription className="text-xs md:text-sm">各学期平均成绩变化趋势</CardDescription>
+            <CardTitle className="text-base md:text-lg">{t('semesterTrends')}</CardTitle>
+            <CardDescription className="text-xs md:text-sm">{t('semesterAverageScores')}</CardDescription>
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-3 md:py-4">
             <div className="space-y-3">
@@ -216,7 +225,7 @@ export default function Dashboard() {
                 <div key={item.semester} className="flex items-center justify-between p-2 md:p-3 border rounded-lg">
                   <div className="flex flex-col">
                     <span className="text-xs md:text-sm font-medium">{item.semester}</span>
-                    <span className="text-xs text-muted-foreground">{item.totalCourses} 门课程</span>
+                    <span className="text-xs text-muted-foreground">{item.totalCourses} {t('courses')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-16 md:w-24 bg-gray-200 rounded-full h-2">
@@ -248,8 +257,8 @@ export default function Dashboard() {
 
         <Card className="col-span-full">
           <CardHeader className="px-3 md:px-6 py-3 md:py-4">
-            <CardTitle className="text-base md:text-lg">课程类型分布</CardTitle>
-            <CardDescription className="text-xs md:text-sm">不同类型课程的成绩表现</CardDescription>
+            <CardTitle className="text-base md:text-lg">{t('courseTypeDistribution')}</CardTitle>
+            <CardDescription className="text-xs md:text-sm">{t('differentTypesPerformance')}</CardDescription>
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-3 md:py-4">
             <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
@@ -257,10 +266,10 @@ export default function Dashboard() {
                 <div key={category.category} className="p-3 md:p-4 border rounded-lg">
                   <div className="flex items-center justify-between mb-1 md:mb-2">
                     <h4 className="text-xs md:text-sm font-medium">{category.category}</h4>
-                    <span className="text-xs md:text-sm text-muted-foreground">{category.count} 门</span>
+                    <span className="text-xs md:text-sm text-muted-foreground">{category.count} {t('courses')}</span>
                   </div>
                   <div className="text-xl md:text-2xl font-bold text-blue-600">{category.averageGrade}</div>
-                  <div className="text-xs md:text-sm text-muted-foreground">平均分</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">{t('average')}</div>
                 </div>
               )) : (
                 <div className="col-span-full text-center text-muted-foreground py-6 md:py-8">

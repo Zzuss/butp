@@ -1,0 +1,70 @@
+{
+  "login": {
+    "title": "Build Your Toolbox",
+    "subtitle": "BuTP",
+    "description": "Please select your student account to login",
+    "selectStudent": "Select student account",
+    "selectPlaceholder": "Please select student...",
+    "loginButton": "Login",
+    "loggingIn": "Logging in...",
+    "demoSystem": "Demo System • For learning purposes only"
+  },
+  "sidebar": {
+    "profile": "My Profile",
+    "dashboard": "Dashboard",
+    "roleModels": "Role Models",
+    "analysis": "Analysis",
+    "charts": "Charts",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "View {name}'s learning data and performance statistics",
+    "averageScore": "Average Score",
+    "overallAverage": "Overall average score",
+    "passRate": "Pass Rate",
+    "coursePassRate": "Course pass rate",
+    "completedCourses": "Completed Courses",
+    "totalCourses": "Total courses",
+    "gpa": "GPA",
+    "creditPoints": "Credit points",
+    "subjectGrades": "Subject Grades",
+    "recentGrades": "Recent course grade distribution",
+    "viewMore": "View More",
+    "level": "Level",
+    "courseStatistics": "Course Statistics",
+    "coursePassStatus": "Course pass status",
+    "passed": "Passed",
+    "notPassed": "Not Passed",
+    "semesterTrends": "Semester Trends",
+    "semesterAverageScores": "Semester average score trends",
+    "courses": "courses",
+    "courseTypeDistribution": "Course Type Distribution",
+    "differentTypesPerformance": "Performance in different course types",
+    "average": "Average",
+    "todoList": "Todo List",
+    "addTodo": "Add Todo",
+    "addTodoPlaceholder": "Add a new task...",
+    "noTodos": "No tasks yet. Add your first task!",
+    "completedTasks": "Completed Tasks",
+    "markComplete": "Complete",
+    "delete": "Delete"
+  },
+  "profile": {
+    "title": "My Profile",
+    "description": "View and manage your personal information",
+    "basicInfo": "Basic Information",
+    "studentId": "Student ID",
+    "name": "Name",
+    "class": "Class",
+    "major": "Major",
+    "awards": "Awards",
+    "noAwards": "No awards yet",
+    "workExperience": "Work Experience",
+    "noWorkExperience": "No work experience yet"
+  },
+  "analysis": {
+    "title": "Analysis",
+    "description": "In-depth analysis of your learning performance with personalized improvement suggestions"
+  }
+} 
