@@ -1,17 +1,17 @@
 import createMiddleware from 'next-intl/middleware';
 
+// 支持的语言列表
+export const locales = ['en', 'zh'];
+
 export default createMiddleware({
   // 支持的语言列表
-  locales: ['en', 'zh'],
+  locales: locales,
   
   // 默认语言
   defaultLocale: 'zh',
   
-  // 不需要本地化的路径
-  localePrefix: 'never',
-  
-  // 使用cookie保存语言选择
-  localeDetection: true
+  // 使用路径前缀进行本地化
+  localePrefix: 'as-needed'
 });
 
 export const config = {
