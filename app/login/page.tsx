@@ -5,18 +5,14 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { GraduationCap, Globe } from "lucide-react"
+import { GraduationCap } from "lucide-react"
 import { useSimpleAuth, students } from "@/contexts/simple-auth-context"
-import { useLanguage } from "@/contexts/language-context"
-import { useTranslations } from 'next-intl'
 
 export default function LoginPage() {
   const [selectedStudentId, setSelectedStudentId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useSimpleAuth()
   const router = useRouter()
-  const { locale, changeLanguage } = useLanguage()
-  const t = useTranslations('login')
 
   const handleLogin = async () => {
     if (!selectedStudentId) {
@@ -42,12 +38,6 @@ export default function LoginPage() {
     setIsLoading(false)
   }
 
-  // 切换语言
-  const toggleLanguage = () => {
-    const newLocale = locale === 'zh' ? 'en' : 'zh'
-    changeLanguage(newLocale)
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md">
@@ -58,19 +48,21 @@ export default function LoginPage() {
             </div>
           </div>
           <div>
-            <CardTitle className="text-2xl">{t('title')}</CardTitle>
-            <CardTitle className="text-xl">{t('subtitle')}</CardTitle>
+            <CardTitle className="text-2xl">
+              <div>Build Your Toolbox</div>
+              <div>BuTP</div>
+            </CardTitle>
             <CardDescription>
-              {t('description')}
+              请选择您的学生账号登录系统
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('selectStudent')}</label>
+            <label className="text-sm font-medium">选择学生账号</label>
             <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
               <SelectTrigger>
-                <SelectValue placeholder={t('selectPlaceholder')} />
+                <SelectValue placeholder="请选择学生..." />
               </SelectTrigger>
               <SelectContent>
                 {students.map((student) => (
@@ -92,22 +84,11 @@ export default function LoginPage() {
             disabled={!selectedStudentId || isLoading}
             className="w-full"
           >
-            {isLoading ? t('loggingIn') : t('loginButton')}
+            {isLoading ? "登录中..." : "登录系统"}
           </Button>
           
-          <div className="flex justify-between items-center">
-            <div className="text-center text-xs text-muted-foreground">
-              <p>{t('demoSystem')}</p>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={toggleLanguage} 
-              className="flex items-center gap-1"
-            >
-              <Globe className="h-4 w-4" />
-              {locale === 'zh' ? 'English' : '中文'}
-            </Button>
+          <div className="text-center text-xs text-muted-foreground">
+            <p>演示系统 • 仅供学习使用</p>
           </div>
         </CardContent>
       </Card>

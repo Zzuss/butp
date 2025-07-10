@@ -1,6 +1,9 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, TrendingDown, Target, Brain, BookOpen, Users } from "lucide-react"
+import { TrendingUp, TrendingDown, Target, Brain, BookOpen, Users, Check, Plus, X } from "lucide-react"
 
 const subjectAnalysis = [
   { subject: '数学', current: 95, target: 98, gap: 3 },
@@ -18,16 +21,6 @@ const abilityRadar = [
   { ability: '应用能力', score: 88 },
   { ability: '创新思维', score: 75 },
   { ability: '表达能力', score: 82 },
-];
-
-const studyTimeAnalysis = [
-  { day: '周一', planned: 8, actual: 7.5 },
-  { day: '周二', planned: 8, actual: 8.2 },
-  { day: '周三', planned: 8, actual: 7.8 },
-  { day: '周四', planned: 8, actual: 8.5 },
-  { day: '周五', planned: 8, actual: 7.2 },
-  { day: '周六', planned: 10, actual: 9.8 },
-  { day: '周日', planned: 10, actual: 10.2 },
 ];
 
 const improvementSuggestions = [
@@ -83,7 +76,50 @@ function Badge({ children, variant = "secondary" }: { children: React.ReactNode,
   )
 }
 
+// 打卡清单类型定义
+type ChecklistItem = {
+  id: string;
+  text: string;
+  completed: boolean;
+  timestamp: Date;
+};
+
 export default function Analysis() {
+  // 打卡清单状态
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([
+    { id: '1', text: '完成数学作业', completed: false, timestamp: new Date() },
+    { id: '2', text: '阅读英语文章', completed: false, timestamp: new Date() },
+    { id: '3', text: '复习物理笔记', completed: true, timestamp: new Date() },
+  ]);
+  const [newItemText, setNewItemText] = useState('');
+
+  // 添加新事项
+  const addItem = () => {
+    if (newItemText.trim() === '') return;
+    
+    const newItem: ChecklistItem = {
+      id: Date.now().toString(),
+      text: newItemText,
+      completed: false,
+      timestamp: new Date()
+    };
+    
+    setChecklist([...checklist, newItem]);
+    setNewItemText('');
+  };
+
+  // 切换完成状态
+  const toggleComplete = (id: string) => {
+    setChecklist(checklist.map(item => 
+      item.id === id ? { ...item, completed: !item.completed } : item
+    ));
+  };
+
+  // 删除事项
+  const removeItem = (id: string) => {
+    setChecklist(checklist.filter(item => item.id !== id));
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -217,40 +253,64 @@ export default function Analysis() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>学习时间分析</CardTitle>
-            <CardDescription>计划与实际学习时间对比</CardDescription>
+            <CardTitle>打卡清单</CardTitle>
+            <CardDescription>记录并完成您的日常任务</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {studyTimeAnalysis.map((item) => (
-                <div key={item.day} className="flex items-center justify-between p-3 border rounded-lg">
-                  <span className="font-medium">{item.day}</span>
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">计划: </span>
-                      <span className="font-semibold">{item.planned}h</span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">实际: </span>
-                      <span className={`font-semibold ${
-                        item.actual >= item.planned ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {item.actual}h
+            <div className="space-y-4">
+              {/* 添加新事项 */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newItemText}
+                  onChange={(e) => setNewItemText(e.target.value)}
+                  placeholder="添加新事项..."
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  onKeyDown={(e) => e.key === 'Enter' && addItem()}
+                />
+                <Button size="sm" onClick={addItem} className="shrink-0">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* 事项列表 */}
+              <div className="space-y-2">
+                {checklist.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className={`flex items-center justify-between p-3 border rounded-lg transition-all ${
+                      item.completed ? 'bg-green-50 border-green-200' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <button 
+                        onClick={() => toggleComplete(item.id)}
+                        className={`flex-shrink-0 h-5 w-5 rounded border flex items-center justify-center ${
+                          item.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                        }`}
+                      >
+                        {item.completed && <Check className="h-3 w-3 text-white" />}
+                      </button>
+                      <span className={`flex-1 truncate ${item.completed ? 'line-through text-muted-foreground' : ''}`}>
+                        {item.text}
                       </span>
                     </div>
-                    <div className={`text-xs px-2 py-1 rounded ${
-                      item.actual >= item.planned 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {item.actual >= item.planned ? '达标' : '未达标'}
-                    </div>
+                    <button 
+                      onClick={() => removeItem(item.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              
+              {/* 完成率统计 */}
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                 <div className="text-sm font-medium text-blue-800">
-                  本周完成率: {Math.round((studyTimeAnalysis.reduce((acc, item) => acc + item.actual, 0) / studyTimeAnalysis.reduce((acc, item) => acc + item.planned, 0)) * 100)}%
+                  完成率: {checklist.length > 0 
+                    ? Math.round((checklist.filter(item => item.completed).length / checklist.length) * 100)
+                    : 0}%
                 </div>
               </div>
             </div>

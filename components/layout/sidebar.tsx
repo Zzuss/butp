@@ -14,12 +14,45 @@ import {
   Menu,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Info
 } from "lucide-react"
 import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
-import { useTranslations } from 'next-intl'
+
+const sidebarItems = [
+  {
+    title: "我的信息",
+    href: "/profile",
+    icon: User,
+  },
+  {
+    title: "数据总览",
+    href: "/dashboard",
+    icon: BarChart3,
+  },
+  {
+    title: "Role Model",
+    href: "/role-models",
+    icon: Users,
+  },
+  {
+    title: "分析模块",
+    href: "/analysis",
+    icon: TrendingUp,
+  },
+  {
+    title: "图表测试",
+    href: "/charts",
+    icon: PieChart,
+  },
+  {
+    title: "关于BuTP",
+    href: "/about",
+    icon: Info,
+  },
+]
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -27,36 +60,6 @@ export function AppSidebar() {
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const t = useTranslations('sidebar')
-
-  // 定义侧边栏项目
-  const sidebarItems = [
-    {
-      title: t('profile'),
-      href: "/profile",
-      icon: User,
-    },
-    {
-      title: t('dashboard'),
-      href: "/dashboard",
-      icon: BarChart3,
-    },
-    {
-      title: t('roleModels'),
-      href: "/role-models",
-      icon: Users,
-    },
-    {
-      title: t('analysis'),
-      href: "/analysis",
-      icon: TrendingUp,
-    },
-    {
-      title: t('charts'),
-      href: "/charts",
-      icon: PieChart,
-    },
-  ]
 
   // 检测是否为移动设备
   useEffect(() => {
@@ -115,9 +118,9 @@ export function AppSidebar() {
       >
         <SidebarHeader className="relative">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'}`}>
-            <GraduationCap className="h-6 w-6" />
+          <GraduationCap className="h-6 w-6" />
             {!isCollapsed && <span className="font-semibold text-lg">BuTP</span>}
-          </div>
+        </div>
           
           {/* 收起/展开按钮 - 仅在非移动设备上显示 */}
           {!isMobile && (
@@ -132,49 +135,49 @@ export function AppSidebar() {
               )}
             </button>
           )}
-        </SidebarHeader>
-        <SidebarContent className="flex-1">
-          <nav className="space-y-2">
-            {sidebarItems.map((item) => (
+      </SidebarHeader>
+      <SidebarContent className="flex-1">
+        <nav className="space-y-2">
+          {sidebarItems.map((item) => (
               <Link key={item.href} href={item.href} onClick={() => isMobile && setIsOpen(false)}>
-                <SidebarItem
-                  active={pathname === item.href}
+              <SidebarItem
+                active={pathname === item.href}
                   className={`w-full ${isCollapsed ? 'justify-center px-2' : 'justify-start'}`}
                   title={isCollapsed ? item.title : undefined}
-                >
-                  <item.icon className="h-4 w-4" />
+              >
+                <item.icon className="h-4 w-4" />
                   {!isCollapsed && <span>{item.title}</span>}
-                </SidebarItem>
-              </Link>
-            ))}
-          </nav>
-        </SidebarContent>
-        
-        {/* 用户信息和登出按钮 */}
-        {currentStudent && (
+              </SidebarItem>
+            </Link>
+          ))}
+        </nav>
+      </SidebarContent>
+      
+      {/* 用户信息和登出按钮 */}
+      {currentStudent && (
           <div className={`border-t border-border mt-auto ${isCollapsed ? 'p-2' : 'p-4'}`}>
             {!isCollapsed ? (
               <>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{currentStudent.name}</p>
-                    <p className="text-xs text-muted-foreground">{currentStudent.id}</p>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={logout}
-                  className="w-full flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  {t('logout')}
-                </Button>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-primary-foreground" />
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{currentStudent.name}</p>
+              <p className="text-xs text-muted-foreground">{currentStudent.id}</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={logout}
+            className="w-full flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            退出登录
+          </Button>
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">
@@ -185,16 +188,16 @@ export function AppSidebar() {
                   variant="outline" 
                   size="icon"
                   onClick={logout}
-                  title={t('logout')}
+                  title="退出登录"
                   className="w-8 h-8"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>
             )}
-          </div>
-        )}
-      </Sidebar>
+        </div>
+      )}
+    </Sidebar>
       
       {/* 移动设备上的遮罩层，点击时关闭侧边栏 */}
       {isMobile && isOpen && (

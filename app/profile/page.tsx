@@ -703,7 +703,7 @@ export default function Profile() {
                   <input 
                     name="title"
                     type="text" 
-                    required
+                    required 
                     placeholder="例如：教学助理实习生"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingInternship?.title || ""}
@@ -715,7 +715,7 @@ export default function Profile() {
                   <input 
                     name="company"
                     type="text" 
-                    required
+                    required 
                     placeholder="例如：新东方教育科技集团"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingInternship?.company || ""}
@@ -735,14 +735,14 @@ export default function Profile() {
                 
                 <div>
                   <label className="block text-sm font-medium mb-1">工作描述 *</label>
-                                      <textarea 
-                      name="description"
-                      required
+                  <textarea 
+                    name="description"
+                    required 
                       rows={4}
                       placeholder="请简要描述您的工作内容和收获"
                       className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                       defaultValue={editingInternship?.description || ""}
-                    />
+                  />
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-4">
@@ -863,22 +863,22 @@ export default function Profile() {
                   {internships.map((internship, index) => (
                     <div key={index} className="flex flex-col p-4 border rounded-lg group hover:bg-gray-50">
                       <div className="flex items-start gap-4 mb-2">
-                        <div className={`w-12 h-12 ${colorPairs[internship.colorIndex].bg} rounded-full flex items-center justify-center`}>
-                          <Briefcase className={`h-6 w-6 ${colorPairs[internship.colorIndex].text}`} />
-                        </div>
-                        <div className="flex-1">
+                      <div className={`w-12 h-12 ${colorPairs[internship.colorIndex].bg} rounded-full flex items-center justify-center`}>
+                        <Briefcase className={`h-6 w-6 ${colorPairs[internship.colorIndex].text}`} />
+                      </div>
+                      <div className="flex-1">
                           <h4 className="font-semibold text-base">{internship.title}</h4>
-                          <p className="text-sm text-muted-foreground mb-1">{internship.company}</p>
+                        <p className="text-sm text-muted-foreground mb-1">{internship.company}</p>
                           <p className="text-xs text-muted-foreground">{internship.period ? internship.period : "——"}</p>
-                        </div>
-                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditInternship(internship)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("internship", index)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditInternship(internship)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("internship", index)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                       </div>
                       <p className="text-sm mt-2 pl-16">{internship.description}</p>
                     </div>

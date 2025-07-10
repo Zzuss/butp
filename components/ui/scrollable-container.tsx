@@ -60,13 +60,13 @@ export function ScrollableContainer({ children }: ScrollableContainerProps) {
           </div>
         </div>
       ) : (
-        <div 
-          ref={scrollContainerRef}
-          className="flex overflow-x-auto gap-4 py-4 px-8 scrollbar-hide scroll-smooth"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {children}
-        </div>
+      <div 
+        ref={scrollContainerRef}
+        className="flex overflow-x-auto gap-4 py-4 px-8 scrollbar-hide scroll-smooth"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {children}
+      </div>
       )}
       
       <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10">
