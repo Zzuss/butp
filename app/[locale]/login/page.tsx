@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useSimpleAuth()
   const router = useRouter()
+  const params = useParams()
   const { locale, changeLanguage } = useLanguage()
   const t = useTranslations('login')
 
@@ -35,8 +36,11 @@ export default function LoginPage() {
       // 模拟登录延迟
       await new Promise(resolve => setTimeout(resolve, 1000))
       
+      // 获取当前语言
+      const currentLocale = params.locale || 'zh'
+      
       // 跳转到dashboard
-      router.push(`/${locale}/dashboard`)
+      router.push(`/${currentLocale}/dashboard`)
     }
     
     setIsLoading(false)
@@ -46,6 +50,17 @@ export default function LoginPage() {
   const toggleLanguage = () => {
     const newLocale = locale === 'zh' ? 'en' : 'zh'
     changeLanguage(newLocale)
+    
+    // 获取当前路径
+    const path = window.location.pathname
+    const pathParts = path.split('/')
+    
+    // 替换语言部分并重定向
+    if (pathParts.length >= 2) {
+      pathParts[1] = newLocale
+      const newPath = pathParts.join('/')
+      window.location.href = newPath
+    }
   }
 
   return (

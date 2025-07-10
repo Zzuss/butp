@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { setCookie } from 'cookies-next';
 
@@ -16,6 +16,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const currentLocale = useLocale();
   const [locale, setLocale] = useState(currentLocale);
   const router = useRouter();
+  const params = useParams();
 
   // 切换语言
   const changeLanguage = (newLocale: string) => {
@@ -25,8 +26,24 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     // 更新状态
     setLocale(newLocale);
     
-    // 刷新页面以应用新语言
-    router.refresh();
+    // 获取当前路径并替换语言部分
+    try {
+      const path = window.location.pathname;
+      const pathParts = path.split('/');
+      
+      if (pathParts.length >= 2) {
+        // 替换语言部分
+        pathParts[1] = newLocale;
+        const newPath = pathParts.join('/');
+        
+        // 使用完整的URL，包括查询参数
+        const query = window.location.search;
+        window.location.href = `${newPath}${query}`;
+      }
+    } catch (error) {
+      // 如果上述方法失败，则简单地刷新页面
+      router.refresh();
+    }
   };
 
   return (
