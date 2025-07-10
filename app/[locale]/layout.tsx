@@ -26,7 +26,7 @@ export function generateStaticParams() {
   return locales.map(locale => ({ locale }));
 }
 
-export default async function RootLayout({
+export default async function LocaleLayout({
   children,
   params: { locale }
 }: Readonly<{
@@ -47,23 +47,19 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang={locale} className="light">
-      <body className="antialiased">
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <LanguageProvider>
-            <SimpleAuthProvider>
-              <SimpleAuthGuard>
-                <div className="flex h-screen flex-col md:flex-row">
-                  <AppSidebar />
-                  <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-4">
-                    {children}
-                  </main>
-                </div>
-              </SimpleAuthGuard>
-            </SimpleAuthProvider>
-          </LanguageProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <LanguageProvider>
+        <SimpleAuthProvider>
+          <SimpleAuthGuard>
+            <div className="flex h-screen flex-col md:flex-row">
+              <AppSidebar />
+              <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-4">
+                {children}
+              </main>
+            </div>
+          </SimpleAuthGuard>
+        </SimpleAuthProvider>
+      </LanguageProvider>
+    </NextIntlClientProvider>
   );
 } 

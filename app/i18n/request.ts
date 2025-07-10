@@ -1,8 +1,8 @@
 import {getRequestConfig} from 'next-intl/server';
+import {locales} from '../i18n';
 
-// 支持的语言列表
-export const locales = ['en', 'zh'];
-export const defaultLocale = 'en';
+// 定义默认语言
+const defaultLocale = 'en';
 
 export default getRequestConfig(async ({locale}) => {
   // 验证locale是否被支持，如果不支持则使用默认语言
@@ -10,6 +10,6 @@ export default getRequestConfig(async ({locale}) => {
 
   return {
     locale: validLocale as string,
-    messages: (await import(`../messages/${validLocale}.json`)).default
+    messages: (await import(`../../messages/${validLocale}.json`)).default
   };
 }); 
