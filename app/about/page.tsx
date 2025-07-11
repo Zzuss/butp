@@ -1,6 +1,12 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Mail, Users, GraduationCap, BookOpen } from "lucide-react"
+import { Mail, Users, GraduationCap, BookOpen, Tag } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
+
+// 版本号常量 - 固定为1.0版本
+const VERSION = "1.0"
 
 // 团队成员数据
 const teachers = [
@@ -60,6 +66,8 @@ const students = [
 ];
 
 export default function AboutPage() {
+  const { t } = useLanguage()
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6">
       <div className="max-w-6xl mx-auto">
@@ -67,7 +75,15 @@ export default function AboutPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-blue-900 mb-4">关于 BuTP</h1>
           <p className="text-xl text-blue-700 mb-2">Build Your Toolbox Program</p>
-          <p className="text-blue-600">构建你的工具箱</p>
+          <p className="text-blue-600 mb-4">构建属于你的工具箱</p>
+          
+          {/* 版本号显示 */}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Tag className="h-5 w-5 text-blue-600" />
+            <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 px-3 py-1 text-sm font-medium">
+              {t('about.version', { version: VERSION })}
+            </Badge>
+          </div>
         </div>
 
         {/* 项目介绍 */}
@@ -80,7 +96,7 @@ export default function AboutPage() {
           </CardHeader>
           <CardContent className="p-6">
             <p className="text-gray-700 text-lg leading-relaxed">
-              BuTP（Build Your Toolbox Program）是一个现代化的学生培养系统，
+              BuTP（Build Your Toolbox Project）是一个现代化的学生培养系统，
               旨在帮助学生更好地管理学习进度、分析学习数据、制定学习计划。
               系统采用 Next.js + React + Supabase 技术栈构建，
               提供直观友好的用户界面和丰富的功能模块。

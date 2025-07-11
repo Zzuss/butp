@@ -206,7 +206,10 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.improvement.priority.high': '高优先级',
     'analysis.improvement.priority.medium': '中优先级',
     'analysis.improvement.estimated.time': '预计用时: {time}',
-    'analysis.improvement.make.plan': '制定计划'
+    'analysis.improvement.make.plan': '制定计划',
+    
+    // About页面
+    'about.version': '当前版本 {version}'
   },
   en: {
     // 登录页面
@@ -296,10 +299,10 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.common.confirm.delete.note': 'This action cannot be undone.',
     
     // 侧边栏
-    'sidebar.dashboard': 'Dashboard',
+    'sidebar.dashboard': 'Dash Board',
     
     // Dashboard页面
-    'dashboard.title': 'Dashboard',
+    'dashboard.title': 'Dash Board',
     'dashboard.description': 'View {name}\'s learning data and performance statistics',
     'dashboard.login.required': 'Please log in to view learning data',
     'dashboard.loading': 'Loading {name}\'s data...',
@@ -397,7 +400,10 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.improvement.priority.high': 'High Priority',
     'analysis.improvement.priority.medium': 'Medium Priority',
     'analysis.improvement.estimated.time': 'Estimated time: {time}',
-    'analysis.improvement.make.plan': 'Make Plan'
+    'analysis.improvement.make.plan': 'Make Plan',
+    
+    // About页面
+    'about.version': 'Version {version}'
   }
 }
 
