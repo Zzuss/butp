@@ -1,13 +1,15 @@
 import Link from 'next/link';
 
 // 将组件改为服务端组件
-export default function HomePage({
+export default async function HomePage({
   params,
 }: {
-  params: { locale: string }
+  params: Promise<{ locale: string }>
 }) {
+  // 等待 params 解析
+  const resolvedParams = await params;
   // 安全地获取 locale
-  const locale = String(params?.locale || 'zh');
+  const locale = String(resolvedParams?.locale || 'zh');
   
   return (
     <div className="flex items-center justify-center min-h-screen">
