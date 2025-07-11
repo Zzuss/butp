@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, TrendingDown, Target, Brain, BookOpen, Users, Check, Plus, X } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
 
 const subjectAnalysis = [
   { subject: '数学', current: 95, target: 98, gap: 3 },
@@ -15,12 +16,12 @@ const subjectAnalysis = [
 ];
 
 const abilityRadar = [
-  { ability: '逻辑思维', score: 85 },
-  { ability: '记忆能力', score: 78 },
-  { ability: '理解能力', score: 92 },
-  { ability: '应用能力', score: 88 },
-  { ability: '创新思维', score: 75 },
-  { ability: '表达能力', score: 82 },
+  { ability: '逻辑思维', abilityKey: 'analysis.ability.logical', score: 85 },
+  { ability: '记忆能力', abilityKey: 'analysis.ability.memory', score: 78 },
+  { ability: '理解能力', abilityKey: 'analysis.ability.comprehension', score: 92 },
+  { ability: '应用能力', abilityKey: 'analysis.ability.application', score: 88 },
+  { ability: '创新思维', abilityKey: 'analysis.ability.innovation', score: 75 },
+  { ability: '表达能力', abilityKey: 'analysis.ability.expression', score: 82 },
 ];
 
 const improvementSuggestions = [
@@ -85,6 +86,8 @@ type ChecklistItem = {
 };
 
 export default function Analysis() {
+  const { t } = useLanguage()
+  
   // 打卡清单状态
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
     { id: '1', text: '完成数学作业', completed: false, timestamp: new Date() },
@@ -134,60 +137,60 @@ export default function Analysis() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">分析模块</h1>
-        <p className="text-muted-foreground">深入分析您的学习表现，提供个性化改进建议</p>
+        <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
+        <p className="text-muted-foreground">{t('analysis.description')}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">学习效率</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analysis.efficiency.title')}</CardTitle>
             <Brain className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">87%</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingUp className="h-3 w-3" />
-              +5% 比上周
+              {t('analysis.efficiency.desc')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">目标达成率</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analysis.target.title')}</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">92%</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingUp className="h-3 w-3" />
-              +3% 比上周
+              {t('analysis.target.desc')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">弱项科目</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analysis.weak.title')}</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">2</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingDown className="h-3 w-3" />
-              需要重点关注
+              {t('analysis.weak.desc')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">班级排名</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analysis.ranking.title')}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">12</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingUp className="h-3 w-3" />
-              上升3名
+              {t('analysis.ranking.desc')}
             </p>
           </CardContent>
         </Card>
@@ -196,8 +199,8 @@ export default function Analysis() {
       <div className="grid gap-6 md:grid-cols-2 mb-6">
         <Card>
           <CardHeader>
-            <CardTitle>各科目分析</CardTitle>
-            <CardDescription>当前成绩与目标对比</CardDescription>
+            <CardTitle>{t('analysis.subjects.title')}</CardTitle>
+            <CardDescription>{t('analysis.subjects.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -205,12 +208,12 @@ export default function Analysis() {
                 <div key={item.subject} className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">{item.subject}</span>
-                    <span className="text-sm text-muted-foreground">差距: {item.gap}分</span>
+                    <span className="text-sm text-muted-foreground">{t('analysis.subjects.gap', { gap: item.gap })}</span>
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span>当前: {item.current}</span>
-                      <span>目标: {item.target}</span>
+                      <span>{t('analysis.subjects.current', { current: item.current })}</span>
+                      <span>{t('analysis.subjects.target', { target: item.target })}</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
@@ -232,14 +235,14 @@ export default function Analysis() {
 
         <Card>
           <CardHeader>
-            <CardTitle>能力评估</CardTitle>
-            <CardDescription>各项能力综合评估</CardDescription>
+            <CardTitle>{t('analysis.ability.title')}</CardTitle>
+            <CardDescription>{t('analysis.ability.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {abilityRadar.map((item) => (
                 <div key={item.ability} className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{item.ability}</span>
+                  <span className="text-sm font-medium">{t(item.abilityKey)}</span>
                   <div className="flex items-center gap-2">
                     <div className="w-20 bg-gray-200 rounded-full h-2">
                       <div 
@@ -253,7 +256,7 @@ export default function Analysis() {
               ))}
               <div className="mt-4 p-3 bg-purple-50 rounded-lg">
                 <div className="text-sm font-medium text-purple-800">
-                  综合能力评分: {Math.round(abilityRadar.reduce((acc, item) => acc + item.score, 0) / abilityRadar.length)}
+                  {t('analysis.ability.overall', { score: Math.round(abilityRadar.reduce((acc, item) => acc + item.score, 0) / abilityRadar.length) })}
                 </div>
               </div>
             </div>
@@ -264,8 +267,8 @@ export default function Analysis() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>打卡清单</CardTitle>
-            <CardDescription>记录并完成您的日常任务</CardDescription>
+            <CardTitle>{t('analysis.checklist.title')}</CardTitle>
+            <CardDescription>{t('analysis.checklist.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -275,7 +278,7 @@ export default function Analysis() {
                   type="text"
                   value={newItemText}
                   onChange={(e) => setNewItemText(e.target.value)}
-                  placeholder="添加新事项..."
+                  placeholder={t('analysis.checklist.add.placeholder')}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   onKeyDown={(e) => e.key === 'Enter' && addItem()}
                 />
@@ -287,7 +290,7 @@ export default function Analysis() {
               {/* 完成率统计 */}
               <div className="p-3 bg-blue-50 rounded-lg">
                 <div className="text-sm font-medium text-blue-800">
-                  完成率: {completionRate}%
+                  {t('analysis.checklist.completion.rate', { rate: completionRate })}
                 </div>
               </div>
               
@@ -328,8 +331,8 @@ export default function Analysis() {
 
         <Card>
           <CardHeader>
-            <CardTitle>改进建议</CardTitle>
-            <CardDescription>基于数据分析的个性化建议</CardDescription>
+            <CardTitle>{t('analysis.improvement.title')}</CardTitle>
+            <CardDescription>{t('analysis.improvement.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -338,15 +341,15 @@ export default function Analysis() {
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold">{suggestion.category}</h4>
                     <Badge variant={suggestion.priority === "高" ? "destructive" : "secondary"}>
-                      {suggestion.priority}优先级
+                      {suggestion.priority === "高" ? t('analysis.improvement.priority.high') : t('analysis.improvement.priority.medium')}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{suggestion.issue}</p>
                   <p className="text-sm">{suggestion.suggestion}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">预计用时: {suggestion.estimatedTime}</span>
+                    <span className="text-xs text-muted-foreground">{t('analysis.improvement.estimated.time', { time: suggestion.estimatedTime })}</span>
                     <Button size="sm" variant="outline">
-                      制定计划
+                      {t('analysis.improvement.make.plan')}
                     </Button>
                   </div>
                 </div>

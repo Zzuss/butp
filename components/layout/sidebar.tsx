@@ -20,15 +20,18 @@ import {
 import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { useLanguage } from "@/contexts/language-context"
 
 const sidebarItems = [
   {
     title: "我的信息",
+    titleKey: "sidebar.profile",
     href: "/profile",
     icon: User,
   },
   {
     title: "数据总览",
+    titleKey: "sidebar.dashboard",
     href: "/dashboard",
     icon: BarChart3,
   },
@@ -39,6 +42,7 @@ const sidebarItems = [
   },
   {
     title: "分析模块",
+    titleKey: "sidebar.analysis",
     href: "/analysis",
     icon: TrendingUp,
   },
@@ -57,6 +61,7 @@ const sidebarItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const { currentStudent, logout } = useSimpleAuth()
+  const { t } = useLanguage()
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -143,10 +148,10 @@ export function AppSidebar() {
               <SidebarItem
                 active={pathname === item.href}
                   className={`w-full ${isCollapsed ? 'justify-center px-2' : 'justify-start'}`}
-                  title={isCollapsed ? item.title : undefined}
+                  title={isCollapsed ? (item.titleKey ? t(item.titleKey) : item.title) : undefined}
               >
                 <item.icon className="h-4 w-4" />
-                  {!isCollapsed && <span>{item.title}</span>}
+                  {!isCollapsed && <span>{item.titleKey ? t(item.titleKey) : item.title}</span>}
               </SidebarItem>
             </Link>
           ))}
@@ -176,7 +181,7 @@ export function AppSidebar() {
             className="w-full flex items-center gap-2"
           >
             <LogOut className="h-4 w-4" />
-            退出登录
+            {t('sidebar.logout')}
           </Button>
               </>
             ) : (
@@ -188,7 +193,7 @@ export function AppSidebar() {
                   variant="outline" 
                   size="icon"
                   onClick={logout}
-                  title="退出登录"
+                  title={t('sidebar.logout')}
                   className="w-8 h-8"
                 >
                   <LogOut className="h-4 w-4" />

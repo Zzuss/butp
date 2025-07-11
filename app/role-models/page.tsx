@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { GraduationCap, Briefcase, MapPin, Star, Building, School, Award, BookOpen, Layers, Globe } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollableContainer } from "../../components/ui/scrollable-container"
+import { useLanguage } from "@/contexts/language-context"
 
 // 按公司和学校分类的虚拟角色模型数据
 const companyModels = {
@@ -776,17 +777,19 @@ function SchoolRow({ school, majors }: { school: string, majors: Record<string, 
 }
 
 export default function RoleModels() {
+  const { t } = useLanguage()
+  
   return (
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Role Models</h1>
-        <p className="text-muted-foreground">了解不同去向的典型人才特征，规划自己的职业和学业发展路径</p>
+        <p className="text-muted-foreground">{t('rolemodels.description')}</p>
       </div>
 
       <Tabs defaultValue="companies" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="companies">按就业公司</TabsTrigger>
-          <TabsTrigger value="schools">按升学学校</TabsTrigger>
+          <TabsTrigger value="companies">{t('rolemodels.tab.companies')}</TabsTrigger>
+          <TabsTrigger value="schools">{t('rolemodels.tab.schools')}</TabsTrigger>
         </TabsList>
         
         <TabsContent value="companies">

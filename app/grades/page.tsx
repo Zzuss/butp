@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getSubjectGrades } from "@/lib/dashboard-data"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import Link from 'next/link'
 
 export default function AllGrades() {
   const { currentStudent } = useSimpleAuth()
+  const { t } = useLanguage()
   const [grades, setGrades] = useState<Awaited<ReturnType<typeof getSubjectGrades>>>([])
   const [loading, setLoading] = useState(false)
   const [selectedRow, setSelectedRow] = useState<number | null>(null)
@@ -46,8 +48,8 @@ export default function AllGrades() {
     return (
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">成绩详情</h1>
-          <p className="text-muted-foreground">请先登录查看学习数据</p>
+          <h1 className="text-3xl font-bold">{t('grades.title')}</h1>
+          <p className="text-muted-foreground">{t('grades.login.required')}</p>
         </div>
       </div>
     )
@@ -57,11 +59,11 @@ export default function AllGrades() {
     return (
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">成绩详情</h1>
-          <p className="text-muted-foreground">正在加载 {currentStudent.name} 的数据...</p>
+          <h1 className="text-3xl font-bold">{t('grades.title')}</h1>
+          <p className="text-muted-foreground">{t('grades.loading').replace('{name}', currentStudent.name)}</p>
         </div>
         <div className="mt-6 flex items-center justify-center h-32">
-          <div className="text-muted-foreground">数据加载中...</div>
+          <div className="text-muted-foreground">{t('grades.loading.message')}</div>
         </div>
       </div>
     )
@@ -71,27 +73,27 @@ export default function AllGrades() {
     <div className="p-6">
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">成绩详情</h1>
-          <p className="text-muted-foreground">{currentStudent.name} 的所有课程成绩</p>
+          <h1 className="text-3xl font-bold">{t('grades.title')}</h1>
+          <p className="text-muted-foreground">{t('grades.description').replace('{name}', currentStudent.name)}</p>
         </div>
         <Link href="/dashboard" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-          返回总览
+          {t('grades.back.to.dashboard')}
         </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>所有课程成绩</CardTitle>
-          <CardDescription>课程成绩详细列表（按学分从高到低排序）</CardDescription>
+          <CardTitle>{t('grades.all.courses.title')}</CardTitle>
+          <CardDescription>{t('grades.all.courses.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="py-3 px-4 text-left">课程名称</th>
-                  <th className="py-3 px-4 text-center">学分</th>
-                  <th className="py-3 px-4 text-center">分数</th>
+                  <th className="py-3 px-4 text-left">{t('grades.table.course.name')}</th>
+                  <th className="py-3 px-4 text-center">{t('grades.table.credit')}</th>
+                  <th className="py-3 px-4 text-center">{t('grades.table.score')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -108,7 +110,7 @@ export default function AllGrades() {
                 )) : (
                   <tr>
                     <td colSpan={3} className="py-8 text-center text-muted-foreground">
-                      暂无成绩数据
+                      {t('grades.no.data')}
                     </td>
                   </tr>
                 )}
@@ -117,7 +119,7 @@ export default function AllGrades() {
           </div>
           
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            共 {grades.length} 门课程
+            {t('grades.total.courses').replace('{count}', grades.length.toString())}
           </div>
         </CardContent>
       </Card>
