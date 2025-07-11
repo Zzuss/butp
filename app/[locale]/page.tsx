@@ -12,7 +12,7 @@ export default function HomePage({
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">欢迎使用学生管理系统</h1>
+        <h1 className="text-2xl font-bold mb-4">欢迎使用BuTP</h1>
         <div className="space-y-4">
           <Link 
             href={`/${locale}/login`} 

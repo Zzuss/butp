@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SimpleAuthProvider } from "@/contexts/simple-auth-context";
 import { SimpleAuthGuard } from "@/components/auth/simple-auth-guard";
@@ -7,7 +7,12 @@ import { AppSidebar } from "@/components/layout/sidebar";
 export const metadata: Metadata = {
   title: "学生管理系统",
   description: "基于 Next.js 和 shadcn/ui 的学生管理系统",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

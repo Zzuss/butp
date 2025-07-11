@@ -120,6 +120,17 @@ export default function Analysis() {
     setChecklist(checklist.filter(item => item.id !== id));
   };
 
+  // 排序事项：未完成的在前，完成的在后
+  const sortedChecklist = [...checklist].sort((a, b) => {
+    if (a.completed === b.completed) return 0;
+    return a.completed ? 1 : -1;
+  });
+
+  // 计算完成率
+  const completionRate = checklist.length > 0 
+    ? Math.round((checklist.filter(item => item.completed).length / checklist.length) * 100)
+    : 100;
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -273,9 +284,16 @@ export default function Analysis() {
                 </Button>
               </div>
               
+              {/* 完成率统计 */}
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <div className="text-sm font-medium text-blue-800">
+                  完成率: {completionRate}%
+                </div>
+              </div>
+              
               {/* 事项列表 */}
               <div className="space-y-2">
-                {checklist.map((item) => (
+                {sortedChecklist.map((item) => (
                   <div 
                     key={item.id} 
                     className={`flex items-center justify-between p-3 border rounded-lg transition-all ${
@@ -303,15 +321,6 @@ export default function Analysis() {
                     </button>
                   </div>
                 ))}
-              </div>
-              
-              {/* 完成率统计 */}
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <div className="text-sm font-medium text-blue-800">
-                  完成率: {checklist.length > 0 
-                    ? Math.round((checklist.filter(item => item.completed).length / checklist.length) * 100)
-                    : 0}%
-                </div>
               </div>
             </div>
           </CardContent>
