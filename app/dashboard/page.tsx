@@ -75,6 +75,16 @@ export default function Dashboard() {
     ? Math.round((stats.completedCourses / stats.totalCourses) * 100)
     : 0
 
+  // 为各科成绩添加虚假的学校平均分数据
+  const subjectGradesWithAverage = subjectGrades.map((item, index) => {
+    // 使用固定的平均分数据，避免每次刷新都变化
+    const averageScores = [82, 78, 85, 79, 88, 76, 83, 80, 87, 81];
+    return {
+      ...item,
+      schoolAverage: averageScores[index % averageScores.length]
+    };
+  })
+
   const attendanceData = [
     { name: t('dashboard.course.stats.passed'), value: attendanceRate, color: '#10b981' },
     { name: t('dashboard.course.stats.failed'), value: 100 - attendanceRate, color: '#ef4444' },
@@ -150,23 +160,63 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="px-3 md:px-6 py-3 md:py-4">
             <div className="space-y-3 md:space-y-4">
-              {subjectGrades.length > 0 ? subjectGrades.map((item) => (
-                <div key={item.subject} className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-xs md:text-sm font-medium">{item.subject}</span>
-                    <span className="text-xs text-muted-foreground">{t('dashboard.subjects.grade.level')}: {item.grade}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 md:w-32 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ width: `${item.score}%` }}
-                      ></div>
+              {subjectGradesWithAverage.length > 0 ? subjectGradesWithAverage.map((item) => {
+                const isAboveAverage = item.score > item.schoolAverage;
+                const maxScore = Math.max(item.score, item.schoolAverage, 100);
+                
+                return (
+                  <div key={item.subject} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs md:text-sm font-medium">{item.subject}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {isAboveAverage ? '+' : ''}{item.score - item.schoolAverage}分
+                      </span>
                     </div>
-                    <span className="text-xs md:text-sm font-semibold w-6 md:w-8">{item.score}</span>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className={isAboveAverage ? 'text-green-600' : 'text-red-600'}>
+                          当前: {item.score}分
+                        </span>
+                        <span className="text-muted-foreground">
+                          平均: {item.schoolAverage}分
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 relative">
+                        {/* 基础进度条 - 蓝色 */}
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full absolute left-0"
+                          style={{ width: `${(Math.min(item.score, item.schoolAverage) / maxScore) * 100}%` }}
+                        ></div>
+                        {/* 超出/不足平均分的部分 */}
+                        {item.score > item.schoolAverage ? (
+                          /* 超出平均分 - 绿色补充 */
+                          <div 
+                            className="bg-green-600 h-2 rounded-r-full absolute"
+                            style={{ 
+                              left: `${(item.schoolAverage / maxScore) * 100}%`,
+                              width: `${((item.score - item.schoolAverage) / maxScore) * 100}%`
+                            }}
+                          ></div>
+                        ) : (
+                          /* 低于平均分 - 红色补充 */
+                          <div 
+                            className="bg-red-600 h-2 rounded-r-full absolute"
+                            style={{ 
+                              left: `${(item.score / maxScore) * 100}%`,
+                              width: `${((item.schoolAverage - item.score) / maxScore) * 100}%`
+                            }}
+                          ></div>
+                        )}
+                        {/* 平均分标记线 */}
+                        <div 
+                          className="absolute top-0 w-0.5 h-2 bg-gray-800 z-10"
+                          style={{ left: `${(item.schoolAverage / maxScore) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )) : (
+                );
+              }) : (
                 <div className="text-center text-muted-foreground py-6 md:py-8">
                   {t('dashboard.subjects.no.data')}
                 </div>
@@ -272,6 +322,13 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+      
+      {/* 免责声明 */}
+      <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p className="text-sm text-yellow-800 text-center">
+          本系统GPA、均分、排名等为模糊计算所得，并非精准数据，仅供参考
+        </p>
       </div>
     </div>
   )
