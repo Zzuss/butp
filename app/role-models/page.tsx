@@ -521,6 +521,135 @@ const schoolModels = {
   }
 }
 
+const internshipModels = {
+  "腾讯": {
+    "技术类": [
+      {
+        id: 1,
+        name: "腾讯技术实习生画像",
+        position: "技术实习生",
+        duration: "3-6个月",
+        location: "深圳/北京",
+        academics: {
+          gpa: "3.5+/4.0",
+          courses: ["数据结构", "算法设计", "操作系统"]
+        },
+        skills: ["编程基础", "学习能力", "沟通能力"],
+        requirements: ["计算机相关专业", "扎实的编程基础", "良好的团队合作精神"],
+        benefits: ["导师指导", "实际项目经验", "转正机会"],
+        tags: ["技术", "实习", "导师制"],
+        description: "腾讯技术实习生将参与真实项目开发，接受资深工程师指导，获得宝贵的实践经验。",
+        rating: 4.8,
+        applications: 1200
+      }
+    ],
+    "产品类": [
+      {
+        id: 2,
+        name: "腾讯产品实习生画像",
+        position: "产品实习生",
+        duration: "3-6个月",
+        location: "深圳/北京",
+        academics: {
+          gpa: "3.4+/4.0",
+          courses: ["市场营销", "用户体验", "数据分析"]
+        },
+        skills: ["需求分析", "用户研究", "产品设计"],
+        requirements: ["对互联网产品感兴趣", "良好的沟通能力", "数据敏感度"],
+        benefits: ["产品经验", "用户调研", "行业认知"],
+        tags: ["产品", "实习", "用户体验"],
+        description: "腾讯产品实习生将参与产品设计和用户研究，学习互联网产品的完整开发流程。",
+        rating: 4.7,
+        applications: 800
+      }
+    ]
+  },
+  "阿里巴巴": {
+    "技术类": [
+      {
+        id: 3,
+        name: "阿里巴巴技术实习生画像",
+        position: "技术实习生",
+        duration: "3-6个月",
+        location: "杭州/北京",
+        academics: {
+          gpa: "3.5+/4.0",
+          courses: ["Java开发", "数据库", "分布式系统"]
+        },
+        skills: ["Java/Python", "数据库操作", "系统设计"],
+        requirements: ["计算机相关专业", "熟悉主流开发语言", "有项目经验"],
+        benefits: ["技术成长", "业务理解", "职业发展"],
+        tags: ["技术", "实习", "大数据"],
+        description: "阿里巴巴技术实习生将接触大规模分布式系统，学习电商业务的技术实现。",
+        rating: 4.8,
+        applications: 1500
+      }
+    ],
+    "运营类": [
+      {
+        id: 4,
+        name: "阿里巴巴运营实习生画像",
+        position: "运营实习生",
+        duration: "3-6个月",
+        location: "杭州/北京",
+        academics: {
+          gpa: "3.3+/4.0",
+          courses: ["市场营销", "电子商务", "数据分析"]
+        },
+        skills: ["数据分析", "内容运营", "用户运营"],
+        requirements: ["对电商行业感兴趣", "数据分析能力", "创意思维"],
+        benefits: ["运营经验", "数据驱动", "商业思维"],
+        tags: ["运营", "实习", "电商"],
+        description: "阿里巴巴运营实习生将学习电商平台运营策略，掌握数据驱动的运营方法。",
+        rating: 4.6,
+        applications: 600
+      }
+    ]
+  },
+  "字节跳动": {
+    "技术类": [
+      {
+        id: 5,
+        name: "字节跳动技术实习生画像",
+        position: "技术实习生",
+        duration: "3-6个月",
+        location: "北京/上海",
+        academics: {
+          gpa: "3.6+/4.0",
+          courses: ["算法设计", "机器学习", "移动开发"]
+        },
+        skills: ["算法优化", "机器学习", "移动开发"],
+        requirements: ["计算机相关专业", "算法基础扎实", "对AI感兴趣"],
+        benefits: ["前沿技术", "算法实践", "快速成长"],
+        tags: ["技术", "实习", "AI"],
+        description: "字节跳动技术实习生将参与推荐算法和AI技术的开发，接触前沿技术。",
+        rating: 4.9,
+        applications: 1000
+      }
+    ],
+    "内容类": [
+      {
+        id: 6,
+        name: "字节跳动内容实习生画像",
+        position: "内容实习生",
+        duration: "3-6个月",
+        location: "北京/上海",
+        academics: {
+          gpa: "3.2+/4.0",
+          courses: ["新闻传播", "内容创作", "社交媒体"]
+        },
+        skills: ["内容创作", "社交媒体", "用户洞察"],
+        requirements: ["对内容创作感兴趣", "良好的文字功底", "创意思维"],
+        benefits: ["内容运营", "用户理解", "创意实践"],
+        tags: ["内容", "实习", "创意"],
+        description: "字节跳动内容实习生将参与内容策划和创作，学习短视频和社交媒体运营。",
+        rating: 4.7,
+        applications: 700
+      }
+    ]
+  }
+}
+
 function Badge({ children, variant = "secondary" }: { children: React.ReactNode, variant?: "secondary" | "outline" }) {
   const baseClass = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
   const variantClass = variant === "outline" 
@@ -556,7 +685,99 @@ interface CompanyModel {
   consultations: number
 }
 
+interface InternshipModel {
+  id: number
+  name: string
+  position: string
+  duration: string
+  location: string
+  academics: {
+    gpa: string
+    courses: string[]
+  }
+  skills: string[]
+  requirements: string[]
+  benefits: string[]
+  tags: string[]
+  description: string
+  rating: number
+  applications: number
+}
+
+function InternshipCard({ model }: { model: InternshipModel }) {
+  const { t } = useLanguage()
+  
+  return (
+    <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0 flex flex-col h-full">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+              <Briefcase className="h-6 w-6 text-orange-600" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">{model.name}</CardTitle>
+              <CardDescription className="flex items-center gap-1">
+                <Briefcase className="h-3 w-3" />
+                {model.position}
+              </CardDescription>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <Star className="h-4 w-4 text-yellow-500 fill-current" />
+            <span className="text-sm font-medium">{model.rating}</span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 flex-1 flex flex-col">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{model.location}</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm">
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <span>{t('rolemodels.internship.duration')}: {model.duration}</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm">
+            <Award className="h-4 w-4 text-muted-foreground" />
+            <span>GPA: {model.academics.gpa}</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm">
+            <Layers className="h-4 w-4 text-muted-foreground" />
+            <span>{t('rolemodels.internship.benefits')}: {model.benefits.join(", ")}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {model.tags.map((tag: string) => (
+            <Badge key={tag} variant="outline">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+
+        <p className="text-sm text-muted-foreground flex-1 overflow-auto">
+          {model.description}
+        </p>
+
+        <div className="flex items-center justify-between pt-2 mt-auto">
+          <span className="text-xs text-muted-foreground">{model.applications} {t('rolemodels.internship.applications')}</span>
+          <Button size="sm">
+            {t('rolemodels.internship.details')}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function CompanyCard({ model }: { model: CompanyModel }) {
+  const { t } = useLanguage()
+  
   return (
     <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0 flex flex-col h-full">
       <CardHeader>
@@ -621,7 +842,7 @@ function CompanyCard({ model }: { model: CompanyModel }) {
 
         <div className="flex items-center justify-between pt-2 mt-auto">
           <Button size="sm">
-            查看详情
+            {t('rolemodels.common.details')}
           </Button>
         </div>
       </CardContent>
@@ -654,6 +875,8 @@ interface SchoolModel {
 }
 
 function SchoolCard({ model }: { model: SchoolModel }) {
+  const { t } = useLanguage()
+  
   return (
     <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0 flex flex-col h-full">
       <CardHeader>
@@ -718,7 +941,7 @@ function SchoolCard({ model }: { model: SchoolModel }) {
 
         <div className="flex items-center justify-between pt-2 mt-auto">
           <Button size="sm">
-            查看详情
+            {t('rolemodels.common.details')}
           </Button>
         </div>
       </CardContent>
@@ -776,6 +999,31 @@ function SchoolRow({ school, majors }: { school: string, majors: Record<string, 
   );
 }
 
+// 实习行组件
+function InternshipRow({ company, categories }: { company: string, categories: Record<string, InternshipModel[]> }) {
+  return (
+    <div className="mb-12">
+      <div className="flex items-center gap-2 mb-4">
+        <Building className="h-5 w-5 text-orange-600" />
+        <h2 className="text-2xl font-semibold">{company}</h2>
+      </div>
+      <ScrollableContainer>
+        {Object.entries(categories).map(([category, models]) => (
+          models.map((model) => (
+            <div key={`${company}-${category}-${model.id}`} className="mr-4 min-w-[350px]">
+              <div className="mb-2 flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+                <span className="text-base font-medium">{category}</span>
+              </div>
+              <InternshipCard model={model} />
+            </div>
+          ))
+        ))}
+      </ScrollableContainer>
+    </div>
+  );
+}
+
 export default function RoleModels() {
   const { t } = useLanguage()
   
@@ -790,6 +1038,7 @@ export default function RoleModels() {
         <TabsList className="mb-6">
           <TabsTrigger value="companies">{t('rolemodels.tab.companies')}</TabsTrigger>
           <TabsTrigger value="schools">{t('rolemodels.tab.schools')}</TabsTrigger>
+          <TabsTrigger value="internships">{t('rolemodels.tab.internships')}</TabsTrigger>
         </TabsList>
         
         <TabsContent value="companies">
@@ -801,6 +1050,12 @@ export default function RoleModels() {
         <TabsContent value="schools">
           {Object.entries(schoolModels).map(([school, majors]) => (
             <SchoolRow key={school} school={school} majors={majors} />
+          ))}
+        </TabsContent>
+        
+        <TabsContent value="internships">
+          {Object.entries(internshipModels).map(([company, categories]) => (
+            <InternshipRow key={company} company={company} categories={categories} />
           ))}
         </TabsContent>
       </Tabs>
