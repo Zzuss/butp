@@ -40,7 +40,7 @@ export function ScrollableContainer({ children }: ScrollableContainerProps) {
       setCurrentIndex(prev => (prev > 0 ? prev - 1 : childrenArray.length - 1));
       setTimeout(() => setIsTransitioning(false), 300);
     } else if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: -350, behavior: 'smooth' });
+      scrollContainerRef.current.scrollBy({ left: -358, behavior: 'smooth' });
     }
   };
   
@@ -52,7 +52,7 @@ export function ScrollableContainer({ children }: ScrollableContainerProps) {
       setCurrentIndex(prev => (prev < childrenArray.length - 1 ? prev + 1 : 0));
       setTimeout(() => setIsTransitioning(false), 300);
     } else if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: 350, behavior: 'smooth' });
+      scrollContainerRef.current.scrollBy({ left: 358, behavior: 'smooth' });
     }
   };
 

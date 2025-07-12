@@ -558,7 +558,7 @@ interface CompanyModel {
 
 function CompanyCard({ model }: { model: CompanyModel }) {
   return (
-    <Card className="hover:shadow-lg transition-shadow w-full md:min-w-[350px] md:w-[350px] flex-shrink-0 flex flex-col min-h-fit md:h-auto">
+    <Card className="hover:shadow-lg transition-shadow w-full md:min-w-[350px] md:w-[350px] flex-shrink-0 flex flex-col min-h-[650px] md:h-auto">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -655,7 +655,7 @@ interface SchoolModel {
 
 function SchoolCard({ model }: { model: SchoolModel }) {
   return (
-    <Card className="hover:shadow-lg transition-shadow w-full md:min-w-[350px] md:w-[350px] flex-shrink-0 flex flex-col min-h-fit md:h-auto">
+    <Card className="hover:shadow-lg transition-shadow w-full md:min-w-[350px] md:w-[350px] flex-shrink-0 flex flex-col min-h-[650px] md:h-auto">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
