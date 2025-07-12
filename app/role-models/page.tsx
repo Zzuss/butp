@@ -779,7 +779,7 @@ function CompanyCard({ model }: { model: CompanyModel }) {
   const { t } = useLanguage()
   
   return (
-    <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0 flex flex-col h-full">
+    <Card className="hover:shadow-lg transition-shadow w-full md:min-w-[350px] md:w-[350px] flex-shrink-0 flex flex-col min-h-[650px] md:h-auto">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -878,7 +878,7 @@ function SchoolCard({ model }: { model: SchoolModel }) {
   const { t } = useLanguage()
   
   return (
-    <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0 flex flex-col h-full">
+    <Card className="hover:shadow-lg transition-shadow w-full md:min-w-[350px] md:w-[350px] flex-shrink-0 flex flex-col min-h-[650px] md:h-auto">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -961,7 +961,7 @@ function CompanyRow({ company, positions }: { company: string, positions: Record
         {Object.entries(positions).map(([position, models]) => (
           models.map((model) => (
             <div key={`${company}-${position}-${model.id}`} className="mr-4 min-w-[350px]">
-              <div className="mb-2 flex items-center gap-2">
+              <div className="mb-2 flex items-center gap-2 md:ml-0">
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
                 <span className="text-base font-medium">{position}</span>
               </div>
@@ -986,7 +986,7 @@ function SchoolRow({ school, majors }: { school: string, majors: Record<string, 
         {Object.entries(majors).map(([major, models]) => (
           models.map((model) => (
             <div key={`${school}-${major}-${model.id}`} className="mr-4 min-w-[350px]">
-              <div className="mb-2 flex items-center gap-2">
+              <div className="mb-2 flex items-center gap-2 md:ml-0">
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
                 <span className="text-base font-medium">{major}</span>
               </div>

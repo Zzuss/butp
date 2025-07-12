@@ -21,13 +21,13 @@ const translations: Record<Language, Record<string, string>> = {
     // 登录页面
     'login.title.line1': 'Build Your Toolbox',
     'login.title.line2': 'BuTP', 
-    'login.description': '请选择您的学生账号登录系统',
+    'login.description': '请选择您的学生账号登录',
     'login.select.label': '选择学生账号',
     'login.select.placeholder': '请选择学生...',
-    'login.button.login': '登录系统',
+    'login.button.login': '登录BuTP',
     'login.button.loading': '登录中...',
-    'login.demo.text': '演示系统 • 仅供学习使用',
-    'login.language.switch': 'English',
+    'login.demo.text': '演示版本 • 仅供学习使用',
+    'login.language.switch': 'Change to English',
     'login.alert.select': '请选择一个学生账号',
     
     // 侧边栏
@@ -216,7 +216,10 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 数据说明
     'dashboard.data.disclaimer.title': '数据说明',
-    'dashboard.data.disclaimer.content': '本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。'
+    'dashboard.data.disclaimer.content': '本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。',
+    
+    // About页面
+    'about.version': '当前版本 {version}'
   },
   en: {
     // 登录页面
@@ -228,7 +231,7 @@ const translations: Record<Language, Record<string, string>> = {
     'login.button.login': 'Login System',
     'login.button.loading': 'Logging in...',
     'login.demo.text': 'Demo System • For Learning Purpose Only',
-    'login.language.switch': '中文',
+    'login.language.switch': '切换为中文',
     'login.alert.select': 'Please select a student account',
     
     // 侧边栏
@@ -306,10 +309,10 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.common.confirm.delete.note': 'This action cannot be undone.',
     
     // 侧边栏
-    'sidebar.dashboard': 'Dashboard',
+    'sidebar.dashboard': 'Dash Board',
     
     // Dashboard页面
-    'dashboard.title': 'Dashboard',
+    'dashboard.title': 'Dash Board',
     'dashboard.description': 'View {name}\'s learning data and performance statistics',
     'dashboard.login.required': 'Please log in to view learning data',
     'dashboard.loading': 'Loading {name}\'s data...',
@@ -417,7 +420,10 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 数据说明
     'dashboard.data.disclaimer.title': 'Data Disclaimer',
-    'dashboard.data.disclaimer.content': 'The average scores, pass rates, GPA and other data displayed on this page are calculated estimates for reference and trend analysis purposes only. Please refer to the official academic system for accurate grade information.'
+    'dashboard.data.disclaimer.content': 'The average scores, pass rates, GPA and other data displayed on this page are calculated estimates for reference and trend analysis purposes only. Please refer to the official academic system for accurate grade information.',
+    
+    // About页面
+    'about.version': 'Version {version}'
   }
 }
 

@@ -25,16 +25,16 @@ export default function RootLayout({
     <html lang="zh" className="light">
       <body className="antialiased">
         <LanguageProvider>
-          <SimpleAuthProvider>
-            <SimpleAuthGuard>
+        <SimpleAuthProvider>
+          <SimpleAuthGuard>
               <div className="flex h-screen flex-col md:flex-row">
-                <AppSidebar />
+              <AppSidebar />
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-4">
-                  {children}
-                </main>
-              </div>
-            </SimpleAuthGuard>
-          </SimpleAuthProvider>
+                {children}
+              </main>
+            </div>
+          </SimpleAuthGuard>
+        </SimpleAuthProvider>
         </LanguageProvider>
       </body>
     </html>

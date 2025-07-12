@@ -15,7 +15,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Info
+  Info,
+  Languages
 } from "lucide-react"
 import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -61,10 +62,15 @@ const sidebarItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const { currentStudent, logout } = useSimpleAuth()
-  const { t } = useLanguage()
+  const { t, language, setLanguage } = useLanguage()
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  // 切换语言函数
+  const toggleLanguage = () => {
+    setLanguage(language === 'zh' ? 'en' : 'zh')
+  }
 
   // 检测是否为移动设备
   useEffect(() => {
@@ -163,6 +169,19 @@ export function AppSidebar() {
           <div className={`border-t border-border mt-auto ${isCollapsed ? 'p-2' : 'p-4'}`}>
             {!isCollapsed ? (
               <>
+          {/* 语言切换按钮 */}
+          <div className="mb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleLanguage}
+              className="w-full flex items-center gap-2 justify-start"
+            >
+              <Languages className="h-4 w-4" />
+              <span>{language === 'zh' ? 'Change to English' : '切换为中文'}</span>
+            </Button>
+          </div>
+          
           <div className="flex items-center gap-3 mb-3">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
@@ -186,6 +205,17 @@ export function AppSidebar() {
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">
+                {/* 语言切换按钮 - 折叠状态 */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleLanguage}
+                  title={language === 'zh' ? 'Change to English' : '切换为中文'}
+                  className="w-8 h-8"
+                >
+                  <Languages className="h-4 w-4" />
+                </Button>
+                
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                   <User className="h-4 w-4 text-primary-foreground" />
                 </div>

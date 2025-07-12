@@ -358,6 +358,13 @@ export default function Analysis() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* 免责声明 */}
+      <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p className="text-sm text-yellow-800 text-center">
+          本系统GPA、均分、排名等为模糊计算所得，并非精准数据，仅供参考
+        </p>
+      </div>
     </div>
   )
 }
