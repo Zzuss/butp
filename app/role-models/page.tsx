@@ -712,8 +712,8 @@ function InternshipCard({ model }: { model: InternshipModel }) {
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-              <Briefcase className="h-6 w-6 text-orange-600" />
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+              <Briefcase className="h-6 w-6 text-primary" />
             </div>
             <div>
               <CardTitle className="text-lg">{model.name}</CardTitle>
@@ -1004,7 +1004,7 @@ function InternshipRow({ company, categories }: { company: string, categories: R
   return (
     <div className="mb-12">
       <div className="flex items-center gap-2 mb-4">
-        <Building className="h-5 w-5 text-orange-600" />
+        <Building className="h-5 w-5 text-primary" />
         <h2 className="text-2xl font-semibold">{company}</h2>
       </div>
       <ScrollableContainer>
