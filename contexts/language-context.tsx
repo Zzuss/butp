@@ -21,13 +21,13 @@ const translations: Record<Language, Record<string, string>> = {
     // 登录页面
     'login.title.line1': 'Build Your Toolbox',
     'login.title.line2': 'BuTP', 
-    'login.description': '请选择您的学生账号登录系统',
+    'login.description': '请选择您的学生账号登录',
     'login.select.label': '选择学生账号',
     'login.select.placeholder': '请选择学生...',
-    'login.button.login': '登录系统',
+    'login.button.login': '登录BuTP',
     'login.button.loading': '登录中...',
-    'login.demo.text': '演示系统 • 仅供学习使用',
-    'login.language.switch': 'English',
+    'login.demo.text': '演示版本 • 仅供学习使用',
+    'login.language.switch': 'Change to English',
     'login.alert.select': '请选择一个学生账号',
     
     // 侧边栏
@@ -221,7 +221,7 @@ const translations: Record<Language, Record<string, string>> = {
     'login.button.login': 'Login System',
     'login.button.loading': 'Logging in...',
     'login.demo.text': 'Demo System • For Learning Purpose Only',
-    'login.language.switch': '中文',
+    'login.language.switch': '切换为中文',
     'login.alert.select': 'Please select a student account',
     
     // 侧边栏
