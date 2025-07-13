@@ -97,48 +97,81 @@ export async function getDashboardStats(studentId: string): Promise<DashboardSta
 
 export async function getSubjectGrades(studentId: string, limit = 6): Promise<SubjectGrade[]> {
   try {
-    const query = supabase
+    // 查询指定学生的所有课程成绩
+    const { data: results, error } = await supabase
       .from('academic_results')
       .select('Course_Name, Course_ID, Grade, Credit')
+      .eq('SNH', studentId)
       .not('Course_Name', 'is', null)
       .not('Grade', 'is', null)
-      .eq('SNH', studentId)
+      .not('Course_Name', 'eq', '')
+      .not('Grade', 'eq', '')
+
+    if (error) {
+      console.error('Database query error:', error)
+      return []
+    }
+
+    if (!results || results.length === 0) {
+      console.log(`No grade data found for student: ${studentId}`)
+      return []
+    }
+
+    // 处理和转换成绩数据
+    const validCourses: SubjectGrade[] = []
     
-    const { data: results } = limit ? await query.limit(limit) : await query
+    for (const course of results) {
+      // 跳过无效数据
+      if (!course.Course_Name?.trim() || !course.Grade?.trim()) {
+        continue
+      }
 
-    if (!results) return []
+      // 转换成绩为数字分数
+      const numericScore = convertGradeToScore(course.Grade)
+      
+      // 跳过无法转换的成绩
+      if (numericScore === null || numericScore < 0 || numericScore > 100) {
+        continue
+      }
 
-    const processedResults = results
-      .filter(r => r.Course_Name && r.Grade)
-      .map(r => {
-        const numericScore = convertGradeToScore(r.Grade)
-        
-        if (numericScore === null) {
-          return null
-        }
-        
-        let grade = 'F'
-        if (numericScore >= 95) grade = 'A+'
-        else if (numericScore >= 90) grade = 'A'
-        else if (numericScore >= 85) grade = 'B+'
-        else if (numericScore >= 80) grade = 'B'
-        else if (numericScore >= 75) grade = 'C+'
-        else if (numericScore >= 70) grade = 'C'
-        else if (numericScore >= 60) grade = 'D'
-        
-        return {
-          subject: r.Course_Name,
-          score: Math.round(numericScore),
-          grade,
-          gpa: Math.round(calculateBUPTGPA(numericScore) * 100) / 100,
-          credit: parseFloat(r.Credit) || 1, // 解析学分，如果为空则默认为1
-          courseId: r.Course_ID
-        }
+      // 计算等级
+      let grade = 'F'
+      if (numericScore >= 95) grade = 'A+'
+      else if (numericScore >= 90) grade = 'A'
+      else if (numericScore >= 85) grade = 'B+'
+      else if (numericScore >= 80) grade = 'B'
+      else if (numericScore >= 75) grade = 'C+'
+      else if (numericScore >= 70) grade = 'C'
+      else if (numericScore >= 60) grade = 'D'
+
+      // 解析学分
+      const credit = parseFloat(course.Credit || '0')
+      
+      validCourses.push({
+        subject: course.Course_Name.trim(),
+        score: Math.round(numericScore),
+        grade,
+        gpa: Math.round(calculateBUPTGPA(numericScore) * 100) / 100,
+        credit: credit > 0 ? credit : 1, // 如果学分无效则默认为1
+        courseId: course.Course_ID?.trim() || undefined
       })
-      .filter(item => item !== null) as SubjectGrade[]
+    }
+
+    // 按分数从高到低排序，选取成绩最高的课程
+    const topCourses = validCourses
+      .sort((a, b) => {
+        // 首先按分数排序
+        if (b.score !== a.score) {
+          return b.score - a.score
+        }
+        // 分数相同时按学分排序（学分高的优先）
+        return b.credit - a.credit
+      })
+      .slice(0, limit)
+
+    console.log(`Found ${validCourses.length} valid courses for student ${studentId}, returning top ${topCourses.length}`)
+    return topCourses
     
-    // 按照分数从高到低排序
-    return processedResults.sort((a, b) => b.score - a.score).slice(0, limit)
   } catch (error) {
     console.error('Error fetching subject grades:', error)
     return []
