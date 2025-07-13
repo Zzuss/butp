@@ -21,13 +21,13 @@ const companyModels = {
           courses: ["深度学习", "自然语言处理", "分布式系统", "机器学习"]
         },
         competitions: ["ACM程序设计大赛", "互联网+创新创业大赛"],
-        internships: ["腾讯AI Lab实习", "知名互联网公司AI实习"],
+        internships: ["腾讯人工智能实验室实习", "知名互联网公司人工智能实习"],
         englishScores: {
           toefl: "105+",
           ielts: "7.0+"
         },
         skills: ["大模型训练", "分布式计算", "算法优化", "团队协作"],
-        tags: ["大模型", "AI", "深度学习"],
+        tags: ["大模型", "人工智能", "深度学习"],
         description: "腾讯大模型工程师需具备扎实的深度学习理论基础，熟悉大规模分布式训练，有相关竞赛和实习经验，课程成绩优秀。",
         rating: 4.9,
         consultations: 120
@@ -96,7 +96,7 @@ const companyModels = {
           ielts: "6.0+"
         },
         skills: ["React/Vue", "前端工程化", "性能优化"],
-        tags: ["前端", "Web", "工程化"],
+        tags: ["前端", "网页开发", "工程化"],
         description: "腾讯前端开发需熟悉主流前端框架，有大型项目开发经验。",
         rating: 4.7,
         consultations: 85
@@ -236,7 +236,7 @@ const companyModels = {
           ielts: "6.0+"
         },
         skills: ["React/Vue", "前端工程化", "性能优化"],
-        tags: ["前端", "Web", "工程化"],
+        tags: ["前端", "网页开发", "工程化"],
         description: "阿里前端开发需熟悉主流前端框架，有大型项目开发经验，注重性能优化。",
         rating: 4.7,
         consultations: 85
@@ -255,14 +255,14 @@ const companyModels = {
           courses: ["人工智能", "计算机视觉", "推荐系统"]
         },
         competitions: ["全国大学生数学建模竞赛", "字节跳动青训营"],
-        internships: ["字节跳动算法实习", "AI研究实验室实习"],
+        internships: ["字节跳动算法实习", "人工智能研究实验室实习"],
         englishScores: {
           toefl: "110+",
           ielts: "7.5+"
         },
         skills: ["深度学习", "推荐系统", "Python/C++"],
-        tags: ["AI", "算法", "推荐系统"],
-        description: "字节算法工程师需有AI算法项目经验，熟悉推荐系统，参与过青训营等活动。",
+        tags: ["人工智能", "算法", "推荐系统"],
+        description: "字节算法工程师需有人工智能算法项目经验，熟悉推荐系统，参与过青训营等活动。",
         rating: 4.9,
         consultations: 90
       }
@@ -284,7 +284,7 @@ const companyModels = {
           ielts: "6.5+"
         },
         skills: ["React/Vue", "前端性能优化", "工程化工具链"],
-        tags: ["前端", "Web", "工程化"],
+        tags: ["前端", "网页开发", "工程化"],
         description: "字节前端开发需熟悉前端主流技术栈，有大型项目开发和优化经验。",
         rating: 4.8,
         consultations: 70
@@ -512,7 +512,7 @@ const schoolModels = {
           sat: "1550+"
         },
         skills: ["算法设计", "科研创新", "编程实现"],
-        tags: ["计算机", "科研", "AI"],
+        tags: ["计算机", "科研", "人工智能"],
         description: "哈佛计算机科学留学生需有扎实的算法和编程基础，积极参与国际竞赛和科研。",
         rating: 4.9,
         consultations: 90
@@ -619,10 +619,10 @@ const internshipModels = {
           courses: ["算法设计", "机器学习", "移动开发"]
         },
         skills: ["算法优化", "机器学习", "移动开发"],
-        requirements: ["计算机相关专业", "算法基础扎实", "对AI感兴趣"],
+        requirements: ["计算机相关专业", "算法基础扎实", "对人工智能感兴趣"],
         benefits: ["前沿技术", "算法实践", "快速成长"],
-        tags: ["技术", "实习", "AI"],
-        description: "字节跳动技术实习生将参与推荐算法和AI技术的开发，接触前沿技术。",
+        tags: ["技术", "实习", "人工智能"],
+        description: "字节跳动技术实习生将参与推荐算法和人工智能技术的开发，接触前沿技术。",
         rating: 4.9,
         applications: 1000
       }

@@ -141,6 +141,13 @@ export default function Analysis() {
         <p className="text-muted-foreground">{t('analysis.description')}</p>
       </div>
 
+      {/* 免责声明 */}
+      <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p className="text-sm text-yellow-800 text-center">
+          本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。
+        </p>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -357,13 +364,6 @@ export default function Analysis() {
             </div>
           </CardContent>
         </Card>
-      </div>
-      
-      {/* 免责声明 */}
-      <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <p className="text-sm text-yellow-800 text-center">
-          本系统GPA、均分、排名等为模糊计算所得，并非精准数据，仅供参考
-        </p>
       </div>
     </div>
   )

@@ -38,6 +38,7 @@ const sidebarItems = [
   },
   {
     title: "Role Model",
+    titleKey: "sidebar.rolemodels",
     href: "/role-models",
     icon: Users,
   },
@@ -49,11 +50,13 @@ const sidebarItems = [
   },
   {
     title: "图表测试",
+    titleKey: "sidebar.charts",
     href: "/charts",
     icon: PieChart,
   },
   {
     title: "关于BuTP",
+    titleKey: "about.title",
     href: "/about",
     icon: Info,
   },

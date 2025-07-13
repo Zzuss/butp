@@ -97,6 +97,13 @@ export default function Dashboard() {
         <p className="text-sm md:text-base text-muted-foreground">{t('dashboard.description').replace('{name}', currentStudent.name)}</p>
       </div>
 
+      {/* 免责声明 */}
+      <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p className="text-sm text-yellow-800 text-center">
+          本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-4 mb-4 md:mb-6 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
@@ -142,23 +149,6 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* 数据说明 */}
-      <div className="mb-6 p-4 bg-muted/50 rounded-lg border border-muted">
-        <div className="flex items-start gap-3">
-          <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-medium text-foreground mb-1">{t('dashboard.data.disclaimer.title')}</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {t('dashboard.data.disclaimer.content')}
-            </p>
-          </div>
-        </div>
       </div>
 
       <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">

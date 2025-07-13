@@ -33,6 +33,8 @@ const translations: Record<Language, Record<string, string>> = {
     // 侧边栏
     'sidebar.profile': '我的信息',
     'sidebar.logout': '退出登录',
+    'sidebar.rolemodels': 'Role Model',
+    'sidebar.charts': '图表测试',
     'sidebar.analysis': '分析模块',
     
     // Profile页面
@@ -171,10 +173,10 @@ const translations: Record<Language, Record<string, string>> = {
     'rolemodels.description': '了解不同去向的典型人才特征，规划自己的职业和学业发展路径',
     'rolemodels.tab.companies': '按就业公司',
     'rolemodels.tab.schools': '按升学学校',
-    'rolemodels.tab.internships': '按实习公司',
-    'rolemodels.internship.duration': '时长',
-    'rolemodels.internship.benefits': '收获',
-    'rolemodels.internship.applications': '人申请',
+    'rolemodels.tab.internships': '按实习机会',
+    'rolemodels.internship.duration': '实习时长',
+    'rolemodels.internship.benefits': '实习收获',
+    'rolemodels.internship.applications': '申请人数',
     'rolemodels.internship.details': '查看详情',
     'rolemodels.common.details': '查看详情',
     
@@ -214,11 +216,8 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.improvement.estimated.time': '预计用时: {time}',
     'analysis.improvement.make.plan': '制定计划',
     
-    // 数据说明
-    'dashboard.data.disclaimer.title': '数据说明',
-    'dashboard.data.disclaimer.content': '本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。',
-    
     // About页面
+    'about.title': '关于BuTP',
     'about.version': '当前版本 {version}'
   },
   en: {
@@ -237,6 +236,8 @@ const translations: Record<Language, Record<string, string>> = {
     // 侧边栏
     'sidebar.profile': 'My Profile',
     'sidebar.logout': 'Logout',
+    'sidebar.rolemodels': 'Role Models',
+    'sidebar.charts': 'Charts Test',
     'sidebar.analysis': 'Analysis',
     
     // Profile页面
@@ -418,11 +419,8 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.improvement.estimated.time': 'Estimated time: {time}',
     'analysis.improvement.make.plan': 'Make Plan',
     
-    // 数据说明
-    'dashboard.data.disclaimer.title': 'Data Disclaimer',
-    'dashboard.data.disclaimer.content': 'The average scores, pass rates, GPA and other data displayed on this page are calculated estimates for reference and trend analysis purposes only. Please refer to the official academic system for accurate grade information.',
-    
     // About页面
+    'about.title': 'About BuTP',
     'about.version': 'Version {version}'
   }
 }
