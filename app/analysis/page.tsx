@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, TrendingDown, Target, Brain, BookOpen, Users, Check, Plus, X } from "lucide-react"
+import { TrendingUp, TrendingDown, Target, Brain, BookOpen, Users, Check, Plus, X, ChevronDown } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import { getTopPercentageGPAThreshold } from "@/lib/dashboard-data"
 
 const subjectAnalysis = [
   { subject: '数学', current: 95, target: 98, gap: 3 },
@@ -88,6 +89,46 @@ type ChecklistItem = {
 export default function Analysis() {
   const { t } = useLanguage()
   
+  // 下拉菜单状态
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState('top30');
+  
+  // GPA门槛值状态
+  const [gpaThreshold, setGpaThreshold] = useState<number | null>(null);
+  const [loadingGPA, setLoadingGPA] = useState(false);
+  
+  const percentageOptions = [
+    { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
+    { key: 'top20', label: t('analysis.tops.top20'), value: 20 },
+    { key: 'top30', label: t('analysis.tops.top30'), value: 30 }
+  ];
+
+  // 获取GPA门槛值
+  const loadGPAThreshold = async (percentage: number) => {
+    setLoadingGPA(true);
+    try {
+      const threshold = await getTopPercentageGPAThreshold(percentage);
+      setGpaThreshold(threshold);
+    } catch (error) {
+      console.error('Failed to load GPA threshold:', error);
+      setGpaThreshold(null);
+    } finally {
+      setLoadingGPA(false);
+    }
+  };
+
+  // 初始加载和选项变化时更新GPA门槛值
+  useEffect(() => {
+    const selectedPercentage = percentageOptions.find(opt => opt.key === selectedOption)?.value || 30;
+    loadGPAThreshold(selectedPercentage);
+  }, [selectedOption]);
+
+  // 处理下拉菜单选择
+  const handleOptionSelect = (optionKey: string) => {
+    setSelectedOption(optionKey);
+    setIsDropdownOpen(false);
+  };
+
   // 打卡清单状态
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
     { id: '1', text: '完成数学作业', completed: false, timestamp: new Date() },
@@ -175,30 +216,43 @@ export default function Analysis() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('analysis.weak.title')}</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-lg font-medium">{t('analysis.tops.title')}</CardTitle>
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="h-7 px-3 text-sm"
+              >
+                {percentageOptions.find(opt => opt.key === selectedOption)?.label}
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 w-24 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  {percentageOptions.map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => handleOptionSelect(option.key)}
+                      className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50 first:rounded-t-md last:rounded-b-md"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingDown className="h-3 w-3" />
-              {t('analysis.weak.desc')}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('analysis.ranking.title')}</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              {t('analysis.ranking.desc')}
-            </p>
+            <div className="text-center py-4">
+              <div className="text-lg font-medium mb-2">
+                GPA：{loadingGPA ? '计算中...' : (gpaThreshold !== null ? gpaThreshold.toFixed(2) : '暂无数据')}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {percentageOptions.find(opt => opt.key === selectedOption)?.label} 门槛值
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

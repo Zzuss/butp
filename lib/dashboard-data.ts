@@ -448,3 +448,79 @@ export async function getBatchCourseSchoolAverages(courseNames: string[]): Promi
     return result
   }
 }
+
+/**
+ * 获取前X%学生的GPA门槛值
+ * @param percentage 百分比 (10, 20, 30等)
+ * @returns GPA门槛值，如果无数据则返回null
+ */
+export async function getTopPercentageGPAThreshold(percentage: number): Promise<number | null> {
+  try {
+    // 边界检查
+    if (percentage <= 0) return null
+    
+    // 获取所有学生的GPA数据
+    const { data: results, error } = await supabase
+      .from('academic_results')
+      .select('SNH, Grade, Credit')
+      .not('Grade', 'is', null)
+      .not('Grade', 'eq', '')
+      .not('SNH', 'is', null)
+
+    if (error) {
+      console.error('Error fetching GPA threshold data:', error)
+      return null
+    }
+
+    if (!results || results.length === 0) {
+      return null
+    }
+
+    // 按学生分组计算每个学生的GPA
+    const studentGPAs = new Map<string, Array<{grade: string | null, credit: string | null}>>()
+    
+    results.forEach(result => {
+      const studentId = result.SNH
+      if (!studentGPAs.has(studentId)) {
+        studentGPAs.set(studentId, [])
+      }
+      studentGPAs.get(studentId)!.push({
+        grade: result.Grade,
+        credit: result.Credit
+      })
+    })
+
+    // 计算每个学生的GPA
+    const studentGPAList: Array<{studentId: string, gpa: number}> = []
+    
+    for (const [studentId, courses] of studentGPAs) {
+      const gpa = calculateWeightedGPA(courses)
+      if (gpa > 0) { // 只包含有效GPA的学生
+        studentGPAList.push({ studentId, gpa })
+      }
+    }
+
+    if (studentGPAList.length === 0) {
+      return null
+    }
+
+    // 如果百分比大于等于100%，返回最低GPA
+    if (percentage >= 100) {
+      return Math.min(...studentGPAList.map(s => s.gpa))
+    }
+
+    // 计算需要的人数
+    const targetCount = Math.ceil(studentGPAList.length * (percentage / 100))
+    const actualCount = Math.min(targetCount, studentGPAList.length)
+
+    // 按GPA从高到低排序
+    const sortedStudents = studentGPAList.sort((a, b) => b.gpa - a.gpa)
+
+    // 返回前N名中最后一名的GPA（即门槛值）
+    return sortedStudents[actualCount - 1].gpa
+
+  } catch (error) {
+    console.error('Error calculating GPA threshold:', error)
+    return null
+  }
+}
