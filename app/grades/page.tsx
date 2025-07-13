@@ -17,10 +17,12 @@ export default function AllGrades() {
   const [showModal, setShowModal] = useState(false)
   const [radarData, setRadarData] = useState<RadarChartData | null>(null)
   const [loadingRadar, setLoadingRadar] = useState(false)
+  const [selectedCourseName, setSelectedCourseName] = useState<string>('')
 
   const closeModal = () => {
     setShowModal(false)
     setRadarData(null)
+    setSelectedCourseName('')
   }
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function AllGrades() {
       setSelectedRow(null)
       setShowModal(false)
       setRadarData(null)
+      setSelectedCourseName('')
       return
     }
     
@@ -61,6 +64,7 @@ export default function AllGrades() {
       setLoadingRadar(true)
       setShowModal(true)
       setRadarData(null) // 清空之前的数据
+      setSelectedCourseName(grades[index].subject) // 设置课程名称
       try {
         const data = await getRadarChartData(grades[index].courseId!)
         setRadarData(data)
@@ -74,6 +78,7 @@ export default function AllGrades() {
       // 没有课程ID时仍然高亮，但不显示模态框
       setShowModal(false)
       setRadarData(null)
+      setSelectedCourseName('')
     }
   }
 
@@ -121,8 +126,17 @@ export default function AllGrades() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('grades.all.courses.title')}</CardTitle>
-          <CardDescription>{t('grades.all.courses.description')}</CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>{t('grades.all.courses.title')}</CardTitle>
+              <CardDescription>{t('grades.all.courses.description')}</CardDescription>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="text-base font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-md">
+                {t('grades.all.courses.click.hint')}
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -164,10 +178,10 @@ export default function AllGrades() {
 
       {/* 悬浮窗 */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={closeModal}>
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeModal}>
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">{t('radar.modal.title')}</h3>
+              <h3 className="text-lg font-semibold">{selectedCourseName}</h3>
               <button 
                 onClick={closeModal}
                 className="text-gray-500 hover:text-gray-700"
@@ -182,7 +196,7 @@ export default function AllGrades() {
                   <div className="text-muted-foreground">加载中...</div>
                 </div>
               ) : radarData ? (
-                <RadarChart data={radarData} width={300} height={300} />
+                <RadarChart data={radarData} width={500} height={500} />
               ) : (
                 <div className="flex items-center justify-center h-48">
                   <div className="text-muted-foreground">暂无数据</div>

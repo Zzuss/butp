@@ -12,14 +12,14 @@ interface RadarChartProps {
 
 export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps) {
   const center = { x: width / 2, y: height / 2 }
-  const radius = Math.min(width, height) / 2 - 20
+  const radius = Math.min(width, height) / 2 - 60 // 为标签预留更多空间
   const dataEntries = Object.entries(data)
   const angleStep = (2 * Math.PI) / dataEntries.length
 
   // 计算每个点的坐标
   const getPointCoordinates = (value: number, index: number) => {
     const angle = index * angleStep - Math.PI / 2 // 从顶部开始
-    const r = (value * radius) // 假设数据在0-1范围内
+    const r = (value * radius * 2) // 将数据放大2倍显示
     return {
       x: center.x + r * Math.cos(angle),
       y: center.y + r * Math.sin(angle)
@@ -29,7 +29,7 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
   // 计算标签位置
   const getLabelCoordinates = (index: number) => {
     const angle = index * angleStep - Math.PI / 2
-    const r = radius + 15
+    const r = radius + 30 // 增加标签与图表的距离
     return {
       x: center.x + r * Math.cos(angle),
       y: center.y + r * Math.sin(angle)
@@ -37,11 +37,11 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
   }
 
   // 生成网格线
-  const gridLevels = [0.2, 0.4, 0.6, 0.8, 1.0]
+  const gridLevels = [0.1, 0.2, 0.3, 0.4, 0.5]
   const gridPaths = gridLevels.map(level => {
     const points = dataEntries.map((_, index) => {
       const angle = index * angleStep - Math.PI / 2
-      const r = level * radius
+      const r = level * radius * 2 // 与数据放大保持一致
       return `${center.x + r * Math.cos(angle)},${center.y + r * Math.sin(angle)}`
     })
     return `M ${points.join(' L ')} Z`
@@ -60,15 +60,15 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
             key={index}
             d={path}
             fill="none"
-            stroke="#e2e8f0"
+            stroke="#94a3b8"
             strokeWidth="1"
-            opacity={0.5}
+            opacity={0.8}
           />
         ))}
         
         {/* 轴线 */}
         {dataEntries.map((_, index) => {
-          const endPoint = getPointCoordinates(1, index)
+          const endPoint = getPointCoordinates(0.5, index) // 调整轴线长度到0.5对应的位置
           return (
             <line
               key={index}
@@ -76,9 +76,9 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
               y1={center.y}
               x2={endPoint.x}
               y2={endPoint.y}
-              stroke="#e2e8f0"
+              stroke="#94a3b8"
               strokeWidth="1"
-              opacity={0.5}
+              opacity={0.8}
             />
           )
         })}
@@ -105,7 +105,6 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
         {/* 标签 */}
         {dataEntries.map(([label], index) => {
           const labelPos = getLabelCoordinates(index)
-          const shortLabel = label.length > 6 ? label.substring(0, 4) + '...' : label
           return (
             <text
               key={index}
@@ -113,11 +112,11 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
               y={labelPos.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fontSize="10"
+              fontSize="12"
               fill="#64748b"
               className="select-none"
             >
-              {shortLabel}
+              {label}
             </text>
           )
         })}

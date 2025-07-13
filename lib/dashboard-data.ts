@@ -254,8 +254,7 @@ export async function getCourseCategories(studentId: string): Promise<{ category
  */
 export async function getRadarChartData(courseId: string): Promise<RadarChartData | null> {
   try {
-    // 尝试从真实数据库获取数据的代码（当前被注释掉）
-    /*
+    // 从真实数据库获取数据
     const { data, error } = await supabase
       .from('radarchart_result')
       .select('数理逻辑与科学基础, 专业核心技术, 人文与社会素养, 工程实践与创新应用, 职业发展与团队协作')
@@ -263,7 +262,7 @@ export async function getRadarChartData(courseId: string): Promise<RadarChartDat
       .limit(1)
 
     if (!error && data && data.length > 0) {
-      const firstRecord = data[0]
+      const firstRecord = data[0] as any
       return {
         数理逻辑与科学基础: Number(firstRecord['数理逻辑与科学基础'].toFixed(3)),
         专业核心技术: Number(firstRecord['专业核心技术'].toFixed(3)),
@@ -272,31 +271,9 @@ export async function getRadarChartData(courseId: string): Promise<RadarChartDat
         职业发展与团队协作: Number(firstRecord['职业发展与团队协作'].toFixed(3))
       }
     }
-    */
     
-    // 模拟数据 - 基于真实数据库中的值
-    const mockData: { [key: string]: RadarChartData } = {
-      '3112190100': { // 电子系统基础
-        数理逻辑与科学基础: 0.184,
-        专业核心技术: 0.293,
-        人文与社会素养: 0.158,
-        工程实践与创新应用: 0.185,
-        职业发展与团队协作: 0.180
-      }
-    }
-    
-    if (mockData[courseId]) {
-      return mockData[courseId]
-    }
-    
-    // 为其他课程生成合理的随机数据
-    return {
-      数理逻辑与科学基础: Number((Math.random() * 0.2 + 0.15).toFixed(3)),
-      专业核心技术: Number((Math.random() * 0.2 + 0.2).toFixed(3)),
-      人文与社会素养: Number((Math.random() * 0.15 + 0.1).toFixed(3)),
-      工程实践与创新应用: Number((Math.random() * 0.2 + 0.15).toFixed(3)),
-      职业发展与团队协作: Number((Math.random() * 0.2 + 0.15).toFixed(3))
-    }
+    // 如果没有找到数据，返回null
+    return null
   } catch (error) {
     console.error('Error in getRadarChartData:', error)
     return null
