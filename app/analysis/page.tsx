@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, TrendingDown, Target, Brain, BookOpen, Users, Check, Plus, X, ChevronDown } from "lucide-react"
+import { TrendingUp, Target, Brain, Check, Plus, X, ChevronDown } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { getTopPercentageGPAThreshold } from "@/lib/dashboard-data"
 
@@ -97,12 +97,6 @@ export default function Analysis() {
   const [gpaThreshold, setGpaThreshold] = useState<number | null>(null);
   const [loadingGPA, setLoadingGPA] = useState(false);
   
-  const percentageOptions = [
-    { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
-    { key: 'top20', label: t('analysis.tops.top20'), value: 20 },
-    { key: 'top30', label: t('analysis.tops.top30'), value: 30 }
-  ];
-
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
     setLoadingGPA(true);
@@ -117,17 +111,29 @@ export default function Analysis() {
     }
   };
 
-  // 初始加载和选项变化时更新GPA门槛值
-  useEffect(() => {
-    const selectedPercentage = percentageOptions.find(opt => opt.key === selectedOption)?.value || 30;
-    loadGPAThreshold(selectedPercentage);
-  }, [selectedOption]);
-
   // 处理下拉菜单选择
   const handleOptionSelect = (optionKey: string) => {
     setSelectedOption(optionKey);
     setIsDropdownOpen(false);
   };
+
+  // 初始加载和选项变化时更新GPA门槛值
+  useEffect(() => {
+    const percentageOptions = [
+      { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
+      { key: 'top20', label: t('analysis.tops.top20'), value: 20 },
+      { key: 'top30', label: t('analysis.tops.top30'), value: 30 }
+    ];
+    
+    const selectedPercentage = percentageOptions.find(opt => opt.key === selectedOption)?.value || 30;
+    loadGPAThreshold(selectedPercentage);
+  }, [selectedOption, t]);
+
+  const percentageOptions = [
+    { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
+    { key: 'top20', label: t('analysis.tops.top20'), value: 20 },
+    { key: 'top30', label: t('analysis.tops.top30'), value: 30 }
+  ];
 
   // 打卡清单状态
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
