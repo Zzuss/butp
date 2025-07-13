@@ -48,7 +48,7 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
   })
 
   // 生成数据路径
-  const dataPoints = dataEntries.map(([_, value], index) => getPointCoordinates(value, index))
+  const dataPoints = dataEntries.map(([, value], index) => getPointCoordinates(value, index))
   const dataPath = `M ${dataPoints.map(p => `${p.x},${p.y}`).join(' L ')} Z`
 
   return (

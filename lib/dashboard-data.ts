@@ -295,7 +295,7 @@ export async function getRadarChartData(courseId: string): Promise<RadarChartDat
       .limit(1)
 
     if (!error && data && data.length > 0) {
-      const firstRecord = data[0] as any
+      const firstRecord = data[0] as unknown as Record<string, number>
       return {
         数理逻辑与科学基础: Number(firstRecord['数理逻辑与科学基础'].toFixed(3)),
         专业核心技术: Number(firstRecord['专业核心技术'].toFixed(3)),
