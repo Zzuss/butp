@@ -180,6 +180,10 @@ const translations: Record<Language, Record<string, string>> = {
     'rolemodels.internship.applications': '申请人数',
     'rolemodels.internship.details': '查看详情',
     'rolemodels.common.details': '查看详情',
+    'rolemodels.possibility.employment': '就业可能性',
+    'rolemodels.possibility.graduate': '升学可能性',
+    'rolemodels.possibility.internship': '实习可能性',
+    'rolemodels.possibility.estimate': '根据您的成绩，估计',
     
     // Analysis页面
     'analysis.title': '分析模块',
@@ -387,6 +391,10 @@ const translations: Record<Language, Record<string, string>> = {
     'rolemodels.internship.applications': 'applications',
     'rolemodels.internship.details': 'View Details',
     'rolemodels.common.details': 'View Details',
+    'rolemodels.possibility.employment': 'Employment Possibility',
+    'rolemodels.possibility.graduate': 'Graduate School Possibility',
+    'rolemodels.possibility.internship': 'Internship Possibility',
+    'rolemodels.possibility.estimate': 'Based on your grades, estimated',
     
     // Analysis页面
     'analysis.title': 'Analysis',

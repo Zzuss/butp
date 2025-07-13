@@ -6,6 +6,60 @@ import { GraduationCap, Briefcase, MapPin, Star, Building, School, Award, BookOp
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollableContainer } from "../../components/ui/scrollable-container"
 import { useLanguage } from "@/contexts/language-context"
+import { useState } from "react"
+
+// 可能性卡片组件
+function PossibilityCard({ activeTab }: { activeTab: string }) {
+  const { t } = useLanguage()
+  
+  // 根据不同标签页显示不同的可能性类型和数值
+  const getPossibilityData = () => {
+    switch (activeTab) {
+      case 'companies':
+        return {
+          type: t('rolemodels.possibility.employment'),
+          percentage: '70%'
+        }
+      case 'schools':
+        return {
+          type: t('rolemodels.possibility.graduate'),
+          percentage: '80%'
+        }
+      case 'internships':
+        return {
+          type: t('rolemodels.possibility.internship'),
+          percentage: '90%'
+        }
+      default:
+        return {
+          type: t('rolemodels.possibility.employment'),
+          percentage: '70%'
+        }
+    }
+  }
+  
+  const { type, percentage } = getPossibilityData()
+  
+  return (
+    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300 shadow-lg hover:shadow-xl transition-shadow duration-300 min-w-[280px] max-w-[320px]">
+      <CardContent className="px-8 py-4">
+        <div className="text-center mb-3">
+          <div className="text-sm text-blue-600 opacity-80">
+            {t('rolemodels.possibility.estimate')}
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="text-xl font-semibold text-blue-700">
+            {type}
+          </div>
+          <div className="text-4xl font-bold text-blue-800 tracking-tight">
+            {percentage}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 // 按公司和学校分类的虚拟角色模型数据
 const companyModels = {
@@ -1026,15 +1080,21 @@ function InternshipRow({ company, categories }: { company: string, categories: R
 
 export default function RoleModels() {
   const { t } = useLanguage()
+  const [activeTab, setActiveTab] = useState("companies")
   
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Role Models</h1>
-        <p className="text-muted-foreground">{t('rolemodels.description')}</p>
+      <div className="mb-6 flex justify-between items-start gap-6">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold">Role Models</h1>
+          <p className="text-muted-foreground">{t('rolemodels.description')}</p>
+        </div>
+        <div className="flex-shrink-0">
+          <PossibilityCard activeTab={activeTab} />
+        </div>
       </div>
 
-      <Tabs defaultValue="companies" className="w-full">
+      <Tabs defaultValue="companies" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="companies">{t('rolemodels.tab.companies')}</TabsTrigger>
           <TabsTrigger value="schools">{t('rolemodels.tab.schools')}</TabsTrigger>
