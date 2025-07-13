@@ -953,24 +953,24 @@ function SchoolCard({ model }: { model: SchoolModel }) {
 function CompanyRow({ company, positions }: { company: string, positions: Record<string, CompanyModel[]> }) {
   return (
     <div className="mb-12">
-      <div className="flex items-center gap-2 mb-4">
-        <Building className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-semibold">{company}</h2>
-      </div>
-      <ScrollableContainer>
-        {Object.entries(positions).map(([position, models]) => (
-          models.map((model) => (
+              <div className="flex items-center gap-2 mb-4">
+                <Building className="h-5 w-5 text-primary" />
+                <h2 className="text-2xl font-semibold">{company}</h2>
+              </div>
+              <ScrollableContainer>
+                {Object.entries(positions).map(([position, models]) => (
+                  models.map((model) => (
             <div key={`${company}-${position}-${model.id}`} className="mr-4 min-w-[350px]">
               <div className="mb-2 flex items-center gap-2 md:ml-0">
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-                <span className="text-base font-medium">{position}</span>
-              </div>
-              <CompanyCard model={model} />
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-base font-medium">{position}</span>
+                      </div>
+                      <CompanyCard model={model} />
+                    </div>
+                  ))
+                ))}
+              </ScrollableContainer>
             </div>
-          ))
-        ))}
-      </ScrollableContainer>
-    </div>
   );
 }
 
@@ -978,24 +978,24 @@ function CompanyRow({ company, positions }: { company: string, positions: Record
 function SchoolRow({ school, majors }: { school: string, majors: Record<string, SchoolModel[]> }) {
   return (
     <div className="mb-12">
-      <div className="flex items-center gap-2 mb-4">
-        <School className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-semibold">{school}</h2>
-      </div>
-      <ScrollableContainer>
-        {Object.entries(majors).map(([major, models]) => (
-          models.map((model) => (
+              <div className="flex items-center gap-2 mb-4">
+                <School className="h-5 w-5 text-primary" />
+                <h2 className="text-2xl font-semibold">{school}</h2>
+              </div>
+              <ScrollableContainer>
+                {Object.entries(majors).map(([major, models]) => (
+                  models.map((model) => (
             <div key={`${school}-${major}-${model.id}`} className="mr-4 min-w-[350px]">
               <div className="mb-2 flex items-center gap-2 md:ml-0">
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-                <span className="text-base font-medium">{major}</span>
-              </div>
-              <SchoolCard model={model} />
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-base font-medium">{major}</span>
+                      </div>
+                      <SchoolCard model={model} />
+                    </div>
+                  ))
+                ))}
+              </ScrollableContainer>
             </div>
-          ))
-        ))}
-      </ScrollableContainer>
-    </div>
   );
 }
 

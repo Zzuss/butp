@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getDashboardStats, getSubjectGrades, getProgressData, getCourseCategories } from "@/lib/dashboard-data"
+import { getDashboardStats, getSubjectGrades, getProgressData, getCourseCategories, getBatchCourseSchoolAverages } from "@/lib/dashboard-data"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
 import { useLanguage } from "@/contexts/language-context"
 import Link from 'next/link'
@@ -12,6 +12,7 @@ interface DashboardData {
   subjectGrades: Awaited<ReturnType<typeof getSubjectGrades>>
   progressData: Awaited<ReturnType<typeof getProgressData>>
   categories: Awaited<ReturnType<typeof getCourseCategories>>
+  schoolAverages: Record<string, number | null>
 }
 
 export default function Dashboard() {
@@ -36,7 +37,13 @@ export default function Dashboard() {
         getCourseCategories(studentId)
       ])
       
-      setDashboardData({ stats, subjectGrades, progressData, categories })
+      // 获取课程名称列表
+      const courseNames = subjectGrades.map(grade => grade.subject)
+      
+      // 批量获取全校平均分
+      const schoolAverages = await getBatchCourseSchoolAverages(courseNames)
+      
+      setDashboardData({ stats, subjectGrades, progressData, categories, schoolAverages })
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
     } finally {
@@ -69,19 +76,19 @@ export default function Dashboard() {
     )
   }
 
-  const { stats, subjectGrades, progressData, categories } = dashboardData
+  const { stats, subjectGrades, progressData, categories, schoolAverages } = dashboardData
   
   const attendanceRate = stats.completedCourses > 0 
     ? Math.round((stats.completedCourses / stats.totalCourses) * 100)
     : 0
 
-  // 为各科成绩添加虚假的学校平均分数据
-  const subjectGradesWithAverage = subjectGrades.map((item, index) => {
-    // 使用固定的平均分数据，避免每次刷新都变化
-    const averageScores = [82, 78, 85, 79, 88, 76, 83, 80, 87, 81];
+  // 为各科成绩添加真实的学校平均分数据
+  const subjectGradesWithAverage = subjectGrades.map((item) => {
+    const schoolAverage = schoolAverages[item.subject]
     return {
       ...item,
-      schoolAverage: averageScores[index % averageScores.length]
+      schoolAverage: schoolAverage !== null ? schoolAverage : 75, // 如果没有平均分数据，使用默认值75
+      hasRealAverage: schoolAverage !== null // 标记是否有真实平均分数据
     };
   })
 
@@ -185,9 +192,9 @@ export default function Dashboard() {
                           当前: {item.score}分
                         </span>
                         <span className="text-muted-foreground">
-                          平均: {item.schoolAverage}分
+                          平均: {item.schoolAverage}分{!item.hasRealAverage && ' (估算)'}
                         </span>
-                      </div>
+                  </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 relative">
                         {/* 基础进度条 - 蓝色 */}
                         <div 
@@ -206,7 +213,7 @@ export default function Dashboard() {
                           ></div>
                         ) : (
                           /* 低于平均分 - 红色补充 */
-                          <div 
+                      <div 
                             className="bg-red-600 h-2 rounded-r-full absolute"
                             style={{ 
                               left: `${(item.score / maxScore) * 100}%`,
@@ -218,7 +225,7 @@ export default function Dashboard() {
                         <div 
                           className="absolute top-0 w-0.5 h-2 bg-gray-800 z-10"
                           style={{ left: `${(item.schoolAverage / maxScore) * 100}%` }}
-                        ></div>
+                      ></div>
                       </div>
                     </div>
                   </div>

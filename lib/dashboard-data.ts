@@ -128,30 +128,30 @@ export async function getSubjectGrades(studentId: string, limit = 6): Promise<Su
 
       // 转换成绩为数字分数
       const numericScore = convertGradeToScore(course.Grade)
-      
+        
       // 跳过无法转换的成绩
       if (numericScore === null || numericScore < 0 || numericScore > 100) {
         continue
-      }
-
+        }
+        
       // 计算等级
-      let grade = 'F'
-      if (numericScore >= 95) grade = 'A+'
-      else if (numericScore >= 90) grade = 'A'
-      else if (numericScore >= 85) grade = 'B+'
-      else if (numericScore >= 80) grade = 'B'
-      else if (numericScore >= 75) grade = 'C+'
-      else if (numericScore >= 70) grade = 'C'
-      else if (numericScore >= 60) grade = 'D'
-
+        let grade = 'F'
+        if (numericScore >= 95) grade = 'A+'
+        else if (numericScore >= 90) grade = 'A'
+        else if (numericScore >= 85) grade = 'B+'
+        else if (numericScore >= 80) grade = 'B'
+        else if (numericScore >= 75) grade = 'C+'
+        else if (numericScore >= 70) grade = 'C'
+        else if (numericScore >= 60) grade = 'D'
+        
       // 解析学分
       const credit = parseFloat(course.Credit || '0')
       
       validCourses.push({
         subject: course.Course_Name.trim(),
-        score: Math.round(numericScore),
-        grade,
-        gpa: Math.round(calculateBUPTGPA(numericScore) * 100) / 100,
+          score: Math.round(numericScore),
+          grade,
+          gpa: Math.round(calculateBUPTGPA(numericScore) * 100) / 100,
         credit: credit > 0 ? credit : 1, // 如果学分无效则默认为1
         courseId: course.Course_ID?.trim() || undefined
       })
@@ -310,5 +310,141 @@ export async function getRadarChartData(courseId: string): Promise<RadarChartDat
   } catch (error) {
     console.error('Error in getRadarChartData:', error)
     return null
+  }
+}
+
+/**
+ * 将分数四舍五入到最近的0.5
+ * @param score 原始分数
+ * @returns 四舍五入到0.5的分数
+ */
+function roundToHalf(score: number): number {
+  return Math.round(score * 2) / 2
+}
+
+/**
+ * 获取课程的全校平均分
+ * @param courseName 课程名称
+ * @returns 全校平均分，如果无数据则返回null
+ */
+export async function getCourseSchoolAverage(courseName: string): Promise<number | null> {
+  try {
+    // 查询该课程的所有学生成绩
+    const { data: results, error } = await supabase
+      .from('academic_results')
+      .select('Grade, Credit')
+      .eq('Course_Name', courseName)
+      .not('Grade', 'is', null)
+      .not('Grade', 'eq', '')
+
+    if (error) {
+      console.error('Error fetching course average:', error)
+      return null
+    }
+
+    if (!results || results.length === 0) {
+      return null
+    }
+
+    // 转换成绩并计算学分加权平均分
+    const validGrades = results
+      .map(result => ({
+        grade: result.Grade,
+        credit: result.Credit
+      }))
+      .filter(item => {
+        const score = convertGradeToScore(item.grade)
+        const credit = parseFloat(item.credit || '0')
+        return score !== null && credit > 0
+      })
+
+    if (validGrades.length === 0) {
+      return null
+    }
+
+    // 使用学分加权平均分并四舍五入到0.5
+    const weightedAverage = calculateWeightedAverage(validGrades)
+    return roundToHalf(weightedAverage)
+  } catch (error) {
+    console.error('Error calculating course school average:', error)
+    return null
+  }
+}
+
+/**
+ * 批量获取多门课程的全校平均分
+ * @param courseNames 课程名称数组
+ * @returns 课程名称到平均分的映射
+ */
+export async function getBatchCourseSchoolAverages(courseNames: string[]): Promise<Record<string, number | null>> {
+  const result: Record<string, number | null> = {}
+  
+  try {
+    // 批量计算课程平均分
+    
+    // 批量查询所有课程的成绩数据
+    const { data: results, error } = await supabase
+      .from('academic_results')
+      .select('Course_Name, Grade, Credit')
+      .in('Course_Name', courseNames)
+      .not('Grade', 'is', null)
+      .not('Grade', 'eq', '')
+
+    if (error) {
+      console.error('Error fetching batch course averages:', error)
+      // 返回所有课程的null值
+      courseNames.forEach(courseName => {
+        result[courseName] = null
+      })
+      return result
+    }
+
+    if (!results || results.length === 0) {
+      courseNames.forEach(courseName => {
+        result[courseName] = null
+      })
+      return result
+    }
+
+    // 按课程名称分组
+    const groupedByCourse = results.reduce((acc, result) => {
+      const courseName = result.Course_Name
+      if (!acc[courseName]) {
+        acc[courseName] = []
+      }
+      acc[courseName].push({
+        grade: result.Grade,
+        credit: result.Credit
+      })
+      return acc
+    }, {} as Record<string, Array<{grade: string | null, credit: string | null}>>)
+
+    // 计算每门课程的平均分
+    for (const courseName of courseNames) {
+      if (groupedByCourse[courseName]) {
+        const validGrades = groupedByCourse[courseName]
+          .filter(item => {
+            const score = convertGradeToScore(item.grade)
+            const credit = parseFloat(item.credit || '0')
+            return score !== null && credit > 0
+          })
+
+        if (validGrades.length > 0) {
+          const weightedAverage = calculateWeightedAverage(validGrades)
+          result[courseName] = roundToHalf(weightedAverage)
+        } else {
+          result[courseName] = null
+        }
+      } else {
+        result[courseName] = null
+      }
+    }
+    return result
+  } catch (error) {
+    console.error('Error calculating batch course school averages:', error)
+    courseNames.forEach(courseName => {
+      result[courseName] = null
+    })
+    return result
   }
 }
