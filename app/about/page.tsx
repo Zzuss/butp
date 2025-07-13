@@ -74,7 +74,7 @@ export default function AboutPage() {
         {/* 页面标题 */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-blue-900 mb-4">关于 BuTP</h1>
-          <p className="text-xl text-blue-700 mb-2">Build Your Toolbox Program</p>
+          <p className="text-xl text-blue-700 mb-2">Build Your Toolbox Project</p>
           <p className="text-blue-600 mb-4">构建属于你的工具箱</p>
           
           {/* 版本号显示 */}

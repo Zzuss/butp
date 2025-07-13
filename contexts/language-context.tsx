@@ -116,7 +116,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 课程统计卡片
     'dashboard.stats.average': '平均分数',
-    'dashboard.stats.average.desc': '总体平均成绩',
+    'dashboard.stats.average.desc': '个人平均成绩',
     'dashboard.stats.pass.rate': '通过率',
     'dashboard.stats.pass.rate.desc': '课程通过率',
     'dashboard.stats.courses': '已修课程',
@@ -310,7 +310,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 课程统计卡片
     'dashboard.stats.average': 'Average Score',
-    'dashboard.stats.average.desc': 'Overall average grade',
+    'dashboard.stats.average.desc': 'Personal average grade',
     'dashboard.stats.pass.rate': 'Pass Rate',
     'dashboard.stats.pass.rate.desc': 'Course pass rate',
     'dashboard.stats.courses': 'Courses Taken',
