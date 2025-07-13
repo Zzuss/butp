@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getSubjectGrades } from "@/lib/dashboard-data"
+import { getSubjectGrades, getRadarChartData, type RadarChartData } from "@/lib/dashboard-data"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
 import { useLanguage } from "@/contexts/language-context"
+import { RadarChart } from "@/components/ui/radar-chart"
 import Link from 'next/link'
 
 export default function AllGrades() {
@@ -13,6 +14,14 @@ export default function AllGrades() {
   const [grades, setGrades] = useState<Awaited<ReturnType<typeof getSubjectGrades>>>([])
   const [loading, setLoading] = useState(false)
   const [selectedRow, setSelectedRow] = useState<number | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [radarData, setRadarData] = useState<RadarChartData | null>(null)
+  const [loadingRadar, setLoadingRadar] = useState(false)
+
+  const closeModal = () => {
+    setShowModal(false)
+    setRadarData(null)
+  }
 
   useEffect(() => {
     if (currentStudent) {
@@ -35,8 +44,37 @@ export default function AllGrades() {
     }
   }
 
-  const handleRowClick = (index: number) => {
-    setSelectedRow(selectedRow === index ? null : index)
+  const handleRowClick = async (index: number) => {
+    // 如果点击的是同一行，取消选择并关闭模态框
+    if (selectedRow === index) {
+      setSelectedRow(null)
+      setShowModal(false)
+      setRadarData(null)
+      return
+    }
+    
+    // 选择新行
+    setSelectedRow(index)
+    
+    // 如果有课程ID，获取雷达图数据
+    if (grades[index]?.courseId) {
+      setLoadingRadar(true)
+      setShowModal(true)
+      setRadarData(null) // 清空之前的数据
+      try {
+        const data = await getRadarChartData(grades[index].courseId!)
+        setRadarData(data)
+      } catch (error) {
+        console.error('Failed to load radar chart data:', error)
+        setRadarData(null)
+      } finally {
+        setLoadingRadar(false)
+      }
+    } else {
+      // 没有课程ID时仍然高亮，但不显示模态框
+      setShowModal(false)
+      setRadarData(null)
+    }
   }
 
   // 格式化学分为保留一位小数
@@ -123,6 +161,37 @@ export default function AllGrades() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 悬浮窗 */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={closeModal}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{t('radar.modal.title')}</h3>
+              <button 
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="flex justify-center">
+              {loadingRadar ? (
+                <div className="flex items-center justify-center h-48">
+                  <div className="text-muted-foreground">加载中...</div>
+                </div>
+              ) : radarData ? (
+                <RadarChart data={radarData} width={300} height={300} />
+              ) : (
+                <div className="flex items-center justify-center h-48">
+                  <div className="text-muted-foreground">暂无数据</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

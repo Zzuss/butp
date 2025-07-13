@@ -218,7 +218,10 @@ const translations: Record<Language, Record<string, string>> = {
     
     // About页面
     'about.title': '关于BuTP',
-    'about.version': '当前版本 {version}'
+    'about.version': '当前版本 {version}',
+    
+    // 雷达图相关
+    'radar.modal.title': '测试字段'
   },
   en: {
     // 登录页面
@@ -421,7 +424,10 @@ const translations: Record<Language, Record<string, string>> = {
     
     // About页面
     'about.title': 'About BuTP',
-    'about.version': 'Version {version}'
+    'about.version': 'Version {version}',
+    
+    // 雷达图相关
+    'radar.modal.title': 'test content'
   }
 }
 
