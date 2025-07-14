@@ -175,7 +175,7 @@ export default function Dashboard() {
           <CardContent className="px-3 md:px-6 py-3 md:py-4">
             <div className="space-y-3 md:space-y-4">
               {subjectGradesWithAverage.length > 0 ? subjectGradesWithAverage.map((item) => {
-                const isAboveAverage = item.score > item.schoolAverage;
+                const isAboveAverage = item.score >= item.schoolAverage;
                 const maxScore = Math.max(item.score, item.schoolAverage, 100);
                 
                 return (
@@ -195,37 +195,25 @@ export default function Dashboard() {
                           平均: {item.schoolAverage}分{!item.hasRealAverage && ' (估算)'}
                         </span>
                   </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 relative">
-                        {/* 基础进度条 - 蓝色 */}
+                      <div className="w-full bg-gray-200 rounded-full h-3 relative">
+                        {/* 当前分数条 - 底层 */}
                         <div 
-                          className="bg-blue-600 h-2 rounded-full absolute left-0"
-                          style={{ width: `${(Math.min(item.score, item.schoolAverage) / maxScore) * 100}%` }}
+                          className={`h-3 rounded-full absolute left-0 ${
+                            isAboveAverage 
+                              ? 'bg-green-400' 
+                              : 'bg-red-600'
+                          }`}
+                          style={{ width: `${(item.score / maxScore) * 100}%` }}
                         ></div>
-                        {/* 超出/不足平均分的部分 */}
-                        {item.score > item.schoolAverage ? (
-                          /* 超出平均分 - 绿色补充 */
-                          <div 
-                            className="bg-green-600 h-2 rounded-r-full absolute"
-                            style={{ 
-                              left: `${(item.schoolAverage / maxScore) * 100}%`,
-                              width: `${((item.score - item.schoolAverage) / maxScore) * 100}%`
-                            }}
-                          ></div>
-                        ) : (
-                          /* 低于平均分 - 红色补充 */
-                      <div 
-                            className="bg-red-600 h-2 rounded-r-full absolute"
-                            style={{ 
-                              left: `${(item.score / maxScore) * 100}%`,
-                              width: `${((item.schoolAverage - item.score) / maxScore) * 100}%`
-                            }}
-                          ></div>
-                        )}
-                        {/* 平均分标记线 */}
+                        {/* 平均分背景条 - 半透明黑色叠加层 */}
                         <div 
-                          className="absolute top-0 w-0.5 h-2 bg-gray-800 z-10"
-                          style={{ left: `${(item.schoolAverage / maxScore) * 100}%` }}
-                      ></div>
+                          className="absolute left-0 h-3 rounded-full"
+                          style={{ 
+                            width: `${(item.schoolAverage / maxScore) * 100}%`,
+                            background: 'rgba(0, 0, 0, 0.2)'
+                          }}
+                        ></div>
+
                       </div>
                     </div>
                   </div>
