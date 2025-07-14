@@ -1084,12 +1084,24 @@ export default function RoleModels() {
   
   return (
     <div className="p-6">
-      <div className="mb-6 flex justify-between items-start gap-6">
+      {/* 电脑端布局：标题和可能性卡片在同一行 */}
+      <div className="mb-6 hidden md:flex justify-between items-start gap-6">
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Role Models</h1>
           <p className="text-muted-foreground">{t('rolemodels.description')}</p>
         </div>
         <div className="flex-shrink-0">
+          <PossibilityCard activeTab={activeTab} />
+        </div>
+      </div>
+      
+      {/* 手机端布局：标题和可能性卡片分开显示 */}
+      <div className="mb-6 md:hidden">
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold">Role Models</h1>
+          <p className="text-muted-foreground">{t('rolemodels.description')}</p>
+        </div>
+        <div className="flex justify-center">
           <PossibilityCard activeTab={activeTab} />
         </div>
       </div>

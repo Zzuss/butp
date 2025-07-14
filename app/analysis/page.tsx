@@ -191,7 +191,7 @@ export default function Analysis() {
       {/* 免责声明 */}
       <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
         <p className="text-sm text-yellow-800 text-center">
-          本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。
+          {t('disclaimer.data.accuracy')}
         </p>
       </div>
 

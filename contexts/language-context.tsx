@@ -132,6 +132,8 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.subjects.view.more': '查看更多',
     'dashboard.subjects.grade.level': '等级',
     'dashboard.subjects.no.data': '暂无成绩数据',
+    'dashboard.subjects.current': '当前',
+    'dashboard.subjects.average': '平均',
     
     // 课程统计
     'dashboard.course.stats.title': '课程统计',
@@ -153,6 +155,9 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.distribution.courses.count': '{count} 门',
     'dashboard.distribution.average': '平均分',
     'dashboard.distribution.no.data': '暂无课程类型数据',
+    
+    // 免责声明
+    'disclaimer.data.accuracy': '本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。',
     
     // Grades页面
     'grades.title': '成绩详情',
@@ -286,7 +291,7 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.work.form.period.placeholder': 'e.g.: July 2024 - August 2024',
     'profile.work.form.description': 'Job Description *',
     'profile.work.form.description.placeholder': 'Please briefly describe your work content and achievements',
-    'profile.language.title': 'Language Scores',
+    'profile.language.title': 'Certificates',
     'profile.language.description': 'TOEFL, IELTS, GRE and other standardized test scores',
     'profile.language.add': 'Add Score',
     'profile.language.empty': 'No information available',
@@ -342,11 +347,13 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.stats.gpa.desc': 'Grade Point Average',
     
     // 各科成绩
-    'dashboard.subjects.title': 'Subject Grades',
+    'dashboard.subjects.title': 'Module results',
     'dashboard.subjects.description': 'Recent course grade distribution',
     'dashboard.subjects.view.more': 'View More',
     'dashboard.subjects.grade.level': 'Grade',
     'dashboard.subjects.no.data': 'No grade data available',
+    'dashboard.subjects.current': 'Your score',
+    'dashboard.subjects.average': 'Cohort average',
     
     // 课程统计
     'dashboard.course.stats.title': 'Course Statistics',
@@ -357,17 +364,20 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.course.stats.summary': 'Passed {completed} / Total {total} courses',
     
     // 学期成绩趋势
-    'dashboard.trends.title': 'Semester Grade Trends',
+    'dashboard.trends.title': 'Semester based performance trend',
     'dashboard.trends.description': 'Average grade changes by semester',
     'dashboard.trends.courses.count': '{count} courses',
     'dashboard.trends.no.data': 'No semester data available',
     
     // 课程类型分布
-    'dashboard.distribution.title': 'Course Type Distribution',
+    'dashboard.distribution.title': 'Module performance by category',
     'dashboard.distribution.description': 'Performance by different course types',
     'dashboard.distribution.courses.count': '{count} courses',
     'dashboard.distribution.average': 'Average',
     'dashboard.distribution.no.data': 'No course type data available',
+    
+    // 免责声明
+    'disclaimer.data.accuracy': 'The average scores, pass rates, GPA and other data displayed on this page are obtained through fuzzy calculations and are for reference and trend analysis only. Please refer to the official academic system for accurate grade information.',
     
     // Grades页面
     'grades.title': 'Grade Details',

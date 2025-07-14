@@ -107,7 +107,7 @@ export default function Dashboard() {
       {/* 免责声明 */}
       <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
         <p className="text-sm text-yellow-800 text-center">
-          本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。
+          {t('disclaimer.data.accuracy')}
         </p>
       </div>
 
@@ -189,10 +189,10 @@ export default function Dashboard() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs">
                         <span className={isAboveAverage ? 'text-green-600' : 'text-red-600'}>
-                          当前: {item.score}分
+                          {t('dashboard.subjects.current')}: {item.score}分
                         </span>
                         <span className="text-muted-foreground">
-                          平均: {item.schoolAverage}分{!item.hasRealAverage && ' (估算)'}
+                          {t('dashboard.subjects.average')}: {item.schoolAverage}分{!item.hasRealAverage && ' (估算)'}
                         </span>
                   </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 relative">
@@ -201,7 +201,7 @@ export default function Dashboard() {
                           className={`h-3 rounded-full absolute left-0 ${
                             isAboveAverage 
                               ? 'bg-green-400' 
-                              : 'bg-red-600'
+                              : 'bg-yellow-200'
                           }`}
                           style={{ width: `${(item.score / maxScore) * 100}%` }}
                         ></div>
