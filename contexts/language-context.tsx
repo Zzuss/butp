@@ -71,7 +71,7 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.work.form.period.placeholder': '例如：2024年7月 - 2024年8月',
     'profile.work.form.description': '工作描述 *',
     'profile.work.form.description.placeholder': '请简要描述您的工作内容和收获',
-    'profile.language.title': '语言成绩',
+    'profile.language.title': '认证证书',
     'profile.language.description': '托福、雅思、GRE等标准化考试成绩',
     'profile.language.add': '添加成绩',
     'profile.language.empty': '当前栏暂无信息',
