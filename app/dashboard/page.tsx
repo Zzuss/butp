@@ -16,7 +16,6 @@ import {
   getRecentSubjectGrades, 
   getCourseTypeStats, 
   getSemesterTrends,
-  type CourseResult,
   type DashboardStats,
   type SubjectGrade,
   type CourseTypeStats,
