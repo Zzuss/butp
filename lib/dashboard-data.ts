@@ -297,3 +297,49 @@ export async function getTopPercentageGPAThreshold(percentage: number): Promise<
     return null
   }
 }
+
+// 雷达图数据接口
+export interface RadarChartData {
+  subject: string
+  A: number
+  B: number
+  fullMark: number
+}
+
+// 获取所有科目成绩（用于grades页面）
+export async function getSubjectGrades(studentHash: string) {
+  try {
+    const results = await getStudentResults(studentHash)
+    return results.map(result => ({
+      id: result.id,
+      course_name: result.course_name,
+      course_id: result.course_id,
+      grade: result.grade,
+      credit: result.credit,
+      semester: result.semester,
+      course_type: result.course_type,
+      course_attribute: result.course_attribute,
+      exam_type: result.exam_type
+    }))
+  } catch (error) {
+    console.error('Error getting subject grades:', error)
+    return []
+  }
+}
+
+// 获取雷达图数据
+export async function getRadarChartData(courseName: string): Promise<RadarChartData | null> {
+  try {
+    // 这里可以根据需要实现具体的雷达图数据逻辑
+    // 暂时返回模拟数据
+    return {
+      subject: courseName,
+      A: 80,
+      B: 90,
+      fullMark: 100
+    }
+  } catch (error) {
+    console.error('Error getting radar chart data:', error)
+    return null
+  }
+}

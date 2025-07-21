@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSimpleAuth } from '@/contexts/simple-auth-context'
 import { useLanguage } from '@/contexts/language-context'
 
@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const [subjectGrades, setSubjectGrades] = useState<SubjectGrade[]>([])
   const [courseTypeStats, setCourseTypeStats] = useState<CourseTypeStats[]>([])
   const [semesterTrends, setSemesterTrends] = useState<SemesterTrend[]>([])
-  const [courseResults, setCourseResults] = useState<CourseResult[]>([])
+  // const [courseResults, setCourseResults] = useState<CourseResult[]>([])
 
   useEffect(() => {
     // 如果未登录，不加载数据
@@ -51,8 +51,8 @@ export default function DashboardPage() {
       setIsLoading(true)
       try {
         // 获取学生成绩数据
-        const results = await getStudentResults(currentStudent.id)
-        setCourseResults(results)
+        const results = await getStudentResults(currentStudent!.id)
+        // setCourseResults(results)
         
         // 计算统计数据
         const dashboardStats = calculateDashboardStats(results)

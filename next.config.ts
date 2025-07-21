@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    telemetry: false,
+  // 移除无效的配置选项
+  eslint: {
+    ignoreDuringBuilds: false,
   },
-  // 禁用跟踪功能
-  tracing: {
-    ignoreRootSpans: true,
+  typescript: {
+    ignoreBuildErrors: false,
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig
