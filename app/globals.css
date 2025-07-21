@@ -99,6 +99,44 @@ body {
   font-family: var(--font-sans);
 }
 
+/* 打印样式 */
+@media print {
+  /* 设置横屏打印 */
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
+  
+  /* 确保body和html占满页面 */
+  body, html {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* 优化卡片显示 */
+  .card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 20px !important;
+  }
+  
+  /* 确保文字清晰 */
+  * {
+    color: #000000 !important;
+  }
+  
+  /* 优化表格显示 */
+  table {
+    border-collapse: collapse !important;
+  }
+  
+  th, td {
+    border: 1px solid #000000 !important;
+    padding: 8px !important;
+  }
+}
+
 * {
   border-color: hsl(var(--border));
 }

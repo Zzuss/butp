@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
-  Languages
+  Languages,
+  FileText
 } from "lucide-react"
 import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -73,6 +74,17 @@ export function AppSidebar() {
   // 切换语言函数
   const toggleLanguage = () => {
     setLanguage(language === 'zh' ? 'en' : 'zh')
+  }
+
+  // 导出PDF函数
+  const exportToPDF = () => {
+    try {
+      // 直接使用浏览器内置的打印功能，不隐藏任何元素
+      window.print();
+    } catch (error) {
+      console.error('PDF导出失败:', error);
+      alert('PDF导出失败，请重试');
+    }
   }
 
   // 检测是否为移动设备
@@ -172,6 +184,19 @@ export function AppSidebar() {
           <div className={`border-t border-border mt-auto ${isCollapsed ? 'p-2' : 'p-4'}`}>
             {!isCollapsed ? (
               <>
+          {/* PDF导出按钮 */}
+          <div className="mb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={exportToPDF}
+              className="w-full flex items-center gap-2 justify-start"
+            >
+              <FileText className="h-4 w-4" />
+              <span>{language === 'zh' ? '导出PDF' : 'Export PDF'}</span>
+            </Button>
+          </div>
+          
           {/* 语言切换按钮 */}
           <div className="mb-3">
             <Button
@@ -208,6 +233,17 @@ export function AppSidebar() {
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">
+                {/* PDF导出按钮 - 折叠状态 */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={exportToPDF}
+                  title={language === 'zh' ? '导出PDF' : 'Export PDF'}
+                  className="w-8 h-8"
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+                
                 {/* 语言切换按钮 - 折叠状态 */}
                 <Button
                   variant="ghost"
