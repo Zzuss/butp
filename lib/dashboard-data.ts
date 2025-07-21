@@ -1,452 +1,216 @@
 import { supabase } from './supabase'
-import { 
-  convertGradeToScore, 
-  calculateWeightedAverage, 
-  calculateWeightedGPA,
-  processCourseGrades,
-  calculateBUPTGPA
-} from './gpa-calculator'
+import { calculateGPA } from './gpa-calculator'
+
+export interface CourseResult {
+  id: string
+  course_name: string
+  course_id: string
+  grade: string | number
+  credit: number
+  semester: string
+  course_type: string
+  course_attribute?: string
+  exam_type?: string
+}
 
 export interface DashboardStats {
-  averageGrade: number
-  totalCourses: number
-  completedCourses: number
-  gpaPoints: number
+  averageScore: number
+  passRate: number
+  courseCount: number
+  gpa: number
 }
 
 export interface SubjectGrade {
-  subject: string
-  score: number
-  grade: string
-  gpa: number
+  name: string
+  grade: number | string
+  average: number
   credit: number
-  courseId?: string
 }
 
-export interface ProgressData {
-  semester: string
+export interface CourseTypeStats {
+  type: string
+  count: number
   averageScore: number
-  totalCourses: number
 }
 
-export interface RadarChartData {
-  [key: string]: number
-  数理逻辑与科学基础: number
-  专业核心技术: number
-  人文与社会素养: number
-  工程实践与创新应用: number
-  职业发展与团队协作: number
+export interface SemesterTrend {
+  semester: string
+  average: number
+  courseCount: number
 }
 
-export async function getDashboardStats(studentId: string): Promise<DashboardStats> {
+// 获取学生成绩数据
+export async function getStudentResults(studentHash: string): Promise<CourseResult[]> {
   try {
-    const query = supabase
-      .from('academic_results')
-      .select('Grade, Credit')
-      .not('Grade', 'is', null)
-      .eq('SNH', studentId)
-    
-    const { data: results } = await query
-
-    if (!results || results.length === 0) {
-      return {
-        averageGrade: 0,
-        totalCourses: 0,
-        completedCourses: 0,
-        gpaPoints: 0
-      }
-    }
-
-    // 转换数据格式以适配GPA计算函数
-    const coursesForGPA = results.map(r => ({
-      grade: r.Grade,
-      credit: r.Credit
-    }))
-    
-    // 使用新的GPA计算函数处理所有课程
-    const processedCourses = processCourseGrades(coursesForGPA)
-    const totalCourses = processedCourses.length
-    
-    // 计算通过课程数（60分及以上）
-    const completedCourses = processedCourses.filter(course => 
-      course.numericScore !== null && course.numericScore >= 60
-    ).length
-    
-    // 使用学分加权平均分
-    const averageGrade = calculateWeightedAverage(coursesForGPA)
-    
-    // 使用北邮官方GPA算法
-    const finalGPA = calculateWeightedGPA(coursesForGPA)
-
-    return {
-      averageGrade: Math.round(averageGrade * 10) / 10,
-      totalCourses,
-      completedCourses,
-      gpaPoints: Math.round(finalGPA * 100) / 100
-    }
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error)
-    return {
-      averageGrade: 0,
-      totalCourses: 0,
-      completedCourses: 0,
-      gpaPoints: 0
-    }
-  }
-}
-
-export async function getSubjectGrades(studentId: string, limit = 6): Promise<SubjectGrade[]> {
-  try {
-    // 查询指定学生的所有课程成绩
+    // 直接使用哈希值查询
     const { data: results, error } = await supabase
       .from('academic_results')
-      .select('Course_Name, Course_ID, Grade, Credit')
-      .eq('SNH', studentId)
-      .not('Course_Name', 'is', null)
-      .not('Grade', 'is', null)
-      .not('Course_Name', 'eq', '')
-      .not('Grade', 'eq', '')
+      .select('*')
+      .eq('SNH', studentHash)
+      .order('Semester_Offered', { ascending: true });
 
     if (error) {
-      console.error('Database query error:', error)
-      return []
+      console.error('Error fetching student results:', error);
+      return [];
     }
 
     if (!results || results.length === 0) {
-      console.log(`No grade data found for student: ${studentId}`)
-      return []
+      return [];
     }
-
-    // 处理和转换成绩数据
-    const validCourses: SubjectGrade[] = []
     
-    for (const course of results) {
-      // 跳过无效数据
-      if (!course.Course_Name?.trim() || !course.Grade?.trim()) {
-        continue
-      }
-
-      // 转换成绩为数字分数
-      const numericScore = convertGradeToScore(course.Grade)
-        
-      // 跳过无法转换的成绩
-      if (numericScore === null || numericScore < 0 || numericScore > 100) {
-        continue
-        }
-        
-      // 计算等级
-        let grade = 'F'
-        if (numericScore >= 95) grade = 'A+'
-        else if (numericScore >= 90) grade = 'A'
-        else if (numericScore >= 85) grade = 'B+'
-        else if (numericScore >= 80) grade = 'B'
-        else if (numericScore >= 75) grade = 'C+'
-        else if (numericScore >= 70) grade = 'C'
-        else if (numericScore >= 60) grade = 'D'
-        
-      // 解析学分
-      const credit = parseFloat(course.Credit || '0')
-      
-      validCourses.push({
-        subject: course.Course_Name.trim(),
-          score: Math.round(numericScore),
-          grade,
-          gpa: Math.round(calculateBUPTGPA(numericScore) * 100) / 100,
-        credit: credit > 0 ? credit : 1, // 如果学分无效则默认为1
-        courseId: course.Course_ID?.trim() || undefined
-      })
-    }
-
-    // 按分数从高到低排序，选取成绩最高的课程
-    const topCourses = validCourses
-      .sort((a, b) => {
-        // 首先按分数排序
-        if (b.score !== a.score) {
-          return b.score - a.score
-        }
-        // 分数相同时按学分排序（学分高的优先）
-        return b.credit - a.credit
-      })
-      .slice(0, limit)
-
-    console.log(`Found ${validCourses.length} valid courses for student ${studentId}, returning top ${topCourses.length}`)
-    return topCourses
-    
+    // 转换数据格式
+    return results.map(result => ({
+      id: result.id || `${result.Course_ID}-${result.Semester_Offered}`,
+      course_name: result.Course_Name,
+      course_id: result.Course_ID,
+      grade: result.Grade,
+      credit: parseFloat(result.Credit) || 0,
+      semester: result.Semester_Offered,
+      course_type: result.Course_Type || '未知',
+      course_attribute: result.Course_Attribute,
+      exam_type: result.Exam_Type
+    }));
   } catch (error) {
-    console.error('Error fetching subject grades:', error)
-    return []
+    console.error('Error in getStudentResults:', error);
+    return [];
   }
 }
 
-export async function getProgressData(studentId: string): Promise<ProgressData[]> {
-  try {
-    const query = supabase
-      .from('academic_results')
-      .select('Semester_Offered, Grade, Course_Name')
-      .not('Semester_Offered', 'is', null)
-      .not('Grade', 'is', null)
-      .eq('SNH', studentId)
-      .order('Semester_Offered', { ascending: true })
-    
-    const { data: results } = await query
-
-    if (!results) return []
-
-    const groupedBySemester = results.reduce((acc, result) => {
-      const semester = result.Semester_Offered
-      const numericScore = convertGradeToScore(result.Grade)
-      
-      if (!acc[semester]) {
-        acc[semester] = { scores: [], totalCourses: 0, courses: [] }
-      }
-      
-      if (numericScore !== null) {
-        acc[semester].scores.push(numericScore)
-        acc[semester].totalCourses++
-        acc[semester].courses.push({
-          grade: result.Grade,
-          credit: '1' // 默认学分，实际应该从数据库获取
-        })
-      }
-      
-      return acc
-    }, {} as Record<string, { scores: number[], totalCourses: number, courses: Array<{grade: string | null, credit: string}> }>)
-
-    return Object.entries(groupedBySemester)
-      .map(([semester, data]) => ({
-        semester,
-        averageScore: data.courses.length > 0 
-          ? Math.round(calculateWeightedAverage(data.courses) * 10) / 10
-          : 0,
-        totalCourses: data.totalCourses
-      }))
-      .slice(0, 8)
-  } catch (error) {
-    console.error('Error fetching progress data:', error)
-    return []
+// 计算仪表盘统计数据
+export function calculateDashboardStats(results: CourseResult[]): DashboardStats {
+  // 如果没有数据，返回默认值
+  if (!results || results.length === 0) {
+    return {
+      averageScore: 0,
+      passRate: 0,
+      courseCount: 0,
+      gpa: 0
+    };
   }
-}
-
-export async function getCourseCategories(studentId: string): Promise<{ category: string, count: number, averageGrade: number }[]> {
-  try {
-    const query = supabase
-      .from('academic_results')
-      .select('Course_Type, Grade')
-      .not('Course_Type', 'is', null)
-      .not('Grade', 'is', null)
-      .eq('SNH', studentId)
-    
-    const { data: results } = await query
-
-    if (!results) return []
-
-    const groupedByCategory = results.reduce((acc, result) => {
-      const category = result.Course_Type || '其他'
-      const numericScore = convertGradeToScore(result.Grade)
-      
-      if (!acc[category]) {
-        acc[category] = { scores: [], count: 0, courses: [] }
-      }
-      
-      if (numericScore !== null) {
-        acc[category].scores.push(numericScore)
-        acc[category].count++
-        acc[category].courses.push({
-          grade: result.Grade,
-          credit: '1' // 默认学分，实际应该从数据库获取
-        })
-      }
-      
-      return acc
-    }, {} as Record<string, { scores: number[], count: number, courses: Array<{grade: string | null, credit: string}> }>)
-
-    return Object.entries(groupedByCategory)
-      .map(([category, data]) => ({
-        category,
-        count: data.count,
-        averageGrade: data.courses.length > 0 
-          ? Math.round(calculateWeightedAverage(data.courses) * 10) / 10
-          : 0
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-  } catch (error) {
-    console.error('Error fetching course categories:', error)
-    return []
-  }
-}
-
-/**
- * 获取雷达图数据
- * 
- * 当前使用模拟数据，因为radarchart_result表启用了RLS但没有访问策略
- * 
- * 要启用真实数据访问，需要数据库管理员执行以下任一操作：
- * 1. 禁用RLS：ALTER TABLE radarchart_result DISABLE ROW LEVEL SECURITY;
- * 2. 添加访问策略：CREATE POLICY "Allow read access" ON radarchart_result FOR SELECT TO public USING (true);
- */
-export async function getRadarChartData(courseId: string): Promise<RadarChartData | null> {
-  try {
-    // 从真实数据库获取数据
-    const { data, error } = await supabase
-      .from('radarchart_result')
-      .select('数理逻辑与科学基础, 专业核心技术, 人文与社会素养, 工程实践与创新应用, 职业发展与团队协作')
-      .eq('course_id', courseId)
-      .limit(1)
-
-    if (!error && data && data.length > 0) {
-      const firstRecord = data[0] as unknown as Record<string, number>
-      return {
-        数理逻辑与科学基础: Number(firstRecord['数理逻辑与科学基础'].toFixed(3)),
-        专业核心技术: Number(firstRecord['专业核心技术'].toFixed(3)),
-        人文与社会素养: Number(firstRecord['人文与社会素养'].toFixed(3)),
-        工程实践与创新应用: Number(firstRecord['工程实践与创新应用'].toFixed(3)),
-        职业发展与团队协作: Number(firstRecord['职业发展与团队协作'].toFixed(3))
-      }
-    }
-    
-    // 如果没有找到数据，返回null
-    return null
-  } catch (error) {
-    console.error('Error in getRadarChartData:', error)
-    return null
-  }
-}
-
-/**
- * 将分数四舍五入到最近的0.5
- * @param score 原始分数
- * @returns 四舍五入到0.5的分数
- */
-function roundToHalf(score: number): number {
-  return Math.round(score * 2) / 2
-}
-
-/**
- * 获取课程的全校平均分
- * @param courseName 课程名称
- * @returns 全校平均分，如果无数据则返回null
- */
-export async function getCourseSchoolAverage(courseName: string): Promise<number | null> {
-  try {
-    // 查询该课程的所有学生成绩
-    const { data: results, error } = await supabase
-      .from('academic_results')
-      .select('Grade, Credit')
-      .eq('Course_Name', courseName)
-      .not('Grade', 'is', null)
-      .not('Grade', 'eq', '')
-
-    if (error) {
-      console.error('Error fetching course average:', error)
-      return null
-    }
-
-    if (!results || results.length === 0) {
-      return null
-    }
-
-    // 转换成绩并计算学分加权平均分
-    const validGrades = results
-      .map(result => ({
-        grade: result.Grade,
-        credit: result.Credit
-      }))
-      .filter(item => {
-        const score = convertGradeToScore(item.grade)
-        const credit = parseFloat(item.credit || '0')
-        return score !== null && credit > 0
-      })
-
-    if (validGrades.length === 0) {
-      return null
-    }
-
-    // 使用学分加权平均分并四舍五入到0.5
-    const weightedAverage = calculateWeightedAverage(validGrades)
-    return roundToHalf(weightedAverage)
-  } catch (error) {
-    console.error('Error calculating course school average:', error)
-    return null
-  }
-}
-
-/**
- * 批量获取多门课程的全校平均分
- * @param courseNames 课程名称数组
- * @returns 课程名称到平均分的映射
- */
-export async function getBatchCourseSchoolAverages(courseNames: string[]): Promise<Record<string, number | null>> {
-  const result: Record<string, number | null> = {}
   
-  try {
-    // 批量计算课程平均分
-    
-    // 批量查询所有课程的成绩数据
-    const { data: results, error } = await supabase
-      .from('academic_results')
-      .select('Course_Name, Grade, Credit')
-      .in('Course_Name', courseNames)
-      .not('Grade', 'is', null)
-      .not('Grade', 'eq', '')
-
-    if (error) {
-      console.error('Error fetching batch course averages:', error)
-      // 返回所有课程的null值
-      courseNames.forEach(courseName => {
-        result[courseName] = null
-      })
-      return result
+  // 计算数值型成绩的平均分
+  const numericGrades = results
+    .filter(r => typeof r.grade === 'number' || !isNaN(parseFloat(r.grade as string)))
+    .map(r => typeof r.grade === 'number' ? r.grade : parseFloat(r.grade as string));
+  
+  const averageScore = numericGrades.length > 0
+    ? numericGrades.reduce((sum, grade) => sum + grade, 0) / numericGrades.length
+    : 0;
+  
+  // 计算通过率（成绩大于等于60分或非数字成绩为"通过"、"良好"、"优秀"等）
+  const passedCourses = results.filter(r => {
+    if (typeof r.grade === 'number' || !isNaN(parseFloat(r.grade as string))) {
+      const numGrade = typeof r.grade === 'number' ? r.grade : parseFloat(r.grade as string);
+      return numGrade >= 60;
+    } else {
+      const strGrade = String(r.grade).toLowerCase();
+      return !['不及格', '不通过', 'fail', 'failed'].some(term => strGrade.includes(term));
     }
+  });
+  
+  const passRate = results.length > 0 ? passedCourses.length / results.length : 0;
+  
+  // 计算GPA
+  const gpa = calculateGPA(results);
+  
+  return {
+    averageScore: Math.round(averageScore * 100) / 100,
+    passRate: Math.round(passRate * 100) / 100,
+    courseCount: results.length,
+    gpa: Math.round(gpa * 100) / 100
+  };
+}
 
-    if (!results || results.length === 0) {
-      courseNames.forEach(courseName => {
-        result[courseName] = null
-      })
-      return result
-    }
-
-    // 按课程名称分组
-    const groupedByCourse = results.reduce((acc, result) => {
-      const courseName = result.Course_Name
-      if (!acc[courseName]) {
-        acc[courseName] = []
-      }
-      acc[courseName].push({
-        grade: result.Grade,
-        credit: result.Credit
-      })
-      return acc
-    }, {} as Record<string, Array<{grade: string | null, credit: string | null}>>)
-
-    // 计算每门课程的平均分
-    for (const courseName of courseNames) {
-      if (groupedByCourse[courseName]) {
-        const validGrades = groupedByCourse[courseName]
-          .filter(item => {
-            const score = convertGradeToScore(item.grade)
-            const credit = parseFloat(item.credit || '0')
-            return score !== null && credit > 0
-          })
-
-        if (validGrades.length > 0) {
-          const weightedAverage = calculateWeightedAverage(validGrades)
-          result[courseName] = roundToHalf(weightedAverage)
-        } else {
-          result[courseName] = null
-        }
-      } else {
-        result[courseName] = null
-      }
-    }
-    return result
-  } catch (error) {
-    console.error('Error calculating batch course school averages:', error)
-    courseNames.forEach(courseName => {
-      result[courseName] = null
-    })
-    return result
+// 获取最近的科目成绩
+export function getRecentSubjectGrades(results: CourseResult[], limit: number = 6): SubjectGrade[] {
+  if (!results || results.length === 0) {
+    return [];
   }
+  
+  // 按学期排序，获取最近的学期
+  const sortedBySemester = [...results].sort((a, b) => {
+    return b.semester.localeCompare(a.semester);
+  });
+  
+  // 获取最近学期的课程
+  const recentSemester = sortedBySemester[0].semester;
+  const recentCourses = sortedBySemester.filter(r => r.semester === recentSemester);
+  
+  // 转换为SubjectGrade格式
+  return recentCourses.slice(0, limit).map(course => ({
+    name: course.course_name,
+    grade: course.grade,
+    average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
+    credit: course.credit
+  }));
+}
+
+// 获取课程类型统计
+export function getCourseTypeStats(results: CourseResult[]): CourseTypeStats[] {
+  if (!results || results.length === 0) {
+    return [];
+  }
+  
+  // 按课程类型分组
+  const courseTypeMap = new Map<string, { count: number; totalScore: number }>();
+  
+  results.forEach(course => {
+    const type = course.course_type || '其他';
+    const score = typeof course.grade === 'number' 
+      ? course.grade 
+      : (!isNaN(parseFloat(course.grade as string)) ? parseFloat(course.grade as string) : 0);
+    
+    if (!courseTypeMap.has(type)) {
+      courseTypeMap.set(type, { count: 0, totalScore: 0 });
+    }
+    
+    const current = courseTypeMap.get(type)!;
+    current.count++;
+    current.totalScore += score;
+  });
+  
+  // 转换为数组并计算平均分
+  return Array.from(courseTypeMap.entries())
+    .map(([type, { count, totalScore }]) => ({
+      type,
+      count,
+      averageScore: count > 0 ? Math.round((totalScore / count) * 100) / 100 : 0
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+// 获取学期成绩趋势
+export function getSemesterTrends(results: CourseResult[]): SemesterTrend[] {
+  if (!results || results.length === 0) {
+    return [];
+  }
+  
+  // 按学期分组
+  const semesterMap = new Map<string, { totalScore: number; courseCount: number }>();
+  
+  results.forEach(course => {
+    const semester = course.semester;
+    const score = typeof course.grade === 'number' 
+      ? course.grade 
+      : (!isNaN(parseFloat(course.grade as string)) ? parseFloat(course.grade as string) : 0);
+    
+    if (!semesterMap.has(semester)) {
+      semesterMap.set(semester, { totalScore: 0, courseCount: 0 });
+    }
+    
+    const current = semesterMap.get(semester)!;
+    current.courseCount++;
+    current.totalScore += score;
+  });
+  
+  // 转换为数组并计算平均分
+  return Array.from(semesterMap.entries())
+    .map(([semester, { totalScore, courseCount }]) => ({
+      semester,
+      average: courseCount > 0 ? Math.round((totalScore / courseCount) * 100) / 100 : 0,
+      courseCount
+    }))
+    .sort((a, b) => a.semester.localeCompare(b.semester));
 }
 
 /**
@@ -494,7 +258,16 @@ export async function getTopPercentageGPAThreshold(percentage: number): Promise<
     const studentGPAList: Array<{studentId: string, gpa: number}> = []
     
     for (const [studentId, courses] of studentGPAs) {
-      const gpa = calculateWeightedGPA(courses)
+      // 转换为CourseResult格式来计算GPA
+      const courseResults = courses
+        .filter(course => course.grade !== null && course.credit !== null)
+        .map(course => ({
+          grade: course.grade!,
+          credit: parseFloat(course.credit || '0')
+        }))
+        .filter(course => course.credit > 0)
+      
+      const gpa = calculateGPA(courseResults)
       if (gpa > 0) { // 只包含有效GPA的学生
         studentGPAList.push({ studentId, gpa })
       }

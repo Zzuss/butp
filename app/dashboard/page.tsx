@@ -1,351 +1,366 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getDashboardStats, getSubjectGrades, getProgressData, getCourseCategories, getBatchCourseSchoolAverages } from "@/lib/dashboard-data"
-import { useSimpleAuth } from "@/contexts/simple-auth-context"
-import { useLanguage } from "@/contexts/language-context"
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useSimpleAuth } from '@/contexts/simple-auth-context'
+import { useLanguage } from '@/contexts/language-context'
 
-interface DashboardData {
-  stats: Awaited<ReturnType<typeof getDashboardStats>>
-  subjectGrades: Awaited<ReturnType<typeof getSubjectGrades>>
-  progressData: Awaited<ReturnType<typeof getProgressData>>
-  categories: Awaited<ReturnType<typeof getCourseCategories>>
-  schoolAverages: Record<string, number | null>
-}
+// 导入数据处理函数
+import { 
+  getStudentResults,
+  calculateDashboardStats, 
+  getRecentSubjectGrades, 
+  getCourseTypeStats, 
+  getSemesterTrends,
+  type CourseResult,
+  type DashboardStats,
+  type SubjectGrade,
+  type CourseTypeStats,
+  type SemesterTrend
+} from '@/lib/dashboard-data'
 
-export default function Dashboard() {
-  const { currentStudent } = useSimpleAuth()
+// 导入图表组件
+import { CourseStatsChart } from '@/components/ui/chart'
+
+export default function DashboardPage() {
+  const { currentStudent, isLoggedIn, isLoading: authLoading } = useSimpleAuth()
   const { t } = useLanguage()
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  
+  const [isLoading, setIsLoading] = useState(true)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [subjectGrades, setSubjectGrades] = useState<SubjectGrade[]>([])
+  const [courseTypeStats, setCourseTypeStats] = useState<CourseTypeStats[]>([])
+  const [semesterTrends, setSemesterTrends] = useState<SemesterTrend[]>([])
+  const [courseResults, setCourseResults] = useState<CourseResult[]>([])
 
   useEffect(() => {
-    if (currentStudent) {
-      loadDashboardData(currentStudent.id)
+    // 如果未登录，不加载数据
+    if (authLoading) return
+    
+    if (!isLoggedIn || !currentStudent) {
+      setIsLoading(false)
+      return
     }
-  }, [currentStudent])
-
-  async function loadDashboardData(studentId: string) {
-    setLoading(true)
-    try {
-      const [stats, subjectGrades, progressData, categories] = await Promise.all([
-        getDashboardStats(studentId),
-        getSubjectGrades(studentId),
-        getProgressData(studentId),
-        getCourseCategories(studentId)
-      ])
-      
-      // 获取课程名称列表
-      const courseNames = subjectGrades.map(grade => grade.subject)
-      
-      // 批量获取全校平均分
-      const schoolAverages = await getBatchCourseSchoolAverages(courseNames)
-      
-      setDashboardData({ stats, subjectGrades, progressData, categories, schoolAverages })
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error)
-    } finally {
-      setLoading(false)
+    
+    async function loadDashboardData() {
+      setIsLoading(true)
+      try {
+        // 获取学生成绩数据
+        const results = await getStudentResults(currentStudent.id)
+        setCourseResults(results)
+        
+        // 计算统计数据
+        const dashboardStats = calculateDashboardStats(results)
+        setStats(dashboardStats)
+        
+        // 获取最近的科目成绩
+        const recentGrades = getRecentSubjectGrades(results)
+        setSubjectGrades(recentGrades)
+        
+        // 获取课程类型统计
+        const typeStats = getCourseTypeStats(results)
+        setCourseTypeStats(typeStats)
+        
+        // 获取学期成绩趋势
+        const trends = getSemesterTrends(results)
+        setSemesterTrends(trends)
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }
-
-  if (!currentStudent) {
-    return (
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
-          <p className="text-muted-foreground">{t('dashboard.login.required')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading || !dashboardData) {
-    return (
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
-          <p className="text-muted-foreground">{t('dashboard.loading').replace('{name}', currentStudent.name)}</p>
-        </div>
-        <div className="mt-6 flex items-center justify-center h-32">
-          <div className="text-muted-foreground">{t('dashboard.loading.message')}</div>
-        </div>
-      </div>
-    )
-  }
-
-  const { stats, subjectGrades, progressData, categories, schoolAverages } = dashboardData
+    
+    loadDashboardData()
+  }, [currentStudent, isLoggedIn, authLoading])
   
-  const attendanceRate = stats.completedCourses > 0 
-    ? Math.round((stats.completedCourses / stats.totalCourses) * 100)
-    : 0
-
-  // 为各科成绩添加真实的学校平均分数据
-  const subjectGradesWithAverage = subjectGrades.map((item) => {
-    const schoolAverage = schoolAverages[item.subject]
-    return {
-      ...item,
-      schoolAverage: schoolAverage !== null ? schoolAverage : 75, // 如果没有平均分数据，使用默认值75
-      hasRealAverage: schoolAverage !== null // 标记是否有真实平均分数据
-    };
-  })
-
-  const attendanceData = [
-    { name: t('dashboard.course.stats.passed'), value: attendanceRate, color: '#10b981' },
-    { name: t('dashboard.course.stats.failed'), value: 100 - attendanceRate, color: '#ef4444' },
-  ];
+  // 如果未登录，显示登录提示
+  if (!authLoading && !isLoggedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
+        <GraduationCap className="h-16 w-16 text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-bold mb-2">{t('dashboard.login.required')}</h2>
+        <Button onClick={() => router.push('/login')}>
+          {t('login.button.login')}
+        </Button>
+      </div>
+    )
+  }
+  
+  // 加载状态
+  if (isLoading || authLoading) {
+    const studentName = currentStudent?.name || ''
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
+        <h2 className="text-xl font-medium mb-2">
+          {currentStudent ? t('dashboard.loading', { name: studentName }) : t('dashboard.loading.message')}
+        </h2>
+      </div>
+    )
+  }
   
   return (
-    <div className="p-2 sm:p-4 md:p-6">
-      <div className="mb-4 md:mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold">{t('dashboard.title')}</h1>
-        <p className="text-sm md:text-base text-muted-foreground">{t('dashboard.description').replace('{name}', currentStudent.name)}</p>
-      </div>
-
-      {/* 免责声明 */}
-      <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <p className="text-sm text-yellow-800 text-center">
-          {t('disclaimer.data.accuracy')}
+    <div className="container mx-auto p-4 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
+        <p className="text-muted-foreground">
+          {t('dashboard.description', { name: currentStudent?.name || '' })}
         </p>
       </div>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-4 mb-4 md:mb-6 md:gap-6">
+      
+      {/* 统计卡片 */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">{t('dashboard.stats.average')}</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t('dashboard.stats.average')}
+            </CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="px-3 md:px-6 py-2">
-            <div className="text-xl md:text-2xl font-bold">{stats.averageGrade}</div>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.averageScore || 0}</div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.average.desc')}
             </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">{t('dashboard.stats.pass.rate')}</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t('dashboard.stats.pass.rate')}
+            </CardTitle>
+            <PercentCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="px-3 md:px-6 py-2">
-            <div className="text-xl md:text-2xl font-bold">{attendanceRate}%</div>
+          <CardContent>
+            <div className="text-2xl font-bold">{Math.round((stats?.passRate || 0) * 100)}%</div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.pass.rate.desc')}
             </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">{t('dashboard.stats.courses')}</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t('dashboard.stats.courses')}
+            </CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="px-3 md:px-6 py-2">
-            <div className="text-xl md:text-2xl font-bold">{stats.totalCourses}</div>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.courseCount || 0}</div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.courses.desc')}
             </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 px-3 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">{t('dashboard.stats.gpa')}</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t('dashboard.stats.gpa')}
+            </CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="px-3 md:px-6 py-2">
-            <div className="text-xl md:text-2xl font-bold">{stats.gpaPoints}</div>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.gpa || 0}</div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.gpa.desc')}
             </p>
           </CardContent>
         </Card>
       </div>
-
-      <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-full md:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between px-3 md:px-6 py-3 md:py-4">
+      
+      {/* 各科成绩 */}
+      <Card className="col-span-3">
+        <CardHeader>
+          <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base md:text-lg">{t('dashboard.subjects.title')}</CardTitle>
-              <CardDescription className="text-xs md:text-sm">{t('dashboard.subjects.description')}</CardDescription>
+              <CardTitle>{t('dashboard.subjects.title')}</CardTitle>
+              <CardDescription>
+                {t('dashboard.subjects.description')}
+              </CardDescription>
             </div>
-            <Link 
-              href="/grades" 
-              className="px-2 py-1 md:px-3 md:py-1.5 bg-blue-600 text-white text-xs md:text-sm rounded-md hover:bg-blue-700 transition-colors"
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-1"
+              onClick={() => router.push('/grades')}
             >
               {t('dashboard.subjects.view.more')}
-            </Link>
-          </CardHeader>
-          <CardContent className="px-3 md:px-6 py-3 md:py-4">
-            <div className="space-y-3 md:space-y-4">
-              {subjectGradesWithAverage.length > 0 ? subjectGradesWithAverage.map((item) => {
-                const isAboveAverage = item.score >= item.schoolAverage;
-                const maxScore = Math.max(item.score, item.schoolAverage, 100);
-                
-                return (
-                  <div key={item.subject} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs md:text-sm font-medium">{item.subject}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {isAboveAverage ? '+' : ''}{item.score - item.schoolAverage}分
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className={isAboveAverage ? 'text-green-600' : 'text-red-600'}>
-                          {t('dashboard.subjects.current')}: {item.score}分
-                        </span>
-                        <span className="text-muted-foreground">
-                          {t('dashboard.subjects.average')}: {item.schoolAverage}分{!item.hasRealAverage && ' (估算)'}
-                        </span>
-                  </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 relative">
-                        {/* 当前分数条 - 底层 */}
-                        <div 
-                          className={`h-3 rounded-full absolute left-0 ${
-                            isAboveAverage 
-                              ? 'bg-green-400' 
-                              : 'bg-yellow-200'
-                          }`}
-                          style={{ width: `${(item.score / maxScore) * 100}%` }}
-                        ></div>
-                        {/* 平均分背景条 - 半透明黑色叠加层 */}
-                          <div 
-                          className="absolute left-0 h-3 rounded-full"
-                            style={{ 
-                            width: `${(item.schoolAverage / maxScore) * 100}%`,
-                            background: 'rgba(0, 0, 0, 0.2)'
-                          }}
-                      ></div>
-
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {subjectGrades.length > 0 ? (
+            <div className="space-y-8">
+              {subjectGrades.map((subject, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">{subject.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {subject.credit} {t('grades.table.credit')}
                       </div>
                     </div>
-                  </div>
-                );
-              }) : (
-                <div className="text-center text-muted-foreground py-6 md:py-8">
-                  {t('dashboard.subjects.no.data')}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-full md:col-span-1">
-          <CardHeader className="px-3 md:px-6 py-3 md:py-4">
-            <CardTitle className="text-base md:text-lg">{t('dashboard.course.stats.title')}</CardTitle>
-            <CardDescription className="text-xs md:text-sm">{t('dashboard.course.stats.description')}</CardDescription>
-          </CardHeader>
-          <CardContent className="px-3 md:px-6 py-3 md:py-4">
-            {/* 主要统计数字 - 居中显示 */}
-            <div className="text-center mb-4 md:mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 border-4 border-green-300">
-                <div className="text-center">
-                  <div className="text-xl md:text-2xl font-bold text-green-700">{attendanceRate}%</div>
-                  <div className="text-xs text-green-600 font-medium">{t('dashboard.course.stats.pass.rate')}</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* 详细统计信息 - 使用卡片式布局 */}
-            <div className="space-y-3 md:space-y-4">
-              {attendanceData.map((item) => (
-                <div key={item.name} className="flex items-center justify-between p-3 md:p-4 bg-gray-50 rounded-lg border">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-4 h-4 md:w-5 md:h-5 rounded-full shadow-sm" 
-                      style={{ backgroundColor: item.color }}
-                    ></div>
-                    <span className="text-sm md:text-base font-medium text-gray-700">{item.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg md:text-xl font-bold text-gray-900">{item.value}%</span>
-                    <div className="w-16 md:w-20 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full transition-all duration-300" 
-                        style={{ 
-                          width: `${item.value}%`,
-                          backgroundColor: item.color 
-                        }}
-                      ></div>
+                    <div className="text-sm font-medium">
+                      {subject.grade}
                     </div>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-primary"
+                      style={{ 
+                        width: `${Math.min(100, (typeof subject.grade === 'number' ? subject.grade : 0) / 100 * 100)}%` 
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{t('dashboard.subjects.current')}</span>
+                    <span>{t('dashboard.subjects.average')}: {subject.average}</span>
                   </div>
                 </div>
               ))}
             </div>
-            
-            {/* 底部总结信息 */}
-            <div className="mt-4 md:mt-6 p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-center">
-                <div className="text-sm md:text-base text-blue-800 font-medium">
-                  {t('dashboard.course.stats.summary').replace('{completed}', stats.completedCourses.toString()).replace('{total}', stats.totalCourses.toString())}
-                </div>
-              </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              {t('dashboard.subjects.no.data')}
             </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* 课程统计 & 学期趋势 */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* 课程统计 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('dashboard.course.stats.title')}</CardTitle>
+            <CardDescription>
+              {t('dashboard.course.stats.description')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            {stats && (
+              <>
+                <CourseStatsChart 
+                  passed={Math.round((stats.passRate || 0) * stats.courseCount)}
+                  failed={Math.round((1 - (stats.passRate || 0)) * stats.courseCount)}
+                  passLabel={t('dashboard.course.stats.passed')}
+                  failLabel={t('dashboard.course.stats.failed')}
+                />
+                <div className="mt-4 text-sm text-center">
+                  <div className="font-medium mb-1">
+                    {t('dashboard.course.stats.pass.rate')}: {Math.round((stats.passRate || 0) * 100)}%
+                  </div>
+                  <div className="text-muted-foreground">
+                    {t('dashboard.course.stats.summary', { 
+                      completed: Math.round((stats.passRate || 0) * stats.courseCount), 
+                      total: stats.courseCount 
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
-
-        <Card className="col-span-full">
-          <CardHeader className="px-3 md:px-6 py-3 md:py-4">
-            <CardTitle className="text-base md:text-lg">{t('dashboard.trends.title')}</CardTitle>
-            <CardDescription className="text-xs md:text-sm">{t('dashboard.trends.description')}</CardDescription>
+        
+        {/* 学期趋势 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('dashboard.trends.title')}</CardTitle>
+            <CardDescription>
+              {t('dashboard.trends.description')}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="px-3 md:px-6 py-3 md:py-4">
-            <div className="space-y-3">
-              {progressData.length > 0 ? progressData.map((item, index) => (
-                <div key={item.semester} className="flex items-center justify-between p-2 md:p-3 border rounded-lg">
-                  <div className="flex flex-col">
-                    <span className="text-xs md:text-sm font-medium">{item.semester}</span>
-                    <span className="text-xs text-muted-foreground">{t('dashboard.trends.courses.count').replace('{count}', item.totalCourses.toString())}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 md:w-24 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full" 
-                        style={{ width: `${(item.averageScore / 100) * 100}%` }}
-                      ></div>
+          <CardContent>
+            {semesterTrends.length > 0 ? (
+              <div className="space-y-4">
+                {semesterTrends.map((trend, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-medium">{trend.semester}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {t('dashboard.trends.courses.count', { count: trend.courseCount })}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium">
+                        {trend.average}
+                      </div>
                     </div>
-                    <span className="text-xs md:text-sm font-semibold w-8 md:w-12">{item.averageScore}</span>
-                    {index > 0 && (
-                      <span className={`text-xs ${
-                        item.averageScore > progressData[index - 1].averageScore 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        {item.averageScore > progressData[index - 1].averageScore ? '↗' : '↘'}
-                      </span>
-                    )}
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary"
+                        style={{ width: `${Math.min(100, trend.average / 100 * 100)}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-              )) : (
-                <div className="text-center text-muted-foreground py-6 md:py-8">
-                  {t('dashboard.trends.no.data')}
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                {t('dashboard.trends.no.data')}
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        <Card className="col-span-full">
-          <CardHeader className="px-3 md:px-6 py-3 md:py-4">
-            <CardTitle className="text-base md:text-lg">{t('dashboard.distribution.title')}</CardTitle>
-            <CardDescription className="text-xs md:text-sm">{t('dashboard.distribution.description')}</CardDescription>
-          </CardHeader>
-          <CardContent className="px-3 md:px-6 py-3 md:py-4">
-            <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-              {categories.length > 0 ? categories.map((category) => (
-                <div key={category.category} className="p-3 md:p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-1 md:mb-2">
-                    <h4 className="text-xs md:text-sm font-medium">{category.category}</h4>
-                    <span className="text-xs md:text-sm text-muted-foreground">{t('dashboard.distribution.courses.count').replace('{count}', category.count.toString())}</span>
+      </div>
+      
+      {/* 课程类型分布 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('dashboard.distribution.title')}</CardTitle>
+          <CardDescription>
+            {t('dashboard.distribution.description')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {courseTypeStats.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {courseTypeStats.map((type, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">{type.type}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {t('dashboard.distribution.courses.count', { count: type.count })}
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium">
+                      {type.averageScore}
+                    </div>
                   </div>
-                  <div className="text-xl md:text-2xl font-bold text-blue-600">{category.averageGrade}</div>
-                  <div className="text-xs md:text-sm text-muted-foreground">{t('dashboard.distribution.average')}</div>
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: `${Math.min(100, type.averageScore / 100 * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-end text-xs text-muted-foreground">
+                    <span>{t('dashboard.distribution.average')}</span>
+                  </div>
                 </div>
-              )) : (
-                <div className="col-span-full text-center text-muted-foreground py-6 md:py-8">
-                  {t('dashboard.distribution.no.data')}
-                </div>
-              )}
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              {t('dashboard.distribution.no.data')}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* 免责声明 */}
+      <div className="text-xs text-muted-foreground text-center p-4 border-t">
+        {t('disclaimer.data.accuracy')}
       </div>
     </div>
   )

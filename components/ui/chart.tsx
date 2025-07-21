@@ -370,6 +370,98 @@ function getPayloadConfigFromPayload(
     : config[key as keyof typeof config]
 }
 
+interface CourseStatsChartProps {
+  passed: number;
+  failed: number;
+  passLabel?: string;
+  failLabel?: string;
+}
+
+export function CourseStatsChart({ 
+  passed, 
+  failed, 
+  passLabel = '通过', 
+  failLabel = '未通过' 
+}: CourseStatsChartProps) {
+  const total = passed + failed;
+  const passPercentage = total > 0 ? Math.round((passed / total) * 100) : 0;
+  const failPercentage = total > 0 ? Math.round((failed / total) * 100) : 0;
+  
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative w-40 h-40">
+        {/* 圆环图 */}
+        <svg width="100%" height="100%" viewBox="0 0 100 100">
+          {/* 背景圆环 */}
+          <circle
+            cx="50"
+            cy="50"
+            r="40"
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth="12"
+          />
+          
+          {/* 通过部分 - 绿色 */}
+          {passPercentage > 0 && (
+            <circle
+              cx="50"
+              cy="50"
+              r="40"
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="12"
+              strokeDasharray={`${passPercentage * 2.51} 251`}
+              strokeDashoffset="0"
+              transform="rotate(-90 50 50)"
+            />
+          )}
+          
+          {/* 未通过部分 - 红色 */}
+          {failPercentage > 0 && (
+            <circle
+              cx="50"
+              cy="50"
+              r="40"
+              fill="none"
+              stroke="#ef4444"
+              strokeWidth="12"
+              strokeDasharray={`${failPercentage * 2.51} 251`}
+              strokeDashoffset={`${-passPercentage * 2.51}`}
+              transform="rotate(-90 50 50)"
+            />
+          )}
+          
+          {/* 中心文字 */}
+          <text
+            x="50"
+            y="50"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize="18"
+            fontWeight="bold"
+            fill="currentColor"
+          >
+            {passPercentage}%
+          </text>
+        </svg>
+      </div>
+      
+      {/* 图例 */}
+      <div className="flex justify-center gap-4 mt-4">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-[#10b981] rounded-full"></div>
+          <span className="text-sm">{passLabel} ({passed})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-[#ef4444] rounded-full"></div>
+          <span className="text-sm">{failLabel} ({failed})</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export {
   ChartContainer,
   ChartTooltip,

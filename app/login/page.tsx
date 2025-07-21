@@ -4,40 +4,50 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { GraduationCap, Languages } from "lucide-react"
-import { useSimpleAuth, students } from "@/contexts/simple-auth-context"
+import { useSimpleAuth } from "@/contexts/simple-auth-context"
 import { useLanguage } from "@/contexts/language-context"
+import { isValidStudentHash, getStudentInfoByHash } from "@/lib/student-data"
 
 export default function LoginPage() {
-  const [selectedStudentId, setSelectedStudentId] = useState<string>("")
+  const [studentHash, setStudentHash] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useSimpleAuth()
   const { language, setLanguage, t } = useLanguage()
   const router = useRouter()
 
   const handleLogin = async () => {
-    if (!selectedStudentId) {
-      alert(t('login.alert.select'))
+    if (!studentHash) {
+      alert(t('login.alert.input'))
       return
     }
 
     setIsLoading(true)
     
-    // 找到选择的学生
-    const selectedStudent = students.find(s => s.id === selectedStudentId)
-    if (selectedStudent) {
-      // 登录
-      login(selectedStudent)
-      
-      // 模拟登录延迟
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // 跳转到dashboard
-      router.push("/dashboard")
+    try {
+      // 检查哈希值是否有效
+      if (isValidStudentHash(studentHash)) {
+        // 获取学生信息
+        const studentInfo = getStudentInfoByHash(studentHash);
+        
+        // 登录
+        login(studentInfo)
+        
+        // 模拟登录延迟
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // 跳转到dashboard
+        router.push("/dashboard")
+      } else {
+        alert(t('login.alert.invalid'))
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error('登录失败:', error)
+      alert(t('login.alert.failed'))
+      setIsLoading(false)
     }
-    
-    setIsLoading(false)
   }
 
   const toggleLanguage = () => {
@@ -78,29 +88,24 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('login.select.label')}</label>
-            <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('login.select.placeholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {students.map((student) => (
-                  <SelectItem key={student.id} value={student.id}>
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{student.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {student.id} • {student.class}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-sm font-medium">{t('login.input.label')}</label>
+            <Input
+              type="text"
+              placeholder={t('login.input.placeholder')}
+              value={studentHash}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentHash(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              提示：请输入64位哈希值作为学号
+            </p>
+            <p className="text-xs text-muted-foreground">
+              示例：1cdc5935a5f0afaf2238e0e83021ad2fcbdcda479ffd7783d6e6bd1ef774d890
+            </p>
           </div>
           
           <Button 
             onClick={handleLogin}
-            disabled={!selectedStudentId || isLoading}
+            disabled={!studentHash || isLoading}
             className="w-full"
           >
             {isLoading ? t('login.button.loading') : t('login.button.login')}
