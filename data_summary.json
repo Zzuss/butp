@@ -1,0 +1,84 @@
+{
+  "timestamp": "2025-07-21T10:57:57.850Z",
+  "totalRecords": 202650,
+  "uniqueStudents": "约 3,320 名学生 (根据先前查询结果)",
+  "uniqueCourses": "约 754 门课程 (根据先前查询结果)",
+  "courseTypeDistribution": [
+    {
+      "Course_Type": "公共课",
+      "count": 413
+    },
+    {
+      "Course_Type": "专业课",
+      "count": 245
+    },
+    {
+      "Course_Type": "实践教学课",
+      "count": 146
+    },
+    {
+      "Course_Type": "思想政治理论课",
+      "count": 128
+    },
+    {
+      "Course_Type": "院级双创课",
+      "count": 50
+    },
+    {
+      "Course_Type": "校级双创课",
+      "count": 17
+    },
+    {
+      "Course_Type": "其他",
+      "count": 1
+    }
+  ],
+  "semesterDistribution": [
+    {
+      "Semester_Offered": "2020-2021-1",
+      "count": 149
+    },
+    {
+      "Semester_Offered": "2020-2021-2",
+      "count": 192
+    },
+    {
+      "Semester_Offered": "2021-2022-1",
+      "count": 161
+    },
+    {
+      "Semester_Offered": "2021-2022-2",
+      "count": 167
+    },
+    {
+      "Semester_Offered": "2022-2023-1",
+      "count": 87
+    },
+    {
+      "Semester_Offered": "2022-2023-2",
+      "count": 161
+    },
+    {
+      "Semester_Offered": "2023-2024-1",
+      "count": 71
+    },
+    {
+      "Semester_Offered": "2023-2024-2",
+      "count": 12
+    }
+  ],
+  "gradeDistribution": {
+    "numeric": {
+      "min": 0,
+      "max": 100,
+      "avg": 82.66,
+      "count": 973
+    },
+    "nonNumeric": {
+      "及格": 2,
+      "良": 19,
+      "优": 4,
+      "中": 2
+    }
+  }
+}
