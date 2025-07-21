@@ -34,8 +34,8 @@ export default function AllGrades() {
   async function loadGrades(studentId: string) {
     setLoading(true)
     try {
-      // 获取所有成绩，不设置限制
-      const allGrades = await getSubjectGrades(studentId, 999)
+      // 获取所有成绩
+      const allGrades = await getSubjectGrades(studentId)
       // 按学分从高到低排序
       const sortedGrades = [...allGrades].sort((a, b) => b.credit - a.credit)
       setGrades(sortedGrades)
@@ -60,13 +60,13 @@ export default function AllGrades() {
     setSelectedRow(index)
     
     // 如果有课程ID，获取雷达图数据
-    if (grades[index]?.courseId) {
+    if (grades[index]?.course_id) {
       setLoadingRadar(true)
       setShowModal(true)
       setRadarData(null) // 清空之前的数据
-      setSelectedCourseName(grades[index].subject) // 设置课程名称
+      setSelectedCourseName(grades[index].course_name) // 设置课程名称
       try {
-        const data = await getRadarChartData(grades[index].courseId!)
+        const data = await getRadarChartData(grades[index].course_id!)
         setRadarData(data)
       } catch (error) {
         console.error('Failed to load radar chart data:', error)
@@ -151,13 +151,13 @@ export default function AllGrades() {
               <tbody>
                 {grades.length > 0 ? grades.map((item, index) => (
                   <tr 
-                    key={`${item.subject}-${index}`} 
+                    key={`${item.course_name}-${index}`} 
                     className={`border-b hover:bg-gray-50 cursor-pointer ${selectedRow === index ? '!bg-blue-50' : ''}`}
                     onClick={() => handleRowClick(index)}
                   >
-                    <td className="py-3 px-4">{item.subject}</td>
+                    <td className="py-3 px-4">{item.course_name}</td>
                     <td className="py-3 px-4 text-center">{formatCredit(item.credit)}</td>
-                    <td className="py-3 px-4 text-center">{item.score}</td>
+                    <td className="py-3 px-4 text-center">{item.grade}</td>
                   </tr>
                 )) : (
                   <tr>
@@ -196,7 +196,7 @@ export default function AllGrades() {
                   <div className="text-muted-foreground">加载中...</div>
                 </div>
               ) : radarData ? (
-                <RadarChart data={radarData} width={500} height={500} />
+                <RadarChart data={{[radarData.subject]: radarData.A}} width={500} height={500} />
               ) : (
                 <div className="flex items-center justify-center h-48">
                   <div className="text-muted-foreground">暂无数据</div>
