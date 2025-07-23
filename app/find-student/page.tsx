@@ -125,7 +125,7 @@ export default function FindStudent() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-600">
-            1. 点击"开始测试"按钮来测试常见的学号格式<br/>
+            1. 点击&ldquo;开始测试&rdquo;按钮来测试常见的学号格式<br/>
             2. 如果找到匹配的学号，它会显示为绿色<br/>
             3. 使用匹配的学号登录系统来测试概率数据功能<br/>
             4. 如果都没有匹配，可能需要检查数据库中的实际学号格式

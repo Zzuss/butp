@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
 import { getUserProbabilityData } from "@/lib/dashboard-data"
 import { sha256 } from "@/lib/utils"
@@ -17,7 +17,7 @@ export default function TestProbability() {
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!currentStudent) {
       setError("未登录")
       return
@@ -43,13 +43,13 @@ export default function TestProbability() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentStudent])
 
   useEffect(() => {
     if (currentStudent) {
       fetchData()
     }
-  }, [currentStudent])
+  }, [currentStudent, fetchData])
 
   return (
     <div className="p-6 max-w-2xl mx-auto">

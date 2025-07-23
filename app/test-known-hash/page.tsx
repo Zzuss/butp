@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSimpleAuth } from "@/contexts/simple-auth-context"
-import { getUserProbabilityData } from "@/lib/dashboard-data"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -26,7 +24,7 @@ export default function TestKnownHash() {
   const [testResults, setTestResults] = useState<Array<{
     hash: string;
     description: string;
-    data: any;
+    data: { proba_1: number; proba_2: number; proba_3: number } | null;
     error: string | null;
   }>>([])
   const [loading, setLoading] = useState(false)

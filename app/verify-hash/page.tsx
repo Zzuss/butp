@@ -111,8 +111,8 @@ export default function VerifyHash() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-600">
-            1. 点击"开始验证"来测试哈希函数<br/>
-            2. 如果所有测试都显示"✅ 匹配"，说明哈希函数工作正常<br/>
+            1. 点击&ldquo;开始验证&rdquo;来测试哈希函数<br/>
+            2. 如果所有测试都显示&ldquo;✅ 匹配&rdquo;，说明哈希函数工作正常<br/>
             3. 然后可以使用这些测试学号登录系统来测试概率数据功能<br/>
             4. 如果哈希值不匹配，可能需要检查哈希算法或数据库中的实际数据
           </p>
