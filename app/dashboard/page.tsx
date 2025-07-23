@@ -16,6 +16,7 @@ import {
   getRecentSubjectGrades, 
   getCourseTypeStats, 
   getSemesterTrends,
+  getStudentInfo,
   type DashboardStats,
   type SubjectGrade,
   type CourseTypeStats,
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const [subjectGrades, setSubjectGrades] = useState<SubjectGrade[]>([])
   const [courseTypeStats, setCourseTypeStats] = useState<CourseTypeStats[]>([])
   const [semesterTrends, setSemesterTrends] = useState<SemesterTrend[]>([])
+  const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
   // const [courseResults, setCourseResults] = useState<CourseResult[]>([])
 
   useEffect(() => {
@@ -52,6 +54,10 @@ export default function DashboardPage() {
         // 获取学生成绩数据
         const results = await getStudentResults(currentStudent!.id)
         // setCourseResults(results)
+        
+        // 获取学生信息（年级和专业）
+        const info = await getStudentInfo(currentStudent!.id)
+        setStudentInfo(info)
         
         // 计算统计数据
         const dashboardStats = calculateDashboardStats(results)
@@ -109,7 +115,10 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
         <p className="text-muted-foreground">
-          {t('dashboard.description', { name: currentStudent?.name || '' })}
+          {studentInfo 
+            ? `${studentInfo.year}${studentInfo.major}-${currentStudent?.id || ''}`
+            : t('dashboard.description', { name: currentStudent?.name || '' })
+          }
         </p>
       </div>
       

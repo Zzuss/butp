@@ -6,7 +6,9 @@ export const validStudentHashes = [
   "f8944cbbc5417c40331109549bd30bfea01d299d230af20559059aa219757233",
   "c398de479af1c08dbce25b685df8ce34bfa5dad842e6ad3172b493ccf39b06a9",
   // 添加实际数据库中的哈希值
-  "1cdc5935a5f0afaf2238e0e83021ad2fcbdcda479ffd7783d6e6bd1ef774d890"
+  "1cdc5935a5f0afaf2238e0e83021ad2fcbdcda479ffd7783d6e6bd1ef774d890",
+  // 数据库可能性表中的第一条数据
+  "353214f8e1ccebe2297a845d528311086a2a582f4470dfe362c0114d4898bc06"
 ];
 
 // 哈希值对应的学生信息（用于显示）
@@ -17,7 +19,9 @@ export const hashStudentInfoMap: Record<string, { name: string; class: string }>
   "f8944cbbc5417c40331109549bd30bfea01d299d230af20559059aa219757233": { name: "学生 D", class: "人工智能专业" },
   "c398de479af1c08dbce25b685df8ce34bfa5dad842e6ad3172b493ccf39b06a9": { name: "学生 E", class: "网络工程专业" },
   // 添加实际数据库中哈希值对应的学生信息
-  "1cdc5935a5f0afaf2238e0e83021ad2fcbdcda479ffd7783d6e6bd1ef774d890": { name: "实际学生", class: "数据库专业" }
+  "1cdc5935a5f0afaf2238e0e83021ad2fcbdcda479ffd7783d6e6bd1ef774d890": { name: "实际学生", class: "数据库专业" },
+  // 数据库可能性表中的第一条数据
+  "353214f8e1ccebe2297a845d528311086a2a582f4470dfe362c0114d4898bc06": { name: "数据库学生1", class: "电信工程及管理" }
 };
 
 /**

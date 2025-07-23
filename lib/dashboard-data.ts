@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { calculateGPA } from './gpa-calculator'
+import { sha256 } from './utils'
 
 export interface CourseResult {
   id: string
@@ -341,5 +342,87 @@ export async function getRadarChartData(courseName: string): Promise<RadarChartD
   } catch (error) {
     console.error('Error getting radar chart data:', error)
     return null
+  }
+}
+
+// 获取学生信息（年级和专业）
+export async function getStudentInfo(studentHash: string): Promise<{ year: string; major: string } | null> {
+  try {
+    const { data: results, error } = await supabase
+      .from('academic_results')
+      .select('Semester_Offered, Current_Major')
+      .eq('SNH', studentHash)
+      .limit(1);
+
+    if (error || !results || results.length === 0) {
+      console.error('Error fetching student info:', error);
+      return null;
+    }
+
+    const result = results[0];
+    
+    // 从学期信息提取年级
+    // 例如: "2020-2021-1" -> "2020级"
+    const semester = result.Semester_Offered;
+    let year = '';
+    if (semester && semester.includes('-')) {
+      const yearPart = semester.split('-')[0];
+      year = `${yearPart}级`;
+    }
+    
+    // 获取专业信息
+    const major = result.Current_Major || '未知专业';
+    
+    return { year, major };
+  } catch (error) {
+    console.error('Error in getStudentInfo:', error);
+    return null;
+  }
+}
+
+// 获取用户概率预测数据
+export async function getUserProbabilityData(studentId: string): Promise<{
+  proba_1: number;
+  proba_2: number;
+  proba_3: number;
+} | null> {
+  try {
+    // 如果输入的是64位哈希值，直接使用；否则进行哈希处理
+    let studentHash = studentId;
+    if (studentId.length !== 64 || !/^[a-f0-9]{64}$/i.test(studentId)) {
+      studentHash = await sha256(studentId);
+    }
+    console.log('查询概率数据:', { studentId, studentHash })
+    
+    const { data, error } = await supabase
+      .from('cohort_probability')
+      .select('proba_1, proba_2, proba_3')
+      .eq('SNH', studentHash)
+      .single();
+
+    if (error) {
+      // 如果是"未找到记录"的错误，这是正常的，不需要报错
+      if (error.code === 'PGRST116') {
+        console.log('数据库中未找到该学生的概率数据，将使用默认值');
+        return null;
+      }
+      console.error('Supabase查询错误:', error);
+      return null;
+    }
+
+    if (!data) {
+      console.log('未找到概率数据，学生哈希值:', studentHash);
+      return null;
+    }
+
+    console.log('找到概率数据:', data);
+    return {
+      proba_1: data.proba_1,
+      proba_2: data.proba_2,
+      proba_3: data.proba_3
+    };
+  } catch (error) {
+    console.error('Error in getUserProbabilityData:', error);
+    return null;
   }
 }
