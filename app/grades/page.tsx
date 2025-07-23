@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getSubjectGrades, getRadarChartData, type RadarChartData } from "@/lib/dashboard-data"
+import { getSubjectGrades, getRadarChartData } from "@/lib/dashboard-data"
 import { useSimpleAuth } from "@/contexts/simple-auth-context"
 import { useLanguage } from "@/contexts/language-context"
 import { RadarChart } from "@/components/ui/radar-chart"
@@ -15,7 +15,7 @@ export default function AllGrades() {
   const [loading, setLoading] = useState(false)
   const [selectedRow, setSelectedRow] = useState<number | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [radarData, setRadarData] = useState<RadarChartData | null>(null)
+  const [radarData, setRadarData] = useState<{ [key: string]: number } | null>(null)
   const [loadingRadar, setLoadingRadar] = useState(false)
   const [selectedCourseName, setSelectedCourseName] = useState<string>('')
 
@@ -196,7 +196,7 @@ export default function AllGrades() {
                   <div className="text-muted-foreground">加载中...</div>
                 </div>
               ) : radarData ? (
-                <RadarChart data={{[radarData.subject]: radarData.A}} width={500} height={500} />
+                <RadarChart data={radarData} width={500} height={500} />
               ) : (
                 <div className="flex items-center justify-center h-48">
                   <div className="text-muted-foreground">暂无数据</div>

@@ -327,16 +327,28 @@ export async function getSubjectGrades(studentHash: string) {
   }
 }
 
-// 获取雷达图数据
-export async function getRadarChartData(courseName: string): Promise<RadarChartData | null> {
+// 获取雷达图数据 - 返回多维度评估数据
+export async function getRadarChartData(courseName: string): Promise<{ [key: string]: number } | null> {
   try {
-    // 这里可以根据需要实现具体的雷达图数据逻辑
-    // 暂时返回模拟数据
+    // 基于原本的 RadarChartData 接口，提供多个评估维度
+    // 这里应该从数据库获取实际的统计数据，暂时使用模拟数据
+    
+    // 使用课程名生成稳定的随机数种子，确保相同课程显示相同数据
+    let seed = 0;
+    for (let i = 0; i < courseName.length; i++) {
+      seed += courseName.charCodeAt(i);
+    }
+    
+    // 基于种子生成稳定的分数
+    const baseScore = 70 + (seed % 21); // 70-90之间
+    
+    // 返回符合原本设计意图的多维度数据
     return {
-      subject: courseName,
-      A: 80,
-      B: 90,
-      fullMark: 100
+      '当前成绩': baseScore,
+      '班级平均': Math.max(60, baseScore - ((seed % 15) + 5)), // 比当前低5-20分
+      '最高成绩': Math.min(100, baseScore + ((seed % 15) + 5)), // 比当前高5-20分
+      '及格线': 60,
+      '优秀线': 85
     }
   } catch (error) {
     console.error('Error getting radar chart data:', error)
