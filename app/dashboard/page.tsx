@@ -6,7 +6,7 @@ import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle } from 'l
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useSimpleAuth } from '@/contexts/simple-auth-context'
+import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage } from '@/contexts/language-context'
 
 // 导入数据处理函数
@@ -26,7 +26,7 @@ import {
 import { CourseStatsChart } from '@/components/ui/chart'
 
 export default function DashboardPage() {
-  const { currentStudent, isLoggedIn, isLoading: authLoading } = useSimpleAuth()
+  const { user, loading: authLoading } = useAuth()
   const { t } = useLanguage()
   const router = useRouter()
   
@@ -41,7 +41,7 @@ export default function DashboardPage() {
     // 如果未登录，不加载数据
     if (authLoading) return
     
-    if (!isLoggedIn || !currentStudent) {
+    if (!user?.isLoggedIn) {
       setIsLoading(false)
       return
     }
@@ -50,7 +50,7 @@ export default function DashboardPage() {
       setIsLoading(true)
       try {
         // 获取学生成绩数据
-        const results = await getStudentResults(currentStudent!.id)
+        const results = await getStudentResults(user!.userId)
         // setCourseResults(results)
         
         // 计算统计数据
@@ -76,10 +76,10 @@ export default function DashboardPage() {
     }
     
     loadDashboardData()
-  }, [currentStudent, isLoggedIn, authLoading])
+  }, [user, authLoading])
   
   // 如果未登录，显示登录提示
-  if (!authLoading && !isLoggedIn) {
+  if (!authLoading && !user?.isLoggedIn) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
         <GraduationCap className="h-16 w-16 text-muted-foreground mb-4" />
@@ -93,12 +93,12 @@ export default function DashboardPage() {
   
   // 加载状态
   if (isLoading || authLoading) {
-    const studentName = currentStudent?.name || ''
+    const studentName = user?.name || ''
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
         <h2 className="text-xl font-medium mb-2">
-          {currentStudent ? t('dashboard.loading', { name: studentName }) : t('dashboard.loading.message')}
+          {user?.isLoggedIn ? t('dashboard.loading', { name: studentName }) : t('dashboard.loading.message')}
         </h2>
       </div>
     )
@@ -109,7 +109,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
         <p className="text-muted-foreground">
-          {t('dashboard.description', { name: currentStudent?.name || '' })}
+          {t('dashboard.description', { name: user?.name || '' })}
         </p>
       </div>
       

@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getSubjectGrades, getRadarChartData } from "@/lib/dashboard-data"
-import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 import { RadarChart } from "@/components/ui/radar-chart"
 import Link from 'next/link'
 
 export default function AllGrades() {
-  const { currentStudent } = useSimpleAuth()
+  const { user } = useAuth()
   const { t } = useLanguage()
   const [grades, setGrades] = useState<Awaited<ReturnType<typeof getSubjectGrades>>>([])
   const [loading, setLoading] = useState(false)
@@ -26,10 +26,10 @@ export default function AllGrades() {
   }
 
   useEffect(() => {
-    if (currentStudent) {
-      loadGrades(currentStudent.id)
+    if (user?.isLoggedIn) {
+      loadGrades(user.userId)
     }
-  }, [currentStudent])
+  }, [user])
 
   async function loadGrades(studentId: string) {
     setLoading(true)
@@ -87,7 +87,7 @@ export default function AllGrades() {
     return credit.toFixed(1)
   }
 
-  if (!currentStudent) {
+  if (!user?.isLoggedIn) {
     return (
       <div className="p-6">
         <div className="mb-6">
@@ -103,7 +103,7 @@ export default function AllGrades() {
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">{t('grades.title')}</h1>
-          <p className="text-muted-foreground">{t('grades.loading').replace('{name}', currentStudent.name)}</p>
+          <p className="text-muted-foreground">{t('grades.loading').replace('{name}', user?.name || '')}</p>
         </div>
         <div className="mt-6 flex items-center justify-center h-32">
           <div className="text-muted-foreground">{t('grades.loading.message')}</div>
@@ -117,7 +117,7 @@ export default function AllGrades() {
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">{t('grades.title')}</h1>
-          <p className="text-muted-foreground">{t('grades.description').replace('{name}', currentStudent.name)}</p>
+          <p className="text-muted-foreground">{t('grades.description').replace('{name}', user?.name || '')}</p>
         </div>
         <Link href="/dashboard" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
           {t('grades.back.to.dashboard')}

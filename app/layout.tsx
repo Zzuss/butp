@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { SimpleAuthProvider } from "@/contexts/simple-auth-context";
-import { SimpleAuthGuard } from "@/components/auth/simple-auth-guard";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { LanguageProvider } from "@/contexts/language-context";
 
@@ -25,16 +24,14 @@ export default function RootLayout({
     <html lang="zh" className="light">
       <body className="antialiased">
         <LanguageProvider>
-        <SimpleAuthProvider>
-          <SimpleAuthGuard>
-              <div className="flex h-screen flex-col md:flex-row">
+          <AuthProvider>
+            <div className="flex h-screen flex-col md:flex-row">
               <AppSidebar />
-                <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-4">
+              <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-4">
                 {children}
               </main>
             </div>
-          </SimpleAuthGuard>
-        </SimpleAuthProvider>
+          </AuthProvider>
         </LanguageProvider>
       </body>
     </html>
