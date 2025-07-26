@@ -6,34 +6,76 @@ import { GraduationCap, Briefcase, MapPin, Star, Building, School, Award, BookOp
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollableContainer } from "../../components/ui/scrollable-container"
 import { useLanguage } from "@/contexts/language-context"
-import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { getUserProbabilityData } from "@/lib/dashboard-data"
+import { useState, useEffect } from "react"
 
 // 可能性卡片组件
 function PossibilityCard({ activeTab }: { activeTab: string }) {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const [probabilityData, setProbabilityData] = useState<{
+    proba_1: number;
+    proba_2: number;
+    proba_3: number;
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  
+  // 获取用户概率数据
+  useEffect(() => {
+    async function fetchProbabilityData() {
+      if (user?.isLoggedIn) {
+        try {
+          const data = await getUserProbabilityData(user.userId)
+          setProbabilityData(data)
+        } catch (error) {
+          console.error('Error fetching probability data:', error)
+        } finally {
+          setLoading(false)
+        }
+      } else {
+        setLoading(false)
+      }
+    }
+    
+    fetchProbabilityData()
+  }, [user])
   
   // 根据不同标签页显示不同的可能性类型和数值
   const getPossibilityData = () => {
+    // 默认值（当没有数据时使用）
+    const defaultValues = {
+      companies: { type: t('rolemodels.possibility.employment'), percentage: '70%' },
+      schools: { type: t('rolemodels.possibility.graduate'), percentage: '80%' },
+      internships: { type: t('rolemodels.possibility.internship'), percentage: '90%' }
+    }
+    
+    // 如果没有数据或正在加载，使用默认值
+    if (loading || !probabilityData) {
+      return defaultValues[activeTab as keyof typeof defaultValues] || defaultValues.companies
+    }
+    
+    // 根据当前标签页返回对应的概率数据
     switch (activeTab) {
       case 'companies':
         return {
           type: t('rolemodels.possibility.employment'),
-          percentage: '70%'
+          percentage: `${(probabilityData.proba_1 * 100).toFixed(1)}%`
         }
       case 'schools':
         return {
           type: t('rolemodels.possibility.graduate'),
-          percentage: '80%'
+          percentage: `${(probabilityData.proba_2 * 100).toFixed(1)}%`
         }
       case 'internships':
         return {
           type: t('rolemodels.possibility.internship'),
-          percentage: '90%'
+          percentage: `${(probabilityData.proba_3 * 100).toFixed(1)}%`
         }
       default:
         return {
           type: t('rolemodels.possibility.employment'),
-          percentage: '70%'
+          percentage: `${(probabilityData.proba_1 * 100).toFixed(1)}%`
         }
     }
   }

@@ -38,9 +38,9 @@ const translations: Record<Language, Record<string, string>> = {
     // 侧边栏
     'sidebar.profile': '我的信息',
     'sidebar.logout': '退出登录',
-    'sidebar.rolemodels': 'Role Model',
+    'sidebar.rolemodels': '职业分析',
     'sidebar.charts': '图表测试',
-    'sidebar.analysis': '分析模块',
+    'sidebar.analysis': '学业分析',
     
     // Profile页面
     'profile.title': '我的信息',
@@ -181,7 +181,7 @@ const translations: Record<Language, Record<string, string>> = {
     'grades.total.courses': '共 {count} 门课程',
     
     // Role Models页面
-    'rolemodels.description': '了解不同去向的典型人才特征，规划自己的职业和学业发展路径',
+    'rolemodels.description': '了解不同职业方向的典型人才特征，规划自己的职业发展路径',
     'rolemodels.tab.companies': '按就业公司',
     'rolemodels.tab.schools': '按升学学校',
     'rolemodels.tab.internships': '按实习机会',
@@ -196,8 +196,8 @@ const translations: Record<Language, Record<string, string>> = {
     'rolemodels.possibility.estimate': '根据您的成绩，估计',
     
     // Analysis页面
-    'analysis.title': '分析模块',
-    'analysis.description': '深入分析您的学习表现，提供个性化改进建议',
+    'analysis.title': '学业分析',
+    'analysis.description': '深入分析您的学业表现，提供个性化改进建议',
     'analysis.efficiency.title': '学习效率',
     'analysis.efficiency.desc': '+5% 比上周',
     'analysis.target.title': '目标达成率',
@@ -263,9 +263,9 @@ const translations: Record<Language, Record<string, string>> = {
     // 侧边栏
     'sidebar.profile': 'My Profile',
     'sidebar.logout': 'Logout',
-    'sidebar.rolemodels': 'Role Models',
+    'sidebar.rolemodels': 'Career Analysis',
     'sidebar.charts': 'Charts Test',
-    'sidebar.analysis': 'Analysis',
+    'sidebar.analysis': 'Academic Analysis',
     
     // Profile页面
     'profile.title': 'My Profile',
@@ -406,7 +406,7 @@ const translations: Record<Language, Record<string, string>> = {
     'grades.total.courses': 'Total {count} courses',
     
     // Role Models页面
-    'rolemodels.description': 'Understand typical talent characteristics for different career paths and plan your professional and academic development',
+    'rolemodels.description': 'Understand typical talent characteristics for different career directions and plan your professional development path',
     'rolemodels.tab.companies': 'By Company',
     'rolemodels.tab.schools': 'By Graduate School',
     'rolemodels.tab.internships': 'By Internship',
@@ -421,8 +421,8 @@ const translations: Record<Language, Record<string, string>> = {
     'rolemodels.possibility.estimate': 'Based on your grades, estimated',
     
     // Analysis页面
-    'analysis.title': 'Analysis',
-    'analysis.description': 'In-depth analysis of your learning performance with personalized improvement suggestions',
+    'analysis.title': 'Academic Analysis',
+    'analysis.description': 'In-depth analysis of your academic performance with personalized improvement suggestions',
     'analysis.efficiency.title': 'Learning Efficiency',
     'analysis.efficiency.desc': '+5% from last week',
     'analysis.target.title': 'Goal Achievement',

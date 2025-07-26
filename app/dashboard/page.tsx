@@ -16,6 +16,7 @@ import {
   getRecentSubjectGrades, 
   getCourseTypeStats, 
   getSemesterTrends,
+  getStudentInfo,
   type DashboardStats,
   type SubjectGrade,
   type CourseTypeStats,
@@ -27,7 +28,7 @@ import { CourseStatsChart } from '@/components/ui/chart'
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const router = useRouter()
   
   const [isLoading, setIsLoading] = useState(true)
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const [subjectGrades, setSubjectGrades] = useState<SubjectGrade[]>([])
   const [courseTypeStats, setCourseTypeStats] = useState<CourseTypeStats[]>([])
   const [semesterTrends, setSemesterTrends] = useState<SemesterTrend[]>([])
+  const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
   // const [courseResults, setCourseResults] = useState<CourseResult[]>([])
 
   useEffect(() => {
@@ -53,12 +55,16 @@ export default function DashboardPage() {
         const results = await getStudentResults(user!.userId)
         // setCourseResults(results)
         
+        // 获取学生信息（年级和专业）
+        const info = await getStudentInfo(user!.userId)
+        setStudentInfo(info)
+        
         // 计算统计数据
         const dashboardStats = calculateDashboardStats(results)
         setStats(dashboardStats)
         
         // 获取最近的科目成绩
-        const recentGrades = getRecentSubjectGrades(results)
+        const recentGrades = await getRecentSubjectGrades(results, 6, language, info?.major, info?.year)
         setSubjectGrades(recentGrades)
         
         // 获取课程类型统计
@@ -109,7 +115,10 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
         <p className="text-muted-foreground">
-          {t('dashboard.description', { name: user?.name || '' })}
+          {studentInfo 
+            ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+            : t('dashboard.description', { name: user?.name || '' })
+          }
         </p>
       </div>
       

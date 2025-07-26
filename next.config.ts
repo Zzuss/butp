@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 移除无效的配置选项
+  // 基本配置
   eslint: {
     ignoreDuringBuilds: false,
   },

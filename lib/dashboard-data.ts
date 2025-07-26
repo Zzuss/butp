@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { calculateGPA } from './gpa-calculator'
+import { sha256 } from './utils'
 
 export interface CourseResult {
   id: string
@@ -122,7 +123,7 @@ export function calculateDashboardStats(results: CourseResult[]): DashboardStats
 }
 
 // 获取最近的科目成绩
-export function getRecentSubjectGrades(results: CourseResult[], limit: number = 6): SubjectGrade[] {
+export async function getRecentSubjectGrades(results: CourseResult[], limit: number = 6, language: string = 'zh', major?: string, year?: string): Promise<SubjectGrade[]> {
   if (!results || results.length === 0) {
     return [];
   }
@@ -136,13 +137,32 @@ export function getRecentSubjectGrades(results: CourseResult[], limit: number = 
   const recentSemester = sortedBySemester[0].semester;
   const recentCourses = sortedBySemester.filter(r => r.semester === recentSemester);
   
-  // 转换为SubjectGrade格式
-  return recentCourses.slice(0, limit).map(course => ({
-    name: course.course_name,
-    grade: course.grade,
-    average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
-    credit: course.credit
-  }));
+  // 转换为SubjectGrade格式，支持课程名称翻译
+  const subjectGrades: SubjectGrade[] = [];
+  
+  for (const course of recentCourses.slice(0, limit)) {
+    let courseName = course.course_name;
+    
+    // 如果是英文模式，尝试获取英文翻译
+    if (language === 'en') {
+      try {
+        courseName = await getCourseNameTranslation(course.course_name, major, year);
+      } catch (error) {
+        console.error('Error translating course name:', error);
+        // 如果翻译失败，使用原中文名称
+        courseName = course.course_name;
+      }
+    }
+    
+    subjectGrades.push({
+      name: courseName,
+      grade: course.grade,
+      average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
+      credit: course.credit
+    });
+  }
+  
+  return subjectGrades;
 }
 
 // 获取课程类型统计
@@ -307,20 +327,39 @@ export interface RadarChartData {
 }
 
 // 获取所有科目成绩（用于grades页面）
-export async function getSubjectGrades(studentHash: string) {
+export async function getSubjectGrades(studentHash: string, language: string = 'zh', major?: string, year?: string) {
   try {
     const results = await getStudentResults(studentHash)
-    return results.map(result => ({
-      id: result.id,
-      course_name: result.course_name,
-      course_id: result.course_id,
-      grade: result.grade,
-      credit: result.credit,
-      semester: result.semester,
-      course_type: result.course_type,
-      course_attribute: result.course_attribute,
-      exam_type: result.exam_type
-    }))
+    const grades = []
+    
+    for (const result of results) {
+      let courseName = result.course_name;
+      
+      // 如果是英文模式，尝试获取英文翻译
+      if (language === 'en') {
+        try {
+          courseName = await getCourseNameTranslation(result.course_name, major, year);
+        } catch (error) {
+          console.error('Error translating course name:', error);
+          // 如果翻译失败，使用原中文名称
+          courseName = result.course_name;
+        }
+      }
+      
+      grades.push({
+        id: result.id,
+        course_name: courseName,
+        course_id: result.course_id,
+        grade: result.grade,
+        credit: result.credit,
+        semester: result.semester,
+        course_type: result.course_type,
+        course_attribute: result.course_attribute,
+        exam_type: result.exam_type
+      })
+    }
+    
+    return grades
   } catch (error) {
     console.error('Error getting subject grades:', error)
     return []
@@ -353,5 +392,121 @@ export async function getRadarChartData(courseName: string): Promise<{ [key: str
   } catch (error) {
     console.error('Error getting radar chart data:', error)
     return null
+  }
+}
+
+// 获取学生信息（年级和专业）
+export async function getStudentInfo(studentHash: string): Promise<{ year: string; major: string } | null> {
+  try {
+    const { data: results, error } = await supabase
+      .from('academic_results')
+      .select('Semester_Offered, Current_Major')
+      .eq('SNH', studentHash)
+      .limit(1);
+
+    if (error || !results || results.length === 0) {
+      console.error('Error fetching student info:', error);
+      return null;
+    }
+
+    const result = results[0];
+    
+    // 从学期信息提取年级
+    // 例如: "2020-2021-1" -> "2020级"
+    const semester = result.Semester_Offered;
+    let year = '';
+    if (semester && semester.includes('-')) {
+      const yearPart = semester.split('-')[0];
+      year = `${yearPart}级`;
+    }
+    
+    // 获取专业信息
+    const major = result.Current_Major || '未知专业';
+    
+    return { year, major };
+  } catch (error) {
+    console.error('Error in getStudentInfo:', error);
+    return null;
+  }
+}
+
+// 获取课程名称的英文翻译
+export async function getCourseNameTranslation(courseName: string, major?: string, year?: string): Promise<string> {
+  try {
+    // 构建查询条件
+    let query = supabase
+      .from('courses_translations')
+      .select('Course_Name_Eng')
+      .eq('Course_Name_Chi', courseName);
+
+    // 如果有专业信息，添加到查询条件
+    if (major) {
+      query = query.eq('Major', major);
+    }
+
+    // 如果有年级信息，添加到查询条件
+    if (year) {
+      query = query.eq('year', year);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error) {
+      // 如果没有找到翻译，返回原中文名称
+      return courseName;
+    }
+
+    // 如果找到英文翻译，返回英文名称
+    return data.Course_Name_Eng || courseName;
+  } catch (error) {
+    console.error('Error getting course name translation:', error);
+    return courseName;
+  }
+}
+
+// 获取用户概率预测数据
+export async function getUserProbabilityData(studentId: string): Promise<{
+  proba_1: number;
+  proba_2: number;
+  proba_3: number;
+} | null> {
+  try {
+    // 如果输入的是64位哈希值，直接使用；否则进行哈希处理
+    let studentHash = studentId;
+    if (studentId.length !== 64 || !/^[a-f0-9]{64}$/i.test(studentId)) {
+      studentHash = await sha256(studentId);
+    }
+    console.log('查询概率数据:', { studentId, studentHash })
+    
+    const { data, error } = await supabase
+      .from('cohort_probability')
+      .select('proba_1, proba_2, proba_3')
+      .eq('SNH', studentHash)
+      .single();
+
+    if (error) {
+      // 如果是"未找到记录"的错误，这是正常的，不需要报错
+      if (error.code === 'PGRST116') {
+        console.log('数据库中未找到该学生的概率数据，将使用默认值');
+        return null;
+      }
+      console.error('Supabase查询错误:', error);
+      return null;
+    }
+
+    if (!data) {
+      console.log('未找到概率数据，学生哈希值:', studentHash);
+      return null;
+    }
+
+    console.log('找到概率数据:', data);
+    return {
+      proba_1: data.proba_1,
+      proba_2: data.proba_2,
+      proba_3: data.proba_3
+    };
+  } catch (error) {
+    console.error('Error in getUserProbabilityData:', error);
+    return null;
   }
 }

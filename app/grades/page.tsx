@@ -10,7 +10,7 @@ import Link from 'next/link'
 
 export default function AllGrades() {
   const { user } = useAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [grades, setGrades] = useState<Awaited<ReturnType<typeof getSubjectGrades>>>([])
   const [loading, setLoading] = useState(false)
   const [selectedRow, setSelectedRow] = useState<number | null>(null)
@@ -29,13 +29,17 @@ export default function AllGrades() {
     if (user?.isLoggedIn) {
       loadGrades(user.userId)
     }
-  }, [user])
+  }, [user, language])
 
   async function loadGrades(studentId: string) {
     setLoading(true)
     try {
+      // 获取学生信息（年级和专业）
+      const { getStudentInfo } = await import('@/lib/dashboard-data')
+      const studentInfo = await getStudentInfo(studentId)
+      
       // 获取所有成绩
-      const allGrades = await getSubjectGrades(studentId)
+      const allGrades = await getSubjectGrades(studentId, language, studentInfo?.major, studentInfo?.year)
       // 按学分从高到低排序
       const sortedGrades = [...allGrades].sort((a, b) => b.credit - a.credit)
       setGrades(sortedGrades)
