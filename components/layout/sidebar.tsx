@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 
 const sidebarItems = [
@@ -65,7 +65,7 @@ const sidebarItems = [
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { currentStudent, logout } = useSimpleAuth()
+  const { user, logout } = useAuth()
   const { t, language, setLanguage } = useLanguage()
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
@@ -180,7 +180,7 @@ export function AppSidebar() {
       </SidebarContent>
       
       {/* 用户信息和登出按钮 */}
-      {currentStudent && (
+      {user && user.isLoggedIn && (
           <div className={`border-t border-border mt-auto ${isCollapsed ? 'p-2' : 'p-4'}`}>
             {!isCollapsed ? (
               <>
@@ -217,8 +217,8 @@ export function AppSidebar() {
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">{currentStudent.name}</p>
-              <p className="text-xs text-muted-foreground">{currentStudent.id}</p>
+              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-xs text-muted-foreground">{user.userId}</p>
             </div>
           </div>
           <Button 

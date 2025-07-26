@@ -1,58 +1,139 @@
-// 数据库中的学号哈希值列表（示例）
-export const validStudentHashes = [
-  "d4e25a73bf0169e7b9ae1ad0423ccf08297c0cb32fb264980a56d2c064a2f15a",
-  "c83d00068ed840b000ca00e569e5d54982a344487c43b641880ebb62f85eb552",
-  "c28b77206e694745f2965b18277d0037857fb04d5cb22d9193b3d1b3e3d6fe73",
-  "f8944cbbc5417c40331109549bd30bfea01d299d230af20559059aa219757233",
-  "c398de479af1c08dbce25b685df8ce34bfa5dad842e6ad3172b493ccf39b06a9",
-  // 添加实际数据库中的哈希值
-  "1cdc5935a5f0afaf2238e0e83021ad2fcbdcda479ffd7783d6e6bd1ef774d890",
-  // 数据库可能性表中的第一条数据
-  "353214f8e1ccebe2297a845d528311086a2a582f4470dfe362c0114d4898bc06"
-];
-
-// 哈希值对应的学生信息（用于显示）
-export const hashStudentInfoMap: Record<string, { name: string; class: string }> = {
-  "d4e25a73bf0169e7b9ae1ad0423ccf08297c0cb32fb264980a56d2c064a2f15a": { name: "学生 A", class: "通信工程专业" },
-  "c83d00068ed840b000ca00e569e5d54982a344487c43b641880ebb62f85eb552": { name: "学生 B", class: "计算机科学与技术专业" },
-  "c28b77206e694745f2965b18277d0037857fb04d5cb22d9193b3d1b3e3d6fe73": { name: "学生 C", class: "软件工程专业" },
-  "f8944cbbc5417c40331109549bd30bfea01d299d230af20559059aa219757233": { name: "学生 D", class: "人工智能专业" },
-  "c398de479af1c08dbce25b685df8ce34bfa5dad842e6ad3172b493ccf39b06a9": { name: "学生 E", class: "网络工程专业" },
-  // 添加实际数据库中哈希值对应的学生信息
-  "1cdc5935a5f0afaf2238e0e83021ad2fcbdcda479ffd7783d6e6bd1ef774d890": { name: "实际学生", class: "数据库专业" },
-  // 数据库可能性表中的第一条数据
-  "353214f8e1ccebe2297a845d528311086a2a582f4470dfe362c0114d4898bc06": { name: "数据库学生1", class: "电信工程及管理" }
-};
+import { createHash } from 'crypto';
+import { supabase } from './supabase';
 
 /**
- * 检查学号哈希值是否有效（在数据库中存在）
- * @param hash 学号哈希值
- * @returns 是否有效
+ * 将学号转换为SHA256哈希值
+ * @param studentId 原始学号
+ * @returns SHA256哈希值
  */
-export function isValidStudentHash(hash: string): boolean {
-  // 检查是否在已知哈希值列表中，或者符合哈希值格式（64位十六进制字符）
-  return validStudentHashes.includes(hash) || /^[a-f0-9]{64}$/i.test(hash);
+export function hashStudentId(studentId: string): string {
+  return createHash('sha256').update(studentId).digest('hex');
 }
 
 /**
- * 获取学号哈希值对应的学生信息
+ * 检查学号哈希值是否在数据库中存在
+ * @param hash 学号哈希值
+ * @returns 是否有效
+ */
+export async function isValidStudentHashInDatabase(hash: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('academic_results')
+      .select('SNH')
+      .eq('SNH', hash)
+      .limit(1);
+    
+    if (error) {
+      console.error('Error checking student hash in database:', error);
+      return false;
+    }
+    
+    return data && data.length > 0;
+  } catch (error) {
+    console.error('Database query failed:', error);
+    return false;
+  }
+}
+
+/**
+ * 检查学号哈希值是否有效（格式检查）
+ * @param hash 学号哈希值
+ * @returns 是否符合哈希格式
+ */
+export function isValidStudentHash(hash: string): boolean {
+  // 检查是否符合64位十六进制字符串格式（SHA256）
+  return /^[a-f0-9]{64}$/i.test(hash);
+}
+
+/**
+ * 检查原始学号是否有效（通过检查其哈希值格式）
+ * @param studentId 原始学号
+ * @returns 是否有效
+ */
+export function isValidStudentId(studentId: string): boolean {
+  const hashedId = hashStudentId(studentId);
+  return isValidStudentHash(hashedId);
+}
+
+/**
+ * 从数据库获取学生信息
  * @param hash 学号哈希值
  * @returns 学生信息对象
  */
-export function getStudentInfoByHash(hash: string): { id: string; name: string; class: string } {
-  const info = hashStudentInfoMap[hash];
+export async function getStudentInfoByHash(hash: string): Promise<{ id: string; name: string; major: string; year?: string } | null> {
+  try {
+    const { data, error } = await supabase
+      .from('academic_results')
+      .select('SNH, Current_Major')
+      .eq('SNH', hash)
+      .limit(1);
+    
+    if (error) {
+      console.error('Error fetching student info:', error);
+      return null;
+    }
+    
+    if (data && data.length > 0) {
+      const student = data[0];
+      return {
+        id: hash,
+        name: `学生 ${hash.substring(0, 8)}`, // 使用哈希前8位作为显示名
+        major: student.Current_Major || '未知专业',
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Database query failed:', error);
+    return null;
+  }
+}
+
+/**
+ * 获取原始学号对应的学生信息（通过哈希化并查询数据库）
+ * @param studentId 原始学号
+ * @returns 学生信息对象，包含哈希值
+ */
+export async function getStudentInfoById(studentId: string): Promise<{ id: string; hash: string; name: string; major: string } | null> {
+  const hash = hashStudentId(studentId);
+  const info = await getStudentInfoByHash(hash);
   
   if (info) {
     return {
-      id: hash,
-      ...info
+      ...info,
+      hash: hash,
     };
   }
   
-  // 如果没有预设信息，返回默认信息
+  return null;
+}
+
+/**
+ * 验证CAS认证的学号是否在数据库中存在
+ * @param studentId CAS返回的原始学号
+ * @returns 验证结果和哈希值
+ */
+export async function validateCasStudentId(studentId: string): Promise<{ isValid: boolean; hash: string; studentInfo?: { id: string; name: string; major: string; year?: string } | null }> {
+  const hash = hashStudentId(studentId);
+  
+  console.log('Validating CAS student ID:', {
+    originalId: studentId,
+    generatedHash: hash
+  });
+  
+  const isValid = await isValidStudentHashInDatabase(hash);
+  
+  if (isValid) {
+    const studentInfo = await getStudentInfoByHash(hash);
+    return {
+      isValid: true,
+      hash: hash,
+      studentInfo: studentInfo
+    };
+  }
+  
   return {
-    id: hash,
-    name: `学生 ${hash.substring(0, 6)}`,
-    class: "未知专业"
+    isValid: false,
+    hash: hash
   };
 }

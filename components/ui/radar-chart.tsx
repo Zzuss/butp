@@ -19,7 +19,9 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
   // 计算每个点的坐标
   const getPointCoordinates = (value: number, index: number) => {
     const angle = index * angleStep - Math.PI / 2 // 从顶部开始
-    const r = (value * radius * 2) // 将数据放大2倍显示
+    // 将0-100的分数映射到0-radius的范围
+    const normalizedValue = Math.max(0, Math.min(100, value)) / 100
+    const r = normalizedValue * radius
     return {
       x: center.x + r * Math.cos(angle),
       y: center.y + r * Math.sin(angle)
@@ -37,11 +39,11 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
   }
 
   // 生成网格线
-  const gridLevels = [0.1, 0.2, 0.3, 0.4, 0.5]
+  const gridLevels = [0.2, 0.4, 0.6, 0.8, 1.0] // 对应20, 40, 60, 80, 100分
   const gridPaths = gridLevels.map(level => {
     const points = dataEntries.map((_, index) => {
       const angle = index * angleStep - Math.PI / 2
-      const r = level * radius * 2 // 与数据放大保持一致
+      const r = level * radius
       return `${center.x + r * Math.cos(angle)},${center.y + r * Math.sin(angle)}`
     })
     return `M ${points.join(' L ')} Z`
@@ -68,7 +70,7 @@ export function RadarChart({ data, width = 200, height = 200 }: RadarChartProps)
         
         {/* 轴线 */}
         {dataEntries.map((_, index) => {
-          const endPoint = getPointCoordinates(0.5, index) // 调整轴线长度到0.5对应的位置
+          const endPoint = getPointCoordinates(100, index) // 轴线延伸到100分位置
           return (
             <line
               key={index}
