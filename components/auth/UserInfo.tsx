@@ -43,6 +43,9 @@ export function UserInfo({ className }: UserInfoProps) {
       <div className="flex flex-col">
         <span className="text-sm font-medium">{user.name}</span>
         <span className="text-xs text-muted-foreground">学号: {user.userId}</span>
+        {user.userHash && (
+          <span className="text-xs text-muted-foreground">哈希: {user.userHash.substring(0, 12)}...</span>
+        )}
       </div>
       
       {/* 登出按钮 */}

@@ -52,11 +52,11 @@ export default function DashboardPage() {
       setIsLoading(true)
       try {
         // 获取学生成绩数据
-        const results = await getStudentResults(user!.userId)
+        const results = await getStudentResults(user!.userHash)
         // setCourseResults(results)
         
         // 获取学生信息（年级和专业）
-        const info = await getStudentInfo(user!.userId)
+        const info = await getStudentInfo(user!.userHash)
         setStudentInfo(info)
         
         // 计算统计数据

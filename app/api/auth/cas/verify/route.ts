@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { validateCasTicket } from '@/lib/cas';
 import { SessionData, sessionOptions } from '@/lib/session';
-import { validateCasStudentId } from '@/lib/student-data';
+import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,37 +31,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 验证学号是否在数据库中存在并获取哈希值
-    const validation = await validateCasStudentId(casUser.userId);
-    console.log('CAS verify: student validation result:', validation);
-    
-    if (!validation.isValid) {
-      console.error('CAS verify: student not found in database');
-      return NextResponse.json(
-        { error: 'Student not found in database' },
-        { status: 403 }
-      );
-    }
+    // 生成学号哈希值但不验证数据库（留给最终登录步骤）
+    const hash = crypto.createHash('sha256').update(casUser.userId).digest('hex');
+    console.log('CAS verify: generated hash for student:', hash);
 
     // 获取返回URL，默认重定向到登录页面进行最终认证
     const returnUrl = request.cookies.get('cas-return-url')?.value || '/login';
     console.log('CAS verify: return URL:', returnUrl);
     
-    // 创建JSON响应先设置会话，然后通过客户端重定向
-    const response = NextResponse.json({ 
-      success: true, 
-      redirect: '/login', // 总是重定向到登录页面进行最终认证
-      user: casUser,
-      studentHash: validation.hash,
-      studentInfo: validation.studentInfo
-    });
+    // 先创建一个临时响应来正确设置session
+    const tempResponse = new NextResponse();
     
-    const session = await getIronSession<SessionData>(request, response, sessionOptions);
-    
-    // 存储CAS认证信息，但还未完成最终登录
-    session.userId = casUser.userId;
-    session.userHash = validation.hash;
-    session.name = casUser.name;
+    // 获取session并设置数据
+    const session = await getIronSession<SessionData>(request, tempResponse, sessionOptions);
+    session.userId = casUser.userId; // 原始学号
+    session.userHash = hash; // 学号哈希值
+    session.name = casUser.name || `学生${casUser.userId}`; // CAS返回的真实姓名，如果没有则使用学号
     session.isCasAuthenticated = true;
     session.isLoggedIn = false; // 最终登录在login页面完成
     session.loginTime = Date.now();
@@ -78,17 +63,26 @@ export async function GET(request: NextRequest) {
     await session.save();
     console.log('CAS verify: session saved successfully');
     
-    // 输出所有headers进行调试
-    console.log('CAS verify: response headers after session save:', Array.from(response.headers.entries()));
+    // 创建重定向响应
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    
+    // 复制session cookies到重定向响应
+    const sessionCookieHeader = tempResponse.headers.get('set-cookie');
+    if (sessionCookieHeader) {
+      response.headers.set('set-cookie', sessionCookieHeader);
+      console.log('CAS verify: session cookie copied:', sessionCookieHeader);
+    }
     
     // 清除返回URL cookie
-    response.cookies.delete('cas-return-url');
+    const existingCookie = response.headers.get('set-cookie') || '';
+    const newCookieHeader = existingCookie + 
+      (existingCookie ? ', ' : '') + 
+      'cas-return-url=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    response.headers.set('set-cookie', newCookieHeader);
     
+    // 输出调试信息
+    console.log('CAS verify: final response headers:', Array.from(response.headers.entries()));
     console.log('CAS verify: final response cookies:', response.cookies.getAll());
-    console.log('CAS verify: Set-Cookie header:', response.headers.get('set-cookie'));
-
-    // 设置重定向header让客户端处理重定向
-    response.headers.set('X-Redirect-To', '/login');
 
     return response;
 

@@ -20,12 +20,13 @@ export const defaultSession: SessionData = {
 };
 
 export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET_KEY || 'your-super-secret-session-key-at-least-32-chars-long',
+  password: process.env.SESSION_SECRET_KEY || 'your-super-secret-session-key-at-least-32-chars-long-for-iron-session-security',
   cookieName: 'butp-session',
   cookieOptions: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production', // 生产环境使用HTTPS
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: '/', // 明确设置路径
   },
 }; 
