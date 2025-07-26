@@ -43,8 +43,8 @@ export default function AllGrades() {
       // 按学分从高到低排序
       const sortedGrades = [...allGrades].sort((a, b) => b.credit - a.credit)
       setGrades(sortedGrades)
-    } catch (error) {
-      console.error('Failed to load grades data:', error)
+    } catch (_error) {
+      console.error('Failed to load grades data:', _error)
     } finally {
       setLoading(false)
     }
@@ -72,8 +72,8 @@ export default function AllGrades() {
       try {
         const data = await getRadarChartData(grades[index].course_id!)
         setRadarData(data)
-      } catch (error) {
-        console.error('Failed to load radar chart data:', error)
+      } catch (_error) {
+        console.error('Failed to load radar chart data:', _error)
         setRadarData(null)
       } finally {
         setLoadingRadar(false)

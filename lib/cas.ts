@@ -11,21 +11,17 @@ const useRealCAS = isProduction || process.env.CAS_MODE === 'real';
 
 // CAS配置
 export const CAS_CONFIG = {
-  // 开发环境使用Mock CAS，生产环境使用真实CAS
-  serverUrl: useMockCAS 
-    ? 'http://localhost:3000/api/mock/cas' // 本地Mock CAS服务
-    : 'https://auth.bupt.edu.cn/authserver', // 真实北邮CAS服务器
+  // 生产环境始终使用真实CAS服务器
+  serverUrl: 'https://auth.bupt.edu.cn/authserver',
     
-  // 开发环境直接回调localhost，生产环境通过代理服务器
-  serviceUrl: isDevelopment
-    ? 'http://localhost:3000/api/auth/cas/callback' // 本地开发回调
-    : 'http://10.3.58.3:8080/api/auth/cas/callback', // 生产环境代理回调
+  // 回调URL配置 - 始终通过代理服务器回调
+  serviceUrl: 'http://10.3.58.3:8080/api/auth/cas/callback',
     
-  // 网站URL - 生产环境使用butp.tech
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || (isDevelopment ? 'http://localhost:3000' : 'https://butp.tech'),
+  // 网站URL - 生产环境使用 butp.tech
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://butp.tech',
   
-  // 代理服务器URL（生产环境）
-  proxyUrl: isProduction ? 'http://10.3.58.3:8080' : null,
+  // 代理服务器URL
+  proxyUrl: 'http://10.3.58.3:8080', // 根据部署脚本配置
   
   // 环境标识
   isDevelopment,

@@ -2,279 +2,263 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { GraduationCap, Languages } from "lucide-react"
+import { AlertCircle, CheckCircle2, User, Hash, Copy } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
-import { useLanguage } from "@/contexts/language-context"
-import { isValidStudentHash } from "@/lib/student-data"
+
+// CAS认证信息接口
+interface CasAuthInfo {
+  userId: string;
+  name: string;
+  userHash: string;
+}
 
 export default function LoginPage() {
-  const [studentHash, setStudentHash] = useState<string>("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [casAuthInfo, setCasAuthInfo] = useState<{
-    userId: string;
-    userHash: string;
-    name: string;
-    isLoggedIn: boolean;
-    isCasAuthenticated: boolean;
-    loginTime: number;
-  } | null>(null)
-  const [showCasLogin, setShowCasLogin] = useState(true)
-  const { login } = useAuth()
-  const { language, setLanguage, t } = useLanguage()
   const router = useRouter()
+  const { refreshUser } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [hashValue, setHashValue] = useState("")
+  const [hashValidating, setHashValidating] = useState(false)
+  const [casAuthInfo, setCasAuthInfo] = useState<CasAuthInfo | null>(null)
 
-  // 检查是否有CAS认证信息
+  // 检查CAS认证状态
   useEffect(() => {
-    const checkCasAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/cas/check-session', {
-          method: 'GET',
-          credentials: 'include',
-        });
+    checkCasAuth()
+  }, [])
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.isCasAuthenticated && !data.isLoggedIn) {
-            console.log('Found CAS auth info:', data);
-            setCasAuthInfo(data);
-            setShowCasLogin(false);
-            // 自动完成最终登录
-            await completeCasLogin(data.userHash);
+  const checkCasAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/cas/check-session', {
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        if (data.isCasAuthenticated && data.userId && data.name && data.userHash) {
+          setCasAuthInfo({
+            userId: data.userId,
+            name: data.name,
+            userHash: data.userHash
+          })
+          if (data.isLoggedIn) {
+            router.push('/dashboard')
+            return
           }
         }
-      } catch (error) {
-        console.error('检查CAS认证状态失败:', error);
-      }
-    };
-
-    checkCasAuth();
-  }, []);
-
-  // 完成CAS登录流程
-  const completeCasLogin = async (userHash: string) => {
-    setIsLoading(true);
-    
-    try {
-      // 验证哈希值并完成登录
-      if (isValidStudentHash(userHash)) {
-        const response = await fetch('/api/auth/cas/complete-login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ userHash }),
-        });
-
-        if (response.ok) {
-          // 登录成功，跳转到dashboard
-          router.push("/dashboard");
-        } else {
-          const errorData = await response.json();
-          throw new Error(errorData.error || '完成登录失败');
-        }
-      } else {
-        throw new Error('无效的学号哈希值格式');
       }
     } catch (error) {
-      console.error('完成CAS登录失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      alert(`登录失败: ${errorMessage}，请重试`);
-      setShowCasLogin(true);
-      setCasAuthInfo(null);
-      setIsLoading(false);
-    }
-  };
-
-  const handleCASLogin = async () => {
-    setIsLoading(true)
-    
-    try {
-      // 直接重定向到CAS登录
-      login('/dashboard')
-    } catch (error) {
-      console.error('CAS登录失败:', error)
-      alert('CAS登录失败，请重试')
-      setIsLoading(false)
+      console.error('检查CAS认证状态失败:', error)
     }
   }
 
+  // CAS登录
+  const handleCasLogin = () => {
+    setLoading(true)
+    setError("")
+    window.location.href = '/api/auth/cas/login?returnUrl=/dashboard'
+  }
+
+  // 验证哈希值
+  const validateHash = async () => {
+    if (!hashValue.trim()) {
+      setError('请输入学号哈希值')
+      return false
+    }
+
+    setHashValidating(true)
+    try {
+      const response = await fetch('/api/auth/validate-hash', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userHash: hashValue.trim() }),
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (response.ok && (data.valid || data.exists)) {
+        return true
+      } else {
+        setError('学号哈希值不正确或学生不存在')
+        return false
+      }
+    } catch {
+      setError('验证失败，请重试')
+      return false
+    } finally {
+      setHashValidating(false)
+    }
+  }
+
+  // 哈希登录
   const handleHashLogin = async () => {
-    if (!studentHash) {
-      alert(t('login.alert.input'))
+    if (!casAuthInfo) {
+      setError('请先完成CAS认证')
       return
     }
 
-    setIsLoading(true)
-    
-    try {
-      // 检查哈希值格式是否有效
-      if (isValidStudentHash(studentHash)) {
-        // 验证哈希值是否在数据库中存在
-        const response = await fetch('/api/auth/validate-hash', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ hash: studentHash }),
-        });
+    const isValid = await validateHash()
+    if (!isValid) return
 
-        if (response.ok) {
-          // 哈希值有效，创建临时session并跳转
-          await completeCasLogin(studentHash);
-        } else {
-          alert('该学号哈希值在数据库中不存在');
-          setIsLoading(false);
-        }
+    setLoading(true)
+    try {
+      const response = await fetch('/api/auth/cas/complete-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          userHash: hashValue.trim(),
+          preserveCasInfo: true 
+        }),
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        // 登录成功，刷新用户状态并重定向到仪表板
+        console.log('Hash login successful, refreshing user...')
+        await refreshUser()
+        console.log('User refreshed, redirecting to dashboard...')
+        router.push('/dashboard')
       } else {
-        alert(t('login.alert.invalid'))
-        setIsLoading(false)
+        const data = await response.json()
+        setError(data.error || '登录失败，请重试')
       }
-    } catch (error) {
-      console.error('登录失败:', error)
-      alert(t('login.alert.failed'))
-      setIsLoading(false)
+    } catch {
+      setError('登录失败，请重试')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'zh' ? 'en' : 'zh')
-  }
+  // 测试哈希值
+  const testHashes = [
+    "1cdc5935a5f0afaf2238e0e83021ad2fcbdcda479ffd7783d6e6bd1ef774d890",
+    "4d589e50d0c55009fd9a3bdaffcfad179309a31093a24e4ac95e0f6a6aff7452"
+  ]
 
-  // 如果正在处理CAS认证，显示加载状态
-  if (casAuthInfo && !showCasLogin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="p-3 bg-primary rounded-full">
-                <GraduationCap className="h-8 w-8 text-primary-foreground" />
-              </div>
-            </div>
-            <div>
-              <CardTitle className="text-2xl">正在登录...</CardTitle>
-              <CardDescription>
-                CAS认证成功，正在完成登录流程
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                用户: {casAuthInfo.name}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                学号哈希: {casAuthInfo.userHash?.substring(0, 16)}...
-              </p>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setHashValue(text)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-4">
-          {/* 语言切换按钮 */}
-          <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleLanguage}
-              className="flex items-center gap-2"
-            >
-              <Languages className="h-4 w-4" />
-              {t('login.language.switch')}
-            </Button>
-          </div>
-          
-          <div className="flex justify-center">
-            <div className="p-3 bg-primary rounded-full">
-              <GraduationCap className="h-8 w-8 text-primary-foreground" />
-            </div>
-          </div>
-          <div>
-            <CardTitle className="text-2xl">
-              <div>{t('login.title.line1')}</div>
-              <div>{t('login.title.line2')}</div>
-            </CardTitle>
-            <CardDescription>
-              {t('login.description')}
-            </CardDescription>
-          </div>
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-gray-800">
+            BuTP 登录
+          </CardTitle>
+          <p className="text-gray-600">北京邮电大学学习数据平台</p>
         </CardHeader>
+
         <CardContent className="space-y-6">
-          {/* 主要CAS登录按钮 */}
-          <div className="space-y-4">
-            <Button 
-              onClick={handleCASLogin}
-              disabled={isLoading}
-              className="w-full text-lg py-6"
-              size="lg"
-            >
-              {isLoading ? "正在跳转到CAS登录..." : "登录BuTP系统"}
-            </Button>
-            
-            <div className="text-center text-sm text-muted-foreground">
-              <p>点击上方按钮使用学校统一身份认证登录</p>
-              <p className="text-xs mt-1">系统将验证您的学号是否在数据库中存在</p>
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              <span className="text-red-700 text-sm">{error}</span>
             </div>
-          </div>
+          )}
 
-          {/* 分隔线 */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+          {/* CAS认证状态显示 */}
+          {casAuthInfo ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <span className="font-medium text-green-800">CAS认证成功</span>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-700">
+                    {casAuthInfo.name} ({casAuthInfo.userId})
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">或</span>
-            </div>
-          </div>
-
-          {/* 备用哈希登录 */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
-              备用登录方式（需要数据库中存在的哈希值）
-            </label>
-            <Input
-              type="text"
-              placeholder="请输入64位SHA256哈希值"
-              value={studentHash}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentHash(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              提示：请输入64位SHA256哈希值
-            </p>
-            <p className="text-xs text-muted-foreground">
-              格式：000ded13b3d1e6f3276740881104c25ace1d3d4cbdd75f775c9b6dbac8efd2cb
-            </p>
-            
-            <Button 
-              onClick={handleHashLogin}
-              disabled={!studentHash || isLoading}
-              className="w-full"
-              variant="outline"
-              size="sm"
+          ) : (
+            /* CAS登录按钮 */
+            <Button
+              onClick={handleCasLogin}
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
             >
-              {isLoading ? t('login.button.loading') : "使用哈希值登录"}
+              {loading ? '正在跳转...' : '使用学号统一身份认证登录'}
             </Button>
-          </div>
-          
-          <div className="text-center text-xs text-muted-foreground">
-            <p>{t('login.demo.text')}</p>
-            <p className="mt-1">系统使用SHA256算法对学号进行哈希化处理</p>
-          </div>
+          )}
+
+          {/* 哈希值登录 */}
+          {casAuthInfo && (
+            <div className="space-y-4">
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="font-medium text-gray-800 mb-3">输入学号哈希值完成登录</h3>
+                
+                {/* 测试哈希值提示 */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <h4 className="font-medium text-blue-800 mb-2">测试用学号哈希值：</h4>
+                  <div className="space-y-2">
+                    {testHashes.map((hash, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-white p-2 rounded border font-mono">
+                          {hash.substring(0, 20)}...
+                        </code>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyToClipboard(hash)}
+                          className="px-2 py-1"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <Input
+                    type="text"
+                    placeholder="请输入64位学号哈希值"
+                    value={hashValue}
+                    onChange={(e) => setHashValue(e.target.value)}
+                    className="font-mono text-sm"
+                    disabled={loading || hashValidating}
+                  />
+                  
+                  <Button
+                    onClick={handleHashLogin}
+                    disabled={loading || hashValidating || !hashValue.trim()}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {hashValidating ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        验证中...
+                      </div>
+                    ) : loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        登录中...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Hash className="h-4 w-4" />
+                        登录
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   )
-}
+} 
