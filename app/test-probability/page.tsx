@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { useAuth } from "@/contexts/AuthContext"
 import { getUserProbabilityData } from "@/lib/dashboard-data"
 import { sha256 } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function TestProbability() {
-  const { currentStudent } = useSimpleAuth()
+  const { user } = useAuth()
   const [probabilityData, setProbabilityData] = useState<{
     proba_1: number;
     proba_2: number;
@@ -18,7 +18,7 @@ export default function TestProbability() {
   const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
-    if (!currentStudent) {
+    if (!user?.isLoggedIn) {
       setError("未登录")
       return
     }
@@ -29,10 +29,10 @@ export default function TestProbability() {
     
     try {
       // 测试哈希函数
-      const studentHash = await sha256(currentStudent.id)
-      setDebugInfo(`学生ID: ${currentStudent.id}\n哈希值: ${studentHash}`)
+      const studentHash = await sha256(user.userId)
+      setDebugInfo(`学生ID: ${user.userId}\n哈希值: ${studentHash}`)
       
-      const data = await getUserProbabilityData(currentStudent.id)
+      const data = await getUserProbabilityData(user.userId)
       setProbabilityData(data)
       if (!data) {
         setError("未找到概率数据 - 这是正常的，系统将显示默认值（就业70%，升学80%，实习90%）")
@@ -43,13 +43,13 @@ export default function TestProbability() {
     } finally {
       setLoading(false)
     }
-  }, [currentStudent])
+  }, [user])
 
   useEffect(() => {
-    if (currentStudent) {
+    if (user?.isLoggedIn) {
       fetchData()
     }
-  }, [currentStudent, fetchData])
+  }, [user, fetchData])
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -60,11 +60,11 @@ export default function TestProbability() {
           <CardTitle>当前用户信息</CardTitle>
         </CardHeader>
         <CardContent>
-          {currentStudent ? (
+          {user?.isLoggedIn ? (
             <div>
-              <p><strong>学号:</strong> {currentStudent.id}</p>
-              <p><strong>姓名:</strong> {currentStudent.name}</p>
-              <p><strong>专业:</strong> {currentStudent.class}</p>
+              <p><strong>学号:</strong> {user.userId}</p>
+              <p><strong>姓名:</strong> {user.name}</p>
+              <p><strong>专业:</strong> 未知</p>
             </div>
           ) : (
             <p>未登录</p>

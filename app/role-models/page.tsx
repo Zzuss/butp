@@ -6,14 +6,14 @@ import { GraduationCap, Briefcase, MapPin, Star, Building, School, Award, BookOp
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollableContainer } from "../../components/ui/scrollable-container"
 import { useLanguage } from "@/contexts/language-context"
-import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { useAuth } from "@/contexts/AuthContext"
 import { getUserProbabilityData } from "@/lib/dashboard-data"
 import { useState, useEffect } from "react"
 
 // 可能性卡片组件
 function PossibilityCard({ activeTab }: { activeTab: string }) {
   const { t } = useLanguage()
-  const { currentStudent } = useSimpleAuth()
+  const { user } = useAuth()
   const [probabilityData, setProbabilityData] = useState<{
     proba_1: number;
     proba_2: number;
@@ -24,9 +24,9 @@ function PossibilityCard({ activeTab }: { activeTab: string }) {
   // 获取用户概率数据
   useEffect(() => {
     async function fetchProbabilityData() {
-      if (currentStudent) {
+      if (user?.isLoggedIn) {
         try {
-          const data = await getUserProbabilityData(currentStudent.id)
+          const data = await getUserProbabilityData(user.userId)
           setProbabilityData(data)
         } catch (error) {
           console.error('Error fetching probability data:', error)
@@ -39,7 +39,7 @@ function PossibilityCard({ activeTab }: { activeTab: string }) {
     }
     
     fetchProbabilityData()
-  }, [currentStudent])
+  }, [user])
   
   // 根据不同标签页显示不同的可能性类型和数值
   const getPossibilityData = () => {

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Vote, TrendingUp, Users, CheckCircle, XCircle } from "lucide-react"
-import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { useAuth } from "@/contexts/AuthContext"
 import { 
   VotingOption, 
   UserVote, 
@@ -16,7 +16,7 @@ import {
 } from "@/lib/voting-data"
 
 export default function VotingPoll() {
-  const { currentStudent } = useSimpleAuth()
+  const { user } = useAuth()
   const [options, setOptions] = useState<VotingOption[]>([])
   const [userVote, setUserVote] = useState<UserVote | null>(null)
   const [loading, setLoading] = useState(true)
@@ -30,7 +30,7 @@ export default function VotingPoll() {
       
       const [optionsData, userVoteData] = await Promise.all([
         getVotingOptions(),
-        currentStudent ? getUserVote(currentStudent.id) : Promise.resolve(null)
+        user?.isLoggedIn ? getUserVote(user.userId) : Promise.resolve(null)
       ])
       
       setOptions(optionsData)
@@ -41,19 +41,19 @@ export default function VotingPoll() {
     } finally {
       setLoading(false)
     }
-  }, [currentStudent])
+  }, [user])
 
   useEffect(() => {
     fetchVotingData()
-  }, [currentStudent, fetchVotingData])
+  }, [user, fetchVotingData])
 
   // 投票处理
   const handleVote = async (optionId: number) => {
-    if (!currentStudent || voting) return
+    if (!user?.isLoggedIn || voting) return
     
     try {
       setVoting(true)
-      const success = await voteForOption(currentStudent.id, optionId)
+      const success = await voteForOption(user.userId, optionId)
       if (success) {
         await fetchVotingData()
       }
@@ -66,11 +66,11 @@ export default function VotingPoll() {
 
   // 撤销投票处理
   const handleRevokeVote = async () => {
-    if (!currentStudent || voting) return
+    if (!user?.isLoggedIn || voting) return
     
     try {
       setVoting(true)
-      const success = await revokeVote(currentStudent.id)
+      const success = await revokeVote(user.userId)
       if (success) {
         await fetchVotingData()
       }
@@ -190,7 +190,7 @@ export default function VotingPoll() {
 
                   {/* 投票按钮 */}
                   <div className="ml-4">
-                    {currentStudent ? (
+                    {user?.isLoggedIn ? (
                       isUserVoted ? (
                         <Button
                           variant="outline"
