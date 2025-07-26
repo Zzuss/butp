@@ -28,7 +28,7 @@ import { CourseStatsChart } from '@/components/ui/chart'
 
 export default function DashboardPage() {
   const { currentStudent, isLoggedIn, isLoading: authLoading } = useSimpleAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const router = useRouter()
   
   const [isLoading, setIsLoading] = useState(true)
@@ -64,7 +64,7 @@ export default function DashboardPage() {
         setStats(dashboardStats)
         
         // 获取最近的科目成绩
-        const recentGrades = getRecentSubjectGrades(results)
+        const recentGrades = await getRecentSubjectGrades(results, 6, language, info?.major, info?.year)
         setSubjectGrades(recentGrades)
         
         // 获取课程类型统计

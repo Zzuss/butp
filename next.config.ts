@@ -7,6 +7,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // 禁用遥测
+  experimental: {
+    telemetry: false,
+  },
 }
 
 export default nextConfig

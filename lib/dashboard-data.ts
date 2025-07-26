@@ -123,7 +123,7 @@ export function calculateDashboardStats(results: CourseResult[]): DashboardStats
 }
 
 // 获取最近的科目成绩
-export function getRecentSubjectGrades(results: CourseResult[], limit: number = 6): SubjectGrade[] {
+export async function getRecentSubjectGrades(results: CourseResult[], limit: number = 6, language: string = 'zh', major?: string, year?: string): Promise<SubjectGrade[]> {
   if (!results || results.length === 0) {
     return [];
   }
@@ -137,13 +137,32 @@ export function getRecentSubjectGrades(results: CourseResult[], limit: number = 
   const recentSemester = sortedBySemester[0].semester;
   const recentCourses = sortedBySemester.filter(r => r.semester === recentSemester);
   
-  // 转换为SubjectGrade格式
-  return recentCourses.slice(0, limit).map(course => ({
-    name: course.course_name,
-    grade: course.grade,
-    average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
-    credit: course.credit
-  }));
+  // 转换为SubjectGrade格式，支持课程名称翻译
+  const subjectGrades: SubjectGrade[] = [];
+  
+  for (const course of recentCourses.slice(0, limit)) {
+    let courseName = course.course_name;
+    
+    // 如果是英文模式，尝试获取英文翻译
+    if (language === 'en') {
+      try {
+        courseName = await getCourseNameTranslation(course.course_name, major, year);
+      } catch (error) {
+        console.error('Error translating course name:', error);
+        // 如果翻译失败，使用原中文名称
+        courseName = course.course_name;
+      }
+    }
+    
+    subjectGrades.push({
+      name: courseName,
+      grade: course.grade,
+      average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
+      credit: course.credit
+    });
+  }
+  
+  return subjectGrades;
 }
 
 // 获取课程类型统计
@@ -308,20 +327,39 @@ export interface RadarChartData {
 }
 
 // 获取所有科目成绩（用于grades页面）
-export async function getSubjectGrades(studentHash: string) {
+export async function getSubjectGrades(studentHash: string, language: string = 'zh', major?: string, year?: string) {
   try {
     const results = await getStudentResults(studentHash)
-    return results.map(result => ({
-      id: result.id,
-      course_name: result.course_name,
-      course_id: result.course_id,
-      grade: result.grade,
-      credit: result.credit,
-      semester: result.semester,
-      course_type: result.course_type,
-      course_attribute: result.course_attribute,
-      exam_type: result.exam_type
-    }))
+    const grades = []
+    
+    for (const result of results) {
+      let courseName = result.course_name;
+      
+      // 如果是英文模式，尝试获取英文翻译
+      if (language === 'en') {
+        try {
+          courseName = await getCourseNameTranslation(result.course_name, major, year);
+        } catch (error) {
+          console.error('Error translating course name:', error);
+          // 如果翻译失败，使用原中文名称
+          courseName = result.course_name;
+        }
+      }
+      
+      grades.push({
+        id: result.id,
+        course_name: courseName,
+        course_id: result.course_id,
+        grade: result.grade,
+        credit: result.credit,
+        semester: result.semester,
+        course_type: result.course_type,
+        course_attribute: result.course_attribute,
+        exam_type: result.exam_type
+      })
+    }
+    
+    return grades
   } catch (error) {
     console.error('Error getting subject grades:', error)
     return []
@@ -377,6 +415,40 @@ export async function getStudentInfo(studentHash: string): Promise<{ year: strin
   } catch (error) {
     console.error('Error in getStudentInfo:', error);
     return null;
+  }
+}
+
+// 获取课程名称的英文翻译
+export async function getCourseNameTranslation(courseName: string, major?: string, year?: string): Promise<string> {
+  try {
+    // 构建查询条件
+    let query = supabase
+      .from('courses_translations')
+      .select('Course_Name_Eng')
+      .eq('Course_Name_Chi', courseName);
+
+    // 如果有专业信息，添加到查询条件
+    if (major) {
+      query = query.eq('Major', major);
+    }
+
+    // 如果有年级信息，添加到查询条件
+    if (year) {
+      query = query.eq('year', year);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error) {
+      // 如果没有找到翻译，返回原中文名称
+      return courseName;
+    }
+
+    // 如果找到英文翻译，返回英文名称
+    return data.Course_Name_Eng || courseName;
+  } catch (error) {
+    console.error('Error getting course name translation:', error);
+    return courseName;
   }
 }
 
