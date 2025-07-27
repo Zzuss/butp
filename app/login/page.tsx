@@ -36,6 +36,8 @@ export default function LoginPage() {
         // 登录
         login(studentInfo)
         
+
+        
         // 模拟登录延迟
         await new Promise(resolve => setTimeout(resolve, 1000))
         

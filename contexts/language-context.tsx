@@ -211,7 +211,7 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.subjects.gap': '差距: {gap}分',
     'analysis.subjects.current': '当前: {current}',
     'analysis.subjects.target': '目标: {target}',
-    'analysis.ability.title': '能力评估',
+    'analysis.ability.title': '个人能力评估',
     'analysis.ability.description': '各项能力综合评估',
     'analysis.ability.overall': '综合能力评分: {score}',
     'analysis.ability.logical': '逻辑思维',

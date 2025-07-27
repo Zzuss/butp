@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Target, Brain, ChevronDown } from "lucide-react"
@@ -19,6 +20,7 @@ const abilityLabels = {
 export default function Analysis() {
   const { t } = useLanguage()
   const { currentStudent } = useSimpleAuth()
+  const router = useRouter()
   
   // 下拉菜单状态
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -27,6 +29,7 @@ export default function Analysis() {
   // GPA门槛值状态
   const [gpaThreshold, setGpaThreshold] = useState<number | null>(null);
   const [loadingGPA, setLoadingGPA] = useState(false);
+  const [gpaCache, setGpaCache] = useState<Record<string, number>>({});
   
   // 能力数据状态
   const [abilityData, setAbilityData] = useState<number[]>([50, 70, 80, 50, 70, 80, 50, 70, 80]);
@@ -58,12 +61,31 @@ export default function Analysis() {
   } | null>(null);
   const [loadingProbability, setLoadingProbability] = useState(false);
   
+  // 培养方案状态
+  const [showCurriculum, setShowCurriculum] = useState(false);
+  const [studentMajor, setStudentMajor] = useState<string | null>(null);
+  const [loadingMajor, setLoadingMajor] = useState(false);
+  
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
+    // 检查缓存
+    const cacheKey = `${percentage}`;
+    if (gpaCache[cacheKey]) {
+      setGpaThreshold(gpaCache[cacheKey]);
+      return;
+    }
+
     setLoadingGPA(true);
     try {
       const threshold = await getTopPercentageGPAThreshold(percentage);
       setGpaThreshold(threshold);
+      // 保存到缓存（只保存非null值）
+      if (threshold !== null) {
+        setGpaCache(prev => ({
+          ...prev,
+          [cacheKey]: threshold
+        }));
+      }
     } catch (error) {
       console.error('Failed to load GPA threshold:', error);
       setGpaThreshold(null);
@@ -104,6 +126,36 @@ export default function Analysis() {
       setSubmitting(false);
       setIsEditing(false);
     }, 1000); // 1秒后退出编辑模式，但提示继续显示
+  };
+
+  // 获取学生专业
+  const loadStudentMajor = async () => {
+    if (!currentStudent?.id) return;
+    
+    setLoadingMajor(true);
+    try {
+      const response = await fetch('/api/student-major', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: currentStudent.id
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setStudentMajor(data.major);
+      } else {
+        setStudentMajor(null);
+      }
+    } catch (error) {
+      console.error('Failed to load student major:', error);
+      setStudentMajor(null);
+    } finally {
+      setLoadingMajor(false);
+    }
   };
 
   // 获取概率数据
@@ -156,6 +208,11 @@ export default function Analysis() {
   // 加载概率数据
   useEffect(() => {
     loadProbabilityData();
+  }, [currentStudent?.id]);
+
+  // 加载学生专业
+  useEffect(() => {
+    loadStudentMajor();
   }, [currentStudent?.id]);
 
   const percentageOptions = [
@@ -306,6 +363,41 @@ export default function Analysis() {
                   })}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+          
+          {/* 培养方案卡片 - 填满右边空缺 */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>培养方案</CardTitle>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/curriculum')}
+                className="h-8 px-3 text-sm"
+              >
+                查看完整培养方案
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {loadingMajor ? (
+                <div className="text-center py-4">
+                  <div className="text-muted-foreground">加载中...</div>
+                </div>
+              ) : studentMajor ? (
+                <div className="text-center py-4">
+                  <div className="text-lg font-medium mb-2">专业：{studentMajor}</div>
+                  <p className="text-sm text-muted-foreground">
+                    点击上方按钮查看完整培养方案
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <div className="text-muted-foreground">暂无专业信息</div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
