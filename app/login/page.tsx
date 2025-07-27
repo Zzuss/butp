@@ -27,9 +27,11 @@ export default function LoginPage() {
     
     try {
       // 检查哈希值是否有效
-      if (isValidStudentHash(studentHash)) {
+      const isValid = await isValidStudentHash(studentHash);
+      
+      if (isValid) {
         // 获取学生信息
-        const studentInfo = getStudentInfoByHash(studentHash);
+        const studentInfo = await getStudentInfoByHash(studentHash);
         
         // 登录
         login(studentInfo)

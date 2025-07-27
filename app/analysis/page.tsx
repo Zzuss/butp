@@ -33,20 +33,30 @@ export default function Analysis() {
   const [loadingAbility, setLoadingAbility] = useState(false);
   
   // 按钮选择状态
-  const [selectedButton, setSelectedButton] = useState<'graduation' | 'overseas' | 'domestic'>('graduation');
+  const [selectedButton, setSelectedButton] = useState<'graduation' | 'overseas' | 'domestic' | null>(null);
   
   // 毕业要求状态
   const [graduationRequirements, setGraduationRequirements] = useState({
     credits: { required: 160, earned: 145, completed: false },
     gpa: { required: 2.0, current: 3.2, completed: true },
     thesis: { completed: false },
-    certificates: { completed: false }
+    certificates: { completed: false },
+    military: { required: 2, earned: 1, completed: false },
+    political: { required: 16, earned: 12, completed: false },
+    innovation: { required: 2, earned: 1, completed: false }
   });
   
   // 编辑状态
   const [isEditing, setIsEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  
+  // 概率数据状态
+  const [probabilityData, setProbabilityData] = useState<{
+    proba_1: number | null;
+    proba_2: number | null;
+  } | null>(null);
+  const [loadingProbability, setLoadingProbability] = useState(false);
   
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
@@ -96,6 +106,36 @@ export default function Analysis() {
     }, 1000); // 1秒后退出编辑模式，但提示继续显示
   };
 
+  // 获取概率数据
+  const loadProbabilityData = async () => {
+    if (!currentStudent?.id) return;
+    
+    setLoadingProbability(true);
+    try {
+      const response = await fetch('/api/probability-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: currentStudent.id
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setProbabilityData(data);
+      } else {
+        setProbabilityData(null);
+      }
+    } catch (error) {
+      console.error('Failed to load probability data:', error);
+      setProbabilityData(null);
+    } finally {
+      setLoadingProbability(false);
+    }
+  };
+
   // 初始加载和选项变化时更新GPA门槛值
   useEffect(() => {
     const percentageOptions = [
@@ -111,6 +151,11 @@ export default function Analysis() {
   // 加载能力数据
   useEffect(() => {
     loadAbilityData();
+  }, [currentStudent?.id]);
+
+  // 加载概率数据
+  useEffect(() => {
+    loadProbabilityData();
   }, [currentStudent?.id]);
 
   const percentageOptions = [
@@ -144,7 +189,7 @@ export default function Analysis() {
           className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
             selectedButton === 'graduation' 
               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-              : 'scale-90'
+              : 'hover:scale-95'
           }`}
           onClick={() => setSelectedButton('graduation')}
         >
@@ -158,24 +203,34 @@ export default function Analysis() {
           className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
             selectedButton === 'overseas' 
               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-              : 'scale-90'
+              : 'hover:scale-95'
           }`}
           onClick={() => setSelectedButton('overseas')}
         >
           <span>海外读研</span>
-          <span className="text-xs text-blue-500 mt-1">70%</span>
+          <span className="text-xs text-blue-500 mt-1">
+            {loadingProbability ? '加载中...' : 
+             probabilityData && probabilityData.proba_2 !== null ? 
+             `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
+             '暂无数据'}
+          </span>
         </Button>
         <Button
           variant={selectedButton === 'domestic' ? 'default' : 'outline'}
           className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
             selectedButton === 'domestic' 
               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-              : 'scale-90'
+              : 'hover:scale-95'
           }`}
           onClick={() => setSelectedButton('domestic')}
         >
           <span>国内读研</span>
-          <span className="text-xs text-blue-500 mt-1">70%</span>
+          <span className="text-xs text-blue-500 mt-1">
+            {loadingProbability ? '加载中...' : 
+             probabilityData && probabilityData.proba_1 !== null ? 
+             `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
+             '暂无数据'}
+          </span>
         </Button>
       </div>
 
@@ -391,6 +446,119 @@ export default function Analysis() {
                     <p className="text-sm text-muted-foreground">
                       {t('analysis.graduation.required.certificates')}
                     </p>
+                  </div>
+                )}
+
+
+
+                {/* 思政课程 - 仅显示未完成的 */}
+                {!graduationRequirements.political.completed && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{t('analysis.graduation.political')}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                          {t('analysis.graduation.pending')}
+                        </span>
+                        {isEditing && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGraduationEdit('political')}
+                            disabled={submitting}
+                            className="h-7 px-2 text-xs"
+                          >
+                            标记完成
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t('analysis.graduation.required.political', { 
+                        required: graduationRequirements.political.required, 
+                        earned: graduationRequirements.political.earned 
+                      })}
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, (graduationRequirements.political.earned / graduationRequirements.political.required) * 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 军训学分 - 仅显示未完成的 */}
+                {!graduationRequirements.military.completed && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{t('analysis.graduation.military')}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                          {t('analysis.graduation.pending')}
+                        </span>
+                        {isEditing && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGraduationEdit('military')}
+                            disabled={submitting}
+                            className="h-7 px-2 text-xs"
+                          >
+                            标记完成
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t('analysis.graduation.required.military', { 
+                        required: graduationRequirements.military.required, 
+                        earned: graduationRequirements.military.earned 
+                      })}
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, (graduationRequirements.military.earned / graduationRequirements.military.required) * 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 创新创业学分 - 仅显示未完成的 */}
+                {!graduationRequirements.innovation.completed && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{t('analysis.graduation.innovation')}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                          {t('analysis.graduation.pending')}
+                        </span>
+                        {isEditing && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGraduationEdit('innovation')}
+                            disabled={submitting}
+                            className="h-7 px-2 text-xs"
+                          >
+                            标记完成
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t('analysis.graduation.required.innovation', { 
+                        required: graduationRequirements.innovation.required, 
+                        earned: graduationRequirements.innovation.earned 
+                      })}
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, (graduationRequirements.innovation.earned / graduationRequirements.innovation.required) * 100)}%` }}
+                      ></div>
+                    </div>
                   </div>
                 )}
               </div>

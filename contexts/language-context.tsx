@@ -245,7 +245,13 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.graduation.required.credits': '总学分: {required}，已获得: {earned}',
     'analysis.graduation.required.gpa': '最低GPA: {required}，当前GPA: {current}',
     'analysis.graduation.required.thesis': '毕业论文需在毕业前完成并通过答辩',
-    'analysis.graduation.required.certificates': '需获得英语四级证书或同等水平证明',
+          'analysis.graduation.required.certificates': '需获得英语四级证书或同等水平证明',
+      'analysis.graduation.military': '军训学分',
+      'analysis.graduation.political': '思政课程',
+      'analysis.graduation.innovation': '创新创业学分',
+      'analysis.graduation.required.military': '军训学分: {required}，已获得: {earned}',
+      'analysis.graduation.required.political': '思政课程学分: {required}，已获得: {earned}',
+      'analysis.graduation.required.innovation': '创新创业学分: {required}，已获得: {earned}',
     
     // About页面
     'about.title': '关于BuTP',
@@ -483,6 +489,12 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.graduation.required.gpa': 'Minimum GPA: {required}, Current GPA: {current}',
     'analysis.graduation.required.thesis': 'Thesis must be completed and defended before graduation',
     'analysis.graduation.required.certificates': 'Must obtain CET-4 certificate or equivalent proof',
+    'analysis.graduation.military': 'Military Training Credits',
+    'analysis.graduation.political': 'Political Education',
+    'analysis.graduation.innovation': 'Innovation Credits',
+    'analysis.graduation.required.military': 'Military training credits: {required}, earned: {earned}',
+    'analysis.graduation.required.political': 'Political education credits: {required}, earned: {earned}',
+    'analysis.graduation.required.innovation': 'Innovation credits: {required}, earned: {earned}',
     
     // About页面
     'about.title': 'About BuTP',

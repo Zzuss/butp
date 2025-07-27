@@ -60,7 +60,7 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
       ctx.moveTo(centerX, centerY)
       ctx.lineTo(x, y)
       ctx.stroke()
-    }
+  }
 
     // 绘制数据
     ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'

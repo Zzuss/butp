@@ -156,9 +156,9 @@ export async function getRecentSubjectGrades(results: CourseResult[], limit: num
     
     subjectGrades.push({
       name: courseName,
-      grade: course.grade,
-      average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
-      credit: course.credit
+    grade: course.grade,
+    average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
+    credit: course.credit
     });
   }
   
@@ -347,15 +347,15 @@ export async function getSubjectGrades(studentHash: string, language: string = '
       }
       
       grades.push({
-        id: result.id,
+      id: result.id,
         course_name: courseName,
-        course_id: result.course_id,
-        grade: result.grade,
-        credit: result.credit,
-        semester: result.semester,
-        course_type: result.course_type,
-        course_attribute: result.course_attribute,
-        exam_type: result.exam_type
+      course_id: result.course_id,
+      grade: result.grade,
+      credit: result.credit,
+      semester: result.semester,
+      course_type: result.course_type,
+      course_attribute: result.course_attribute,
+      exam_type: result.exam_type
       })
     }
     
