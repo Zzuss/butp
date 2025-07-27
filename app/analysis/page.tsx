@@ -19,7 +19,7 @@ const abilityLabels = {
 
 export default function Analysis() {
   const { t } = useLanguage()
-  const { currentStudent } = useSimpleAuth()
+  const { currentStudent, studentDataCache, setStudentDataCache } = useSimpleAuth()
   const router = useRouter()
   
   // 下拉菜单状态
@@ -65,6 +65,13 @@ export default function Analysis() {
   const [showCurriculum, setShowCurriculum] = useState(false);
   const [studentMajor, setStudentMajor] = useState<string | null>(null);
   const [loadingMajor, setLoadingMajor] = useState(false);
+  
+  // 目标分数状态
+  const [targetScores, setTargetScores] = useState<{
+    target1_score: number | null;
+    target2_score: number | null;
+  } | null>(null);
+  const [loadingTargetScores, setLoadingTargetScores] = useState(false);
   
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
@@ -132,6 +139,12 @@ export default function Analysis() {
   const loadStudentMajor = async () => {
     if (!currentStudent?.id) return;
     
+    // 检查全局缓存
+    if (studentDataCache[currentStudent.id]?.major !== undefined) {
+      setStudentMajor(studentDataCache[currentStudent.id].major);
+      return;
+    }
+    
     setLoadingMajor(true);
     try {
       const response = await fetch('/api/student-major', {
@@ -147,6 +160,14 @@ export default function Analysis() {
       if (response.ok) {
         const data = await response.json();
         setStudentMajor(data.major);
+        // 保存到全局缓存
+        setStudentDataCache(prev => ({
+          ...prev,
+          [currentStudent.id]: {
+            ...prev[currentStudent.id],
+            major: data.major
+          }
+        }));
       } else {
         setStudentMajor(null);
       }
@@ -158,9 +179,59 @@ export default function Analysis() {
     }
   };
 
+  // 获取目标分数
+  const loadTargetScores = async () => {
+    if (!currentStudent?.id) return;
+    
+    // 检查全局缓存
+    if (studentDataCache[currentStudent.id]?.targetScores) {
+      setTargetScores(studentDataCache[currentStudent.id].targetScores);
+      return;
+    }
+    
+    setLoadingTargetScores(true);
+    try {
+      const response = await fetch('/api/target-scores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: currentStudent.id
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTargetScores(data);
+        // 保存到全局缓存
+        setStudentDataCache(prev => ({
+          ...prev,
+          [currentStudent.id]: {
+            ...prev[currentStudent.id],
+            targetScores: data
+          }
+        }));
+      } else {
+        setTargetScores(null);
+      }
+    } catch (error) {
+      console.error('Failed to load target scores:', error);
+      setTargetScores(null);
+    } finally {
+      setLoadingTargetScores(false);
+    }
+  };
+
   // 获取概率数据
   const loadProbabilityData = async () => {
     if (!currentStudent?.id) return;
+    
+    // 检查全局缓存
+    if (studentDataCache[currentStudent.id]?.probabilityData) {
+      setProbabilityData(studentDataCache[currentStudent.id].probabilityData);
+      return;
+    }
     
     setLoadingProbability(true);
     try {
@@ -177,6 +248,14 @@ export default function Analysis() {
       if (response.ok) {
         const data = await response.json();
         setProbabilityData(data);
+        // 保存到全局缓存
+        setStudentDataCache(prev => ({
+          ...prev,
+          [currentStudent.id]: {
+            ...prev[currentStudent.id],
+            probabilityData: data
+          }
+        }));
       } else {
         setProbabilityData(null);
       }
@@ -215,6 +294,11 @@ export default function Analysis() {
     loadStudentMajor();
   }, [currentStudent?.id]);
 
+  // 加载目标分数
+  useEffect(() => {
+    loadTargetScores();
+  }, [currentStudent?.id]);
+
   const percentageOptions = [
     { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
     { key: 'top20', label: t('analysis.tops.top20'), value: 20 },
@@ -248,7 +332,7 @@ export default function Analysis() {
               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
               : 'hover:scale-95'
           }`}
-          onClick={() => setSelectedButton('graduation')}
+          onClick={() => setSelectedButton(selectedButton === 'graduation' ? null : 'graduation')}
         >
           <span>毕业</span>
           <span className="text-xs text-red-500 mt-1 px-1 text-center leading-tight break-words whitespace-normal">
@@ -262,7 +346,7 @@ export default function Analysis() {
               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
               : 'hover:scale-95'
           }`}
-          onClick={() => setSelectedButton('overseas')}
+          onClick={() => setSelectedButton(selectedButton === 'overseas' ? null : 'overseas')}
         >
           <span>海外读研</span>
           <span className="text-xs text-blue-500 mt-1">
@@ -279,7 +363,7 @@ export default function Analysis() {
               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
               : 'hover:scale-95'
           }`}
-          onClick={() => setSelectedButton('domestic')}
+          onClick={() => setSelectedButton(selectedButton === 'domestic' ? null : 'domestic')}
         >
           <span>国内读研</span>
           <span className="text-xs text-blue-500 mt-1">
@@ -291,8 +375,31 @@ export default function Analysis() {
         </Button>
       </div>
 
-      {/* 平均成绩模块 - 仅在非毕业状态显示 */}
-      {selectedButton !== 'graduation' && (
+      {/* 目标分数显示 */}
+      {(selectedButton === 'overseas' || selectedButton === 'domestic') && (
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          {loadingTargetScores ? (
+            <div className="text-center text-blue-600">加载中...</div>
+          ) : targetScores ? (
+            <div className="text-center">
+              <p className="text-blue-800 font-medium">
+                想要达到该目标，最低均分为{' '}
+                <span className="text-blue-600 font-bold">
+                  {selectedButton === 'overseas' 
+                    ? (targetScores.target2_score !== null ? targetScores.target2_score.toFixed(1) : '暂无数据')
+                    : (targetScores.target1_score !== null ? targetScores.target1_score.toFixed(1) : '暂无数据')
+                  }
+                </span>
+              </p>
+            </div>
+          ) : (
+            <div className="text-center text-blue-600">暂无目标分数数据</div>
+          )}
+        </div>
+      )}
+
+      {/* 平均成绩模块 - 仅在非毕业、非海外读研、非国内读研状态显示 */}
+      {selectedButton !== 'graduation' && selectedButton !== 'overseas' && selectedButton !== 'domestic' && (
         <div className="mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -336,8 +443,8 @@ export default function Analysis() {
         </div>
       )}
 
-      {/* 能力评估模块 - 仅在非毕业状态显示 */}
-      {selectedButton !== 'graduation' && (
+      {/* 能力评估模块 - 仅在非毕业、非海外读研、非国内读研状态显示 */}
+      {selectedButton !== 'graduation' && selectedButton !== 'overseas' && selectedButton !== 'domestic' && (
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>

@@ -8,12 +8,27 @@ interface Student {
   class: string
 }
 
+interface StudentData {
+  targetScores: {
+    target1_score: number | null;
+    target2_score: number | null;
+  } | null;
+  probabilityData: {
+    proba_1: number | null;
+    proba_2: number | null;
+  } | null;
+  major: string | null;
+}
+
 interface SimpleAuthContextType {
   currentStudent: Student | null
   isLoggedIn: boolean
   login: (student: Student) => void
   logout: () => void
   isLoading: boolean
+  // 全局缓存
+  studentDataCache: Record<string, StudentData>
+  setStudentDataCache: React.Dispatch<React.SetStateAction<Record<string, StudentData>>>
 }
 
 const SimpleAuthContext = createContext<SimpleAuthContextType | undefined>(undefined)
@@ -30,6 +45,7 @@ export const students = [
 export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [studentDataCache, setStudentDataCache] = useState<Record<string, StudentData>>({})
 
   useEffect(() => {
     // 从cookie中恢复登录状态
@@ -62,7 +78,9 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       isLoggedIn: !!currentStudent,
       login,
       logout,
-      isLoading
+      isLoading,
+      studentDataCache,
+      setStudentDataCache
     }}>
       {children}
     </SimpleAuthContext.Provider>

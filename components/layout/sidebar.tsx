@@ -50,12 +50,6 @@ const sidebarItems = [
     icon: Users,
   },
   {
-    title: "图表测试",
-    titleKey: "sidebar.charts",
-    href: "/charts",
-    icon: PieChart,
-  },
-  {
     title: "关于BuTP",
     titleKey: "about.title",
     href: "/about",
