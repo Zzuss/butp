@@ -76,15 +76,36 @@ export default function Analysis() {
   const [loadingTargetScores, setLoadingTargetScores] = useState(false);
   
   // 课程成绩状态
-  const [courseScores, setCourseScores] = useState<Array<{
+  const [loadingCourseScores, setLoadingCourseScores] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  
+  // 原始课程数据（只在初始化时设置一次，永远不变）
+  const [originalScores, setOriginalScores] = useState<Array<{
     courseName: string;
     score: number | null;
     semester: number | null;
     category: string | null;
+    courseId?: string;
   }>>([]);
-  const [loadingCourseScores, setLoadingCourseScores] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [modifiedScores, setModifiedScores] = useState<Record<string, string | number>>({});
+  
+  // 修改后的课程数据（初始时复制原始数据，每次确认修改时更新）
+  const [modifiedScores, setModifiedScores] = useState<Array<{
+    courseName: string;
+    score: number | null | string;
+    semester: number | null;
+    category: string | null;
+    courseId?: string;
+  }>>([]);
+  
+  // 所有课程数据状态
+  const [allCourseData, setAllCourseData] = useState<any>(null);
+  const [loadingAllCourseData, setLoadingAllCourseData] = useState(false);
+  const [showAllCourseData, setShowAllCourseData] = useState(false);
+  
+  // 获取当前应该显示的成绩数据
+  const getCurrentScores = () => {
+    return originalScores;
+  };
   
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
@@ -278,14 +299,7 @@ export default function Analysis() {
   // 处理编辑模式切换
   const handleEditModeToggle = () => {
     if (!isEditMode) {
-      // 进入编辑模式，初始化修改后的成绩为原始成绩
-      const initialModifiedScores: Record<string, number> = {};
-      courseScores.forEach(course => {
-        if (course.score !== null) {
-          initialModifiedScores[course.courseName] = course.score;
-        }
-      });
-      setModifiedScores(initialModifiedScores);
+      // 进入编辑模式，显示欢迎提示
       setShowEditModal(true);
       // 3秒后自动关闭悬浮窗
       setTimeout(() => {
@@ -297,16 +311,43 @@ export default function Analysis() {
 
   // 处理确认修改
   const handleConfirmModification = () => {
+    // 确保所有成绩都是数字类型
+    setModifiedScores(prev => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map(course => ({
+        ...course,
+        score: typeof course.score === 'string' ? parseFloat(course.score) : course.score
+      }));
+    });
     setShowConfirmModal(true);
+    
+    // 清除缓存，确保下次加载时使用新的数据
+    if (currentStudent?.id) {
+      const cacheKey = currentStudent.id;
+      setStudentDataCache(prev => {
+        const newCache = { ...prev };
+        // 删除所有包含该学生ID的缓存
+        Object.keys(newCache).forEach(key => {
+          if (key.startsWith(cacheKey)) {
+            delete newCache[key];
+          }
+        });
+        return newCache;
+      });
+    }
   };
 
   // 处理成绩修改
   const handleScoreChange = (courseName: string, newScore: string) => {
     // 允许用户输入任意内容，包括多位小数
-    setModifiedScores(prev => ({
-      ...prev,
-      [courseName]: newScore
-    }));
+    setModifiedScores(prev => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map(course => 
+        course.courseName === courseName 
+          ? { ...course, score: newScore }
+          : course
+      );
+    });
   };
 
   // 处理成绩输入完成（失去焦点或按回车）
@@ -315,18 +356,26 @@ export default function Analysis() {
     if (!isNaN(score) && score >= 0 && score <= 100) {
       // 输入完成后保留一位小数
       const roundedScore = Math.round(score * 10) / 10;
-      setModifiedScores(prev => ({
-        ...prev,
-        [courseName]: roundedScore
-      }));
+      setModifiedScores(prev => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map(course => 
+          course.courseName === courseName 
+            ? { ...course, score: roundedScore }
+            : course
+        );
+      });
     } else {
       // 如果输入无效，恢复原始成绩
-      const originalScore = courseScores.find(course => course.courseName === courseName)?.score;
-      if (originalScore !== null && originalScore !== undefined) {
-        setModifiedScores(prev => ({
-          ...prev,
-          [courseName]: originalScore
-        }));
+      const originalCourse = originalScores.find(course => course.courseName === courseName);
+      if (originalCourse && originalCourse.score !== null) {
+        setModifiedScores(prev => {
+          if (!Array.isArray(prev)) return prev;
+          return prev.map(course => 
+            course.courseName === courseName 
+              ? { ...course, score: originalCourse.score }
+              : course
+          );
+        });
       }
     }
   };
@@ -339,7 +388,13 @@ export default function Analysis() {
     const cacheKey = currentStudent.id;
     const cachedData = studentDataCache[cacheKey];
     if (cachedData?.courseScores) {
-      setCourseScores(cachedData.courseScores);
+      // 初始化原始课程数据（只在第一次加载时设置）
+      if (originalScores.length === 0) {
+        setOriginalScores(cachedData.courseScores);
+        
+        // 同时初始化修改后的课程数据为原始数据
+        setModifiedScores(cachedData.courseScores);
+      }
       return;
     }
 
@@ -354,7 +409,14 @@ export default function Analysis() {
       if (response.ok) {
         const data = await response.json();
         const courseScoresData = data.data.courseScores || [];
-        setCourseScores(courseScoresData);
+        
+        // 初始化原始课程数据（只在第一次加载时设置）
+        if (originalScores.length === 0) {
+          setOriginalScores(courseScoresData);
+          
+          // 同时初始化修改后的课程数据为原始数据
+          setModifiedScores(courseScoresData);
+        }
         
         // 保存到缓存
         setStudentDataCache(prev => ({
@@ -365,12 +427,76 @@ export default function Analysis() {
           }
         }));
       } else {
-        setCourseScores([]);
+        setOriginalScores([]);
+        setModifiedScores([]);
       }
     } catch (error) {
-      setCourseScores([]);
+      setOriginalScores([]);
+      setModifiedScores([]);
     } finally {
       setLoadingCourseScores(false);
+    }
+  };
+
+  // 加载所有课程数据
+  const loadAllCourseData = async () => {
+    if (!currentStudent?.id) return;
+
+    // 使用当前的修改数据
+    const scoresToUse = modifiedScores;
+
+    // 检查缓存 - 使用修改后的成绩作为缓存键的一部分
+    const cacheKey = currentStudent.id;
+    const hasModifications = scoresToUse.length > 0;
+    const modifiedScoresHash = hasModifications ? 
+      btoa(unescape(encodeURIComponent(JSON.stringify(scoresToUse)))).slice(0, 8) : 'original';
+    const fullCacheKey = `${cacheKey}_${modifiedScoresHash}`;
+    
+    const cachedData = studentDataCache[fullCacheKey];
+    if (cachedData?.allCourseData) {
+      setAllCourseData(cachedData.allCourseData);
+      setShowAllCourseData(true);
+      return;
+    }
+
+    setLoadingAllCourseData(true);
+    try {
+      // 添加调试信息
+      console.log('发送到API的数据:', {
+        studentHash: currentStudent.id,
+        scoresToUse,
+        modifiedScores
+      });
+      
+      const response = await fetch('/api/all-course-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          studentHash: currentStudent.id,
+          modifiedScores: scoresToUse
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAllCourseData(data.data);
+        setShowAllCourseData(true);
+        
+        // 保存到缓存
+        setStudentDataCache(prev => ({
+          ...prev,
+          [fullCacheKey]: {
+            ...prev[fullCacheKey],
+            allCourseData: data.data
+          }
+        }));
+      } else {
+        console.error('Failed to load all course data');
+      }
+    } catch (error) {
+      console.error('Error loading all course data:', error);
+    } finally {
+      setLoadingAllCourseData(false);
     }
   };
 
@@ -500,23 +626,38 @@ export default function Analysis() {
       {/* 目标分数显示 */}
       {(selectedButton === 'overseas' || selectedButton === 'domestic') && (
         <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          {loadingTargetScores ? (
-            <div className="text-center text-blue-600">{t('analysis.target.score.loading')}</div>
-          ) : targetScores ? (
-            <div className="text-center">
-              <p className="text-blue-800 font-medium">
-                {t('analysis.target.score.minimum')}{' '}
-                <span className="text-blue-600 font-bold">
-                  {selectedButton === 'overseas' 
-                    ? (targetScores.target2_score !== null ? targetScores.target2_score.toFixed(1) : '暂无数据')
-                    : (targetScores.target1_score !== null ? targetScores.target1_score.toFixed(1) : '暂无数据')
-                  }
-                </span>
-              </p>
+          <div className="flex justify-between items-center">
+            <div className="flex-1">
+              {loadingTargetScores ? (
+                <div className="text-center text-blue-600">{t('analysis.target.score.loading')}</div>
+              ) : targetScores ? (
+                <div className="text-center">
+                  <p className="text-blue-800 font-medium">
+                    {t('analysis.target.score.minimum')}{' '}
+                    <span className="text-blue-600 font-bold">
+                      {selectedButton === 'overseas' 
+                        ? (targetScores.target2_score !== null ? targetScores.target2_score.toFixed(1) : '暂无数据')
+                        : (targetScores.target1_score !== null ? targetScores.target1_score.toFixed(1) : '暂无数据')
+                      }
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center text-blue-600">{t('analysis.target.score.no.data')}</div>
+              )}
             </div>
-          ) : (
-            <div className="text-center text-blue-600">{t('analysis.target.score.no.data')}</div>
-          )}
+            <div className="ml-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadAllCourseData}
+                disabled={loadingAllCourseData}
+                className="text-xs"
+              >
+                {loadingAllCourseData ? '加载中...' : '查看所有课程数据'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -570,7 +711,7 @@ export default function Analysis() {
                 <div className="text-center py-8">
                   <div className="text-muted-foreground">{t('analysis.course.scores.loading')}</div>
                 </div>
-              ) : courseScores.length > 0 ? (
+              ) : originalScores.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse border border-gray-200">
                     <thead>
@@ -588,7 +729,7 @@ export default function Analysis() {
                       </tr>
                     </thead>
                     <tbody>
-                      {courseScores.map((course, index) => (
+                      {getCurrentScores().map((course, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
                             {index + 1}
@@ -626,7 +767,16 @@ export default function Analysis() {
                                   max="100"
                                   step="0.5"
                                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  value={modifiedScores[course.courseName] || course.score}
+                                  value={(() => {
+                                    if (!Array.isArray(modifiedScores) || modifiedScores.length === 0) {
+                                      return course.score !== null ? course.score : '';
+                                    }
+                                    const modifiedCourse = modifiedScores.find(c => c.courseName === course.courseName);
+                                    if (modifiedCourse) {
+                                      return modifiedCourse.score !== null && modifiedCourse.score !== undefined ? modifiedCourse.score : '';
+                                    }
+                                    return course.score !== null ? course.score : '';
+                                  })()}
                                   onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
                                   onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
                                   placeholder={t('analysis.course.scores.input.placeholder')}
@@ -1106,6 +1256,216 @@ export default function Analysis() {
               <p className="text-sm text-gray-600">
                 {t('analysis.confirm.modal.description')}
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 所有课程数据模态框 */}
+      {showAllCourseData && allCourseData && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowAllCourseData(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl p-6 max-w-6xl mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">所有课程数据收集结果</h3>
+              <button 
+                onClick={() => setShowAllCourseData(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* 数据摘要 */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-semibold mb-2">数据摘要</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">总课程数：</span>
+                  <span className="text-blue-600">{allCourseData.summary?.totalCourses || 0}</span>
+                </div>
+                <div>
+                  <span className="font-medium">来源1课程：</span>
+                  <span className="text-green-600">{allCourseData.summary?.source1Count || 0}</span>
+                </div>
+                <div>
+                  <span className="font-medium">来源2课程：</span>
+                  <span className="text-orange-600">{allCourseData.summary?.source2Count || 0}</span>
+                </div>
+                <div>
+                  <span className="font-medium">唯一课程：</span>
+                  <span className="text-purple-600">{allCourseData.summary?.uniqueCourses || 0}</span>
+                </div>
+              </div>
+              {allCourseData.cacheInfo && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <h5 className="font-medium mb-2">缓存信息</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">数据状态：</span>
+                      <span className={allCourseData.cacheInfo.hasModifications ? 'text-yellow-600' : 'text-green-600'}>
+                        {allCourseData.cacheInfo.hasModifications ? '已修改' : '原始数据'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-medium">修改课程数：</span>
+                      <span className="text-blue-600">{allCourseData.cacheInfo.modifiedCoursesCount}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">缓存键：</span>
+                      <span className="text-gray-600 font-mono text-xs">{allCourseData.cacheInfo.cacheKey}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 来源1数据表格 */}
+            <div className="mb-6">
+              <h4 className="font-semibold mb-3 text-green-700">来源1：cohort_predictions 表（包含修改后的成绩）</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200 text-sm">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCourseData.source1Data?.map((course: any, index: number) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
+                        <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2 font-mono">
+                          <span className={`font-bold ${
+                            course.score >= 90 ? 'text-green-600' :
+                            course.score >= 80 ? 'text-blue-600' :
+                            course.score >= 70 ? 'text-yellow-600' :
+                            course.score >= 60 ? 'text-orange-600' :
+                            'text-red-600'
+                          }`}>
+                            {course.score}
+                          </span>
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 来源2数据表格 */}
+            <div className="mb-6">
+              <h4 className="font-semibold mb-3 text-orange-700">来源2：academic_results 表</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200 text-sm">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">课程类型</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCourseData.source2Data?.map((course: any, index: number) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
+                        <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2 font-mono">
+                          {course.score !== null ? (
+                            <span className={`font-bold ${
+                              course.score >= 90 ? 'text-green-600' :
+                              course.score >= 80 ? 'text-blue-600' :
+                              course.score >= 70 ? 'text-yellow-600' :
+                              course.score >= 60 ? 'text-orange-600' :
+                              'text-red-600'
+                            }`}>
+                              {course.score}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 italic">暂无成绩</span>
+                          )}
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2">{course.courseType || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 合并后的所有课程数据 */}
+            <div className="mb-6">
+              <h4 className="font-semibold mb-3 text-blue-700">合并后的所有课程数据（来源1优先，包含修改）</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200 text-sm">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-200 px-3 py-2 text-left">来源</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
+                      <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCourseData.allCourses?.map((course: any, index: number) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-3 py-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            course.source === 'cohort_predictions' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-orange-100 text-orange-800'
+                          }`}>
+                            {course.source === 'cohort_predictions' ? '来源1' : '来源2'}
+                          </span>
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
+                        <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2 font-mono">
+                          {course.score !== null ? (
+                            <span className={`font-bold ${
+                              course.score >= 90 ? 'text-green-600' :
+                              course.score >= 80 ? 'text-blue-600' :
+                              course.score >= 70 ? 'text-yellow-600' :
+                              course.score >= 60 ? 'text-orange-600' :
+                              'text-red-600'
+                            }`}>
+                              {course.score}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 italic">暂无成绩</span>
+                          )}
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
+                        <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

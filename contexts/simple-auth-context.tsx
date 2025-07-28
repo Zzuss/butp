@@ -24,6 +24,7 @@ interface StudentData {
     semester: number | null;
     category: string | null;
   }> | null;
+  allCourseData: any | null;
 }
 
 interface SimpleAuthContextType {
