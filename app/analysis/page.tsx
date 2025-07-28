@@ -323,6 +323,14 @@ export default function Analysis() {
   const loadCourseScores = async () => {
     if (!currentStudent?.id) return;
 
+    // 检查缓存
+    const cacheKey = currentStudent.id;
+    const cachedData = studentDataCache[cacheKey];
+    if (cachedData?.courseScores) {
+      setCourseScores(cachedData.courseScores);
+      return;
+    }
+
     setLoadingCourseScores(true);
     try {
       const response = await fetch('/api/student-course-scores', {
@@ -333,7 +341,17 @@ export default function Analysis() {
 
       if (response.ok) {
         const data = await response.json();
-        setCourseScores(data.data.courseScores || []);
+        const courseScoresData = data.data.courseScores || [];
+        setCourseScores(courseScoresData);
+        
+        // 保存到缓存
+        setStudentDataCache(prev => ({
+          ...prev,
+          [cacheKey]: {
+            ...prev[cacheKey],
+            courseScores: courseScoresData
+          }
+        }));
       } else {
         setCourseScores([]);
       }
@@ -382,6 +400,14 @@ export default function Analysis() {
       loadCourseScores();
     }
   }, [selectedButton, currentStudent?.id]);
+
+  // 页面卸载时清理缓存（可选，如果需要的话）
+  useEffect(() => {
+    return () => {
+      // 页面卸载时的清理逻辑
+      // 目前我们选择保留缓存，因为用户可能会重新进入页面
+    };
+  }, []);
 
   const percentageOptions = [
     { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
@@ -487,19 +513,47 @@ export default function Analysis() {
         <div className="mt-6">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-center">
                 <div>
                   <CardTitle className="text-lg font-medium">详细课程成绩</CardTitle>
                   <CardDescription>您的各门课程成绩详情（按分数降序排列）</CardDescription>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="ml-4"
-                  onClick={handleEditModeToggle}
-                >
-                  {isEditMode ? '退出修改' : '修改未来'}
-                </Button>
+                <div className="flex-1 flex justify-center">
+                  {isEditMode ? (
+                    <Button 
+                      variant="default"
+                      size="lg"
+                      className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
+                      onClick={() => {
+                        // 这里可以添加确认逻辑
+                        console.log('确认修改');
+                      }}
+                    >
+                      确认修改
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="default"
+                      size="lg"
+                      className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
+                      onClick={handleEditModeToggle}
+                    >
+                      修改未来
+                    </Button>
+                  )}
+                </div>
+                <div className="w-32 flex justify-end">
+                  {isEditMode && (
+                    <Button 
+                      variant="destructive"
+                      size="lg"
+                      className="px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
+                      onClick={handleEditModeToggle}
+                    >
+                      退出修改
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>

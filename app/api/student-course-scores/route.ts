@@ -204,32 +204,13 @@ export async function POST(request: NextRequest) {
       // 获取所有课程编号
       const allCourseIds = Object.values(courseNameToIdMapping);
       
-      // 先尝试按专业查询
-      let coursesData = null;
-      if (studentMajor) {
-        const { data, error } = await supabase
-          .from('courses')
-          .select('course_id, course_name, semester, category')
-          .eq('major', studentMajor);
-        
-        if (!error && data) {
-          coursesData = data;
-        }
-      }
+      // 直接查询所有相关课程，不限制专业
+      const { data: coursesData, error } = await supabase
+        .from('courses')
+        .select('course_id, course_name, semester, category')
+        .in('course_id', allCourseIds);
       
-      // 如果按专业查询结果不完整，则查询所有相关课程
-      if (!coursesData || coursesData.length < allCourseIds.length * 0.8) {
-        const { data, error } = await supabase
-          .from('courses')
-          .select('course_id, course_name, semester, category')
-          .in('course_id', allCourseIds);
-        
-        if (!error && data) {
-          coursesData = data;
-        }
-      }
-      
-      if (coursesData) {
+      if (!error && coursesData) {
         // 创建课程编号到学期和类别的映射
         coursesData.forEach((course) => {
           if (course.course_id) {

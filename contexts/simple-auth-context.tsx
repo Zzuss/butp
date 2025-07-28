@@ -18,6 +18,12 @@ interface StudentData {
     proba_2: number | null;
   } | null;
   major: string | null;
+  courseScores: Array<{
+    courseName: string;
+    score: number | null;
+    semester: number | null;
+    category: string | null;
+  }> | null;
 }
 
 interface SimpleAuthContextType {
