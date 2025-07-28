@@ -78,8 +78,11 @@ export default function Analysis() {
     courseName: string;
     score: number | null;
     semester: number | null;
+    category: string | null;
   }>>([]);
   const [loadingCourseScores, setLoadingCourseScores] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [modifiedScores, setModifiedScores] = useState<Record<string, string | number>>({});
   
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
@@ -270,6 +273,52 @@ export default function Analysis() {
     }
   };
 
+  // 处理编辑模式切换
+  const handleEditModeToggle = () => {
+    if (!isEditMode) {
+      // 进入编辑模式，初始化修改后的成绩为原始成绩
+      const initialModifiedScores: Record<string, number> = {};
+      courseScores.forEach(course => {
+        if (course.score !== null) {
+          initialModifiedScores[course.courseName] = course.score;
+        }
+      });
+      setModifiedScores(initialModifiedScores);
+    }
+    setIsEditMode(!isEditMode);
+  };
+
+  // 处理成绩修改
+  const handleScoreChange = (courseName: string, newScore: string) => {
+    // 允许用户输入任意内容，包括多位小数
+    setModifiedScores(prev => ({
+      ...prev,
+      [courseName]: newScore
+    }));
+  };
+
+  // 处理成绩输入完成（失去焦点或按回车）
+  const handleScoreBlur = (courseName: string, newScore: string) => {
+    const score = parseFloat(newScore);
+    if (!isNaN(score) && score >= 0 && score <= 100) {
+      // 输入完成后保留一位小数
+      const roundedScore = Math.round(score * 10) / 10;
+      setModifiedScores(prev => ({
+        ...prev,
+        [courseName]: roundedScore
+      }));
+    } else {
+      // 如果输入无效，恢复原始成绩
+      const originalScore = courseScores.find(course => course.courseName === courseName)?.score;
+      if (originalScore !== null && originalScore !== undefined) {
+        setModifiedScores(prev => ({
+          ...prev,
+          [courseName]: originalScore
+        }));
+      }
+    }
+  };
+
   // 加载课程成绩数据
   const loadCourseScores = async () => {
     if (!currentStudent?.id) return;
@@ -438,8 +487,20 @@ export default function Analysis() {
         <div className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-medium">详细课程成绩</CardTitle>
-              <CardDescription>您的各门课程成绩详情（按分数降序排列）</CardDescription>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg font-medium">详细课程成绩</CardTitle>
+                  <CardDescription>您的各门课程成绩详情（按分数降序排列）</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="ml-4"
+                  onClick={handleEditModeToggle}
+                >
+                  {isEditMode ? '退出修改' : '修改未来'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingCourseScores ? (
@@ -454,7 +515,13 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程类别</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                        {isEditMode && (
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
+                            修改成绩
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -468,6 +535,9 @@ export default function Analysis() {
                           </td>
                           <td className="border border-gray-200 px-4 py-2 text-sm">
                             {course.courseName}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+                            {course.category || '-'}
                           </td>
                           <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
                             {course.score !== null ? (
@@ -484,6 +554,25 @@ export default function Analysis() {
                               <span className="text-gray-400 italic">暂无成绩</span>
                             )}
                           </td>
+                          {isEditMode && (
+                            <td className="border border-gray-200 px-4 py-2 text-sm">
+                              {course.score !== null ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.5"
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  value={modifiedScores[course.courseName] || course.score}
+                                  onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
+                                  onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
+                                  placeholder="0-100"
+                                />
+                              ) : (
+                                <span className="text-gray-400 italic text-xs">无原始成绩</span>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>

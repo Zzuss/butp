@@ -115,25 +115,44 @@ export async function POST(request: NextRequest) {
     
     // 课程名称到课程编号的映射表（基于真实数据）
     const courseNameToIdMapping: Record<string, string> = {
+      // 政治理论课程
       "思想道德与法治": "3322100012",
       "中国近现代史纲要": "3322100060",
       "马克思主义基本原理": "3322100021",
       "毛泽东思想和中国特色社会主义理论体系概论": "3322100082",
+      "习近平新时代中国特色社会主义思想概论": "3322100091",
       "形势与政策1": "1052100010",
       "形势与政策2": "1052100020",
       "形势与政策3": "1052100030",
       "形势与政策4": "1052100040",
       "形势与政策5": "1052100050",
+      "思想道德与法治（实践环节）": "3322100013",
+      "毛泽东思想和中国特色社会主义理论体系概论实": "3322100083",
+      
+      // 基础课程
       "线性代数": "3412110079",
       "高等数学A(上)": "3412110019",
       "高等数学A(下)": "3412110029",
       "大学物理D（上）": "3412120019",
       "大学物理D（下）": "3412120029",
+      "工程数学": "3412110129",
+      "概率论与随机过程": "3412110099",
+      
+      // 英语课程
+      "综合英语（上）": "3312110316",
+      "综合英语（下）": "3312110326",
+      "进阶听说（上）": "3312110336",
+      "进阶听说（下）": "3312110346",
+      
+      // 计算机课程
       "程序设计基础": "3132100090",
-      "数据结构": "3132100090", // 假设与程序设计基础相同
+      "数据设计": "3512156011",
       "Java高级语言程序设计": "3512142011",
       "软件工程": "3512163043",
+      
+      // 专业基础课程
       "电子信息工程专业导论": "3112191070",
+      "电子系统基础": "3112191110",
       "电子电路基础": "3112190019",
       "信号与系统": "B304BY0010",
       "数字电路设计": "3512142023",
@@ -143,36 +162,84 @@ export async function POST(request: NextRequest) {
       "电磁场与电磁波": "3122101058",
       "通信原理I": "3112100140",
       "机器学习": "3512152011",
+      
+      // 专业课程
+      "产品开发与管理": "3512156071",
+      "多媒体基础": "3512153031",
+      "数字音频基础": "3512159421",
+      "信息论": "3112191960",
+      "高级变换": "3512171801",
+      "图形与视频处理": "3512162301",
+      "交互式媒体设计": "3512153051",
       "3D图形程序设计": "3512154053",
+      "深度学习与计算视觉": "3512172411",
+      
+      // 实践课程
       "军训": "2122110003",
       "物理实验C": "3412130049",
       "电路实验": "3122108005",
+      "通信原理实验": "3112100990",
+      "电子工艺实习": "3112199020",
+      "Design & Build实训（电子）": "3122106831",
+      "电子信息工程专业实习": "3512190007",
+      
+      // 其他课程
+      "体育基础": "3812150010",
+      "军事理论": "2122110002",
+      "大学生心理健康": "2122120000",
+      "安全教育": "2122100090",
+      "学术交流技能1": "3312110219",
+      "学术交流技能2": "3312110229",
+      "个人发展计划1": "3512130011",
+      "个人发展计划2": "3512140013",
+      "个人发展计划3": "3512150011",
       "毕业设计": "3512165214"
     };
 
-    // 查询courses表获取课程学期信息
+    // 查询courses表获取课程学期和类别信息
     let courseIdToSemesterMap: Record<string, number | null> = {};
-    if (studentMajor) {
-      try {
-        const { data: coursesData, error: coursesError } = await supabase
+    let courseIdToCategoryMap: Record<string, string | null> = {};
+    
+    try {
+      // 获取所有课程编号
+      const allCourseIds = Object.values(courseNameToIdMapping);
+      
+      // 先尝试按专业查询
+      let coursesData = null;
+      if (studentMajor) {
+        const { data, error } = await supabase
           .from('courses')
-          .select('course_id, course_name, semester')
+          .select('course_id, course_name, semester, category')
           .eq('major', studentMajor);
         
-        if (!coursesError && coursesData) {
-          // 创建课程编号到学期的映射
-          courseIdToSemesterMap = coursesData.reduce((acc, course) => {
-            if (course.course_id) {
-              acc[course.course_id] = course.semester;
-            }
-            return acc;
-          }, {} as Record<string, number | null>);
-          
-
+        if (!error && data) {
+          coursesData = data;
         }
-              } catch (error) {
-          // 静默处理错误
+      }
+      
+      // 如果按专业查询结果不完整，则查询所有相关课程
+      if (!coursesData || coursesData.length < allCourseIds.length * 0.8) {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('course_id, course_name, semester, category')
+          .in('course_id', allCourseIds);
+        
+        if (!error && data) {
+          coursesData = data;
         }
+      }
+      
+      if (coursesData) {
+        // 创建课程编号到学期和类别的映射
+        coursesData.forEach((course) => {
+          if (course.course_id) {
+            courseIdToSemesterMap[course.course_id] = course.semester;
+            courseIdToCategoryMap[course.course_id] = course.category;
+          }
+        });
+      }
+    } catch (error) {
+      // 静默处理错误
     }
     
     // 将数据转换为更易处理的格式
@@ -182,11 +249,13 @@ export async function POST(request: NextRequest) {
         // 使用映射表查找对应的课程编号
         const courseId = courseNameToIdMapping[courseName];
         const semester = courseId ? courseIdToSemesterMap[courseId] || null : null;
+        const category = courseId ? courseIdToCategoryMap[courseId] || null : null;
         
         return {
           courseName,
           score: score as number | null,
-          semester
+          semester,
+          category
         };
       })
       .sort((a, b) => {
