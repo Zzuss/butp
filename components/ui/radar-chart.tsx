@@ -18,13 +18,13 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // 设置画布大小 - 放大150%
-    const size = 300 // 从200增加到300
+    // 设置画布大小 - 大幅增加为标签留出充足空间
+    const size = 450 // 大幅增加画布大小
     canvas.width = size
     canvas.height = size
     const centerX = size / 2
     const centerY = size / 2
-    const radius = size / 2 - 30 // 相应调整边距
+    const radius = size / 2 - 80 // 大幅增加边距，为标签留出充足空间
 
     // 清除画布
     ctx.clearRect(0, 0, size, size)
@@ -98,12 +98,31 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
 
     // 绘制标签
     ctx.fillStyle = '#374151'
-    ctx.font = '14px Arial' // 增大字体
+    ctx.font = 'bold 12px Arial' // 调整字体大小和粗细
     ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
     for (let i = 0; i < labels.length; i++) {
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2
-      const x = centerX + (radius + 20) * Math.cos(angle)
-      const y = centerY + (radius + 20) * Math.sin(angle)
+      // 增加标签偏移距离，确保文字不被截断
+      const labelRadius = radius + 50
+      const x = centerX + labelRadius * Math.cos(angle)
+      const y = centerY + labelRadius * Math.sin(angle)
+      
+      // 根据角度调整文字对齐方式，避免文字重叠
+      if (angle >= -Math.PI/6 && angle <= Math.PI/6) {
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'top'
+      } else if (angle > Math.PI/6 && angle <= 5*Math.PI/6) {
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'middle'
+      } else if (angle > 5*Math.PI/6 || angle < -5*Math.PI/6) {
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+      } else {
+        ctx.textAlign = 'right'
+        ctx.textBaseline = 'middle'
+      }
+      
       ctx.fillText(labels[i], x, y)
     }
 
@@ -127,7 +146,9 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
 
   return (
     <div className={`flex justify-center ${className}`}>
-      <canvas ref={canvasRef} className="max-w-full h-auto" />
+      <div className="relative overflow-visible">
+        <canvas ref={canvasRef} className="max-w-full h-auto" />
+      </div>
     </div>
   )
 } 

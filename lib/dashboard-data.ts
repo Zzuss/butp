@@ -321,8 +321,11 @@ export async function getTopPercentageGPAThreshold(percentage: number): Promise<
 // 雷达图数据接口
 export interface RadarChartData {
   subject: string
-  A: number
-  B: number
+  knowledge: number      // 知识掌握
+  application: number    // 应用能力
+  analysis: number       // 分析能力
+  synthesis: number      // 综合能力
+  evaluation: number     // 评价能力
   fullMark: number
 }
 
@@ -370,11 +373,14 @@ export async function getSubjectGrades(studentHash: string, language: string = '
 export async function getRadarChartData(courseName: string): Promise<RadarChartData | null> {
   try {
     // 这里可以根据需要实现具体的雷达图数据逻辑
-    // 暂时返回模拟数据
+    // 暂时返回模拟数据，包含更多维度的评估
     return {
       subject: courseName,
-      A: 80,
-      B: 90,
+      knowledge: Math.floor(Math.random() * 30) + 70,      // 知识掌握 70-100
+      application: Math.floor(Math.random() * 30) + 70,    // 应用能力 70-100
+      analysis: Math.floor(Math.random() * 30) + 70,       // 分析能力 70-100
+      synthesis: Math.floor(Math.random() * 30) + 70,      // 综合能力 70-100
+      evaluation: Math.floor(Math.random() * 30) + 70,     // 评价能力 70-100
       fullMark: 100
     }
   } catch (error) {

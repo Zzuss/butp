@@ -53,6 +53,7 @@ export default function Analysis() {
   const [isEditing, setIsEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   
   // 概率数据状态
   const [probabilityData, setProbabilityData] = useState<{
@@ -284,6 +285,11 @@ export default function Analysis() {
         }
       });
       setModifiedScores(initialModifiedScores);
+      setShowEditModal(true);
+      // 3秒后自动关闭悬浮窗
+      setTimeout(() => {
+        setShowEditModal(false);
+      }, 3000);
     }
     setIsEditMode(!isEditMode);
   };
@@ -523,7 +529,7 @@ export default function Analysis() {
                     <Button 
                       variant="default"
                       size="lg"
-                      className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
+                      className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-110"
                       onClick={() => {
                         // 这里可以添加确认逻辑
                         console.log('确认修改');
@@ -1033,6 +1039,33 @@ export default function Analysis() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑模式悬浮提示窗 */}
+      {showEditModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowEditModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl p-8 max-w-md mx-4 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              修改你的未来
+            </h3>
+            <p className="text-lg text-gray-600">
+              让你人生拥有更多的可能性
+            </p>
           </div>
         </div>
       )}

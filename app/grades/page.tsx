@@ -200,7 +200,17 @@ export default function AllGrades() {
                   <div className="text-muted-foreground">加载中...</div>
                 </div>
               ) : radarData ? (
-                <RadarChart data={{[radarData.subject]: radarData.A}} width={500} height={500} />
+                <RadarChart 
+                  data={[
+                    radarData.knowledge, 
+                    radarData.application, 
+                    radarData.analysis, 
+                    radarData.synthesis, 
+                    radarData.evaluation
+                  ]} 
+                  labels={['知识掌握', '应用能力', '分析能力', '综合能力', '评价能力']} 
+                  className="w-full max-w-md"
+                />
               ) : (
                 <div className="flex items-center justify-center h-48">
                   <div className="text-muted-foreground">暂无数据</div>
