@@ -13,8 +13,8 @@ import { useSimpleAuth } from "@/contexts/simple-auth-context"
 
 // 能力标签（支持中英文）
 const abilityLabels = {
-  zh: ['逻辑思维', '记忆能力', '理解能力', '应用能力', '创新思维', '表达能力', '分析能力', '综合能力', '实践能力'],
-  en: ['Logical Thinking', 'Memory', 'Comprehension', 'Application', 'Innovation', 'Expression', 'Analysis', 'Synthesis', 'Practice']
+  zh: ['公共课程', '实践课程', '数学科学', '政治课程', '基础学科', '创新课程', '英语课程', '基础专业', '专业课程'],
+  en: ['Public Courses', 'Practice Courses', 'Math & Science', 'Political Courses', 'Basic Subjects', 'Innovation Courses', 'English Courses', 'Basic Major', 'Major Courses']
 }
 
 export default function Analysis() {
@@ -54,6 +54,7 @@ export default function Analysis() {
   const [submitting, setSubmitting] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   
   // 概率数据状态
   const [probabilityData, setProbabilityData] = useState<{
@@ -294,6 +295,11 @@ export default function Analysis() {
     setIsEditMode(!isEditMode);
   };
 
+  // 处理确认修改
+  const handleConfirmModification = () => {
+    setShowConfirmModal(true);
+  };
+
   // 处理成绩修改
   const handleScoreChange = (courseName: string, newScore: string) => {
     // 允许用户输入任意内容，包括多位小数
@@ -495,11 +501,11 @@ export default function Analysis() {
       {(selectedButton === 'overseas' || selectedButton === 'domestic') && (
         <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
           {loadingTargetScores ? (
-            <div className="text-center text-blue-600">加载中...</div>
+            <div className="text-center text-blue-600">{t('analysis.target.score.loading')}</div>
           ) : targetScores ? (
             <div className="text-center">
               <p className="text-blue-800 font-medium">
-                想要达到该目标，最低均分为{' '}
+                {t('analysis.target.score.minimum')}{' '}
                 <span className="text-blue-600 font-bold">
                   {selectedButton === 'overseas' 
                     ? (targetScores.target2_score !== null ? targetScores.target2_score.toFixed(1) : '暂无数据')
@@ -509,7 +515,7 @@ export default function Analysis() {
               </p>
             </div>
           ) : (
-            <div className="text-center text-blue-600">暂无目标分数数据</div>
+            <div className="text-center text-blue-600">{t('analysis.target.score.no.data')}</div>
           )}
         </div>
       )}
@@ -521,8 +527,8 @@ export default function Analysis() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle className="text-lg font-medium">详细课程成绩</CardTitle>
-                  <CardDescription>您的各门课程成绩详情（按分数降序排列）</CardDescription>
+                  <CardTitle className="text-lg font-medium">{t('analysis.course.scores.title')}</CardTitle>
+                  <CardDescription>{t('analysis.course.scores.description')}</CardDescription>
                 </div>
                 <div className="flex-1 flex justify-center">
                   {isEditMode ? (
@@ -530,12 +536,9 @@ export default function Analysis() {
                       variant="default"
                       size="lg"
                       className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-110"
-                      onClick={() => {
-                        // 这里可以添加确认逻辑
-                        console.log('确认修改');
-                      }}
+                      onClick={handleConfirmModification}
                     >
-                      确认修改
+                      {t('analysis.course.scores.confirm.modify')}
                     </Button>
                   ) : (
                     <Button 
@@ -544,7 +547,7 @@ export default function Analysis() {
                       className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
                       onClick={handleEditModeToggle}
                     >
-                      修改未来
+                      {t('analysis.course.scores.modify.future')}
                     </Button>
                   )}
                 </div>
@@ -556,7 +559,7 @@ export default function Analysis() {
                       className="px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
                       onClick={handleEditModeToggle}
                     >
-                      退出修改
+                      {t('analysis.course.scores.exit.modify')}
                     </Button>
                   )}
                 </div>
@@ -565,21 +568,21 @@ export default function Analysis() {
             <CardContent>
               {loadingCourseScores ? (
                 <div className="text-center py-8">
-                  <div className="text-muted-foreground">加载课程成绩中...</div>
+                  <div className="text-muted-foreground">{t('analysis.course.scores.loading')}</div>
                 </div>
               ) : courseScores.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse border border-gray-200">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程类别</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.ranking')}</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.semester')}</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.course.name')}</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.category')}</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.score')}</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩
+                            {t('analysis.course.scores.table.modify.score')}
                           </th>
                         )}
                       </tr>
@@ -591,7 +594,7 @@ export default function Analysis() {
                             {index + 1}
                           </td>
                           <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
-                            {course.semester !== null ? `第${course.semester}学期` : '-'}
+                            {course.semester !== null ? t('analysis.course.scores.semester.format', { semester: course.semester }) : '-'}
                           </td>
                           <td className="border border-gray-200 px-4 py-2 text-sm">
                             {course.courseName}
@@ -611,7 +614,7 @@ export default function Analysis() {
                                 {course.score}
                               </span>
                             ) : (
-                              <span className="text-gray-400 italic">暂无成绩</span>
+                              <span className="text-gray-400 italic">{t('analysis.course.scores.no.score')}</span>
                             )}
                           </td>
                           {isEditMode && (
@@ -626,11 +629,11 @@ export default function Analysis() {
                                   value={modifiedScores[course.courseName] || course.score}
                                   onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
                                   onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
-                                  placeholder="0-100"
+                                  placeholder={t('analysis.course.scores.input.placeholder')}
                                 />
-                              ) : (
-                                <span className="text-gray-400 italic text-xs">无原始成绩</span>
-                              )}
+                                                              ) : (
+                                  <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
+                                )}
                             </td>
                           )}
                         </tr>
@@ -640,7 +643,7 @@ export default function Analysis() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <div className="text-muted-foreground">暂无课程成绩数据</div>
+                  <div className="text-muted-foreground">{t('analysis.course.scores.no.data')}</div>
                 </div>
               )}
             </CardContent>
@@ -727,7 +730,7 @@ export default function Analysis() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
-                <CardTitle>培养方案</CardTitle>
+                <CardTitle>{t('analysis.curriculum.title')}</CardTitle>
               </div>
               <Button
                 variant="outline"
@@ -735,7 +738,7 @@ export default function Analysis() {
                 onClick={() => router.push('/curriculum')}
                 className="h-8 px-3 text-sm"
               >
-                查看完整培养方案
+                {t('analysis.curriculum.view.full')}
               </Button>
             </CardHeader>
             <CardContent>
@@ -745,14 +748,14 @@ export default function Analysis() {
                 </div>
               ) : studentMajor ? (
                 <div className="text-center py-4">
-                  <div className="text-lg font-medium mb-2">专业：{studentMajor}</div>
+                  <div className="text-lg font-medium mb-2">{t('analysis.curriculum.major', { major: studentMajor })}</div>
                   <p className="text-sm text-muted-foreground">
-                    点击上方按钮查看完整培养方案
+                    {t('analysis.curriculum.click.hint')}
                   </p>
                 </div>
               ) : (
                 <div className="text-center py-4">
-                  <div className="text-muted-foreground">暂无专业信息</div>
+                  <div className="text-muted-foreground">{t('analysis.curriculum.no.major')}</div>
                 </div>
               )}
             </CardContent>
@@ -1061,11 +1064,49 @@ export default function Analysis() {
               </div>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">
-              修改你的未来
+              {t('analysis.edit.modal.title')}
             </h3>
             <p className="text-lg text-gray-600">
-              让你人生拥有更多的可能性
+              {t('analysis.edit.modal.description')}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* 确认修改悬浮窗 - 显示九个特征值 */}
+      {showConfirmModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowConfirmModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl p-8 max-w-2xl mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">{t('analysis.confirm.modal.title')}</h3>
+              <button 
+                onClick={() => setShowConfirmModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              {currentAbilityLabels.map((label, index) => (
+                <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="text-sm font-medium text-gray-600 mb-2">{label}</div>
+                  <div className="text-2xl font-bold text-blue-600">{index + 1}</div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                {t('analysis.confirm.modal.description')}
+              </p>
+            </div>
           </div>
         </div>
       )}

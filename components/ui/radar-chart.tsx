@@ -137,10 +137,10 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
       const x = centerX + r * Math.cos(angle)
       const y = centerY + r * Math.sin(angle)
       
-      // 在数据点旁边显示数值
+      // 在数据点旁边显示数值（保留一位小数）
       const offsetX = 20 * Math.cos(angle) // 增大偏移
       const offsetY = 20 * Math.sin(angle)
-      ctx.fillText(data[i].toString(), x + offsetX, y + offsetY)
+      ctx.fillText(data[i].toFixed(1), x + offsetX, y + offsetY)
     }
   }, [data, labels])
 

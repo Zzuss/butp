@@ -10,7 +10,7 @@ export async function getStudentAbilityData(studentId: string): Promise<number[]
 
     const { data, error } = await supabase
       .from('cohort_predictions')
-      .select('ability_1, ability_2, ability_3, ability_4, ability_5, ability_6, ability_7, ability_8, ability_9')
+      .select('current_public, current_practice, current_math_science, current_political, current_basic_subject, current_innovation, current_english, current_basic_major, current_major')
       .eq('SNH', studentHash)
       .single()
 
@@ -24,15 +24,15 @@ export async function getStudentAbilityData(studentId: string): Promise<number[]
     }
 
     return [
-      data.ability_1 || 50,
-      data.ability_2 || 70,
-      data.ability_3 || 80,
-      data.ability_4 || 50,
-      data.ability_5 || 70,
-      data.ability_6 || 80,
-      data.ability_7 || 50,
-      data.ability_8 || 70,
-      data.ability_9 || 80
+      data.current_public || 50,
+      data.current_practice || 70,
+      data.current_math_science || 80,
+      data.current_political || 50,
+      data.current_basic_subject || 70,
+      data.current_innovation || 80,
+      data.current_english || 50,
+      data.current_basic_major || 70,
+      data.current_major || 80
     ]
   } catch (error) {
     console.error('Error in getStudentAbilityData:', error)

@@ -34,7 +34,7 @@ export async function getStudentInfoByHash(hash: string): Promise<{ id: string; 
       },
       body: JSON.stringify({ studentHash: hash })
     });
-
+  
     if (response.ok) {
       const data = await response.json();
       return data.studentInfo;
@@ -44,10 +44,10 @@ export async function getStudentInfoByHash(hash: string): Promise<{ id: string; 
   } catch (error) {
     console.error('Error getting student info:', error);
     // 返回默认信息
-    return {
-      id: hash,
-      name: `学生 ${hash.substring(0, 6)}`,
-      class: "未知专业"
-    };
+  return {
+    id: hash,
+    name: `学生 ${hash.substring(0, 6)}`,
+    class: "未知专业"
+  };
   }
 }

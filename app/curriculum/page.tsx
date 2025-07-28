@@ -116,38 +116,38 @@ export default function CurriculumPage() {
           className="mb-4 flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          返回
+          {t('curriculum.back')}
         </Button>
-        <h1 className="text-3xl font-bold">培养方案</h1>
+        <h1 className="text-3xl font-bold">{t('curriculum.title')}</h1>
         <p className="text-muted-foreground">
-          {studentMajor ? `${studentMajor}专业课程列表` : '加载中...'}
+          {studentMajor ? t('curriculum.description', { major: studentMajor }) : t('curriculum.loading')}
         </p>
       </div>
 
       {/* 课程表格 */}
       <Card>
         <CardHeader>
-          <CardTitle>课程列表</CardTitle>
+          <CardTitle>{t('curriculum.course.list')}</CardTitle>
           <CardDescription>
-            共 {courses.length} 门课程
+            {t('curriculum.course.count', { count: courses.length })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="text-muted-foreground">加载中...</div>
+              <div className="text-muted-foreground">{t('curriculum.loading')}</div>
             </div>
           ) : courses.length > 0 ? (
             <div className="overflow-x-auto">
                                    <table className="w-full border-collapse border border-gray-200">
                        <thead>
                          <tr className="bg-gray-50">
-                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
-                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程编号</th>
-                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
-                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程类型</th>
-                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">备注</th>
+                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('curriculum.table.semester')}</th>
+                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('curriculum.table.course.id')}</th>
+                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('curriculum.table.course.name')}</th>
+                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('curriculum.table.category')}</th>
+                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('curriculum.table.credit')}</th>
+                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('curriculum.table.remarks')}</th>
                          </tr>
                        </thead>
                 <tbody>
@@ -179,7 +179,7 @@ export default function CurriculumPage() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <div className="text-muted-foreground">暂无课程数据</div>
+              <div className="text-muted-foreground">{t('curriculum.no.data')}</div>
             </div>
           )}
         </CardContent>
