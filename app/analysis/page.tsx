@@ -73,6 +73,14 @@ export default function Analysis() {
   } | null>(null);
   const [loadingTargetScores, setLoadingTargetScores] = useState(false);
   
+  // 课程成绩状态
+  const [courseScores, setCourseScores] = useState<Array<{
+    courseName: string;
+    score: number | null;
+    semester: number | null;
+  }>>([]);
+  const [loadingCourseScores, setLoadingCourseScores] = useState(false);
+  
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
     // 检查缓存
@@ -267,6 +275,33 @@ export default function Analysis() {
     }
   };
 
+  // 加载课程成绩数据
+  const loadCourseScores = async () => {
+    if (!currentStudent?.id) return;
+
+    setLoadingCourseScores(true);
+    try {
+      const response = await fetch('/api/student-course-scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentHash: currentStudent.id })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCourseScores(data.data.courseScores || []);
+      } else {
+        console.error('Failed to load course scores');
+        setCourseScores([]);
+      }
+    } catch (error) {
+      console.error('Error loading course scores:', error);
+      setCourseScores([]);
+    } finally {
+      setLoadingCourseScores(false);
+    }
+  };
+
   // 初始加载和选项变化时更新GPA门槛值
   useEffect(() => {
     const percentageOptions = [
@@ -298,6 +333,13 @@ export default function Analysis() {
   useEffect(() => {
     loadTargetScores();
   }, [currentStudent?.id]);
+
+  // 当选择海外读研时加载课程成绩
+  useEffect(() => {
+    if (selectedButton === 'overseas') {
+      loadCourseScores();
+    }
+  }, [selectedButton, currentStudent?.id]);
 
   const percentageOptions = [
     { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
@@ -395,6 +437,72 @@ export default function Analysis() {
           ) : (
             <div className="text-center text-blue-600">暂无目标分数数据</div>
           )}
+        </div>
+      )}
+
+      {/* 海外读研课程成绩表格 */}
+      {selectedButton === 'overseas' && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-medium">详细课程成绩</CardTitle>
+              <CardDescription>您的各门课程成绩详情（按分数降序排列）</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingCourseScores ? (
+                <div className="text-center py-8">
+                  <div className="text-muted-foreground">加载课程成绩中...</div>
+                </div>
+              ) : courseScores.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-200">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {courseScores.map((course, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
+                            {index + 1}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
+                            {course.semester !== null ? `第${course.semester}学期` : '-'}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm">
+                            {course.courseName}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                            {course.score !== null ? (
+                              <span className={`font-bold ${
+                                course.score >= 90 ? 'text-green-600' :
+                                course.score >= 80 ? 'text-blue-600' :
+                                course.score >= 70 ? 'text-yellow-600' :
+                                course.score >= 60 ? 'text-orange-600' :
+                                'text-red-600'
+                              }`}>
+                                {course.score}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic">暂无成绩</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-muted-foreground">暂无课程成绩数据</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
