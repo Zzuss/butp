@@ -100,10 +100,9 @@ export async function POST(request: NextRequest) {
       .eq('SNH', trimmedHash)
       .limit(1);
 
-    if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json({ error: 'Database query failed' }, { status: 500 })
-    }
+            if (error) {
+          return NextResponse.json({ error: 'Database query failed' }, { status: 500 })
+        }
 
     if (!data || data.length === 0) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
@@ -169,11 +168,11 @@ export async function POST(request: NextRequest) {
             return acc;
           }, {} as Record<string, number | null>);
           
-          console.log('Course ID to semester mapping sample:', Object.entries(courseIdToSemesterMap).slice(0, 5));
+
         }
-      } catch (error) {
-        console.error('Error fetching course semesters:', error);
-      }
+              } catch (error) {
+          // 静默处理错误
+        }
     }
     
     // 将数据转换为更易处理的格式
@@ -208,16 +207,7 @@ export async function POST(request: NextRequest) {
         return b.score - a.score;
       });
 
-    console.log(`Found ${courseScores.length} courses for student ${trimmedHash}`);
-    console.log(`Courses with scores: ${courseScores.filter(c => c.score !== null).length}`);
-    console.log(`Courses without scores: ${courseScores.filter(c => c.score === null).length}`);
-    console.log(`Courses with semester info: ${courseScores.filter(c => c.semester !== null).length}`);
-    
-    // 显示没有学期信息的课程
-    const coursesWithoutSemester = courseScores.filter(c => c.semester === null);
-    if (coursesWithoutSemester.length > 0) {
-      console.log('Courses without semester info:', coursesWithoutSemester.map(c => c.courseName));
-    }
+
 
     return NextResponse.json({
       success: true,
@@ -231,8 +221,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Server error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+                } catch (error) {
+                return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+              }
 } 

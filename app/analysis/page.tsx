@@ -102,7 +102,6 @@ export default function Analysis() {
         }));
       }
     } catch (error) {
-      console.error('Failed to load GPA threshold:', error);
       setGpaThreshold(null);
     } finally {
       setLoadingGPA(false);
@@ -118,7 +117,6 @@ export default function Analysis() {
       const data = await getStudentAbilityData(currentStudent.id);
       setAbilityData(data);
     } catch (error) {
-      console.error('Failed to load ability data:', error);
       setAbilityData([50, 70, 80, 50, 70, 80, 50, 70, 80]);
     } finally {
       setLoadingAbility(false);
@@ -180,7 +178,6 @@ export default function Analysis() {
         setStudentMajor(null);
       }
     } catch (error) {
-      console.error('Failed to load student major:', error);
       setStudentMajor(null);
     } finally {
       setLoadingMajor(false);
@@ -224,7 +221,6 @@ export default function Analysis() {
         setTargetScores(null);
       }
     } catch (error) {
-      console.error('Failed to load target scores:', error);
       setTargetScores(null);
     } finally {
       setLoadingTargetScores(false);
@@ -268,7 +264,6 @@ export default function Analysis() {
         setProbabilityData(null);
       }
     } catch (error) {
-      console.error('Failed to load probability data:', error);
       setProbabilityData(null);
     } finally {
       setLoadingProbability(false);
@@ -291,11 +286,9 @@ export default function Analysis() {
         const data = await response.json();
         setCourseScores(data.data.courseScores || []);
       } else {
-        console.error('Failed to load course scores');
         setCourseScores([]);
       }
     } catch (error) {
-      console.error('Error loading course scores:', error);
       setCourseScores([]);
     } finally {
       setLoadingCourseScores(false);
@@ -334,9 +327,9 @@ export default function Analysis() {
     loadTargetScores();
   }, [currentStudent?.id]);
 
-  // 当选择海外读研时加载课程成绩
+  // 当选择海外读研或国内读研时加载课程成绩
   useEffect(() => {
-    if (selectedButton === 'overseas') {
+    if (selectedButton === 'overseas' || selectedButton === 'domestic') {
       loadCourseScores();
     }
   }, [selectedButton, currentStudent?.id]);
@@ -440,8 +433,8 @@ export default function Analysis() {
         </div>
       )}
 
-      {/* 海外读研课程成绩表格 */}
-      {selectedButton === 'overseas' && (
+      {/* 海外读研/国内读研课程成绩表格 */}
+      {(selectedButton === 'overseas' || selectedButton === 'domestic') && (
         <div className="mt-6">
           <Card>
             <CardHeader>
