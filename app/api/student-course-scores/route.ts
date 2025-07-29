@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
     const studentMajor = studentData.major;
     
     // 课程名称到课程编号的映射表（基于真实数据）
+    // 注意：如果需要添加新课程或修改课程编号，需要手动更新这个映射表
     const courseNameToIdMapping: Record<string, string> = {
       // 政治理论课程
       "思想道德与法治": "3322100012",
@@ -196,26 +197,28 @@ export async function POST(request: NextRequest) {
       "毕业设计": "3512165214"
     };
 
-    // 查询courses表获取课程学期和类别信息
+    // 查询courses表获取课程学期、类别和学分信息
     let courseIdToSemesterMap: Record<string, number | null> = {};
     let courseIdToCategoryMap: Record<string, string | null> = {};
+    let courseIdToCreditMap: Record<string, number | null> = {};
     
     try {
       // 获取所有课程编号
       const allCourseIds = Object.values(courseNameToIdMapping);
       
-      // 直接查询所有相关课程，不限制专业
+      // 直接查询所有相关课程，不限制专业，包含学分信息
       const { data: coursesData, error } = await supabase
         .from('courses')
-        .select('course_id, course_name, semester, category')
+        .select('course_id, course_name, semester, category, credit')
         .in('course_id', allCourseIds);
       
       if (!error && coursesData) {
-        // 创建课程编号到学期和类别的映射
+        // 创建课程编号到学期、类别和学分的映射
         coursesData.forEach((course) => {
           if (course.course_id) {
             courseIdToSemesterMap[course.course_id] = course.semester;
             courseIdToCategoryMap[course.course_id] = course.category;
+            courseIdToCreditMap[course.course_id] = course.credit;
           }
         });
       }
@@ -231,12 +234,15 @@ export async function POST(request: NextRequest) {
         const courseId = courseNameToIdMapping[courseName];
         const semester = courseId ? courseIdToSemesterMap[courseId] || null : null;
         const category = courseId ? courseIdToCategoryMap[courseId] || null : null;
+        const credit = courseId ? courseIdToCreditMap[courseId] || 0.1 : 0.1; // 默认0.1学分
         
         return {
           courseName,
           score: score as number | null,
           semester,
-          category
+          category,
+          courseId: courseId || null,
+          credit
         };
       })
       .sort((a, b) => {

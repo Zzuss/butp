@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
 
-    const { studentHash, modifiedScores } = await request.json()
+    const { studentHash, modifiedScores, source2Scores } = await request.json()
 
     if (!studentHash) {
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 })
@@ -111,33 +111,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch source 1 data' }, { status: 500 })
     }
 
-    // 2. 获取来源2的数据（academic_results表）
-    const { data: source2Data, error: source2Error } = await supabase
-      .from('academic_results')
-      .select(`
-        SNH,
-        Semester_Offered,
-        Current_Major,
-        Course_ID,
-        Course_Name,
-        Grade,
-        Grade_Remark,
-        Course_Type,
-        Course_Attribute,
-        Hours,
-        Credit,
-        Offering_Unit,
-        Tags,
-        Description,
-        Exam_Type,
-        Assessment_Method
-      `)
-      .eq('SNH', trimmedHash)
-      .order('Semester_Offered', { ascending: true });
+    // 2. 获取来源2的数据（使用前端传递的缓存数据）
+    let source2Data = null;
+    if (source2Scores && Array.isArray(source2Scores) && source2Scores.length > 0) {
+      // 使用前端传递的来源二数据
+      source2Data = source2Scores;
+    } else {
+      // 如果前端没有传递来源二数据，则从数据库查询（备用方案）
+      const { data: dbSource2Data, error: source2Error } = await supabase
+        .from('academic_results')
+        .select(`
+          SNH,
+          Semester_Offered,
+          Current_Major,
+          Course_ID,
+          Course_Name,
+          Grade,
+          Grade_Remark,
+          Course_Type,
+          Course_Attribute,
+          Hours,
+          Credit,
+          Offering_Unit,
+          Tags,
+          Description,
+          Exam_Type,
+          Assessment_Method
+        `)
+        .eq('SNH', trimmedHash)
+        .order('Semester_Offered', { ascending: true });
 
-    if (source2Error) {
-      console.error('Source 2 error:', source2Error)
-      return NextResponse.json({ error: 'Failed to fetch source 2 data' }, { status: 500 })
+      if (source2Error) {
+        console.error('Source 2 error:', source2Error)
+        return NextResponse.json({ error: 'Failed to fetch source 2 data' }, { status: 500 })
+      }
+      source2Data = dbSource2Data;
     }
 
     // 3. 获取courses表信息用于映射
@@ -281,49 +289,62 @@ export async function POST(request: NextRequest) {
     const source2Courses: any[] = [];
     if (source2Data) {
       source2Data.forEach((record: any) => {
-        const courseId = record.Course_ID;
-        const courseInfo = courseId ? courseIdToInfoMap[courseId] : null;
-        
-        // 转换成绩格式
-        let score = null;
-        if (record.Grade) {
-          const gradeStr = record.Grade.toString();
-          if (gradeStr.includes('.')) {
-            score = parseFloat(gradeStr);
-          } else {
-            score = parseInt(gradeStr);
+        // 如果是从前端传递的数据，直接使用
+        if (record.source === 'academic_results') {
+          source2Courses.push(record);
+        } else {
+          // 如果是从数据库查询的数据，需要转换格式
+          const courseId = record.Course_ID;
+          const courseInfo = courseId ? courseIdToInfoMap[courseId] : null;
+          
+          // 转换成绩格式
+          let score = null;
+          if (record.Grade) {
+            const gradeStr = record.Grade.toString();
+            if (gradeStr.includes('.')) {
+              score = parseFloat(gradeStr);
+            } else {
+              score = parseInt(gradeStr);
+            }
           }
+          
+          source2Courses.push({
+            source: 'academic_results',
+            courseName: record.Course_Name,
+            courseId: courseId,
+            score: score,
+            semester: courseInfo?.semester || record.Semester_Offered,
+            category: courseInfo?.category || null,
+            credit: courseInfo?.credit || parseFloat(record.Credit) || null,
+            courseType: record.Course_Type,
+            courseAttribute: record.Course_Attribute,
+            examType: record.Exam_Type,
+            rawData: record
+          });
         }
-        
-        source2Courses.push({
-          source: 'academic_results',
-          courseName: record.Course_Name,
-          courseId: courseId,
-          score: score,
-          semester: courseInfo?.semester || record.Semester_Offered,
-          category: courseInfo?.category || null,
-          credit: courseInfo?.credit || parseFloat(record.Credit) || null,
-          courseType: record.Course_Type,
-          courseAttribute: record.Course_Attribute,
-          examType: record.Exam_Type,
-          rawData: record
-        });
       });
     }
 
-    // 合并数据，来源1优先
+    // 合并数据，来源1优先，按细化规则过滤
     const allCourses: any[] = [];
     const processedCourseNames = new Set<string>();
 
     // 先添加来源1的数据
+    // 规则：修改为0分的记录在总表，暂无成绩的不记录
     source1Courses.forEach(course => {
-      allCourses.push(course);
-      processedCourseNames.add(course.courseName);
+      if (course.score !== null && course.score !== undefined) { // 有成绩就记录（包括0分）
+        allCourses.push(course);
+        processedCourseNames.add(course.courseName);
+      }
     });
 
     // 添加来源2中未在来源1中出现的课程
+    // 规则：无论什么原因，只要没有成绩或成绩为0，都不记录
     source2Courses.forEach(course => {
-      if (!processedCourseNames.has(course.courseName)) {
+      if (!processedCourseNames.has(course.courseName) && 
+          course.score !== null && 
+          course.score !== undefined && 
+          course.score !== 0) { // 有成绩且不为0分才记录
         allCourses.push(course);
         processedCourseNames.add(course.courseName);
       }

@@ -86,6 +86,7 @@ export default function Analysis() {
     semester: number | null;
     category: string | null;
     courseId?: string;
+    credit?: number; // 新增学分字段
   }>>([]);
   
   // 修改后的课程数据（初始时复制原始数据，每次确认修改时更新）
@@ -95,6 +96,20 @@ export default function Analysis() {
     semester: number | null;
     category: string | null;
     courseId?: string;
+    credit?: number; // 新增学分字段
+  }>>([]);
+  
+  // 来源二课程数据（academic_results表数据，只在初始化时设置一次，永远不变）
+  const [source2Scores, setSource2Scores] = useState<Array<{
+    courseName: string;
+    score: number | null;
+    semester: number | null;
+    category: string | null;
+    courseId?: string;
+    credit?: number;
+    courseType?: string;
+    courseAttribute?: string;
+    examType?: string;
   }>>([]);
   
   // 所有课程数据状态
@@ -387,7 +402,7 @@ export default function Analysis() {
     // 检查缓存
     const cacheKey = currentStudent.id;
     const cachedData = studentDataCache[cacheKey];
-    if (cachedData?.courseScores) {
+    if (cachedData?.courseScores && cachedData?.source2Scores) {
       // 初始化原始课程数据（只在第一次加载时设置）
       if (originalScores.length === 0) {
         setOriginalScores(cachedData.courseScores);
@@ -395,20 +410,36 @@ export default function Analysis() {
         // 同时初始化修改后的课程数据为原始数据
         setModifiedScores(cachedData.courseScores);
       }
+      
+      // 初始化来源二课程数据（只在第一次加载时设置）
+      if (source2Scores.length === 0) {
+        setSource2Scores(cachedData.source2Scores);
+      }
       return;
     }
 
     setLoadingCourseScores(true);
     try {
-      const response = await fetch('/api/student-course-scores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentHash: currentStudent.id })
-      });
+      // 并行获取来源一和来源二数据
+      const [source1Response, source2Response] = await Promise.all([
+        fetch('/api/student-course-scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentHash: currentStudent.id })
+        }),
+        fetch('/api/source2-scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentHash: currentStudent.id })
+        })
+      ]);
 
-      if (response.ok) {
-        const data = await response.json();
-        const courseScoresData = data.data.courseScores || [];
+      if (source1Response.ok && source2Response.ok) {
+        const source1Data = await source1Response.json();
+        const source2Data = await source2Response.json();
+        
+        const courseScoresData = source1Data.data.courseScores || [];
+        const source2ScoresData = source2Data.data.source2Scores || [];
         
         // 初始化原始课程数据（只在第一次加载时设置）
         if (originalScores.length === 0) {
@@ -418,21 +449,29 @@ export default function Analysis() {
           setModifiedScores(courseScoresData);
         }
         
+        // 初始化来源二课程数据（只在第一次加载时设置）
+        if (source2Scores.length === 0) {
+          setSource2Scores(source2ScoresData);
+        }
+        
         // 保存到缓存
         setStudentDataCache(prev => ({
           ...prev,
           [cacheKey]: {
             ...prev[cacheKey],
-            courseScores: courseScoresData
+            courseScores: courseScoresData,
+            source2Scores: source2ScoresData
           }
         }));
       } else {
         setOriginalScores([]);
         setModifiedScores([]);
+        setSource2Scores([]);
       }
     } catch (error) {
       setOriginalScores([]);
       setModifiedScores([]);
+      setSource2Scores([]);
     } finally {
       setLoadingCourseScores(false);
     }
@@ -468,14 +507,19 @@ export default function Analysis() {
         modifiedScores
       });
       
-      const response = await fetch('/api/all-course-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          studentHash: currentStudent.id,
-          modifiedScores: scoresToUse
-        })
-      });
+              // 使用缓存的来源二数据，只发送来源一数据到API
+        const response = await fetch('/api/all-course-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            studentHash: currentStudent.id,
+            modifiedScores: scoresToUse,
+            source2Scores: source2Scores.map(score => ({
+              ...score,
+              source: 'academic_results' // 添加source字段
+            })) // 发送缓存的来源二数据
+          })
+        });
 
       if (response.ok) {
         const data = await response.json();
@@ -664,7 +708,7 @@ export default function Analysis() {
       {/* 海外读研/国内读研课程成绩表格 */}
       {(selectedButton === 'overseas' || selectedButton === 'domestic') && (
         <div className="mt-6">
-          <Card>
+        <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
@@ -705,8 +749,8 @@ export default function Analysis() {
                   )}
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
+          </CardHeader>
+          <CardContent>
               {loadingCourseScores ? (
                 <div className="text-center py-8">
                   <div className="text-muted-foreground">{t('analysis.course.scores.loading')}</div>
@@ -720,6 +764,7 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.semester')}</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.course.name')}</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.category')}</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.credit')}</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">{t('analysis.course.scores.table.score')}</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
@@ -742,6 +787,9 @@ export default function Analysis() {
                           </td>
                           <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
                             {course.category || '-'}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
+                            {course.credit || '-'}
                           </td>
                           <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
                             {course.score !== null ? (
@@ -796,69 +844,69 @@ export default function Analysis() {
                   <div className="text-muted-foreground">{t('analysis.course.scores.no.data')}</div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
         </div>
       )}
 
       {/* 平均成绩模块 - 仅在非毕业、非海外读研、非国内读研状态显示 */}
       {selectedButton !== 'graduation' && selectedButton !== 'overseas' && selectedButton !== 'domestic' && (
         <div className="mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">{t('analysis.tops.title')}</CardTitle>
-              <div className="relative">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="h-7 px-3 text-sm"
-                >
-                  {percentageOptions.find(opt => opt.key === selectedOption)?.label}
-                  <ChevronDown className="ml-1 h-3 w-3" />
-                </Button>
-                {isDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-24 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                    {percentageOptions.map((option) => (
-                      <button
-                        key={option.key}
-                        onClick={() => handleOptionSelect(option.key)}
-                        className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50 first:rounded-t-md last:rounded-b-md"
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-4">
-                <div className="text-lg font-medium mb-2">
-                  GPA：{loadingGPA ? '计算中...' : (gpaThreshold !== null ? gpaThreshold.toFixed(2) : '暂无数据')}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-lg font-medium">{t('analysis.tops.title')}</CardTitle>
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="h-7 px-3 text-sm"
+              >
+                {percentageOptions.find(opt => opt.key === selectedOption)?.label}
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 w-24 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  {percentageOptions.map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => handleOptionSelect(option.key)}
+                      className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50 first:rounded-t-md last:rounded-b-md"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {percentageOptions.find(opt => opt.key === selectedOption)?.label} 门槛值
-                </p>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-4">
+              <div className="text-lg font-medium mb-2">
+                GPA：{loadingGPA ? '计算中...' : (gpaThreshold !== null ? gpaThreshold.toFixed(2) : '暂无数据')}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <p className="text-sm text-muted-foreground">
+                {percentageOptions.find(opt => opt.key === selectedOption)?.label} 门槛值
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       )}
 
       {/* 能力评估模块 - 仅在非毕业、非海外读研、非国内读研状态显示 */}
       {selectedButton !== 'graduation' && selectedButton !== 'overseas' && selectedButton !== 'domestic' && (
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
+        <Card>
+          <CardHeader>
               <CardTitle>{t('analysis.ability.title')}</CardTitle>
               <CardDescription>{t('analysis.ability.description')}</CardDescription>
-            </CardHeader>
-            <CardContent>
+          </CardHeader>
+          <CardContent>
               {loadingAbility ? (
                 <div className="flex justify-center items-center h-64">
                   <div className="text-muted-foreground">加载中...</div>
-                </div>
+                  </div>
                            ) : (
                  <RadarChart 
                    data={abilityData} 
@@ -871,8 +919,8 @@ export default function Analysis() {
                   {t('analysis.ability.overall', { 
                     score: Math.round(abilityData.reduce((acc, item) => acc + item, 0) / abilityData.length) 
                   })}
-                </div>
-              </div>
+                    </div>
+                      </div>
             </CardContent>
           </Card>
           
@@ -881,7 +929,7 @@ export default function Analysis() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
                 <CardTitle>{t('analysis.curriculum.title')}</CardTitle>
-              </div>
+                    </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -895,7 +943,7 @@ export default function Analysis() {
               {loadingMajor ? (
                 <div className="text-center py-4">
                   <div className="text-muted-foreground">加载中...</div>
-                </div>
+                  </div>
               ) : studentMajor ? (
                 <div className="text-center py-4">
                   <div className="text-lg font-medium mb-2">{t('analysis.curriculum.major', { major: studentMajor })}</div>
@@ -906,17 +954,17 @@ export default function Analysis() {
               ) : (
                 <div className="text-center py-4">
                   <div className="text-muted-foreground">{t('analysis.curriculum.no.major')}</div>
-                </div>
+            </div>
               )}
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
         </div>
       )}
 
       {/* 毕业要求模块 - 仅在毕业状态显示 */}
       {selectedButton === 'graduation' && (
         <div className="mb-6">
-          <Card>
+        <Card>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle>{t('analysis.graduation.title')}</CardTitle>
@@ -932,14 +980,14 @@ export default function Analysis() {
               {isEditing ? '取消编辑' : '编辑'}
             </Button>
           </CardHeader>
-            <CardContent>
+          <CardContent>
               <div className="space-y-6">
                 {/* 学分要求 - 仅显示未完成的 */}
                 {!graduationRequirements.credits.completed && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium">{t('analysis.graduation.credits')}</h3>
-                      <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                         <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
                           {t('analysis.graduation.pending')}
                         </span>
@@ -979,7 +1027,7 @@ export default function Analysis() {
                       <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
                         {t('analysis.graduation.pending')}
                       </span>
-                    </div>
+                </div>
                     <p className="text-sm text-muted-foreground">
                       {t('analysis.graduation.required.gpa', { 
                         required: graduationRequirements.gpa.required, 
@@ -991,8 +1039,8 @@ export default function Analysis() {
                         className="bg-green-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${Math.min(100, (graduationRequirements.gpa.current / graduationRequirements.gpa.required) * 100)}%` }}
                       ></div>
-                    </div>
-                  </div>
+                </div>
+              </div>
                 )}
 
                 {/* 毕业论文 - 仅显示未完成的 */}
@@ -1015,8 +1063,8 @@ export default function Analysis() {
                             标记完成
                           </Button>
                         )}
-                      </div>
-                    </div>
+            </div>
+      </div>
                     <p className="text-sm text-muted-foreground">
                       {t('analysis.graduation.required.thesis')}
                     </p>
@@ -1028,7 +1076,7 @@ export default function Analysis() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium">{t('analysis.graduation.certificates')}</h3>
-                      <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                         <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
                           {t('analysis.graduation.pending')}
                         </span>
@@ -1041,9 +1089,9 @@ export default function Analysis() {
                             className="h-7 px-2 text-xs"
                           >
                             标记完成
-                          </Button>
+                </Button>
                         )}
-                      </div>
+              </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {t('analysis.graduation.required.certificates')}
@@ -1052,7 +1100,7 @@ export default function Analysis() {
                 )}
 
 
-
+              
                 {/* 思政课程 - 仅显示未完成的 */}
                 {!graduationRequirements.political.completed && (
                   <div className="space-y-3">
@@ -1073,8 +1121,8 @@ export default function Analysis() {
                             标记完成
                           </Button>
                         )}
-                      </div>
-                    </div>
+                </div>
+              </div>
                     <p className="text-sm text-muted-foreground">
                       {t('analysis.graduation.required.political', { 
                         required: graduationRequirements.political.required, 
@@ -1184,15 +1232,15 @@ export default function Analysis() {
               <p className="text-sm font-medium text-gray-900">提交成功</p>
               <p className="text-sm text-gray-600 mt-1">已提交修改，请您耐心等待后台反馈。</p>
             </div>
-            <button
+                      <button 
               onClick={() => setShowNotification(false)}
               className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-            >
+                      >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
-          </div>
+                      </button>
+                    </div>
         </div>
       )}
 
@@ -1235,12 +1283,12 @@ export default function Analysis() {
           >
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">{t('analysis.confirm.modal.title')}</h3>
-              <button 
+                    <button 
                 onClick={() => setShowConfirmModal(false)}
                 className="text-gray-500 hover:text-gray-700"
-              >
+                    >
                 ✕
-              </button>
+                    </button>
             </div>
             
             <div className="grid grid-cols-3 gap-4">
@@ -1248,9 +1296,9 @@ export default function Analysis() {
                 <div key={index} className="p-4 border border-gray-200 rounded-lg">
                   <div className="text-sm font-medium text-gray-600 mb-2">{label}</div>
                   <div className="text-2xl font-bold text-blue-600">{index + 1}</div>
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
             
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
@@ -1279,7 +1327,7 @@ export default function Analysis() {
               >
                 ✕
               </button>
-            </div>
+                  </div>
             
             {/* 数据摘要 */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -1288,7 +1336,7 @@ export default function Analysis() {
                 <div>
                   <span className="font-medium">总课程数：</span>
                   <span className="text-blue-600">{allCourseData.summary?.totalCourses || 0}</span>
-                </div>
+                  </div>
                 <div>
                   <span className="font-medium">来源1课程：</span>
                   <span className="text-green-600">{allCourseData.summary?.source1Count || 0}</span>
@@ -1363,8 +1411,8 @@ export default function Analysis() {
                     ))}
                   </tbody>
                 </table>
-              </div>
             </div>
+      </div>
 
             {/* 来源2数据表格 */}
             <div className="mb-6">

@@ -24,6 +24,17 @@ interface StudentData {
     semester: number | null;
     category: string | null;
   }> | null;
+  source2Scores: Array<{
+    courseName: string;
+    score: number | null;
+    semester: number | null;
+    category: string | null;
+    courseId?: string;
+    credit?: number;
+    courseType?: string;
+    courseAttribute?: string;
+    examType?: string;
+  }> | null;
   allCourseData: any | null;
 }
 
