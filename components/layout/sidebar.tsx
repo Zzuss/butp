@@ -9,7 +9,6 @@ import {
   Users, 
   TrendingUp,
   GraduationCap,
-  PieChart,
   LogOut,
   Menu,
   X,

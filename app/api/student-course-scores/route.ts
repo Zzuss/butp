@@ -198,9 +198,9 @@ export async function POST(request: NextRequest) {
     };
 
     // 查询courses表获取课程学期、类别和学分信息
-    let courseIdToSemesterMap: Record<string, number | null> = {};
-    let courseIdToCategoryMap: Record<string, string | null> = {};
-    let courseIdToCreditMap: Record<string, number | null> = {};
+    const courseIdToSemesterMap: Record<string, number | null> = {};
+    const courseIdToCategoryMap: Record<string, string | null> = {};
+    const courseIdToCreditMap: Record<string, number | null> = {};
     
     try {
       // 获取所有课程编号
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
           }
         });
       }
-    } catch (error) {
+    } catch {
       // 静默处理错误
     }
     

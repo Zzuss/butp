@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, Target, Brain, ChevronDown } from "lucide-react"
+import { ChevronDown } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { getTopPercentageGPAThreshold } from "@/lib/dashboard-data"
 import { getStudentAbilityData } from "@/lib/ability-data"
@@ -39,7 +39,7 @@ export default function Analysis() {
   const [selectedButton, setSelectedButton] = useState<'graduation' | 'overseas' | 'domestic' | null>(null);
   
   // 毕业要求状态
-  const [graduationRequirements, setGraduationRequirements] = useState({
+  const [graduationRequirements] = useState({
     credits: { required: 160, earned: 145, completed: false },
     gpa: { required: 2.0, current: 3.2, completed: true },
     thesis: { completed: false },
@@ -64,7 +64,7 @@ export default function Analysis() {
   const [loadingProbability, setLoadingProbability] = useState(false);
   
   // 培养方案状态
-  const [showCurriculum, setShowCurriculum] = useState(false);
+  // const [showCurriculum, setShowCurriculum] = useState(false);
   const [studentMajor, setStudentMajor] = useState<string | null>(null);
   const [loadingMajor, setLoadingMajor] = useState(false);
   
@@ -113,7 +113,36 @@ export default function Analysis() {
   }>>([]);
   
   // 所有课程数据状态
-  const [allCourseData, setAllCourseData] = useState<any>(null);
+  const [allCourseData, setAllCourseData] = useState<{
+    source1: Array<{
+      courseName: string;
+      score: number | null;
+      semester: number | null;
+      category: string | null;
+      courseId?: string;
+      credit?: number;
+    }>;
+    source2: Array<{
+      courseName: string;
+      score: number | null;
+      semester: number | null;
+      category: string | null;
+      courseId?: string;
+      credit?: number;
+    }>;
+    merged: Array<{
+      courseName: string;
+      score: number | null;
+      semester: number | null;
+      category: string | null;
+      courseId?: string;
+      credit?: number;
+    }>;
+    cacheInfo: {
+      hasModifications: boolean;
+      modifiedCount: number;
+    };
+  } | null>(null);
   const [loadingAllCourseData, setLoadingAllCourseData] = useState(false);
   const [showAllCourseData, setShowAllCourseData] = useState(false);
   
@@ -156,7 +185,7 @@ export default function Analysis() {
           [cacheKey]: threshold
         }));
       }
-    } catch (error) {
+    } catch {
       setGpaThreshold(null);
     } finally {
       setLoadingGPA(false);
@@ -171,7 +200,7 @@ export default function Analysis() {
     try {
       const data = await getStudentAbilityData(currentStudent.id);
       setAbilityData(data);
-    } catch (error) {
+    } catch {
       setAbilityData([50, 70, 80, 50, 70, 80, 50, 70, 80]);
     } finally {
       setLoadingAbility(false);
@@ -185,7 +214,7 @@ export default function Analysis() {
   };
 
   // 处理毕业要求编辑
-  const handleGraduationEdit = (requirementKey: keyof typeof graduationRequirements) => {
+  const handleGraduationEdit = () => {
     setSubmitting(true);
     setShowNotification(true);
     
@@ -877,10 +906,10 @@ export default function Analysis() {
                           <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
                             {course.score !== null ? (
                               <span className={`font-bold ${
-                                course.score >= 90 ? 'text-green-600' :
-                                course.score >= 80 ? 'text-blue-600' :
-                                course.score >= 70 ? 'text-yellow-600' :
-                                course.score >= 60 ? 'text-orange-600' :
+                                Number(course.score) >= 90 ? 'text-green-600' :
+                                Number(course.score) >= 80 ? 'text-blue-600' :
+                                Number(course.score) >= 70 ? 'text-yellow-600' :
+                                Number(course.score) >= 60 ? 'text-orange-600' :
                                 'text-red-600'
                               }`}>
                                 {course.score}
@@ -1078,7 +1107,7 @@ export default function Analysis() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleGraduationEdit('credits')}
+                            onClick={() => handleGraduationEdit()}
                             disabled={submitting}
                             className="h-7 px-2 text-xs"
                           >
@@ -1139,7 +1168,7 @@ export default function Analysis() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleGraduationEdit('thesis')}
+                            onClick={() => handleGraduationEdit()}
                             disabled={submitting}
                             className="h-7 px-2 text-xs"
                           >
@@ -1167,7 +1196,7 @@ export default function Analysis() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleGraduationEdit('certificates')}
+                            onClick={() => handleGraduationEdit()}
                             disabled={submitting}
                             className="h-7 px-2 text-xs"
                           >

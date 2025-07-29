@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     // 调用Python脚本进行预测
     const pythonScript = path.join(process.cwd(), 'test_model', 'predict_script.py');
     
-    return new Promise((resolve, reject) => {
+    return new Promise<Response>((resolve) => {
       const pythonProcess = spawn('python', [pythonScript, JSON.stringify(features)]);
       
       let result = '';
