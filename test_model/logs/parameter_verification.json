@@ -1,0 +1,174 @@
+{
+  "timestamp": "2025-07-29T21:39:34.676235",
+  "best_params": {
+    "colsample_bytree": 0.8,
+    "learning_rate": 0.1,
+    "max_depth": 3,
+    "min_child_weight": 5,
+    "n_estimators": 100,
+    "reg_alpha": 0.5,
+    "reg_lambda": 1,
+    "subsample": 0.8
+  },
+  "current_params": {
+    "objective": "multi:softprob",
+    "base_score": null,
+    "booster": null,
+    "callbacks": null,
+    "colsample_bylevel": null,
+    "colsample_bynode": null,
+    "colsample_bytree": 0.8,
+    "device": "cuda",
+    "early_stopping_rounds": null,
+    "enable_categorical": false,
+    "eval_metric": "mlogloss",
+    "feature_types": null,
+    "gamma": null,
+    "grow_policy": null,
+    "importance_type": null,
+    "interaction_constraints": null,
+    "learning_rate": 0.1,
+    "max_bin": null,
+    "max_cat_threshold": null,
+    "max_cat_to_onehot": null,
+    "max_delta_step": null,
+    "max_depth": 3,
+    "max_leaves": null,
+    "min_child_weight": 5,
+    "missing": NaN,
+    "monotone_constraints": null,
+    "multi_strategy": null,
+    "n_estimators": 100,
+    "n_jobs": null,
+    "num_parallel_tree": null,
+    "random_state": 42,
+    "reg_alpha": 0.5,
+    "reg_lambda": 1,
+    "sampling_method": null,
+    "scale_pos_weight": null,
+    "subsample": 0.8,
+    "tree_method": "hist",
+    "validate_parameters": null,
+    "verbosity": null,
+    "use_label_encoder": false
+  },
+  "parameter_verification": {
+    "colsample_bytree": {
+      "expected": 0.8,
+      "actual": 0.8,
+      "match": true
+    },
+    "learning_rate": {
+      "expected": 0.1,
+      "actual": 0.1,
+      "match": true
+    },
+    "max_depth": {
+      "expected": 3,
+      "actual": 3,
+      "match": true
+    },
+    "min_child_weight": {
+      "expected": 5,
+      "actual": 5,
+      "match": true
+    },
+    "n_estimators": {
+      "expected": 100,
+      "actual": 100,
+      "match": true
+    },
+    "reg_alpha": {
+      "expected": 0.5,
+      "actual": 0.5,
+      "match": true
+    },
+    "reg_lambda": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "subsample": {
+      "expected": 0.8,
+      "actual": 0.8,
+      "match": true
+    }
+  },
+  "model_info": {
+    "n_estimators": 100,
+    "file_size": 316510,
+    "model_type": "<class 'xgboost.sklearn.XGBClassifier'>"
+  },
+  "prediction_consistency": {
+    "consistent": true,
+    "predictions": [
+      [
+        0.5676071643829346,
+        0.4210966229438782,
+        0.011296259239315987
+      ],
+      [
+        0.5676071643829346,
+        0.4210966229438782,
+        0.011296259239315987
+      ],
+      [
+        0.5676071643829346,
+        0.4210966229438782,
+        0.011296259239315987
+      ],
+      [
+        0.5676071643829346,
+        0.4210966229438782,
+        0.011296259239315987
+      ],
+      [
+        0.5676071643829346,
+        0.4210966229438782,
+        0.011296259239315987
+      ]
+    ]
+  },
+  "default_comparison": {
+    "colsample_bytree": {
+      "default": null,
+      "loaded": 0.8,
+      "is_different": true
+    },
+    "learning_rate": {
+      "default": null,
+      "loaded": 0.1,
+      "is_different": true
+    },
+    "max_depth": {
+      "default": null,
+      "loaded": 3,
+      "is_different": true
+    },
+    "min_child_weight": {
+      "default": null,
+      "loaded": 5,
+      "is_different": true
+    },
+    "n_estimators": {
+      "default": null,
+      "loaded": 100,
+      "is_different": true
+    },
+    "reg_alpha": {
+      "default": null,
+      "loaded": 0.5,
+      "is_different": true
+    },
+    "reg_lambda": {
+      "default": null,
+      "loaded": 1,
+      "is_different": true
+    },
+    "subsample": {
+      "default": null,
+      "loaded": 0.8,
+      "is_different": true
+    }
+  }
+}

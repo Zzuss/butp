@@ -9,7 +9,6 @@ import {
   Users, 
   TrendingUp,
   GraduationCap,
-  PieChart,
   LogOut,
   Menu,
   X,
@@ -38,22 +37,16 @@ const sidebarItems = [
     icon: BarChart3,
   },
   {
-    title: "Role Model",
-    titleKey: "sidebar.rolemodels",
-    href: "/role-models",
-    icon: Users,
-  },
-  {
     title: "分析模块",
     titleKey: "sidebar.analysis",
     href: "/analysis",
     icon: TrendingUp,
   },
   {
-    title: "图表测试",
-    titleKey: "sidebar.charts",
-    href: "/charts",
-    icon: PieChart,
+    title: "Role Model",
+    titleKey: "sidebar.rolemodels",
+    href: "/role-models",
+    icon: Users,
   },
   {
     title: "关于BuTP",
@@ -139,7 +132,7 @@ export function AppSidebar() {
         className={`h-screen flex flex-col transition-all duration-300 ease-in-out ${
           isMobile 
             ? `fixed top-0 left-0 z-40 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} shadow-lg`
-            : isCollapsed ? 'w-16' : 'w-64'
+            : isCollapsed ? 'w-16' : 'w-52'
         }`}
       >
         <SidebarHeader className="relative">

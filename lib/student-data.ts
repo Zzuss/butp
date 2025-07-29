@@ -1,139 +1,53 @@
-import { createHash } from 'crypto';
-import { supabase } from './supabase';
-
 /**
- * 将学号转换为SHA256哈希值
- * @param studentId 原始学号
- * @returns SHA256哈希值
- */
-export function hashStudentId(studentId: string): string {
-  return createHash('sha256').update(studentId).digest('hex');
-}
-
-/**
- * 检查学号哈希值是否在数据库中存在
+ * 动态验证学号哈希值（从数据库中查询）
  * @param hash 学号哈希值
  * @returns 是否有效
  */
-export async function isValidStudentHashInDatabase(hash: string): Promise<boolean> {
+export async function isValidStudentHash(hash: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase
-      .from('academic_results')
-      .select('SNH')
-      .eq('SNH', hash)
-      .limit(1);
-    
-    if (error) {
-      console.error('Error checking student hash in database:', error);
-      return false;
-    }
-    
-    return data && data.length > 0;
+    const response = await fetch('/api/verify-student', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ studentHash: hash })
+    });
+
+    return response.ok;
   } catch (error) {
-    console.error('Database query failed:', error);
+    console.error('Error verifying student hash:', error);
     return false;
   }
 }
 
 /**
- * 检查学号哈希值是否有效（格式检查）
- * @param hash 学号哈希值
- * @returns 是否符合哈希格式
- */
-export function isValidStudentHash(hash: string): boolean {
-  // 检查是否符合64位十六进制字符串格式（SHA256）
-  return /^[a-f0-9]{64}$/i.test(hash);
-}
-
-/**
- * 检查原始学号是否有效（通过检查其哈希值格式）
- * @param studentId 原始学号
- * @returns 是否有效
- */
-export function isValidStudentId(studentId: string): boolean {
-  const hashedId = hashStudentId(studentId);
-  return isValidStudentHash(hashedId);
-}
-
-/**
- * 从数据库获取学生信息
+ * 动态获取学号哈希值对应的学生信息
  * @param hash 学号哈希值
  * @returns 学生信息对象
  */
-export async function getStudentInfoByHash(hash: string): Promise<{ id: string; name: string; major: string; year?: string } | null> {
+export async function getStudentInfoByHash(hash: string): Promise<{ id: string; name: string; class: string }> {
   try {
-    const { data, error } = await supabase
-      .from('academic_results')
-      .select('SNH, Current_Major')
-      .eq('SNH', hash)
-      .limit(1);
-    
-    if (error) {
-      console.error('Error fetching student info:', error);
-      return null;
+    const response = await fetch('/api/verify-student', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ studentHash: hash })
+    });
+  
+    if (response.ok) {
+      const data = await response.json();
+      return data.studentInfo;
+    } else {
+      throw new Error('Failed to get student info');
     }
-    
-    if (data && data.length > 0) {
-      const student = data[0];
-      return {
-        id: hash,
-        name: `学生 ${hash.substring(0, 8)}`, // 使用哈希前8位作为显示名
-        major: student.Current_Major || '未知专业',
-      };
-    }
-    
-    return null;
   } catch (error) {
-    console.error('Database query failed:', error);
-    return null;
-  }
-}
-
-/**
- * 获取原始学号对应的学生信息（通过哈希化并查询数据库）
- * @param studentId 原始学号
- * @returns 学生信息对象，包含哈希值
- */
-export async function getStudentInfoById(studentId: string): Promise<{ id: string; hash: string; name: string; major: string } | null> {
-  const hash = hashStudentId(studentId);
-  const info = await getStudentInfoByHash(hash);
-  
-  if (info) {
-    return {
-      ...info,
-      hash: hash,
-    };
-  }
-  
-  return null;
-}
-
-/**
- * 验证CAS认证的学号是否在数据库中存在
- * @param studentId CAS返回的原始学号
- * @returns 验证结果和哈希值
- */
-export async function validateCasStudentId(studentId: string): Promise<{ isValid: boolean; hash: string; studentInfo?: { id: string; name: string; major: string; year?: string } | null }> {
-  const hash = hashStudentId(studentId);
-  
-  console.log('Validating CAS student ID:', {
-    originalId: studentId,
-    generatedHash: hash
-  });
-  
-  const isValid = await isValidStudentHashInDatabase(hash);
-  
-  if (isValid) {
-    const studentInfo = await getStudentInfoByHash(hash);
-    return {
-      isValid: true,
-      hash: hash,
-      studentInfo: studentInfo
-    };
-  }
-  
+    console.error('Error getting student info:', error);
+    // 返回默认信息
   return {
-    isValid: false,
-    hash: hash
+    id: hash,
+    name: `学生 ${hash.substring(0, 6)}`,
+    class: "未知专业"
   };
+  }
 }
