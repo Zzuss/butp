@@ -1,0 +1,46 @@
+{
+  "test_cases": [
+    {
+      "name": "正常数据测试",
+      "features": {
+        "public": 85.5,
+        "political": 88.0,
+        "english": 92.3,
+        "math_science": 87.8,
+        "basic_subject": 89.2,
+        "basic_major": 86.7,
+        "major": 90.1,
+        "practice": 84.9,
+        "innovation": 88.5
+      }
+    },
+    {
+      "name": "边界值测试",
+      "features": {
+        "public": 60.0,
+        "political": 60.0,
+        "english": 60.0,
+        "math_science": 60.0,
+        "basic_subject": 60.0,
+        "basic_major": 60.0,
+        "major": 60.0,
+        "practice": 60.0,
+        "innovation": 60.0
+      }
+    },
+    {
+      "name": "高分测试",
+      "features": {
+        "public": 95.0,
+        "political": 95.0,
+        "english": 95.0,
+        "math_science": 95.0,
+        "basic_subject": 95.0,
+        "basic_major": 95.0,
+        "major": 95.0,
+        "practice": 95.0,
+        "innovation": 95.0
+      }
+    }
+  ]
+} 

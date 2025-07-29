@@ -121,10 +121,20 @@ export default function Analysis() {
   const [calculatedFeatures, setCalculatedFeatures] = useState<Record<string, number> | null>(null);
   const [loadingFeatures, setLoadingFeatures] = useState(false);
   
+  // 当前去向的新可能
+  const [newPossibility, setNewPossibility] = useState<{
+    current: string;
+    other: string;
+  } | null>(null);
+  
+
+  
   // 获取当前应该显示的成绩数据
   const getCurrentScores = () => {
-    return originalScores;
+    return modifiedScores;
   };
+
+
   
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
@@ -783,7 +793,7 @@ export default function Analysis() {
                   <CardTitle className="text-lg font-medium">{t('analysis.course.scores.title')}</CardTitle>
                   <CardDescription>{t('analysis.course.scores.description')}</CardDescription>
                 </div>
-                <div className="flex-1 flex justify-center">
+                <div className="flex-1 flex justify-center items-center gap-4">
                   {isEditMode ? (
                     <Button 
                       variant="default"
@@ -802,6 +812,11 @@ export default function Analysis() {
                     >
                       {t('analysis.course.scores.modify.future')}
                     </Button>
+                  )}
+                  {newPossibility && (
+                    <div className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg font-medium">
+                      当前去向的新可能为：{newPossibility.current}，另一去向的新可能为：{newPossibility.other}
+                    </div>
                   )}
                 </div>
                 <div className="w-32 flex justify-end">
@@ -1379,10 +1394,23 @@ export default function Analysis() {
             </div>
             
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                {t('analysis.confirm.modal.description')}
-              </p>
-                  </div>
+              <button
+                onClick={() => {
+                  // 设置静态的新可能值（暂时）
+                  setNewPossibility({
+                    current: '85.5%',
+                    other: '12.3%'
+                  });
+                  // 关闭确认模态框
+                  setShowConfirmModal(false);
+                  // 退出编辑模式，回到修改未来按钮界面
+                  setIsEditMode(false);
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                计算人生新可能
+              </button>
+            </div>
                   </div>
                 </div>
       )}
