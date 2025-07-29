@@ -2,20 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getSubjectGrades, getRadarChartData, type RadarChartData } from "@/lib/dashboard-data"
-import { useSimpleAuth } from "@/contexts/simple-auth-context"
+import { getSubjectGrades, getRadarChartData } from "@/lib/dashboard-data"
+import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 import { RadarChart } from "@/components/ui/radar-chart"
 import Link from 'next/link'
 
 export default function AllGrades() {
-  const { currentStudent } = useSimpleAuth()
+  const { user } = useAuth()
   const { t, language } = useLanguage()
   const [grades, setGrades] = useState<Awaited<ReturnType<typeof getSubjectGrades>>>([])
   const [loading, setLoading] = useState(false)
   const [selectedRow, setSelectedRow] = useState<number | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [radarData, setRadarData] = useState<RadarChartData | null>(null)
+  const [radarData, setRadarData] = useState<{ [key: string]: number } | null>(null)
   const [loadingRadar, setLoadingRadar] = useState(false)
   const [selectedCourseName, setSelectedCourseName] = useState<string>('')
 
@@ -26,10 +26,10 @@ export default function AllGrades() {
   }
 
   useEffect(() => {
-    if (currentStudent) {
-      loadGrades(currentStudent.id)
+    if (user?.isLoggedIn) {
+      loadGrades(user.userId)
     }
-  }, [currentStudent, language])
+  }, [user, language])
 
   async function loadGrades(studentId: string) {
     setLoading(true)
@@ -43,8 +43,8 @@ export default function AllGrades() {
       // 按学分从高到低排序
       const sortedGrades = [...allGrades].sort((a, b) => b.credit - a.credit)
       setGrades(sortedGrades)
-    } catch (error) {
-      console.error('Failed to load grades data:', error)
+    } catch (_error) {
+      console.error('Failed to load grades data:', _error)
     } finally {
       setLoading(false)
     }
@@ -72,8 +72,8 @@ export default function AllGrades() {
       try {
         const data = await getRadarChartData(grades[index].course_id!)
         setRadarData(data)
-      } catch (error) {
-        console.error('Failed to load radar chart data:', error)
+      } catch (_error) {
+        console.error('Failed to load radar chart data:', _error)
         setRadarData(null)
       } finally {
         setLoadingRadar(false)
@@ -91,7 +91,7 @@ export default function AllGrades() {
     return credit.toFixed(1)
   }
 
-  if (!currentStudent) {
+  if (!user?.isLoggedIn) {
     return (
       <div className="p-6">
         <div className="mb-6">
@@ -107,7 +107,7 @@ export default function AllGrades() {
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">{t('grades.title')}</h1>
-          <p className="text-muted-foreground">{t('grades.loading').replace('{name}', currentStudent.name)}</p>
+          <p className="text-muted-foreground">{t('grades.loading').replace('{name}', user?.name || '')}</p>
         </div>
         <div className="mt-6 flex items-center justify-center h-32">
           <div className="text-muted-foreground">{t('grades.loading.message')}</div>
@@ -121,7 +121,7 @@ export default function AllGrades() {
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">{t('grades.title')}</h1>
-          <p className="text-muted-foreground">{t('grades.description').replace('{name}', currentStudent.name)}</p>
+          <p className="text-muted-foreground">{t('grades.description').replace('{name}', user?.name || '')}</p>
         </div>
         <Link href="/dashboard" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
           {t('grades.back.to.dashboard')}
@@ -200,17 +200,7 @@ export default function AllGrades() {
                   <div className="text-muted-foreground">加载中...</div>
                 </div>
               ) : radarData ? (
-                <RadarChart 
-                  data={[
-                    radarData.knowledge, 
-                    radarData.application, 
-                    radarData.analysis, 
-                    radarData.synthesis, 
-                    radarData.evaluation
-                  ]} 
-                  labels={['知识掌握', '应用能力', '分析能力', '综合能力', '评价能力']} 
-                  className="w-full max-w-md"
-                />
+                <RadarChart data={radarData} width={500} height={500} />
               ) : (
                 <div className="flex items-center justify-center h-48">
                   <div className="text-muted-foreground">暂无数据</div>
