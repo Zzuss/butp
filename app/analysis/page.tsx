@@ -1395,16 +1395,71 @@ export default function Analysis() {
             
             <div className="mt-6 text-center">
               <button
-                onClick={() => {
-                  // 设置静态的新可能值（暂时）
-                  setNewPossibility({
-                    current: '85.5%',
-                    other: '12.3%'
-                  });
-                  // 关闭确认模态框
-                  setShowConfirmModal(false);
-                  // 退出编辑模式，回到修改未来按钮界面
-                  setIsEditMode(false);
+                onClick={async () => {
+                  try {
+                    // 检查是否有计算出的特征值
+                    if (!calculatedFeatures) {
+                      console.error('没有可用的特征值');
+                      return;
+                    }
+
+                    // 准备特征数据（按顺序：公共课程、政治理论、基础学科、专业课程、实践课程、创新创业、人文素养、科学素养、身心健康）
+                    const featureOrder = [
+                      '公共课程', '政治理论', '基础学科', '专业课程', 
+                      '实践课程', '创新创业', '人文素养', '科学素养', '身心健康'
+                    ];
+                    
+                    const features = featureOrder.map(feature => calculatedFeatures[feature] || 0);
+
+                    // 调用预测API
+                    const response = await fetch('/api/predict-possibility', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ features }),
+                    });
+
+                    if (!response.ok) {
+                      throw new Error('预测请求失败');
+                    }
+
+                    const result = await response.json();
+
+                    if (result.error) {
+                      throw new Error(result.error);
+                    }
+
+                    // 根据当前界面类型确定当前去向和另一去向
+                    let currentPossibility, otherPossibility;
+                    
+                    if (selectedButton === 'overseas') {
+                      // 海外读研界面
+                      currentPossibility = result.probabilities.overseas.toFixed(1) + '%';
+                      otherPossibility = result.probabilities.domestic.toFixed(1) + '%';
+                    } else if (selectedButton === 'domestic') {
+                      // 国内读研界面
+                      currentPossibility = result.probabilities.domestic.toFixed(1) + '%';
+                      otherPossibility = result.probabilities.overseas.toFixed(1) + '%';
+                    } else {
+                      throw new Error('未知的界面类型');
+                    }
+
+                    // 设置新可能值
+                    setNewPossibility({
+                      current: currentPossibility,
+                      other: otherPossibility
+                    });
+
+                    // 关闭确认模态框
+                    setShowConfirmModal(false);
+                    // 退出编辑模式，回到修改未来按钮界面
+                    setIsEditMode(false);
+
+                  } catch (error) {
+                    console.error('计算人生新可能失败:', error);
+                    alert('计算失败，请重试');
+                  }
                 }}
                 className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
