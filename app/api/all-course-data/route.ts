@@ -171,6 +171,64 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // 来源1 category 到9个特征值的映射表
+    // 注意：如果需要添加新的课程类别或修改映射关系，需要手动更新这个映射表
+    const source1CategoryToFeatureMapping: Record<string, string> = {
+      // 公共课程
+      '公共课': '公共课程',
+      '素质教育': '公共课程',
+      '素质教育-人文社科类': '公共课程',
+      '素质教育-理工类': '公共课程',
+      '素质教育-艺术类': '公共课程',
+      '体育': '公共课程',
+      '体育、美育': '公共课程',
+      '体育专项课': '公共课程',
+      '体育类': '公共课程',
+      '体育课等': '公共课程',
+      '安全教育': '公共课程',
+      '其他': '公共课程',
+      '心理健康': '公共课程',
+      '军事理论': '公共课程',
+      
+      // 实践课程
+      '实践教学': '实践课程',
+      '实践教学课': '实践课程',
+      
+      // 数学科学
+      '数学与自然科学': '数学科学',
+      
+      // 政治课程
+      '思想政治理论': '政治课程',
+      '思想政治理论课': '政治课程',
+      
+      // 基础学科
+      '数学与自然科学基础': '基础学科',
+      '计算机基础': '基础学科',
+      
+      // 创新课程
+      '校级创新创业课程': '创新课程',
+      '校级双创课': '创新课程',
+      '院级双创课': '创新课程',
+      '学院特色创新5学分': '创新课程',
+      '学院特色创新6学分': '创新课程',
+      '学院特色创新学分（5学分)': '创新课程',
+      '学院特色创新必修3学分': '创新课程',
+      '学院特色创新必修5学分': '创新课程',
+      
+      // 英语课程
+      '外语': '英语课程',
+      '英语': '英语课程',
+      
+      // 基础专业
+      '专业基础': '基础专业',
+      '专业课基础': '基础专业',
+      '学科基础': '基础专业',
+      
+      // 专业课程
+      '专业课': '专业课程',
+      '叶培大学院辅修': '专业课程'
+    };
+
     // 课程名称到课程编号的映射表（基于真实数据）
     const courseNameToIdMapping: Record<string, string> = {
       // 政治理论课程
@@ -264,13 +322,17 @@ export async function POST(request: NextRequest) {
         // 当前成绩就是修改后的成绩
         const currentScore = typeof course.score === 'string' ? parseFloat(course.score) : course.score;
         
+        // 应用来源1的category映射
+        const originalCategory = course.category || courseInfo?.category || null;
+        const mappedCategory = originalCategory ? source1CategoryToFeatureMapping[originalCategory] || '基础学科' : '基础学科';
+        
         source1Courses.push({
           source: 'cohort_predictions',
           courseName: course.courseName,
           courseId: courseId || null,
           score: currentScore,
           semester: course.semester || courseInfo?.semester || null,
-          category: course.category || courseInfo?.category || null,
+          category: mappedCategory, // 使用映射后的category
           credit: course.credit || courseInfo?.credit || null,
           rawData: course
         });

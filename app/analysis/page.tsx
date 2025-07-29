@@ -117,6 +117,10 @@ export default function Analysis() {
   const [loadingAllCourseData, setLoadingAllCourseData] = useState(false);
   const [showAllCourseData, setShowAllCourseData] = useState(false);
   
+  // 特征值状态
+  const [calculatedFeatures, setCalculatedFeatures] = useState<Record<string, number> | null>(null);
+  const [loadingFeatures, setLoadingFeatures] = useState(false);
+  
   // 获取当前应该显示的成绩数据
   const getCurrentScores = () => {
     return originalScores;
@@ -325,16 +329,60 @@ export default function Analysis() {
   };
 
   // 处理确认修改
-  const handleConfirmModification = () => {
-    // 确保所有成绩都是数字类型
-    setModifiedScores(prev => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.map(course => ({
-        ...course,
-        score: typeof course.score === 'string' ? parseFloat(course.score) : course.score
-      }));
-    });
-    setShowConfirmModal(true);
+  const handleConfirmModification = async () => {
+    // 确保所有成绩都是数字类型，并等待更新完成
+    const updatedScores = modifiedScores.map(course => ({
+      ...course,
+      score: typeof course.score === 'string' ? parseFloat(course.score) : course.score
+    }));
+    
+    // 立即更新状态
+    setModifiedScores(updatedScores);
+    
+    // 计算特征值
+    setLoadingFeatures(true);
+    try {
+      // 使用更新后的数据
+      const response = await fetch('/api/all-course-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentHash: currentStudent?.id,
+          modifiedScores: updatedScores, // 直接使用更新后的数据
+          source2Scores: source2Scores.map(score => ({
+            ...score,
+            source: 'academic_results'
+          }))
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // 使用合成后的数据计算特征值
+        const featureResponse = await fetch('/api/calculate-features', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            allCourses: data.data.allCourses
+          })
+        });
+
+        if (featureResponse.ok) {
+          const featureData = await featureResponse.json();
+          setCalculatedFeatures(featureData.data.featureValues);
+        } else {
+          console.error('Failed to calculate features');
+        }
+      } else {
+        console.error('Failed to load all course data');
+      }
+    } catch (error) {
+      console.error('Error calculating features:', error);
+    } finally {
+      setLoadingFeatures(false);
+      setShowConfirmModal(true);
+    }
     
     // 清除缓存，确保下次加载时使用新的数据
     if (currentStudent?.id) {
@@ -525,6 +573,26 @@ export default function Analysis() {
         const data = await response.json();
         setAllCourseData(data.data);
         setShowAllCourseData(true);
+        
+        // 计算特征值
+        try {
+          const featureResponse = await fetch('/api/calculate-features', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              allCourses: data.data.allCourses
+            })
+          });
+
+          if (featureResponse.ok) {
+            const featureData = await featureResponse.json();
+            setCalculatedFeatures(featureData.data.featureValues);
+          } else {
+            console.error('Failed to calculate features');
+          }
+        } catch (error) {
+          console.error('Error calculating features:', error);
+        }
         
         // 保存到缓存
         setStudentDataCache(prev => ({
@@ -1289,24 +1357,34 @@ export default function Analysis() {
                     >
                 ✕
                     </button>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4">
-              {currentAbilityLabels.map((label, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                  <div className="text-sm font-medium text-gray-600 mb-2">{label}</div>
-                  <div className="text-2xl font-bold text-blue-600">{index + 1}</div>
                   </div>
-                ))}
-              </div>
+            
+                        <div className="grid grid-cols-3 gap-4">
+              {loadingFeatures ? (
+                <div className="col-span-3 text-center py-8">
+                  <div className="text-muted-foreground">{t('analysis.confirm.modal.loading')}</div>
+                </div>
+              ) : calculatedFeatures ? (
+                Object.entries(calculatedFeatures).map(([category, value]) => (
+                  <div key={category} className="p-4 border border-gray-200 rounded-lg">
+                    <div className="text-sm font-medium text-gray-600 mb-2">{category}</div>
+                    <div className="text-2xl font-bold text-blue-600">{value.toFixed(3)}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-8">
+                  <div className="text-muted-foreground">暂无特征值数据</div>
+                </div>
+              )}
+            </div>
             
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 {t('analysis.confirm.modal.description')}
               </p>
-            </div>
-          </div>
-        </div>
+                  </div>
+                  </div>
+                </div>
       )}
 
       {/* 所有课程数据模态框 */}
@@ -1515,6 +1593,24 @@ export default function Analysis() {
                 </table>
               </div>
             </div>
+
+            {/* 计算出的特征值显示 */}
+            {calculatedFeatures && (
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-semibold mb-3 text-blue-800">基于当前数据计算出的9个特征值</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  {Object.entries(calculatedFeatures).map(([category, value]) => (
+                    <div key={category} className="p-3 border border-blue-300 rounded-lg bg-white">
+                      <div className="text-sm font-medium text-blue-700 mb-1">{category}</div>
+                      <div className="text-xl font-bold text-blue-600">{value.toFixed(3)}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 text-xs text-blue-600">
+                  计算方法：按类别分组，计算加权平均值（成绩×学分/总学分）
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
