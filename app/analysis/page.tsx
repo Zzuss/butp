@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { TrendingUp, Target, Brain, Check, Plus, X, ChevronDown } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { getTopPercentageGPAThreshold } from "@/lib/dashboard-data"
+import { ExportButton } from '@/components/pdf/PagePDFExport'
 
 const subjectAnalysis = [
   { subject: '数学', current: 95, target: 98, gap: 3 },
@@ -183,9 +184,16 @@ export default function Analysis() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
-        <p className="text-muted-foreground">{t('analysis.description')}</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
+          <p className="text-muted-foreground">{t('analysis.description')}</p>
+        </div>
+        <ExportButton 
+          pageTitle="学习分析报告"
+          fileName={`learning_analysis_${new Date().toISOString().split('T')[0]}.pdf`}
+          contentSelector=".analysis-content"
+        />
       </div>
 
       {/* 免责声明 */}
@@ -195,7 +203,8 @@ export default function Analysis() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="analysis-content">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('analysis.efficiency.title')}</CardTitle>
@@ -424,6 +433,7 @@ export default function Analysis() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   )

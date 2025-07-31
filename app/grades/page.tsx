@@ -6,6 +6,7 @@ import { getSubjectGrades, getRadarChartData } from "@/lib/dashboard-data"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 import { RadarChart } from "@/components/ui/radar-chart"
+import { ExportButton } from '@/components/pdf/PagePDFExport'
 import Link from 'next/link'
 
 export default function AllGrades() {
@@ -123,25 +124,33 @@ export default function AllGrades() {
           <h1 className="text-3xl font-bold">{t('grades.title')}</h1>
           <p className="text-muted-foreground">{t('grades.description').replace('{name}', user?.name || '')}</p>
         </div>
-        <Link href="/dashboard" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-          {t('grades.back.to.dashboard')}
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton 
+            pageTitle="学生成绩单"
+            fileName={`${user?.name || 'student'}_grades_${new Date().toISOString().split('T')[0]}.pdf`}
+            contentSelector=".grades-content"
+          />
+          <Link href="/dashboard" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+            {t('grades.back.to.dashboard')}
+          </Link>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle>{t('grades.all.courses.title')}</CardTitle>
-              <CardDescription>{t('grades.all.courses.description')}</CardDescription>
-            </div>
-            <div className="flex-1 flex justify-center">
-              <div className="text-base font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-md">
-                {t('grades.all.courses.click.hint')}
+      <div className="grades-content">
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>{t('grades.all.courses.title')}</CardTitle>
+                <CardDescription>{t('grades.all.courses.description')}</CardDescription>
+              </div>
+              <div className="flex-1 flex justify-center">
+                <div className="text-base font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-md">
+                  {t('grades.all.courses.click.hint')}
+                </div>
               </div>
             </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -179,6 +188,7 @@ export default function AllGrades() {
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {/* 悬浮窗 */}
       {showModal && (

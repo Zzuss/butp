@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle } from 'lucide-react'
+import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle, Download } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ExportButton } from '@/components/pdf/PagePDFExport'
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage } from '@/contexts/language-context'
@@ -112,18 +113,26 @@ export default function DashboardPage() {
   
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
-        <p className="text-muted-foreground">
-          {studentInfo 
-            ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-            : t('dashboard.description', { name: user?.name || '' })
-          }
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
+          <p className="text-muted-foreground">
+            {studentInfo 
+              ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+              : t('dashboard.description', { name: user?.name || '' })
+            }
+          </p>
+        </div>
+        <ExportButton 
+          pageTitle="学生仪表板"
+          fileName={`${user?.name || 'student'}_dashboard_${new Date().toISOString().split('T')[0]}.pdf`}
+          contentSelector=".dashboard-content"
+        />
       </div>
       
       {/* 统计卡片 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="dashboard-content">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
@@ -320,6 +329,7 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
       
       {/* 课程类型分布 */}
