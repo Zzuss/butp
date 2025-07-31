@@ -44,7 +44,8 @@ export default function LoginPage() {
 
   // 测试哈希值
   const testHashes = [
-    "a97af3ae898a3d3e2c2c8aecd9f49fc0a0474e813c218f3891016ac0466fcb55"
+    "a97af3ae898a3d3e2c2c8aecd9f49fc0a0474e813c218f3891016ac0466fcb55",
+    "353214f8e1ccebe2297a845d528311086a2a582f4470dfe362c0114d4898bc06"
   ]
 
   // 复制到剪贴板并填入输入框
