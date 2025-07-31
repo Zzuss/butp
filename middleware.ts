@@ -41,8 +41,21 @@ export async function middleware(request: NextRequest) {
   const isProtectedPath = PROTECTED_PATHS.some(path => pathname.startsWith(path));
   
   if (isProtectedPath) {
+    // 检查是否为本地开发环境
+    const isLocalhost = request.nextUrl.hostname === 'localhost' || 
+                       request.nextUrl.hostname === '127.0.0.1' ||
+                       process.env.NODE_ENV === 'development';
+    
+    if (isLocalhost) {
+      // 本地开发环境：直接重定向到登录页面，跳过CAS认证
+      console.log('Middleware: localhost detected, redirecting to login page for path:', pathname);
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('returnUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    
     try {
-      // 检查用户会话
+      // 生产环境：检查用户会话
       const response = NextResponse.next();
       const session = await getIronSession<SessionData>(request, response, sessionOptions);
       

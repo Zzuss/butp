@@ -57,12 +57,12 @@ export async function POST(request: NextRequest) {
       session.userHash = userHash; // 使用用户输入的哈希值
     } else {
       // 否则验证哈希值匹配
-      if (session.userHash !== userHash) {
-        console.error('Complete CAS login: userHash mismatch');
-        return NextResponse.json(
-          { error: 'UserHash mismatch' },
-          { status: 401 }
-        );
+    if (session.userHash !== userHash) {
+      console.error('Complete CAS login: userHash mismatch');
+      return NextResponse.json(
+        { error: 'UserHash mismatch' },
+        { status: 401 }
+      );
       }
     }
 
