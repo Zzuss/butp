@@ -50,6 +50,12 @@ const sidebarItems = [
     icon: Users,
   },
   {
+    title: "PDF演示",
+    titleKey: "sidebar.pdfdemo",
+    href: "/pdf-demo",
+    icon: FileText,
+  },
+  {
     title: "关于BuTP",
     titleKey: "about.title",
     href: "/about",
