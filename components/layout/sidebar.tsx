@@ -22,6 +22,7 @@ import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/component
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
+import { trackUserAction } from "@/lib/analytics"
 
 const sidebarItems = [
   {
@@ -63,6 +64,17 @@ export function AppSidebar() {
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  // 处理登出事件
+  const handleLogout = () => {
+    // 追踪登出事件
+    trackUserAction('logout', { 
+      userId: user?.userId,
+      userHash: user?.userHash?.substring(0, 12)
+    })
+    
+    logout()
+  }
 
   // 切换语言函数
   const toggleLanguage = () => {
@@ -220,7 +232,7 @@ export function AppSidebar() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={logout}
+            onClick={handleLogout}
             className="w-full flex items-center gap-2"
           >
             <LogOut className="h-4 w-4" />
@@ -257,7 +269,7 @@ export function AppSidebar() {
                 <Button 
                   variant="outline" 
                   size="icon"
-                  onClick={logout}
+                  onClick={handleLogout}
                   title={t('sidebar.logout')}
                   className="w-8 h-8"
                 >

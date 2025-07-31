@@ -3,6 +3,8 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { LanguageProvider } from "@/contexts/language-context";
+import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
+import { PageViewTracker } from "@/components/analytics/PageViewTracker";
 
 export const metadata: Metadata = {
   title: "学生管理系统",
@@ -31,8 +33,10 @@ export default function RootLayout({
                 {children}
               </main>
             </div>
+            <PageViewTracker />
           </AuthProvider>
         </LanguageProvider>
+        <UmamiAnalytics websiteId="ddf456a9-f046-48b0-b27b-95a6dc0182b9" />
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AlertCircle, CheckCircle2, User, Hash, Copy, Code } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
+import { trackUserAction } from "@/lib/analytics"
 
 // CAS认证信息接口
 interface CasAuthInfo {
@@ -113,12 +114,28 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok && data.success) {
+        // 追踪登录成功事件
+        trackUserAction('login_success', { 
+          method: 'dev_hash',
+          userId: data.user?.userId 
+        })
+        
         await refreshUser()
         router.push('/dashboard')
       } else {
+        // 追踪登录失败事件
+        trackUserAction('login_failed', { 
+          method: 'dev_hash',
+          error: data.error 
+        })
         setError(data.error || '登录失败')
       }
-    } catch {
+    } catch (error) {
+      // 追踪登录错误事件
+      trackUserAction('login_error', { 
+        method: 'dev_hash',
+        error: 'network_error'
+      })
       setError('登录失败，请重试')
     } finally {
       setLoading(false)
@@ -186,12 +203,28 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok && data.success) {
+        // 追踪登录成功事件
+        trackUserAction('login_success', { 
+          method: 'cas_hash',
+          userId: data.user?.userId 
+        })
+        
         await refreshUser()
         router.push('/dashboard')
       } else {
+        // 追踪登录失败事件
+        trackUserAction('login_failed', { 
+          method: 'cas_hash',
+          error: data.error 
+        })
         setError(data.error || '登录失败')
       }
-    } catch {
+    } catch (error) {
+      // 追踪登录错误事件
+      trackUserAction('login_error', { 
+        method: 'cas_hash',
+        error: 'network_error'
+      })
       setError('登录失败，请重试')
     } finally {
       setLoading(false)
