@@ -156,9 +156,9 @@ export async function getRecentSubjectGrades(results: CourseResult[], limit: num
     
     subjectGrades.push({
       name: courseName,
-      grade: course.grade,
-      average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
-      credit: course.credit
+    grade: course.grade,
+    average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
+    credit: course.credit
     });
   }
   
@@ -321,8 +321,11 @@ export async function getTopPercentageGPAThreshold(percentage: number): Promise<
 // 雷达图数据接口
 export interface RadarChartData {
   subject: string
-  A: number
-  B: number
+  knowledge: number      // 知识掌握
+  application: number    // 应用能力
+  analysis: number       // 分析能力
+  synthesis: number      // 综合能力
+  evaluation: number     // 评价能力
   fullMark: number
 }
 
@@ -347,15 +350,15 @@ export async function getSubjectGrades(studentHash: string, language: string = '
       }
       
       grades.push({
-        id: result.id,
+      id: result.id,
         course_name: courseName,
-        course_id: result.course_id,
-        grade: result.grade,
-        credit: result.credit,
-        semester: result.semester,
-        course_type: result.course_type,
-        course_attribute: result.course_attribute,
-        exam_type: result.exam_type
+      course_id: result.course_id,
+      grade: result.grade,
+      credit: result.credit,
+      semester: result.semester,
+      course_type: result.course_type,
+      course_attribute: result.course_attribute,
+      exam_type: result.exam_type
       })
     }
     
@@ -366,28 +369,19 @@ export async function getSubjectGrades(studentHash: string, language: string = '
   }
 }
 
-// 获取雷达图数据 - 返回多维度评估数据
-export async function getRadarChartData(courseName: string): Promise<{ [key: string]: number } | null> {
+// 获取雷达图数据
+export async function getRadarChartData(courseName: string): Promise<RadarChartData | null> {
   try {
-    // 基于原本的 RadarChartData 接口，提供多个评估维度
-    // 这里应该从数据库获取实际的统计数据，暂时使用模拟数据
-    
-    // 使用课程名生成稳定的随机数种子，确保相同课程显示相同数据
-    let seed = 0;
-    for (let i = 0; i < courseName.length; i++) {
-      seed += courseName.charCodeAt(i);
-    }
-    
-    // 基于种子生成稳定的分数
-    const baseScore = 70 + (seed % 21); // 70-90之间
-    
-    // 返回符合原本设计意图的多维度数据
+    // 这里可以根据需要实现具体的雷达图数据逻辑
+    // 暂时返回模拟数据，包含更多维度的评估
     return {
-      '当前成绩': baseScore,
-      '班级平均': Math.max(60, baseScore - ((seed % 15) + 5)), // 比当前低5-20分
-      '最高成绩': Math.min(100, baseScore + ((seed % 15) + 5)), // 比当前高5-20分
-      '及格线': 60,
-      '优秀线': 85
+      subject: courseName,
+      knowledge: Math.floor(Math.random() * 30) + 70,      // 知识掌握 70-100
+      application: Math.floor(Math.random() * 30) + 70,    // 应用能力 70-100
+      analysis: Math.floor(Math.random() * 30) + 70,       // 分析能力 70-100
+      synthesis: Math.floor(Math.random() * 30) + 70,      // 综合能力 70-100
+      evaluation: Math.floor(Math.random() * 30) + 70,     // 评价能力 70-100
+      fullMark: 100
     }
   } catch (error) {
     console.error('Error getting radar chart data:', error)
