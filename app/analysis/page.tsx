@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { TrendingUp, Target, Brain, Check, Plus, X, ChevronDown } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { getTopPercentageGPAThreshold } from "@/lib/dashboard-data"
-import { ExportButton } from '@/components/pdf/PagePDFExport'
+import { SimplePDFExport } from '@/components/pdf/SimplePDFExport'
 
 const subjectAnalysis = [
   { subject: '数学', current: 95, target: 98, gap: 3 },
@@ -189,7 +189,7 @@ export default function Analysis() {
           <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
           <p className="text-muted-foreground">{t('analysis.description')}</p>
         </div>
-        <ExportButton 
+        <SimplePDFExport 
           pageTitle="学习分析报告"
           fileName={`learning_analysis_${new Date().toISOString().split('T')[0]}.pdf`}
           contentSelector=".analysis-content"

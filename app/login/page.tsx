@@ -47,9 +47,26 @@ export default function LoginPage() {
     "a97af3ae898a3d3e2c2c8aecd9f49fc0a0474e813c218f3891016ac0466fcb55"
   ]
 
-  // 复制到剪贴板
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+  // 复制到剪贴板并填入输入框
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      // 同时填入输入框
+      setHashValue(text)
+      console.log('已复制到剪贴板并填入输入框')
+    } catch (error) {
+      console.error('复制失败:', error)
+      // 备用方案：使用传统方法
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      // 即使复制失败，也要填入输入框
+      setHashValue(text)
+      console.log('已复制到剪贴板（备用方案）并填入输入框')
+    }
   }
 
   // 检查CAS认证状态

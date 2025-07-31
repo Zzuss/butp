@@ -13,6 +13,46 @@ interface PagePDFExportProps {
   children?: React.ReactNode
 }
 
+// 颜色转换函数 - 将现代CSS颜色函数转换为兼容的颜色
+const convertModernColors = (element: HTMLElement) => {
+  const style = window.getComputedStyle(element)
+  const properties = ['color', 'background-color', 'border-color']
+  
+  properties.forEach(prop => {
+    const value = style.getPropertyValue(prop)
+    if (value.includes('oklch') || value.includes('hsl') || value.includes('rgb')) {
+      // 转换为十六进制颜色
+      const tempDiv = document.createElement('div')
+      tempDiv.style.color = value
+      document.body.appendChild(tempDiv)
+      const computedColor = window.getComputedStyle(tempDiv).color
+      document.body.removeChild(tempDiv)
+      
+      // 将rgb转换为十六进制
+      if (computedColor.startsWith('rgb')) {
+        const rgb = computedColor.match(/\d+/g)
+        if (rgb && rgb.length >= 3) {
+          const hex = '#' + rgb.map(x => {
+            const hex = parseInt(x).toString(16)
+            return hex.length === 1 ? '0' + hex : hex
+          }).join('')
+          element.style.setProperty(prop, hex, 'important')
+        }
+      }
+    }
+  })
+}
+
+// 递归处理所有子元素
+const processElementColors = (element: HTMLElement) => {
+  convertModernColors(element)
+  Array.from(element.children).forEach(child => {
+    if (child instanceof HTMLElement) {
+      processElementColors(child)
+    }
+  })
+}
+
 export function PagePDFExport({ 
   pageTitle = '页面导出',
   fileName,
@@ -27,6 +67,9 @@ export function PagePDFExport({
 
     setIsGenerating(true)
     try {
+      // 处理颜色兼容性问题
+      processElementColors(contentRef.current)
+      
       // 使用html2canvas捕获页面内容
       const canvas = await html2canvas(contentRef.current, {
         scale: 2, // 提高清晰度
@@ -35,6 +78,12 @@ export function PagePDFExport({
         backgroundColor: '#ffffff',
         width: contentRef.current.scrollWidth,
         height: contentRef.current.scrollHeight,
+        // 添加颜色处理选项
+        ignoreElements: (element) => {
+          // 忽略一些可能导致问题的元素
+          return element.classList.contains('no-export') || 
+                 (element instanceof HTMLElement && element.style.display === 'none')
+        }
       })
 
       // 创建PDF
@@ -135,6 +184,9 @@ export function ExportButton({
         return
       }
 
+      // 处理颜色兼容性问题
+      processElementColors(contentElement)
+
       // 使用html2canvas捕获内容
       const canvas = await html2canvas(contentElement, {
         scale: 2,
@@ -143,6 +195,11 @@ export function ExportButton({
         backgroundColor: '#ffffff',
         width: contentElement.scrollWidth,
         height: contentElement.scrollHeight,
+        // 添加颜色处理选项
+        ignoreElements: (element) => {
+          return element.classList.contains('no-export') || 
+                 element.style.display === 'none'
+        }
       })
 
       // 创建PDF
