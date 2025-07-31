@@ -3,9 +3,20 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { StudentReportPreview } from '@/components/pdf/StudentReportPDF'
 import { SimplePDFExport } from '@/components/pdf/SimplePDFExport'
 import { FileText, Download, Eye } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+// 动态导入PDF组件，避免SSR问题
+const ChinesePDFPreview = dynamic(
+  () => import('@/components/pdf/ChinesePDF').then(mod => ({ default: mod.ChinesePDFPreview })),
+  { ssr: false }
+)
+
+const ChinesePDFDownload = dynamic(
+  () => import('@/components/pdf/ChinesePDF').then(mod => ({ default: mod.ChinesePDFDownload })),
+  { ssr: false }
+)
 
 // 模拟学生数据
 const mockStudent = {
@@ -28,6 +39,11 @@ const mockCourseScores = [
 
 export default function PDFDemoPage() {
   const [showPreview, setShowPreview] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -82,6 +98,9 @@ export default function PDFDemoPage() {
               {showPreview ? '隐藏预览' : '预览PDF'}
             </Button>
             
+            {isClient && (
+              <ChinesePDFDownload student={mockStudent} courseScores={mockCourseScores} />
+            )}
             <SimplePDFExport student={mockStudent} courseScores={mockCourseScores} />
           </div>
         </CardContent>
@@ -95,7 +114,9 @@ export default function PDFDemoPage() {
           </CardHeader>
           <CardContent>
             <div className="border rounded-lg overflow-hidden">
-              <StudentReportPreview student={mockStudent} courseScores={mockCourseScores} />
+              {isClient && (
+                <ChinesePDFPreview student={mockStudent} courseScores={mockCourseScores} />
+              )}
             </div>
           </CardContent>
         </Card>
