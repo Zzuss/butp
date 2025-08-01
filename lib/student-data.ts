@@ -1,5 +1,34 @@
 import { createHash } from 'crypto';
-import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// 硬编码 Supabase 配置（用于 API 路由）
+const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM';
+
+// 创建 Supabase 客户端
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// 缓存数据结构
+interface CourseData {
+  courseName: string;
+  score: number | null;
+  semester: number | null;
+  category: string | null;
+  courseId?: string;
+  credit?: number | null;
+}
+
+interface StudentDataCache {
+  [studentHash: string]: {
+    originalScores: CourseData[];
+    modifiedScores: CourseData[];
+    source2Scores: CourseData[];
+    lastUpdated: number;
+  };
+}
+
+// 全局缓存对象
+const studentDataCache: StudentDataCache = {};
 
 /**
  * 将学号转换为SHA256哈希值
@@ -11,31 +40,53 @@ export function hashStudentId(studentId: string): string {
 }
 
 /**
- * 检查学号哈希值是否在数据库中存在（检查所有包含SNH字段的表）
+ * 检查学号哈希值是否在数据库中存在（检查所有可能的表）
  * @param hash 学号哈希值
  * @returns 是否有效
  */
 export async function isValidStudentHashInDatabase(hash: string): Promise<boolean> {
   try {
-    // 检查所有包含SNH字段的表（只检查实际存在的表）
-    const tables = ['academic_results', 'cohort_probability'];
+    // 检查所有可能包含学生哈希值的表
+    const tables = [
+      'academic_results', 
+      'cohort_probability',
+      'cohort_predictions',
+      'student_profiles',
+      'course_enrollments',
+      'grade_records',
+      'student_records'
+    ];
     
     for (const table of tables) {
       try {
-        const { data, error } = await supabase
-          .from(table)
-          .select('SNH')
-          .eq('SNH', hash)
-          .limit(1);
+        console.log(`Checking table: ${table}`);
         
-        if (error) {
-          console.error(`Error checking student hash in ${table}:`, error);
-          continue; // 继续检查下一个表
-        }
+        // 尝试不同的字段名，因为不同表可能使用不同的字段名
+        const possibleFields = ['SNH', 'student_hash', 'hash', 'student_id', 'id'];
         
-        if (data && data.length > 0) {
-          console.log(`Hash found in table: ${table}`);
-          return true;
+        for (const field of possibleFields) {
+          try {
+            const { data, error } = await supabase
+              .from(table)
+              .select(field)
+              .eq(field, hash)
+              .limit(1);
+            
+            if (error) {
+              // 如果字段不存在，会报错，这是正常的，继续尝试下一个字段
+              console.log(`Field ${field} not found in table ${table}, trying next field...`);
+              continue;
+            }
+            
+            if (data && data.length > 0) {
+              console.log(`Hash found in table: ${table}, field: ${field}`);
+              return true;
+            }
+          } catch (fieldError) {
+            // 字段不存在或其他错误，继续尝试下一个字段
+            console.log(`Error checking field ${field} in table ${table}:`, fieldError);
+            continue;
+          }
         }
       } catch (tableError) {
         console.error(`Error querying table ${table}:`, tableError);
@@ -49,6 +100,199 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
     console.error('Database query failed:', error);
     return false;
   }
+}
+
+  /**
+   * 获取学生的原始课程数据（来源1：cohort_predictions）
+   * @param studentHash 学生哈希值
+   * @returns 原始课程数据
+   */
+  export async function getOriginalScores(studentHash: string): Promise<CourseData[]> {
+    try {
+      const { data, error } = await supabase
+        .from('cohort_predictions')
+        .select('Course_Name, Grade, Semester_Offered, Course_Attribute, Course_ID, Credit')
+        .eq('SNH', studentHash);
+
+      if (error) {
+        console.error('Error fetching original scores:', error);
+        return [];
+      }
+
+      return (data || []).map(course => ({
+        courseName: course.Course_Name || '',
+        score: course.Grade ? parseFloat(course.Grade) : null,
+        semester: course.Semester_Offered ? parseInt(course.Semester_Offered) : null,
+        category: course.Course_Attribute || null,
+        courseId: course.Course_ID || undefined,
+        credit: course.Credit ? parseFloat(course.Credit) : undefined
+      }));
+    } catch (error) {
+      console.error('Error in getOriginalScores:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 获取学生的来源2课程数据（academic_results）
+   * @param studentHash 学生哈希值
+   * @returns 来源2课程数据
+   */
+  export async function getSource2Scores(studentHash: string): Promise<CourseData[]> {
+    try {
+      const { data, error } = await supabase
+        .from('academic_results')
+        .select('Course_Name, Grade, Semester_Offered, Course_Attribute, Course_ID, Credit')
+        .eq('SNH', studentHash);
+
+      if (error) {
+        console.error('Error fetching source2 scores:', error);
+        return [];
+      }
+
+      return (data || []).map(course => ({
+        courseName: course.Course_Name || '',
+        score: course.Grade ? parseFloat(course.Grade) : null,
+        semester: course.Semester_Offered ? parseInt(course.Semester_Offered) : null,
+        category: course.Course_Attribute || null,
+        courseId: course.Course_ID || undefined,
+        credit: course.Credit ? parseFloat(course.Credit) : undefined
+      }));
+    } catch (error) {
+      console.error('Error in getSource2Scores:', error);
+      return [];
+    }
+  }
+
+/**
+ * 初始化学生数据缓存
+ * @param studentHash 学生哈希值
+ * @returns 缓存数据
+ */
+export async function initializeStudentCache(studentHash: string): Promise<{
+  originalScores: CourseData[];
+  modifiedScores: CourseData[];
+  source2Scores: CourseData[];
+}> {
+  // 检查缓存是否存在且未过期（24小时）
+  const cache = studentDataCache[studentHash];
+  const now = Date.now();
+  const cacheExpiry = 24 * 60 * 60 * 1000; // 24小时
+
+  if (cache && (now - cache.lastUpdated) < cacheExpiry) {
+    console.log('Using cached data for student:', studentHash);
+    return cache;
+  }
+
+  console.log('Initializing cache for student:', studentHash);
+
+  // 并行获取原始数据和来源2数据
+  const [originalScores, source2Scores] = await Promise.all([
+    getOriginalScores(studentHash),
+    getSource2Scores(studentHash)
+  ]);
+
+  // 初始化修改后的数据为原始数据的副本
+  const modifiedScores = JSON.parse(JSON.stringify(originalScores));
+
+  // 更新缓存
+  studentDataCache[studentHash] = {
+    originalScores,
+    modifiedScores,
+    source2Scores,
+    lastUpdated: now
+  };
+
+  return {
+    originalScores,
+    modifiedScores,
+    source2Scores
+  };
+}
+
+/**
+ * 更新学生的修改后数据
+ * @param studentHash 学生哈希值
+ * @param modifiedScores 修改后的课程数据
+ */
+export function updateModifiedScores(studentHash: string, modifiedScores: CourseData[]): void {
+  if (studentDataCache[studentHash]) {
+    studentDataCache[studentHash].modifiedScores = modifiedScores;
+    studentDataCache[studentHash].lastUpdated = Date.now();
+    console.log('Updated modified scores for student:', studentHash);
+  }
+}
+
+/**
+ * 获取学生的当前显示数据（根据编辑状态）
+ * @param studentHash 学生哈希值
+ * @param isEditMode 是否处于编辑模式
+ * @returns 当前显示的数据
+ */
+export function getCurrentDisplayScores(studentHash: string, isEditMode: boolean): CourseData[] {
+  const cache = studentDataCache[studentHash];
+  if (!cache) {
+    return [];
+  }
+
+  if (isEditMode && cache.modifiedScores.length > 0) {
+    return cache.modifiedScores;
+  }
+
+  return cache.originalScores;
+}
+
+/**
+ * 清除学生缓存
+ * @param studentHash 学生哈希值
+ */
+export function clearStudentCache(studentHash: string): void {
+  delete studentDataCache[studentHash];
+  console.log('Cleared cache for student:', studentHash);
+}
+
+/**
+ * 获取缓存统计信息
+ * @param studentHash 学生哈希值
+ * @returns 缓存统计信息
+ */
+export function getCacheInfo(studentHash: string): {
+  hasCache: boolean;
+  originalCount: number;
+  modifiedCount: number;
+  source2Count: number;
+  hasModifications: boolean;
+  modifiedCoursesCount: number;
+  lastUpdated: number | null;
+} {
+  const cache = studentDataCache[studentHash];
+  if (!cache) {
+    return {
+      hasCache: false,
+      originalCount: 0,
+      modifiedCount: 0,
+      source2Count: 0,
+      hasModifications: false,
+      modifiedCoursesCount: 0,
+      lastUpdated: null
+    };
+  }
+
+  // 计算修改的课程数量
+  const modifiedCoursesCount = cache.modifiedScores.filter((course, index) => {
+    const originalCourse = cache.originalScores[index];
+    return originalCourse && course.score !== originalCourse.score;
+  }).length;
+
+  return {
+    hasCache: true,
+    originalCount: cache.originalScores.length,
+    modifiedCount: cache.modifiedScores.length,
+    source2Count: cache.source2Scores.length,
+    hasModifications: modifiedCoursesCount > 0,
+    modifiedCoursesCount,
+    lastUpdated: cache.lastUpdated
+  };
 }
 
 /**
