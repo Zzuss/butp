@@ -5,14 +5,14 @@ import { createClient } from '@supabase/supabase-js'
 function createSupabaseClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 }
 
 export async function POST(request: NextRequest) {
   try {
     // 检查环境变量
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       console.error('Missing Supabase environment variables')
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }

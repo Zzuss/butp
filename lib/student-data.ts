@@ -11,24 +11,40 @@ export function hashStudentId(studentId: string): string {
 }
 
 /**
- * 检查学号哈希值是否在数据库中存在
+ * 检查学号哈希值是否在数据库中存在（检查所有包含SNH字段的表）
  * @param hash 学号哈希值
  * @returns 是否有效
  */
 export async function isValidStudentHashInDatabase(hash: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase
-      .from('academic_results')
-      .select('SNH')
-      .eq('SNH', hash)
-      .limit(1);
+    // 检查所有包含SNH字段的表（只检查实际存在的表）
+    const tables = ['academic_results', 'cohort_probability'];
     
-    if (error) {
-      console.error('Error checking student hash in database:', error);
-      return false;
+    for (const table of tables) {
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .select('SNH')
+          .eq('SNH', hash)
+          .limit(1);
+        
+        if (error) {
+          console.error(`Error checking student hash in ${table}:`, error);
+          continue; // 继续检查下一个表
+        }
+        
+        if (data && data.length > 0) {
+          console.log(`Hash found in table: ${table}`);
+          return true;
+        }
+      } catch (tableError) {
+        console.error(`Error querying table ${table}:`, tableError);
+        continue; // 继续检查下一个表
+      }
     }
     
-    return data && data.length > 0;
+    console.log('Hash not found in any table');
+    return false;
   } catch (error) {
     console.error('Database query failed:', error);
     return false;
