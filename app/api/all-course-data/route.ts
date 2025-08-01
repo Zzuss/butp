@@ -106,41 +106,60 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch source 1 data' }, { status: 500 })
     }
 
-    // 2. 获取来源2的数据（使用前端传递的缓存数据）
+    // 2. 获取来源2的数据（使用前端传递的缓存数据或调用来源2 API）
     let source2Data = null;
     if (source2Scores && Array.isArray(source2Scores) && source2Scores.length > 0) {
       // 使用前端传递的来源二数据
       source2Data = source2Scores;
     } else {
-      // 如果前端没有传递来源二数据，则从数据库查询（备用方案）
-      const { data: dbSource2Data, error: source2Error } = await supabase
-        .from('academic_results')
-        .select(`
-          SNH,
-          Semester_Offered,
-          Current_Major,
-          Course_ID,
-          Course_Name,
-          Grade,
-          Grade_Remark,
-          Course_Type,
-          Course_Attribute,
-          Hours,
-          Credit,
-          Offering_Unit,
-          Tags,
-          Description,
-          Exam_Type,
-          Assessment_Method
-        `)
-        .eq('SNH', trimmedHash)
-        .order('Semester_Offered', { ascending: true });
+      // 如果前端没有传递来源二数据，则调用来源2 API
+      try {
+        const source2Response = await fetch(`${request.nextUrl.origin}/api/source2-scores`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ studentHash: trimmedHash })
+        });
+        
+        if (source2Response.ok) {
+          const source2Result = await source2Response.json();
+          if (source2Result.success) {
+            source2Data = source2Result.data.source2Scores;
+          }
+        }
+      } catch (error) {
+        console.error('Error calling source2 API:', error);
+        // 如果API调用失败，使用备用方案从数据库直接查询
+        const { data: dbSource2Data, error: source2Error } = await supabase
+          .from('academic_results')
+          .select(`
+            SNH,
+            Semester_Offered,
+            Current_Major,
+            Course_ID,
+            Course_Name,
+            Grade,
+            Grade_Remark,
+            Course_Type,
+            Course_Attribute,
+            Hours,
+            Credit,
+            Offering_Unit,
+            Tags,
+            Description,
+            Exam_Type,
+            Assessment_Method
+          `)
+          .eq('SNH', trimmedHash)
+          .order('Semester_Offered', { ascending: true });
 
-      if (source2Error) {
-        console.error('Source 2 error:', source2Error)
-        return NextResponse.json({ error: 'Failed to fetch source 2 data' }, { status: 500 })
+        if (source2Error) {
+          console.error('Source 2 error:', source2Error)
+          return NextResponse.json({ error: 'Failed to fetch source 2 data' }, { status: 500 })
+        }
+        source2Data = dbSource2Data;
       }
-      source2Data = dbSource2Data;
     }
 
     // 3. 获取courses表信息用于映射
@@ -222,6 +241,17 @@ export async function POST(request: NextRequest) {
       // 专业课程
       '专业课': '专业课程',
       '叶培大学院辅修': '专业课程'
+    };
+
+    // 来源2 课程类型到类别的映射表（来自模板route_1.ts）
+    const source2CourseTypeToCategoryMapping: Record<string, string> = {
+      '思想政治理论课': '政治课程',
+      '公共课': '公共课程',
+      '专业课': '专业课程',
+      '实践教学课': '实践课程',
+      '校级双创课': '创新课程',
+      '院级双创课': '创新课程',
+      '其他': '基础学科'
     };
 
     // 课程名称到课程编号的映射表（基于真实数据）
@@ -365,13 +395,19 @@ export async function POST(request: NextRequest) {
             }
           }
           
+          // 应用来源2的category映射
+          const originalCategory = courseInfo?.category || null;
+          const mappedCategory = originalCategory ? 
+            source2CourseTypeToCategoryMapping[originalCategory] || '基础学科' : 
+            (record.Course_Type ? source2CourseTypeToCategoryMapping[record.Course_Type] || '基础学科' : '基础学科');
+          
           source2Courses.push({
             source: 'academic_results',
             courseName: record.Course_Name,
             courseId: courseId,
             score: score,
             semester: courseInfo?.semester || record.Semester_Offered,
-            category: courseInfo?.category || null,
+            category: mappedCategory, // 使用映射后的category
             credit: courseInfo?.credit || parseFloat(record.Credit) || null,
             courseType: record.Course_Type,
             courseAttribute: record.Course_Attribute,
@@ -382,25 +418,45 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 合并数据，来源1优先，按细化规则过滤
-    const allCourses: any[] = [];
-    const processedCourseNames = new Set<string>();
+         // 合并数据，按照新的规则：先来源2，再来源1
+     const allCourses: any[] = [];
+     const processedCourseNames = new Set<string>();
 
-    // 先添加来源1的数据
-    // 规则：无论成绩是否存在都记录
-    source1Courses.forEach(course => {
-      allCourses.push(course);
-      processedCourseNames.add(course.courseName);
-    });
+     // 第一步：先置入来源2的数据
+     // 规则：如果来源2中成绩为0或不存在，则不置入总表
+     source2Courses.forEach(course => {
+       if (course.score !== null && course.score !== undefined && course.score !== 0) {
+         allCourses.push(course);
+         processedCourseNames.add(course.courseName);
+       }
+     });
 
-    // 添加来源2中未在来源1中出现的课程
-    // 规则：无论成绩是否存在都记录
-    source2Courses.forEach(course => {
-      if (!processedCourseNames.has(course.courseName)) {
-        allCourses.push(course);
-        processedCourseNames.add(course.courseName);
-      }
-    });
+     // 第二步：再置入来源1的数据
+     // 规则：
+     // 1. 如果来源1成绩与来源2冲突，用来源1成绩覆盖
+     // 2. 如果来源1成绩为null，不置入
+     // 3. 如果来源1成绩为0，要置入总表
+     source1Courses.forEach(course => {
+       if (course.score !== null && course.score !== undefined) { // 成绩不为null才处理
+         const existingIndex = allCourses.findIndex(c => c.courseName === course.courseName);
+         
+         if (existingIndex >= 0) {
+           // 冲突情况：用来源1成绩覆盖
+           allCourses[existingIndex] = {
+             ...allCourses[existingIndex],
+             score: course.score,
+             source: 'cohort_predictions (override)'
+           };
+         } else {
+           // 新课程：直接添加
+           allCourses.push({
+             ...course,
+             source: 'cohort_predictions'
+           });
+           processedCourseNames.add(course.courseName);
+         }
+       }
+     });
 
     return NextResponse.json({
       success: true,

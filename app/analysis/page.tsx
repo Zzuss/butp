@@ -66,6 +66,10 @@ export default function Analysis() {
   // Modified缓存状态
   const [modifiedScoresCache, setModifiedScoresCache] = useState<Record<string, any>>({});
   const [loadingModifiedScores, setLoadingModifiedScores] = useState(false);
+  
+  // Source2缓存状态
+  const [source2ScoresCache, setSource2ScoresCache] = useState<Record<string, any>>({});
+  const [loadingSource2Scores, setLoadingSource2Scores] = useState(false);
 
 
 
@@ -110,6 +114,18 @@ export default function Analysis() {
   const [allCourseData, setAllCourseData] = useState<any>(null);
   const [loadingAllCourseData, setLoadingAllCourseData] = useState(false);
   const [showAllCourseData, setShowAllCourseData] = useState(false);
+  
+  // 特征值状态
+  const [calculatedFeatures, setCalculatedFeatures] = useState<Record<string, number> | null>(null);
+  const [loadingFeatures, setLoadingFeatures] = useState(false);
+  
+  // 预测结果状态
+  const [predictionResult, setPredictionResult] = useState<{
+    domesticPercentage: number | null;
+    overseasPercentage: number | null;
+  } | null>(null);
+  
+
 
   // 获取GPA门槛值
   const loadGPAThreshold = async (percentage: number) => {
@@ -209,6 +225,20 @@ export default function Analysis() {
       setTimeout(() => {
         setShowEditModal(false);
       }, 3000);
+      
+      // 初始化modified缓存（如果还没有的话）
+      if (user?.userHash && !modifiedScoresCache[user.userHash]) {
+        const originalScores = getOriginalScores();
+        if (originalScores.length > 0) {
+          setModifiedScoresCache(prev => ({
+            ...prev,
+            [user.userHash]: JSON.parse(JSON.stringify(originalScores)) // 深拷贝原始数据
+          }));
+        }
+      }
+      
+      // 清除之前的预测结果
+      setPredictionResult(null);
     }
     setIsEditMode(!isEditMode);
   };
@@ -216,41 +246,63 @@ export default function Analysis() {
   // 处理成绩修改
   const handleScoreChange = (courseName: string, newScore: string) => {
     // 允许用户输入任意内容，包括多位小数
-    setModifiedScores(prev => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.map(course => 
+    if (!user?.userHash) return;
+    
+    // 更新modified缓存
+    setModifiedScoresCache(prev => {
+      const currentModifiedScores = prev[user.userHash] || [];
+      const updatedScores = currentModifiedScores.map((course: any) => 
         course.courseName === courseName 
           ? { ...course, score: newScore }
           : course
       );
+      
+      return {
+        ...prev,
+        [user.userHash]: updatedScores
+      };
     });
   };
 
   // 处理成绩输入完成（失去焦点或按回车）
   const handleScoreBlur = (courseName: string, newScore: string) => {
+    if (!user?.userHash) return;
+    
     const score = parseFloat(newScore);
     if (!isNaN(score) && score >= 0 && score <= 100) {
       // 输入完成后保留一位小数
       const roundedScore = Math.round(score * 10) / 10;
-      setModifiedScores(prev => {
-        if (!Array.isArray(prev)) return prev;
-        return prev.map(course => 
+      
+      setModifiedScoresCache(prev => {
+        const currentModifiedScores = prev[user.userHash] || [];
+        const updatedScores = currentModifiedScores.map((course: any) => 
           course.courseName === courseName 
             ? { ...course, score: roundedScore }
             : course
         );
+        
+        return {
+          ...prev,
+          [user.userHash]: updatedScores
+        };
       });
     } else {
       // 如果输入无效，恢复原始成绩
-      const originalCourse = originalScores.find(course => course.courseName === courseName);
+      const originalScores = getOriginalScores();
+      const originalCourse = originalScores.find((course: any) => course.courseName === courseName);
       if (originalCourse && originalCourse.score !== null) {
-        setModifiedScores(prev => {
-          if (!Array.isArray(prev)) return prev;
-          return prev.map(course => 
+        setModifiedScoresCache(prev => {
+          const currentModifiedScores = prev[user.userHash] || [];
+          const updatedScores = currentModifiedScores.map((course: any) => 
             course.courseName === courseName 
               ? { ...course, score: originalCourse.score }
               : course
           );
+          
+          return {
+            ...prev,
+            [user.userHash]: updatedScores
+          };
         });
       }
     }
@@ -258,17 +310,118 @@ export default function Analysis() {
 
   // 处理确认修改
   const handleConfirmModification = async () => {
+    if (!user?.userHash) return;
+    
+
+    
+    // 获取当前的修改数据
+    const currentModifiedScores = getModifiedScores();
+    
     // 确保所有成绩都是数字类型
-    const updatedScores = modifiedScores.map(course => ({
+    const updatedScores = currentModifiedScores.map((course: any) => ({
       ...course,
       score: typeof course.score === 'string' ? parseFloat(course.score) : course.score
     }));
     
-    // 立即更新状态
-    setModifiedScores(updatedScores);
+    // 1. 同步到modified表 - 更新modified缓存
+    setModifiedScoresCache(prev => ({
+      ...prev,
+      [user.userHash]: updatedScores
+    }));
     
-    // 显示确认模态框
-    setShowConfirmModal(true);
+    // 2. 同步到总表 - 调用all-course-data API生成新的总表
+    setLoadingFeatures(true);
+    try {
+      // 获取来源2数据
+      const source2Scores = await loadSource2Scores();
+      
+      // 调用all-course-data API，传入修改后的成绩
+      const response = await fetch('/api/all-course-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentHash: user.userHash,
+          modifiedScores: updatedScores, // 使用修改后的成绩
+          source2Scores: source2Scores.map((score: any) => ({
+            ...score,
+            source: 'academic_results'
+          }))
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // 3. 重新计算特征值 - 使用新的总表数据
+        const featureResponse = await fetch('/api/calculate-features', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            allCourses: data.data.allCourses
+          })
+        });
+
+        if (featureResponse.ok) {
+          const featureData = await featureResponse.json();
+          setCalculatedFeatures(featureData.data.featureValues);
+          
+          // 4. 调用预测API - 使用计算出的特征值进行预测
+          // 将中文特征名称映射为英文
+          const featureMapping: Record<string, string> = {
+            '公共课程': 'public',
+            '实践课程': 'practice',
+            '数学科学': 'math_science',
+            '政治课程': 'political',
+            '基础学科': 'basic_subject',
+            '创新课程': 'innovation',
+            '英语课程': 'english',
+            '基础专业': 'basic_major',
+            '专业课程': 'major'
+          };
+          
+          const englishFeatureValues: Record<string, number> = {};
+          Object.entries(featureData.data.featureValues).forEach(([chineseName, value]) => {
+            const englishName = featureMapping[chineseName];
+            if (englishName && typeof value === 'number') {
+              englishFeatureValues[englishName] = value;
+            }
+          });
+          
+          const predictionResponse = await fetch('/api/predict-possibility', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              featureValues: englishFeatureValues
+            })
+          });
+
+          if (predictionResponse.ok) {
+            const predictionData = await predictionResponse.json();
+            if (predictionData.success && predictionData.data) {
+              // 解析预测结果：第一个是国内读研，第二个是海外读研，第三个忽略
+              const probabilities = predictionData.data.probabilities;
+              console.log('预测概率:', probabilities);
+              console.log('预测类别:', predictionData.data.predictedClass);
+              setPredictionResult({
+                domesticPercentage: Math.round(probabilities[0] * 100), // 国内读研百分比
+                overseasPercentage: Math.round(probabilities[1] * 100)  // 海外读研百分比
+              });
+            }
+          } else {
+            console.error('Failed to predict possibility');
+            setPredictionResult(null);
+          }
+        } else {
+          console.error('Failed to calculate features');
+        }
+      } else {
+        console.error('Failed to load all course data');
+      }
+    } catch (error) {
+      console.error('Error calculating features:', error);
+    } finally {
+      setLoadingFeatures(false);
+    }
     
     // 退出编辑模式
     setIsEditMode(false);
@@ -373,6 +526,50 @@ export default function Analysis() {
     }
   };
 
+  // 加载Source2缓存
+  const loadSource2Scores = async () => {
+    if (!user?.userHash) return [];
+
+    // 检查缓存
+    if (source2ScoresCache[user.userHash]) {
+      console.log('Using cached source2 scores');
+      return source2ScoresCache[user.userHash];
+    }
+
+    setLoadingSource2Scores(true);
+    try {
+      console.log('Loading source2 scores from API...');
+      
+      const response = await fetch('/api/source2-scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentHash: user.userHash })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const scores = data.data.source2Scores;
+        
+        // 更新缓存
+        setSource2ScoresCache(prev => ({
+          ...prev,
+          [user.userHash]: scores
+        }));
+        
+        console.log('Source2 scores loaded:', scores.length, 'courses');
+        return scores;
+      } else {
+        console.error('Failed to load source2 scores');
+        return [];
+      }
+    } catch (error) {
+      console.error('Error loading source2 scores:', error);
+      return [];
+    } finally {
+      setLoadingSource2Scores(false);
+    }
+  };
+
   // 获取Modified缓存数据
   const getModifiedScores = () => {
     if (!user?.userHash) return [];
@@ -383,9 +580,9 @@ export default function Analysis() {
       return modifiedScoresCache[user.userHash];
     }
     
-    // 如果没有modified缓存，返回original缓存
+    // 如果没有modified缓存，返回original缓存（作为初始值）
     if (originalScoresCache[user.userHash]) {
-      console.log('No modified cache, using original scores');
+      console.log('No modified cache, using original scores as initial value');
       return originalScoresCache[user.userHash];
     }
     
@@ -427,13 +624,17 @@ export default function Analysis() {
     
     // 确保original缓存已加载
     const originalScoresData = await loadOriginalScores();
+    
+    // 加载来源2数据
+    const source2ScoresData = await loadSource2Scores();
 
     setLoadingAllCourseData(true);
     try {
       console.log('发送到API的数据:', {
         studentHash: user.userHash,
         modifiedScoresData: modifiedScoresData.length,
-        originalScoresData: originalScoresData.length
+        originalScoresData: originalScoresData.length,
+        source2ScoresData: source2ScoresData.length
       });
       
       // 调用API获取所有课程数据
@@ -443,10 +644,7 @@ export default function Analysis() {
         body: JSON.stringify({ 
           studentHash: user.userHash,
           modifiedScores: modifiedScoresData,
-          source2Scores: originalScoresData.map((score: any) => ({
-            ...score,
-            source: 'cohort_predictions'
-          }))
+          source2Scores: source2ScoresData
         })
       });
 
@@ -454,6 +652,29 @@ export default function Analysis() {
         const data = await response.json();
         setAllCourseData(data.data);
         setShowAllCourseData(true);
+        
+        // 计算特征值
+        setLoadingFeatures(true);
+        try {
+          const featureResponse = await fetch('/api/calculate-features', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              allCourses: data.data.allCourses
+            })
+          });
+
+          if (featureResponse.ok) {
+            const featureData = await featureResponse.json();
+            setCalculatedFeatures(featureData.data.featureValues);
+          } else {
+            console.error('Failed to calculate features');
+          }
+        } catch (error) {
+          console.error('Error calculating features:', error);
+        } finally {
+          setLoadingFeatures(false);
+        }
       } else {
         console.error('Failed to load all course data');
       }
@@ -674,7 +895,7 @@ export default function Analysis() {
                       {t('analysis.ability.overall', { 
                         score: Math.round(abilityData.reduce((acc, item) => acc + item, 0) / abilityData.length) 
                       })}
-                    </div>
+                      </div>
                   </div>
                 </CardContent>
               </Card>
@@ -867,9 +1088,9 @@ export default function Analysis() {
                         <div 
                           className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${Math.min(100, (graduationRequirements.political.earned / graduationRequirements.political.required) * 100)}%` }}
-                        ></div>
-                  </div>
-              </div>
+                          ></div>
+                        </div>
+                      </div>
                   )}
 
                   {/* 军训学分 - 仅显示未完成的 */}
@@ -892,8 +1113,8 @@ export default function Analysis() {
                               标记完成
                             </Button>
                           )}
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                       <p className="text-sm text-muted-foreground">
                         需要 {graduationRequirements.military.required} 学分，已获得 {graduationRequirements.military.earned} 学分
                       </p>
@@ -976,16 +1197,42 @@ export default function Analysis() {
                   </Button>
                 </div>
               </div>
+            </div>
+            
+            {/* 预测结果显示框 */}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex justify-between items-center">
+                <div className="flex-1">
+                  <div className="text-center">
+                    <p className="text-blue-800 font-medium">
+                      {predictionResult ? (
+                        selectedButton === 'overseas' ? (
+                          `当前去向的新可能性为${predictionResult.overseasPercentage}%，另一去向的新可能性为${predictionResult.domesticPercentage}%`
+                        ) : selectedButton === 'domestic' ? (
+                          `当前去向的新可能性为${predictionResult.domesticPercentage}%，另一去向的新可能性为${predictionResult.overseasPercentage}%`
+                        ) : (
+                          `当前去向的新可能性为${predictionResult.overseasPercentage}%，另一去向的新可能性为${predictionResult.domesticPercentage}%`
+                        )
+                      ) : (
+                        '还未开始计算新百分比'
+                      )}
+                    </p>
+                  </div>
                 </div>
+                <div className="ml-4">
+                  <div className="w-20"></div>
+                </div>
+              </div>
+            </div>
                 
             {/* 课程成绩表格 */}
-            <Card>
-              <CardHeader>
+          <Card>
+            <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle className="text-lg font-medium">课程成绩</CardTitle>
                     <CardDescription>查看和修改您的课程成绩</CardDescription>
-                  </div>
+                      </div>
                   <div className="flex-1 flex justify-center items-center gap-4">
                     {isEditMode ? (
                       <Button 
@@ -993,8 +1240,16 @@ export default function Analysis() {
                         size="lg"
                         className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
                         onClick={handleConfirmModification}
+                        disabled={loadingFeatures}
                       >
-                        确认修改
+                        {loadingFeatures ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>计算中...</span>
+                          </div>
+                        ) : (
+                          '确认修改'
+                        )}
                       </Button>
                     ) : (
                       <Button 
@@ -1006,7 +1261,7 @@ export default function Analysis() {
                         修改未来
                       </Button>
                     )}
-                  </div>
+                    </div>
                   <div className="w-32 flex justify-end">
                     {isEditMode && (
                       <Button 
@@ -1019,7 +1274,7 @@ export default function Analysis() {
                       </Button>
                     )}
                   </div>
-                </div>
+                  </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -1089,17 +1344,29 @@ export default function Analysis() {
                               </td>
                               {isEditMode && (
                                 <td className="border border-gray-200 px-4 py-2 text-sm">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="0.5"
-                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    value={score !== null && score !== undefined ? score : ''}
-                                    placeholder="输入新成绩"
-                                    onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
-                                    onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
-                                  />
+                                  {score !== null && score !== undefined ? (
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="0.5"
+                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      value={(() => {
+                                        // 从modified缓存中查找当前课程的最新成绩
+                                        const modifiedScores = getModifiedScores();
+                                        const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
+                                        if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
+                                          return modifiedCourse.score;
+                                        }
+                                        return score; // 如果没有修改，显示原始成绩
+                                      })()}
+                                      placeholder="输入新成绩"
+                                      onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
+                                      onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
+                                    />
+                                  ) : (
+                                    <span className="text-gray-400 italic text-xs">无原始成绩</span>
+                                  )}
                                 </td>
                               )}
                             </tr>
@@ -1110,11 +1377,11 @@ export default function Analysis() {
                   </table>
                   <div className="text-center text-sm text-muted-foreground mt-4">
                     共{getOriginalScores().length}门课程
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
         )}
 
         {/* 国内读研分析界面 - 仿照模板设计 */}
@@ -1165,8 +1432,16 @@ export default function Analysis() {
                         size="lg"
                         className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
                         onClick={handleConfirmModification}
+                        disabled={loadingFeatures}
                       >
-                        确认修改
+                        {loadingFeatures ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>计算中...</span>
+                          </div>
+                        ) : (
+                          '确认修改'
+                        )}
                       </Button>
                     ) : (
                       <Button 
@@ -1178,6 +1453,9 @@ export default function Analysis() {
                         修改未来
                       </Button>
                     )}
+
+
+
                   </div>
                   <div className="w-32 flex justify-end">
                     {isEditMode && (
@@ -1224,7 +1502,7 @@ export default function Analysis() {
                         </td>
                         {isEditMode && (
                           <td className="border border-gray-200 px-4 py-2 text-sm">
-                            <input
+                  <input
                               type="number"
                               min="0"
                               max="100"
@@ -1286,7 +1564,7 @@ export default function Analysis() {
                   </table>
                                      <div className="text-center text-sm text-muted-foreground mt-4">
                      共3门课程
-                   </div>
+                </div>
                  </div>
             </CardContent>
           </Card>
@@ -1302,8 +1580,8 @@ export default function Analysis() {
                 <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              </div>
-            </div>
+                  </div>
+                </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-900">提交成功</p>
               <p className="text-sm text-gray-600 mt-1">已提交修改，请您耐心等待后台反馈。</p>
@@ -1347,38 +1625,7 @@ export default function Analysis() {
         </div>
       )}
 
-      {/* 确认修改悬浮窗 */}
-      {showConfirmModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowConfirmModal(false)}
-        >
-          <div 
-            className="bg-white rounded-lg shadow-xl p-8 max-w-md mx-4 text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              修改已确认
-            </h3>
-            <p className="text-lg text-gray-600 mb-6">
-              您的成绩修改已保存，系统将基于新成绩重新计算您的可能性
-            </p>
-            <button
-              onClick={() => setShowConfirmModal(false)}
-              className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200"
-            >
-              确定
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* 所有课程数据模态框 */}
       {showAllCourseData && allCourseData && (
@@ -1392,13 +1639,13 @@ export default function Analysis() {
           >
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">所有课程数据收集结果</h3>
-              <button 
+                      <button 
                 onClick={() => setShowAllCourseData(false)}
                 className="text-gray-500 hover:text-gray-700"
-              >
+                      >
                 ✕
-              </button>
-            </div>
+                      </button>
+                    </div>
             
             {/* 数据摘要 */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -1411,7 +1658,7 @@ export default function Analysis() {
                 <div>
                   <span className="font-medium">来源1课程：</span>
                   <span className="text-green-600">{allCourseData.summary?.source1Count || 0}</span>
-                </div>
+              </div>
                 <div>
                   <span className="font-medium">来源2课程：</span>
                   <span className="text-orange-600">{allCourseData.summary?.source2Count || 0}</span>
@@ -1461,8 +1708,8 @@ export default function Analysis() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
+                    </div>
+                    </div>
 
             {/* 来源2数据表格 */}
             <div className="mb-6">
@@ -1508,7 +1755,7 @@ export default function Analysis() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+                  </div>
             </div>
 
             {/* 合并后的所有课程数据 */}
@@ -1563,6 +1810,32 @@ export default function Analysis() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* 计算出的特征值显示 */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="font-semibold mb-3 text-blue-800">基于当前数据计算出的9个特征值</h4>
+              {loadingFeatures ? (
+                <div className="text-center py-4">
+                  <div className="text-blue-600">计算特征值中...</div>
+                </div>
+              ) : calculatedFeatures ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {Object.entries(calculatedFeatures).map(([category, value]) => (
+                    <div key={category} className="p-3 border border-blue-300 rounded-lg bg-white">
+                      <div className="text-sm font-medium text-blue-700 mb-1">{category}</div>
+                      <div className="text-xl font-bold text-blue-600">{value.toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <div className="text-gray-500">暂无特征值数据</div>
+                </div>
+              )}
+              <div className="mt-3 text-xs text-blue-600">
+                计算方法：按类别分组，计算加权平均值（成绩×学分/总学分）
               </div>
             </div>
           </div>

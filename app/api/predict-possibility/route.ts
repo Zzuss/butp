@@ -1,146 +1,122 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 
-// 直接使用硬编码的Supabase配置
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM';
+// 定义特征值的类型
+interface FeatureValues {
+  public: number;
+  political: number;
+  english: number;
+  math_science: number;
+  basic_subject: number;
+  basic_major: number;
+  major: number;
+  practice: number;
+  innovation: number;
+}
 
-// 使用环境变量
-//const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-//const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-//if (!supabaseUrl || !supabaseKey) {
-//  throw new Error('Missing Supabase environment variables');
-//}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const studentHash = searchParams.get('studentHash');
-
-    if (!studentHash) {
-      return NextResponse.json(
-        { error: '缺少studentHash参数' },
-        { status: 400 }
-      );
-    }
-
-    console.log('Fetching probability data for hash:', studentHash.substring(0, 16) + '...');
-
-    // 从cohort_probability表获取概率数据
-    const { data, error } = await supabase
-      .from('cohort_probability')
-      .select('proba_1, proba_2, proba_3, major')
-      .eq('SNH', studentHash)
-      .limit(1);
-
-    if (error) {
-      console.error('Database query error:', error);
-      return NextResponse.json(
-        { error: '数据库查询失败' },
-        { status: 500 }
-      );
-    }
-
-    if (!data || data.length === 0) {
-      console.log('No probability data found for hash:', studentHash.substring(0, 16) + '...');
-      return NextResponse.json(
-        { error: '未找到概率数据' },
-        { status: 404 }
-      );
-    }
-
-    const probabilityData = data[0];
-    
-    // 转换为前端期望的格式
-    const result = {
-      proba_1: probabilityData.proba_1,
-      proba_2: probabilityData.proba_2,
-      proba_3: probabilityData.proba_3,
-      major: probabilityData.major || '未知专业'
-    };
-
-    console.log('Probability data found:', result);
-    return NextResponse.json(result);
-
-  } catch (error) {
-    console.error('API error:', error);
-    return NextResponse.json(
-      { error: '服务器内部错误' },
-      { status: 500 }
-    );
-  }
+// 定义预测结果的类型
+interface PredictionResult {
+  probabilities: number[]; // 3个百分比 [0类概率, 1类概率, 2类概率]
+  predictedClass: number;  // 最高概率的类别 (0, 1, 或 2)
+  featureValues: FeatureValues;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { features } = await request.json();
+    const { featureValues } = await request.json();
 
-    // 验证输入数据
-    if (!features || !Array.isArray(features) || features.length !== 9) {
-      return NextResponse.json(
-        { error: '需要提供9个特征值' },
-        { status: 400 }
-      );
+    // 验证输入
+    if (!featureValues) {
+      return NextResponse.json({ 
+        error: 'featureValues is required' 
+      }, { status: 400 });
+    }
+
+    // 验证九个特征值是否都存在
+    const requiredFeatures = [
+      'public', 'political', 'english', 'math_science', 
+      'basic_subject', 'basic_major', 'major', 'practice', 'innovation'
+    ];
+
+    for (const feature of requiredFeatures) {
+      if (typeof featureValues[feature] !== 'number') {
+        return NextResponse.json({ 
+          error: `Missing or invalid feature: ${feature}` 
+        }, { status: 400 });
+      }
     }
 
     // 调用Python脚本进行预测
-    const pythonScript = path.join(process.cwd(), 'test_model', 'predict_script.py');
-    
-    return new Promise<Response>((resolve) => {
-      const pythonProcess = spawn('python', [pythonScript, JSON.stringify(features)]);
-      
-      let result = '';
-      let error = '';
+    const result = await callXGBoostModel(featureValues);
 
-      pythonProcess.stdout.on('data', (data) => {
-        result += data.toString();
-      });
-
-      pythonProcess.stderr.on('data', (data) => {
-        error += data.toString();
-      });
-
-      pythonProcess.on('close', (code) => {
-        if (code !== 0) {
-          console.error('Python脚本执行错误:', error);
-          resolve(NextResponse.json(
-            { error: '模型预测失败' },
-            { status: 500 }
-          ));
-          return;
-        }
-
-        try {
-          const prediction = JSON.parse(result);
-          resolve(NextResponse.json(prediction));
-        } catch (parseError) {
-          console.error('解析Python输出失败:', parseError);
-          resolve(NextResponse.json(
-            { error: '解析预测结果失败' },
-            { status: 500 }
-          ));
-        }
-      });
-
-      pythonProcess.on('error', (err) => {
-        console.error('启动Python进程失败:', err);
-        resolve(NextResponse.json(
-          { error: '启动预测服务失败' },
-          { status: 500 }
-        ));
-      });
+    return NextResponse.json({
+      success: true,
+      data: result
     });
 
   } catch (error) {
-    console.error('API错误:', error);
-    return NextResponse.json(
-      { error: '服务器内部错误' },
-      { status: 500 }
-    );
+    console.error('Error in predict-possibility:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error' 
+    }, { status: 500 });
   }
+}
+
+async function callXGBoostModel(featureValues: FeatureValues): Promise<PredictionResult> {
+  // 这里我们需要调用Python脚本来加载模型并进行预测
+  // 由于Next.js API路由的限制，我们需要使用子进程来调用Python
+  
+  const { spawn } = require('child_process');
+  
+  return new Promise((resolve, reject) => {
+    // 创建临时文件来传递特征值
+    const tempDataPath = path.join(process.cwd(), 'temp_prediction_data.json');
+    const tempData = {
+      featureValues: featureValues
+    };
+    
+    fs.writeFileSync(tempDataPath, JSON.stringify(tempData));
+    
+    // 调用Python预测脚本
+    const pythonScript = path.join(process.cwd(), 'scripts', 'predict.py');
+    const pythonProcess = spawn('python', [pythonScript, tempDataPath]);
+    
+    let output = '';
+    let errorOutput = '';
+    
+    pythonProcess.stdout.on('data', (data: Buffer) => {
+      output += data.toString();
+    });
+    
+    pythonProcess.stderr.on('data', (data: Buffer) => {
+      errorOutput += data.toString();
+    });
+    
+    pythonProcess.on('close', (code: number) => {
+      // 清理临时文件
+      try {
+        fs.unlinkSync(tempDataPath);
+      } catch (e) {
+        console.warn('Failed to delete temp file:', e);
+      }
+      
+      if (code !== 0) {
+        console.error('Python script error:', errorOutput);
+        reject(new Error(`Python script failed with code ${code}: ${errorOutput}`));
+        return;
+      }
+      
+      try {
+        const result = JSON.parse(output);
+        resolve(result);
+      } catch (e) {
+        reject(new Error(`Failed to parse Python output: ${output}`));
+      }
+    });
+    
+    pythonProcess.on('error', (error: Error) => {
+      reject(new Error(`Failed to start Python process: ${error.message}`));
+    });
+  });
 } 

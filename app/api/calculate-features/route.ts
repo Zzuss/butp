@@ -5,10 +5,10 @@ export async function POST(request: NextRequest) {
     const { allCourses } = await request.json()
 
     if (!allCourses || !Array.isArray(allCourses)) {
-      return NextResponse.json({ error: 'Invalid course data' }, { status: 400 })
+      return NextResponse.json({ error: 'allCourses array is required' }, { status: 400 })
     }
 
-    // 定义9个特征类别
+    // 定义九个特征值类别
     const featureCategories = [
       '公共课程',
       '实践课程', 
@@ -27,56 +27,88 @@ export async function POST(request: NextRequest) {
       featureValues[category] = 0
     })
 
-    // 按类别分组课程
-    const coursesByCategory: Record<string, Array<{score: number, credit: number}>> = {}
+    // 按category分组计算加权平均
+    const categoryGroups: Record<string, { scores: number[], credits: number[] }> = {}
+    
+    // 初始化分组
     featureCategories.forEach(category => {
-      coursesByCategory[category] = []
+      categoryGroups[category] = { scores: [], credits: [] }
     })
 
     // 遍历所有课程，按category分组
-    allCourses.forEach(course => {
+    allCourses.forEach((course: any) => {
       const category = course.category
-      if (category && featureCategories.includes(category) && 
-          course.score !== null && course.score !== undefined &&
-          course.credit !== null && course.credit !== undefined) {
-        coursesByCategory[category].push({
-          score: course.score,
-          credit: course.credit
-        })
+      const score = course.score
+      const credit = course.credit
+
+      // 只处理有category、有效成绩和学分的课程
+      if (category && 
+          score !== null && 
+          score !== undefined && 
+          !isNaN(score) && 
+          credit !== null && 
+          credit !== undefined && 
+          !isNaN(credit) && 
+          credit > 0) {
+        
+        if (categoryGroups[category]) {
+          categoryGroups[category].scores.push(score)
+          categoryGroups[category].credits.push(credit)
+        }
       }
     })
 
-    // 计算每个类别的加权平均值
+    // 计算每个category的加权平均值
     featureCategories.forEach(category => {
-      const courses = coursesByCategory[category]
-      if (courses.length > 0) {
-        const totalWeightedScore = courses.reduce((sum, course) => {
-          return sum + (course.score * course.credit)
-        }, 0)
-        const totalCredits = courses.reduce((sum, course) => {
-          return sum + course.credit
-        }, 0)
+      const group = categoryGroups[category]
+      
+      if (group.scores.length > 0 && group.credits.length > 0) {
+        // 计算加权平均：Σ(成绩 × 学分) / Σ(学分)
+        let weightedSum = 0
+        let totalCredits = 0
+        
+        for (let i = 0; i < group.scores.length; i++) {
+          weightedSum += group.scores[i] * group.credits[i]
+          totalCredits += group.credits[i]
+        }
         
         if (totalCredits > 0) {
-          featureValues[category] = Number((totalWeightedScore / totalCredits).toFixed(3))
+          featureValues[category] = Number((weightedSum / totalCredits).toFixed(2))
+        } else {
+          featureValues[category] = 0
         }
+      } else {
+        featureValues[category] = 0
       }
-      // 如果没有课程，保持默认值0
     })
+
+    // 添加调试信息
+    const debugInfo = {
+      totalCourses: allCourses.length,
+      coursesWithValidData: allCourses.filter((course: any) => 
+        course.category && 
+        course.score !== null && 
+        course.score !== undefined && 
+        !isNaN(course.score) && 
+        course.credit !== null && 
+        course.credit !== undefined && 
+        !isNaN(course.credit) && 
+        course.credit > 0
+      ).length,
+      categoryBreakdown: Object.keys(categoryGroups).map(category => ({
+        category,
+        courseCount: categoryGroups[category].scores.length,
+        totalCredits: categoryGroups[category].credits.reduce((sum, credit) => sum + credit, 0),
+        averageScore: categoryGroups[category].scores.length > 0 ? 
+          categoryGroups[category].scores.reduce((sum, score) => sum + score, 0) / categoryGroups[category].scores.length : 0
+      }))
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         featureValues,
-        summary: {
-          totalCourses: allCourses.length,
-          coursesByCategory: Object.fromEntries(
-            featureCategories.map(category => [
-              category, 
-              coursesByCategory[category].length
-            ])
-          )
-        }
+        debugInfo
       }
     })
 

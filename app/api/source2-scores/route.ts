@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// 在每次请求时创建新的客户端，避免连接问题
-function createSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+// 使用硬编码的Supabase配置
+const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function POST(request: NextRequest) {
   try {
-    // 检查环境变量
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.error('Missing Supabase environment variables')
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
-    }
-
-    const { studentHash } = await request.json()
+    const body = await request.json();
+    const { studentHash } = body;
 
     if (!studentHash) {
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 })
@@ -29,9 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid hash format' }, { status: 400 })
     }
 
-    const supabase = createSupabaseClient()
-
-    // 获取来源2的数据（academic_results表）
+    // 1. 获取来源2的数据（academic_results表）
     const { data: source2Data, error: source2Error } = await supabase
       .from('academic_results')
       .select(`
@@ -60,7 +51,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch source 2 data' }, { status: 500 })
     }
 
-    // 获取courses表信息用于映射
+    // 2. 获取courses表信息用于映射
     const { data: coursesData, error: coursesError } = await supabase
       .from('courses')
       .select('course_id, course_name, semester, category, credit')
@@ -71,7 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch courses data' }, { status: 500 })
     }
 
-    // 创建课程编号到课程信息的映射
+    // 3. 创建课程编号到课程信息的映射
     const courseIdToInfoMap: Record<string, any> = {};
     coursesData?.forEach(course => {
       if (course.course_id) {
@@ -83,8 +74,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 课程类型到类别的映射
-    // 注意：如果需要添加新的课程类型或修改映射关系，需要手动更新这个映射表
+    // 4. 课程类型到类别的映射
     const courseTypeToCategoryMapping: Record<string, string> = {
       '思想政治理论课': '政治课程',
       '公共课': '公共课程',
@@ -95,7 +85,7 @@ export async function POST(request: NextRequest) {
       '其他': '基础学科'
     };
 
-    // 处理来源2数据
+    // 5. 处理来源2数据
     const source2Courses: any[] = [];
     if (source2Data) {
       source2Data.forEach((record: any) => {
@@ -114,18 +104,25 @@ export async function POST(request: NextRequest) {
         }
         
         source2Courses.push({
+          source: 'academic_results',
           courseName: record.Course_Name,
           courseId: courseId,
           score: score,
           semester: courseInfo?.semester || record.Semester_Offered,
-          category: courseTypeToCategoryMapping[record.Course_Type] || '基础学科', // 使用课程类型映射
+          category: courseTypeToCategoryMapping[record.Course_Type] || '基础学科',
           credit: courseInfo?.credit || parseFloat(record.Credit) || 0.1,
           courseType: record.Course_Type,
           courseAttribute: record.Course_Attribute,
-          examType: record.Exam_Type
+          examType: record.Exam_Type,
+          rawData: record
         });
       });
     }
+
+    console.log('Source 2 courses found:', source2Courses.length);
+    console.log('Courses with semester info:', source2Courses.filter(c => c.semester !== null).length);
+    console.log('Courses with category info:', source2Courses.filter(c => c.category !== null).length);
+    console.log('Courses with credit info:', source2Courses.filter(c => c.credit !== null).length);
 
     return NextResponse.json({
       success: true,
@@ -139,7 +136,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('API error:', error)
+    console.error('API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 
