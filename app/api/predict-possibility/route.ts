@@ -7,6 +7,14 @@ import path from 'path';
 const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM';
 
+// 使用环境变量
+//const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+//const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+//if (!supabaseUrl || !supabaseKey) {
+//  throw new Error('Missing Supabase environment variables');
+//}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function GET(request: NextRequest) {
