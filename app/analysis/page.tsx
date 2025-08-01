@@ -50,6 +50,22 @@ export default function Analysis() {
   // 编辑状态
   const [isEditing, setIsEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  
+  // 目标分数状态（带缓存）
+  const [targetScores, setTargetScores] = useState<{
+    target1_score: number | null;
+    target2_score: number | null;
+  } | null>(null);
+  const [loadingTargetScores, setLoadingTargetScores] = useState(false);
+  const [targetScoresCache, setTargetScoresCache] = useState<Record<string, any>>({});
+  
+  // Original缓存状态
+  const [originalScoresCache, setOriginalScoresCache] = useState<Record<string, any>>({});
+  const [loadingOriginalScores, setLoadingOriginalScores] = useState(false);
+  
+  // Modified缓存状态
+  const [modifiedScoresCache, setModifiedScoresCache] = useState<Record<string, any>>({});
+  const [loadingModifiedScores, setLoadingModifiedScores] = useState(false);
 
 
 
@@ -258,19 +274,166 @@ export default function Analysis() {
     setIsEditMode(false);
   };
 
+  // 加载目标分数（带缓存）
+  const loadTargetScores = async () => {
+    if (!user?.userHash) return;
+
+    // 检查缓存
+    if (targetScoresCache[user.userHash]) {
+      setTargetScores(targetScoresCache[user.userHash]);
+      return;
+    }
+
+    setLoadingTargetScores(true);
+    try {
+      const response = await fetch('/api/target-scores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ studentHash: user.userHash }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setTargetScores(result.data);
+          // 缓存数据
+          setTargetScoresCache(prev => ({
+            ...prev,
+            [user.userHash]: result.data
+          }));
+        } else {
+          setTargetScores(null);
+        }
+      } else {
+        setTargetScores(null);
+      }
+    } catch (error) {
+      console.error('Failed to load target scores:', error);
+      setTargetScores(null);
+    } finally {
+      setLoadingTargetScores(false);
+    }
+  };
+
+  // 加载Original缓存（从student-course-scores API，对标模板）
+  const loadOriginalScores = async () => {
+    if (!user?.userHash) return;
+
+    // 检查缓存
+    if (originalScoresCache[user.userHash]) {
+      console.log('Using cached original scores');
+      return originalScoresCache[user.userHash];
+    }
+
+    setLoadingOriginalScores(true);
+    try {
+      const response = await fetch('/api/student-course-scores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ studentHash: user.userHash }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const originalScores = result.data.courseScores || [];
+          
+          // 缓存original数据
+          setOriginalScoresCache(prev => ({
+            ...prev,
+            [user.userHash]: originalScores
+          }));
+          
+          // 初始化modified缓存（复制original数据）
+          setModifiedScoresCache(prev => ({
+            ...prev,
+            [user.userHash]: JSON.parse(JSON.stringify(originalScores)) // 深拷贝
+          }));
+          
+          console.log('Original scores loaded and cached:', originalScores.length, 'courses');
+          console.log('Modified cache initialized with original data');
+          return originalScores;
+        } else {
+          console.log('No original scores found');
+          return [];
+        }
+      } else {
+        console.error('Failed to load original scores');
+        return [];
+      }
+    } catch (error) {
+      console.error('Error loading original scores:', error);
+      return [];
+    } finally {
+      setLoadingOriginalScores(false);
+    }
+  };
+
+  // 获取Modified缓存数据
+  const getModifiedScores = () => {
+    if (!user?.userHash) return [];
+    
+    // 检查modified缓存
+    if (modifiedScoresCache[user.userHash]) {
+      console.log('Using cached modified scores');
+      return modifiedScoresCache[user.userHash];
+    }
+    
+    // 如果没有modified缓存，返回original缓存
+    if (originalScoresCache[user.userHash]) {
+      console.log('No modified cache, using original scores');
+      return originalScoresCache[user.userHash];
+    }
+    
+    console.log('No cache available');
+    return [];
+  };
+
+  // 获取Original缓存数据
+  const getOriginalScores = () => {
+    if (!user?.userHash) return [];
+    
+    // 检查original缓存
+    if (originalScoresCache[user.userHash]) {
+      console.log('Using cached original scores');
+      return originalScoresCache[user.userHash];
+    }
+    
+    console.log('No original cache available');
+    return [];
+  };
+
+  // 更新Modified缓存数据
+  const updateModifiedScores = (newScores: any[]) => {
+    if (!user?.userHash) return;
+    
+    setModifiedScoresCache(prev => ({
+      ...prev,
+      [user.userHash]: JSON.parse(JSON.stringify(newScores)) // 深拷贝
+    }));
+    console.log('Modified cache updated with', newScores.length, 'courses');
+  };
+
   // 加载所有课程数据
   const loadAllCourseData = async () => {
     if (!user?.userHash) return;
 
-    // 使用当前的修改数据
-    const scoresToUse = modifiedScores.length > 0 ? modifiedScores : courseScores;
+    // 获取modified缓存数据
+    const modifiedScoresData = getModifiedScores();
+    
+    // 确保original缓存已加载
+    const originalScoresData = await loadOriginalScores();
 
     setLoadingAllCourseData(true);
     try {
       console.log('发送到API的数据:', {
         studentHash: user.userHash,
-        scoresToUse,
-        modifiedScores
+        modifiedScoresData: modifiedScoresData.length,
+        originalScoresData: originalScoresData.length
       });
       
       // 调用API获取所有课程数据
@@ -279,10 +442,10 @@ export default function Analysis() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           studentHash: user.userHash,
-          modifiedScores: scoresToUse,
-          source2Scores: originalScores.map(score => ({
+          modifiedScores: modifiedScoresData,
+          source2Scores: originalScoresData.map((score: any) => ({
             ...score,
-            source: 'academic_results'
+            source: 'cohort_predictions'
           }))
         })
       });
@@ -323,6 +486,24 @@ export default function Analysis() {
     
     if (user?.userHash) {
       loadAbilityData();
+    }
+  }, [user?.userHash, authLoading]);
+
+  // 加载目标分数
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (user?.userHash) {
+      loadTargetScores();
+    }
+  }, [user?.userHash, authLoading]);
+
+  // 加载Original缓存
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (user?.userHash) {
+      loadOriginalScores();
     }
   }, [user?.userHash, authLoading]);
 
@@ -397,7 +578,10 @@ export default function Analysis() {
          >
            <span>海外读研</span>
            <span className="text-xs text-blue-500 mt-1">
-             示例数据
+             {loadingTargetScores ? '加载中...' : 
+              targetScores && targetScores.target2_score !== null ? 
+              `${targetScores.target2_score}%` : 
+              '暂无数据'}
            </span>
          </Button>
                  <Button
@@ -411,7 +595,10 @@ export default function Analysis() {
          >
            <span>国内读研</span>
            <span className="text-xs text-blue-500 mt-1">
-             示例数据
+             {loadingTargetScores ? '加载中...' : 
+              targetScores && targetScores.target1_score !== null ? 
+              `${targetScores.target1_score}%` : 
+              '暂无数据'}
            </span>
          </Button>
       </div>
@@ -769,7 +956,10 @@ export default function Analysis() {
                     <p className="text-blue-800 font-medium">
                       最低目标分数：{' '}
                       <span className="text-blue-600 font-bold">
-                        示例数据
+                        {loadingTargetScores ? '加载中...' : 
+                         targetScores && targetScores.target2_score !== null ? 
+                         `${targetScores.target2_score}%` : 
+                         '暂无数据'}
                       </span>
                     </p>
                   </div>
@@ -850,80 +1040,76 @@ export default function Analysis() {
                       </tr>
                     </thead>
                     <tbody>
-                      {/* 示例数据行 */}
-                      <tr className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">1</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">第1学期</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm">高等数学A(上)</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">数学与自然科学</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">4.0</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                          <span className="font-bold text-green-600">92</span>
-                        </td>
-                        {isEditMode && (
-                          <td className="border border-gray-200 px-4 py-2 text-sm">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.5"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value="92"
-                              placeholder="输入新成绩"
-                            />
-                          </td>
-                        )}
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">2</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">第1学期</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm">线性代数</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">数学与自然科学</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">3.0</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                          <span className="font-bold text-blue-600">85</span>
-                        </td>
-                        {isEditMode && (
-                          <td className="border border-gray-200 px-4 py-2 text-sm">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.5"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value="85"
-                              placeholder="输入新成绩"
-                            />
-                          </td>
-                        )}
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">3</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">第2学期</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm">程序设计基础</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">计算机基础</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">3.0</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                          <span className="font-bold text-yellow-600">78</span>
-                        </td>
-                        {isEditMode && (
-                          <td className="border border-gray-200 px-4 py-2 text-sm">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.5"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value="78"
-                              placeholder="输入新成绩"
-                            />
-                          </td>
-                        )}
-                      </tr>
+                      {(() => {
+                        const originalScores = getOriginalScores();
+                        if (originalScores.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                                {loadingOriginalScores ? '加载中...' : '暂无课程数据'}
+                              </td>
+                            </tr>
+                          );
+                        }
+                        
+                        return originalScores.map((course: any, index: number) => {
+                          const score = course.score;
+                          let scoreColor = 'text-gray-600';
+                          if (score !== null && score !== undefined) {
+                            if (score >= 90) scoreColor = 'text-green-600';
+                            else if (score >= 80) scoreColor = 'text-blue-600';
+                            else if (score >= 70) scoreColor = 'text-yellow-600';
+                            else if (score >= 60) scoreColor = 'text-orange-600';
+                            else scoreColor = 'text-red-600';
+                          }
+                          
+                          return (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
+                                {index + 1}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
+                                {course.semester ? `第${course.semester}学期` : '未知学期'}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                {course.courseName}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+                                {course.category || '未分类'}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
+                                {course.credit || '0.0'}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                {score !== null && score !== undefined ? (
+                                  <span className={`font-bold ${scoreColor}`}>{score}</span>
+                                ) : (
+                                  <span className="text-gray-400">暂无成绩</span>
+                                )}
+                              </td>
+                              {isEditMode && (
+                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.5"
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={score !== null && score !== undefined ? score : ''}
+                                    placeholder="输入新成绩"
+                                    onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
+                                    onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
+                                  />
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                   <div className="text-center text-sm text-muted-foreground mt-4">
-                    共3门课程
+                    共{getOriginalScores().length}门课程
                   </div>
                 </div>
               </CardContent>
@@ -942,7 +1128,10 @@ export default function Analysis() {
                     <p className="text-blue-800 font-medium">
                       最低目标分数：{' '}
                       <span className="text-blue-600 font-bold">
-                        示例数据
+                        {loadingTargetScores ? '加载中...' : 
+                         targetScores && targetScores.target1_score !== null ? 
+                         `${targetScores.target1_score}%` : 
+                         '暂无数据'}
                       </span>
                     </p>
                   </div>

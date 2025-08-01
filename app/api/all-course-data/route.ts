@@ -387,21 +387,16 @@ export async function POST(request: NextRequest) {
     const processedCourseNames = new Set<string>();
 
     // 先添加来源1的数据
-    // 规则：修改为0分的记录在总表，暂无成绩的不记录
+    // 规则：无论成绩是否存在都记录
     source1Courses.forEach(course => {
-      if (course.score !== null && course.score !== undefined) { // 有成绩就记录（包括0分）
-        allCourses.push(course);
-        processedCourseNames.add(course.courseName);
-      }
+      allCourses.push(course);
+      processedCourseNames.add(course.courseName);
     });
 
     // 添加来源2中未在来源1中出现的课程
-    // 规则：无论什么原因，只要没有成绩或成绩为0，都不记录
+    // 规则：无论成绩是否存在都记录
     source2Courses.forEach(course => {
-      if (!processedCourseNames.has(course.courseName) && 
-          course.score !== null && 
-          course.score !== undefined && 
-          course.score !== 0) { // 有成绩且不为0分才记录
+      if (!processedCourseNames.has(course.courseName)) {
         allCourses.push(course);
         processedCourseNames.add(course.courseName);
       }
