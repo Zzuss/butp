@@ -536,11 +536,14 @@ export default function Analysis() {
         if (result.success && result.data) {
           const originalScores = result.data.courseScores || [];
           
-          // 缓存original数据
+          // 先缓存original数据
           setOriginalScoresCache(prev => ({
             ...prev,
             [user.userHash]: originalScores
           }));
+          
+          // 等待缓存更新完成
+          await new Promise(resolve => setTimeout(resolve, 0));
           
           // 初始化modified缓存（复制original数据）
           setModifiedScoresCache(prev => ({
@@ -642,6 +645,20 @@ export default function Analysis() {
     }
     
     console.log('No original cache available');
+    return [];
+  };
+
+  // 获取Source2成绩数据
+  const getSource2Scores = () => {
+    if (!user?.userHash) return [];
+    
+    // 检查source2缓存
+    if (source2ScoresCache[user.userHash]) {
+      console.log('Using cached source2 scores');
+      return source2ScoresCache[user.userHash];
+    }
+    
+    console.log('No source2 cache available');
     return [];
   };
 
@@ -759,6 +776,15 @@ export default function Analysis() {
     
     if (user?.userHash) {
       loadOriginalScores();
+    }
+  }, [user?.userHash, authLoading]);
+
+  // 加载Source2缓存
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (user?.userHash) {
+      loadSource2Scores();
     }
   }, [user?.userHash, authLoading]);
 
@@ -1365,17 +1391,22 @@ export default function Analysis() {
                     <tbody>
                       {(() => {
                         const originalScores = getOriginalScores();
-                        if (originalScores.length === 0) {
+                        // 过滤掉没有成绩的课程
+                        const filteredScores = originalScores.filter((course: any) => 
+                          course.score !== null && course.score !== undefined
+                        );
+                        
+                        if (filteredScores.length === 0) {
                           return (
                             <tr>
                               <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                                {loadingOriginalScores ? '加载中...' : '暂无课程数据'}
+                                {loadingOriginalScores ? '加载中...' : '暂无有成绩的课程数据'}
                               </td>
                             </tr>
                           );
                         }
                         
-                        return originalScores.map((course: any, index: number) => {
+                        return filteredScores.map((course: any, index: number) => {
                           const score = course.score;
                           let scoreColor = 'text-gray-600';
                           if (score !== null && score !== undefined) {
@@ -1444,7 +1475,107 @@ export default function Analysis() {
                     </tbody>
                   </table>
                   <div className="text-center text-sm text-muted-foreground mt-4">
-                    共{getOriginalScores().length}门课程
+                    共{getOriginalScores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Source2 课程成绩表格 - 只读 */}
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-lg font-medium text-orange-700">已修成绩</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200">
+                  <thead>
+                    <tr className="bg-orange-50">
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                      {isEditMode && (
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
+                          修改状态
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const source2Scores = getSource2Scores();
+                      // 过滤掉没有成绩的课程
+                      const filteredSource2Scores = source2Scores.filter((course: any) => 
+                        course.score !== null && course.score !== undefined
+                      );
+                      
+                      if (filteredSource2Scores.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                              {loadingSource2Scores ? '加载中...' : '暂无有成绩的课程数据'}
+                            </td>
+                          </tr>
+                        );
+                      }
+                      
+                      return filteredSource2Scores.map((course: any, index: number) => {
+                        const score = course.score;
+                        let scoreColor = 'text-gray-600';
+                        if (score !== null && score !== undefined) {
+                          if (score >= 90) scoreColor = 'text-green-600';
+                          else if (score >= 80) scoreColor = 'text-blue-600';
+                          else if (score >= 70) scoreColor = 'text-yellow-600';
+                          else if (score >= 60) scoreColor = 'text-orange-600';
+                          else scoreColor = 'text-red-600';
+                        }
+                        
+                        return (
+                          <tr key={index} className="hover:bg-orange-50">
+                            <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
+                              {index + 1}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-left text-sm font-medium text-gray-500">
+                              {course.semester ? `第${course.semester}学期` : '未知学期'}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm">
+                              {course.courseName}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+                              {course.category || '未分类'}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
+                              {course.credit || '0.0'}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                              {score !== null && score !== undefined ? (
+                                <span className={`font-bold ${scoreColor}`}>{score}</span>
+                              ) : (
+                                <span className="text-gray-400">暂无成绩</span>
+                              )}
+                            </td>
+                            {isEditMode && (
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                <span className="text-gray-400 italic text-xs bg-gray-100 px-2 py-1 rounded">
+                                  无法修改
+                                </span>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  共{getSource2Scores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
                 </div>
               </div>
             </CardContent>
@@ -1580,17 +1711,22 @@ export default function Analysis() {
                     <tbody>
                       {(() => {
                         const originalScores = getOriginalScores();
-                        if (originalScores.length === 0) {
+                        // 过滤掉没有成绩的课程
+                        const filteredScores = originalScores.filter((course: any) => 
+                          course.score !== null && course.score !== undefined
+                        );
+                        
+                        if (filteredScores.length === 0) {
                           return (
                             <tr>
                               <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                                {loadingOriginalScores ? '加载中...' : '暂无课程数据'}
+                                {loadingOriginalScores ? '加载中...' : '暂无有成绩的课程数据'}
                               </td>
                             </tr>
                           );
                         }
                         
-                        return originalScores.map((course: any, index: number) => {
+                        return filteredScores.map((course: any, index: number) => {
                           const score = course.score;
                           let scoreColor = 'text-gray-600';
                           if (score !== null && score !== undefined) {
@@ -1651,9 +1787,109 @@ export default function Analysis() {
                     </tbody>
                   </table>
                                      <div className="text-center text-sm text-muted-foreground mt-4">
-                     共{getOriginalScores().length}门课程
+                     共{getOriginalScores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
                 </div>
                  </div>
+            </CardContent>
+          </Card>
+
+          {/* Source2 课程成绩表格 - 只读 */}
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-lg font-medium text-orange-700">已修成绩</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200">
+                  <thead>
+                    <tr className="bg-orange-50">
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                      {isEditMode && (
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
+                          修改状态
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const source2Scores = getSource2Scores();
+                      // 过滤掉没有成绩的课程
+                      const filteredSource2Scores = source2Scores.filter((course: any) => 
+                        course.score !== null && course.score !== undefined
+                      );
+                      
+                      if (filteredSource2Scores.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                              {loadingSource2Scores ? '加载中...' : '暂无有成绩的课程数据'}
+                            </td>
+                          </tr>
+                        );
+                      }
+                      
+                      return filteredSource2Scores.map((course: any, index: number) => {
+                        const score = course.score;
+                        let scoreColor = 'text-gray-600';
+                        if (score !== null && score !== undefined) {
+                          if (score >= 90) scoreColor = 'text-green-600';
+                          else if (score >= 80) scoreColor = 'text-blue-600';
+                          else if (score >= 70) scoreColor = 'text-yellow-600';
+                          else if (score >= 60) scoreColor = 'text-orange-600';
+                          else scoreColor = 'text-red-600';
+                        }
+                        
+                        return (
+                          <tr key={index} className="hover:bg-orange-50">
+                            <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
+                              {index + 1}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
+                              {course.semester ? `第${course.semester}学期` : '未知学期'}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm">
+                              {course.courseName}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+                              {course.category || '未分类'}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
+                              {course.credit || '0.0'}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                              {score !== null && score !== undefined ? (
+                                <span className={`font-bold ${scoreColor}`}>{score}</span>
+                              ) : (
+                                <span className="text-gray-400">暂无成绩</span>
+                              )}
+                            </td>
+                            {isEditMode && (
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                <span className="text-gray-400 italic text-xs bg-gray-100 px-2 py-1 rounded">
+                                  无法修改
+                                </span>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  共{getSource2Scores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
