@@ -274,6 +274,16 @@ export default function Analysis() {
     setIsEditMode(!isEditMode);
   };
 
+  // 处理按钮选择切换
+  const handleButtonSelect = (buttonType: 'graduation' | 'overseas' | 'domestic' | null) => {
+    // 如果切换按钮，重置编辑模式
+    if (selectedButton !== buttonType) {
+      setIsEditMode(false);
+      setPredictionResult(null);
+    }
+    setSelectedButton(selectedButton === buttonType ? null : buttonType);
+  };
+
   // 处理成绩修改
   const handleScoreChange = (courseName: string, newScore: string) => {
     // 允许用户输入任意内容，包括多位小数
@@ -828,7 +838,7 @@ export default function Analysis() {
               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
               : 'hover:scale-95'
           }`}
-          onClick={() => setSelectedButton(selectedButton === 'graduation' ? null : 'graduation')}
+          onClick={() => handleButtonSelect('graduation')}
         >
           <span>毕业</span>
           <span className="text-xs text-red-500 mt-1 px-1 text-center leading-tight break-words whitespace-normal">
@@ -842,7 +852,7 @@ export default function Analysis() {
                ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
                : 'hover:scale-95'
            }`}
-           onClick={() => setSelectedButton(selectedButton === 'overseas' ? null : 'overseas')}
+           onClick={() => handleButtonSelect('overseas')}
          >
            <div className="grid grid-cols-2 w-full h-full">
              <div className="flex items-center justify-center border-r border-gray-300">
@@ -865,7 +875,7 @@ export default function Analysis() {
                ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
                : 'hover:scale-95'
            }`}
-           onClick={() => setSelectedButton(selectedButton === 'domestic' ? null : 'domestic')}
+           onClick={() => handleButtonSelect('domestic')}
          >
            <div className="grid grid-cols-2 w-full h-full">
              <div className="flex items-center justify-center border-r border-gray-300">
@@ -1475,6 +1485,26 @@ export default function Analysis() {
               </div>
             </div>
 
+            {/* 预测结果显示框 */}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex justify-between items-center">
+                <div className="flex-1">
+                  <div className="text-center">
+                    <p className="text-blue-800 font-medium">
+                      {predictionResult ? (
+                        `当前去向的新可能性为${predictionResult.domesticPercentage}%，另一去向的新可能性为${predictionResult.overseasPercentage}%`
+                      ) : (
+                        '还未开始计算新百分比'
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <div className="w-20"></div>
+                </div>
+              </div>
+            </div>
+
             {/* 课程成绩表格 */}
           <Card>
             <CardHeader>
@@ -1548,80 +1578,80 @@ export default function Analysis() {
                       </tr>
                     </thead>
                     <tbody>
-                      {/* 示例数据行 */}
-                      <tr className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">1</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">第1学期</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm">高等数学A(上)</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">数学与自然科学</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">4.0</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                          <span className="font-bold text-green-600">92</span>
-                        </td>
-                        {isEditMode && (
-                          <td className="border border-gray-200 px-4 py-2 text-sm">
-                  <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.5"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value="92"
-                              placeholder="输入新成绩"
-                            />
-                          </td>
-                        )}
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">2</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">第1学期</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm">线性代数</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">数学与自然科学</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">3.0</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                          <span className="font-bold text-blue-600">85</span>
-                        </td>
-                        {isEditMode && (
-                          <td className="border border-gray-200 px-4 py-2 text-sm">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.5"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value="85"
-                              placeholder="输入新成绩"
-                            />
-                          </td>
-                        )}
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">3</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">第2学期</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm">程序设计基础</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">计算机基础</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">3.0</td>
-                        <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                          <span className="font-bold text-yellow-600">78</span>
-                        </td>
-                        {isEditMode && (
-                          <td className="border border-gray-200 px-4 py-2 text-sm">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.5"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value="78"
-                              placeholder="输入新成绩"
-                            />
-                          </td>
-                        )}
-                      </tr>
+                      {(() => {
+                        const originalScores = getOriginalScores();
+                        if (originalScores.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                                {loadingOriginalScores ? '加载中...' : '暂无课程数据'}
+                              </td>
+                            </tr>
+                          );
+                        }
+                        
+                        return originalScores.map((course: any, index: number) => {
+                          const score = course.score;
+                          let scoreColor = 'text-gray-600';
+                          if (score !== null && score !== undefined) {
+                            if (score >= 90) scoreColor = 'text-green-600';
+                            else if (score >= 80) scoreColor = 'text-blue-600';
+                            else if (score >= 70) scoreColor = 'text-yellow-600';
+                            else if (score >= 60) scoreColor = 'text-orange-600';
+                            else scoreColor = 'text-red-600';
+                          }
+                          
+                          return (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">{index + 1}</td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
+                                {course.semester ? `第${course.semester}学期` : '-'}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm">{course.courseName}</td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">{course.category || '-'}</td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">{course.credit || '-'}</td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                {course.score !== null ? (
+                                  <span className={`font-bold ${scoreColor}`}>{course.score}</span>
+                                ) : (
+                                  <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
+                                )}
+                              </td>
+                              {isEditMode && (
+                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                  {course.score !== null ? (
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="0.5"
+                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      value={(() => {
+                                        // 从modified缓存中查找当前课程的最新成绩
+                                        const modifiedScores = getModifiedScores();
+                                        const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
+                                        if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
+                                          return modifiedCourse.score;
+                                        }
+                                        return course.score; // 如果没有修改，显示原始成绩
+                                      })()}
+                                      onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
+                                      onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
+                                      placeholder={t('analysis.course.scores.input.placeholder')}
+                                    />
+                                  ) : (
+                                    <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
+                                  )}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                                      <div className="text-center text-sm text-muted-foreground mt-4">
-                     共3门课程
+                     共{getOriginalScores().length}门课程
                 </div>
                  </div>
             </CardContent>
