@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
           semester: courseInfo?.semester || null,
           category: courseInfo?.category || null,
           courseId: courseId || null,
-          credit: courseInfo?.credit || null
+          credit: courseInfo?.credit || 0.1
         };
       })
       .sort((a, b) => {

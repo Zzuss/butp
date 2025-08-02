@@ -162,7 +162,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.distribution.no.data': '暂无课程类型数据',
     
     // 免责声明
-    'disclaimer.data.accuracy': '本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。',
+    'disclaimer.data.accuracy': '本页面显示的平均分数、通过率、GPA等数据均为模糊计算所得，计算中只考虑必修课成绩，仅供参考和趋势分析使用。真实成绩信息请以官方教务系统为准。',
     
     // Grades页面
     'grades.title': '成绩详情',
@@ -212,7 +212,7 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.subjects.current': '当前: {current}',
     'analysis.subjects.target': '目标: {target}',
     'analysis.ability.title': '个人能力评估',
-    'analysis.ability.description': '各项能力综合评估',
+    'analysis.ability.description': '此数据由所有已有成绩分类加权得出',
     'analysis.ability.overall': '综合能力评分: {score}',
     'analysis.ability.logical': '逻辑思维',
     'analysis.ability.memory': '记忆能力',
@@ -220,7 +220,7 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.ability.application': '应用能力',
     'analysis.ability.innovation': '创新思维',
     'analysis.ability.expression': '表达能力',
-    'analysis.tops.title': '专业平均成绩',
+    'analysis.tops.title': '当前专业平均GPA',
     'analysis.tops.top10': '前10%',
     'analysis.tops.top20': '前20%',
     'analysis.tops.top30': '前30%',

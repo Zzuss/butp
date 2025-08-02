@@ -3,8 +3,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Award, Briefcase, Languages, Plus, Edit, Trash2, X } from "lucide-react"
-import { useState, FormEvent, useRef } from "react"
+import { useState, FormEvent, useRef, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
+import { useAuth } from "@/contexts/AuthContext"
+import { getStudentInfo } from "@/lib/dashboard-data"
 
 // 定义各类考试成绩的接口
 interface ToeflScore {
@@ -50,9 +52,11 @@ interface Internship {
 
 export default function Profile() {
   const { t } = useLanguage()
+  const { user, loading: authLoading } = useAuth()
   const [showScoreForm, setShowScoreForm] = useState(false);
   const [selectedScoreType, setSelectedScoreType] = useState("");
   const [editMode, setEditMode] = useState(false);
+  const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
   
   // 添加获奖记录和实习经历的表单状态
   const [showAwardForm, setShowAwardForm] = useState(false);
@@ -150,6 +154,28 @@ export default function Profile() {
   const formRef = useRef<HTMLFormElement>(null);
   const awardFormRef = useRef<HTMLFormElement>(null);
   const internshipFormRef = useRef<HTMLFormElement>(null);
+
+  // 加载学生信息
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user?.isLoggedIn || !user?.userHash) {
+      setStudentInfo(null);
+      return;
+    }
+    
+    async function loadStudentInfo() {
+      try {
+        const info = await getStudentInfo(user.userHash);
+        setStudentInfo(info);
+      } catch (error) {
+        console.error('Error loading student info:', error);
+        setStudentInfo(null);
+      }
+    }
+    
+    loadStudentInfo();
+  }, [user, authLoading]);
   
   const handleAddScore = () => {
     setEditMode(false);
@@ -786,7 +812,12 @@ export default function Profile() {
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{t('profile.title')}</h1>
-        <p className="text-muted-foreground">{t('profile.description')}</p>
+        <p className="text-muted-foreground">
+          {studentInfo 
+            ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+            : t('profile.description')
+          }
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

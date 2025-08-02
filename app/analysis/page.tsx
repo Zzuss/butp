@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ChevronDown } from "lucide-react"
+
 import { useLanguage } from "@/contexts/language-context"
-import { getTopPercentageGPAThreshold } from "@/lib/dashboard-data"
+import { getTopPercentageGPAThreshold, getStudentInfo } from "@/lib/dashboard-data"
 import { getStudentAbilityData } from "@/lib/ability-data"
 import { RadarChart } from "@/components/ui/radar-chart"
 import { SimplePDFExport } from '@/components/pdf/SimplePDFExport'
@@ -21,12 +21,18 @@ export default function Analysis() {
   const { t, language } = useLanguage()
   const { user, loading: authLoading } = useAuth()
   
-  // 下拉菜单状态
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedOption, setSelectedOption] = useState('top30');
+
   
   // GPA门槛值状态
-  const [gpaThreshold, setGpaThreshold] = useState<number | null>(null);
+  const [gpaThresholds, setGpaThresholds] = useState<{
+    top10: number | null;
+    top20: number | null;
+    top30: number | null;
+  }>({
+    top10: null,
+    top20: null,
+    top30: null
+  });
   const [loadingGPA, setLoadingGPA] = useState(false);
   
   // 按钮选择状态
@@ -124,18 +130,47 @@ export default function Analysis() {
     domesticPercentage: number | null;
     overseasPercentage: number | null;
   } | null>(null);
+
+  // 学生信息状态
+  const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
   
 
 
   // 获取GPA门槛值
-  const loadGPAThreshold = async (percentage: number) => {
+  const loadGPAThresholds = async () => {
     setLoadingGPA(true);
     try {
-      const threshold = await getTopPercentageGPAThreshold(percentage);
-      setGpaThreshold(threshold);
+      // 并行加载三个百分比的数据
+      const promises = [10, 20, 30].map(async (percentage) => {
+        const threshold = await getTopPercentageGPAThreshold(percentage);
+        return { percentage, gpa: threshold };
+      });
+      
+      const results = await Promise.all(promises);
+      const newThresholds: {
+        top10: number | null;
+        top20: number | null;
+        top30: number | null;
+      } = {
+        top10: null,
+        top20: null,
+        top30: null
+      };
+      
+      results.forEach(({ percentage, gpa }) => {
+        if (percentage === 10) newThresholds.top10 = gpa;
+        if (percentage === 20) newThresholds.top20 = gpa;
+        if (percentage === 30) newThresholds.top30 = gpa;
+      });
+      
+      setGpaThresholds(newThresholds);
     } catch (error) {
-      console.error('Failed to load GPA threshold:', error);
-      setGpaThreshold(null);
+      console.error('Failed to load GPA thresholds:', error);
+      setGpaThresholds({
+        top10: null,
+        top20: null,
+        top30: null
+      });
     } finally {
       setLoadingGPA(false);
     }
@@ -157,11 +192,7 @@ export default function Analysis() {
     }
   };
 
-  // 处理下拉菜单选择
-  const handleOptionSelect = (optionKey: string) => {
-    setSelectedOption(optionKey);
-    setIsDropdownOpen(false);
-  };
+
 
   // 处理毕业要求编辑
   const handleGraduationEdit = (requirementKey: keyof typeof graduationRequirements) => {
@@ -687,19 +718,12 @@ export default function Analysis() {
 
 
 
-  // 初始加载和选项变化时更新GPA门槛值
+  // 初始加载时更新GPA门槛值
   useEffect(() => {
     if (authLoading) return;
     
-    const percentageOptions = [
-      { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
-      { key: 'top20', label: t('analysis.tops.top20'), value: 20 },
-      { key: 'top30', label: t('analysis.tops.top30'), value: 30 }
-    ];
-    
-    const selectedPercentage = percentageOptions.find(opt => opt.key === selectedOption)?.value || 30;
-    loadGPAThreshold(selectedPercentage);
-  }, [selectedOption, t, authLoading]);
+    loadGPAThresholds();
+  }, [authLoading]);
 
   // 加载能力数据
   useEffect(() => {
@@ -728,13 +752,31 @@ export default function Analysis() {
     }
   }, [user?.userHash, authLoading]);
 
+  // 加载学生信息
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user?.isLoggedIn || !user?.userHash) {
+      setStudentInfo(null);
+      return;
+    }
+    
+    async function loadStudentInfo() {
+      try {
+        const info = await getStudentInfo(user!.userHash);
+        setStudentInfo(info);
+      } catch (error) {
+        console.error('Error loading student info:', error);
+        setStudentInfo(null);
+      }
+    }
+    
+    loadStudentInfo();
+  }, [user, authLoading]);
 
 
-  const percentageOptions = [
-    { key: 'top10', label: t('analysis.tops.top10'), value: 10 },
-    { key: 'top20', label: t('analysis.tops.top20'), value: 20 },
-    { key: 'top30', label: t('analysis.tops.top30'), value: 30 }
-  ];
+
+
 
   // 获取当前语言的能力标签
   const currentAbilityLabels = abilityLabels[language as keyof typeof abilityLabels] || abilityLabels.zh;
@@ -756,7 +798,12 @@ export default function Analysis() {
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
-          <p className="text-muted-foreground">{t('analysis.description')}</p>
+          <p className="text-muted-foreground">
+            {studentInfo 
+              ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+              : t('analysis.description')
+            }
+          </p>
         </div>
         <SimplePDFExport 
           pageTitle="学习分析报告"
@@ -790,37 +837,49 @@ export default function Analysis() {
         </Button>
                  <Button
            variant={selectedButton === 'overseas' ? 'default' : 'outline'}
-           className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
+           className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
              selectedButton === 'overseas' 
                ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
                : 'hover:scale-95'
            }`}
            onClick={() => setSelectedButton(selectedButton === 'overseas' ? null : 'overseas')}
          >
-           <span>海外读研</span>
-           <span className="text-xs text-blue-500 mt-1">
-             {loadingTargetScores ? '加载中...' : 
-              targetScores && targetScores.target2_score !== null ? 
-              `${targetScores.target2_score}%` : 
-              '暂无数据'}
-           </span>
+           <div className="grid grid-cols-2 w-full h-full">
+             <div className="flex items-center justify-center border-r border-gray-300">
+               <span>海外读研</span>
+             </div>
+             <div className="flex items-center justify-center">
+               <span className="text-base text-blue-500 font-medium">
+                 {loadingTargetScores ? '加载中...' : 
+                  targetScores && targetScores.target2_score !== null ? 
+                  `${targetScores.target2_score}%` : 
+                  '暂无数据'}
+               </span>
+             </div>
+           </div>
          </Button>
                  <Button
            variant={selectedButton === 'domestic' ? 'default' : 'outline'}
-           className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
+           className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
              selectedButton === 'domestic' 
                ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
                : 'hover:scale-95'
            }`}
            onClick={() => setSelectedButton(selectedButton === 'domestic' ? null : 'domestic')}
          >
-           <span>国内读研</span>
-           <span className="text-xs text-blue-500 mt-1">
-             {loadingTargetScores ? '加载中...' : 
-              targetScores && targetScores.target1_score !== null ? 
-              `${targetScores.target1_score}%` : 
-              '暂无数据'}
-           </span>
+           <div className="grid grid-cols-2 w-full h-full">
+             <div className="flex items-center justify-center border-r border-gray-300">
+               <span>国内读研</span>
+             </div>
+             <div className="flex items-center justify-center">
+               <span className="text-base text-blue-500 font-medium">
+                 {loadingTargetScores ? '加载中...' : 
+                  targetScores && targetScores.target1_score !== null ? 
+                  `${targetScores.target1_score}%` : 
+                  '暂无数据'}
+               </span>
+             </div>
+           </div>
          </Button>
       </div>
 
@@ -833,39 +892,38 @@ export default function Analysis() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-lg font-medium">{t('analysis.tops.title')}</CardTitle>
-              <div className="relative">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="h-7 px-3 text-sm"
-                >
-                  {percentageOptions.find(opt => opt.key === selectedOption)?.label}
-                  <ChevronDown className="ml-1 h-3 w-3" />
-                </Button>
-                {isDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-24 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                    {percentageOptions.map((option) => (
-                      <button
-                        key={option.key}
-                        onClick={() => handleOptionSelect(option.key)}
-                        className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50 first:rounded-t-md last:rounded-b-md"
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-4">
-                <div className="text-lg font-medium mb-2">
-                  GPA：{loadingGPA ? '计算中...' : (gpaThreshold !== null ? gpaThreshold.toFixed(2) : '暂无数据')}
+              <div className="grid grid-cols-3 gap-4">
+                {/* 前10% GPA */}
+                <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
+                  <div className="text-lg font-medium mb-2">
+                    {loadingGPA ? '计算中...' : (gpaThresholds.top10 !== null ? gpaThresholds.top10.toFixed(2) : '暂无数据')}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {t('analysis.tops.top10')} GPA
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {percentageOptions.find(opt => opt.key === selectedOption)?.label} 门槛值
-                </p>
+                
+                {/* 前20% GPA */}
+                <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
+                  <div className="text-lg font-medium mb-2">
+                    {loadingGPA ? '计算中...' : (gpaThresholds.top20 !== null ? gpaThresholds.top20.toFixed(2) : '暂无数据')}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {t('analysis.tops.top20')} GPA
+                  </p>
+                </div>
+                
+                {/* 前30% GPA */}
+                <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
+                  <div className="text-lg font-medium mb-2">
+                    {loadingGPA ? '计算中...' : (gpaThresholds.top30 !== null ? gpaThresholds.top30.toFixed(2) : '暂无数据')}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {t('analysis.tops.top30')} GPA
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1230,8 +1288,8 @@ export default function Analysis() {
             <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-lg font-medium">课程成绩</CardTitle>
-                    <CardDescription>查看和修改您的课程成绩</CardDescription>
+                    <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : '暂无数据'}% 海外读研的目标，推荐的各科目成绩如下：</CardTitle>
+                    <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
                       </div>
                   <div className="flex-1 flex justify-center items-center gap-4">
                     {isEditMode ? (
@@ -1289,7 +1347,7 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩
+                            修改成绩可查看趋势变化
                           </th>
                         )}
                       </tr>
@@ -1422,8 +1480,8 @@ export default function Analysis() {
             <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-lg font-medium">课程成绩</CardTitle>
-                    <CardDescription>查看和修改您的课程成绩</CardDescription>
+                    <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : '暂无数据'}% 国内读研的目标，推荐的各科目成绩如下：</CardTitle>
+                    <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
                   </div>
                   <div className="flex-1 flex justify-center items-center gap-4">
                     {isEditMode ? (
@@ -1484,7 +1542,7 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩
+                            修改成绩可查看趋势变化
                           </th>
                         )}
                       </tr>
