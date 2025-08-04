@@ -880,11 +880,11 @@ export default function Analysis() {
            }`}
            onClick={() => handleButtonSelect('overseas')}
          >
-           <div className="grid grid-cols-2 w-full h-full">
-             <div className="flex items-center justify-center border-r border-gray-300">
+           <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
+             <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
                <span>海外读研</span>
              </div>
-             <div className="flex items-center justify-center">
+             <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
                <span className="text-base text-blue-500 font-medium">
                  {loadingTargetScores ? '加载中...' : 
                   targetScores && targetScores.target2_score !== null ? 
@@ -903,11 +903,11 @@ export default function Analysis() {
            }`}
            onClick={() => handleButtonSelect('domestic')}
          >
-           <div className="grid grid-cols-2 w-full h-full">
-             <div className="flex items-center justify-center border-r border-gray-300">
+           <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
+             <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
                <span>国内读研</span>
              </div>
-             <div className="flex items-center justify-center">
+             <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
                <span className="text-base text-blue-500 font-medium">
                  {loadingTargetScores ? '加载中...' : 
                   targetScores && targetScores.target1_score !== null ? 
@@ -1322,11 +1322,59 @@ export default function Analysis() {
             {/* 课程成绩表格 */}
           <Card>
             <CardHeader>
-                <div className="flex justify-between items-center">
+                {/* 手机端布局 - 上下排列 */}
+                <div className="flex flex-col space-y-4 md:hidden">
                   <div>
                     <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : '暂无数据'}% 海外读研的目标，推荐的各科目成绩如下：</CardTitle>
                     <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
-                      </div>
+                  </div>
+                  <div className="flex flex-col space-y-3">
+                    {isEditMode ? (
+                      <>
+                        <Button 
+                          variant="default"
+                          size="lg"
+                          className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
+                          onClick={handleConfirmModification}
+                          disabled={loadingFeatures}
+                        >
+                          {loadingFeatures ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>计算中...</span>
+                            </div>
+                          ) : (
+                            '确认修改'
+                          )}
+                        </Button>
+                        <Button 
+                          variant="destructive"
+                          size="lg"
+                          className="w-full px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
+                          onClick={handleEditModeToggle}
+                        >
+                          退出修改
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        variant="default"
+                        size="lg"
+                        className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
+                        onClick={handleEditModeToggle}
+                      >
+                        修改未来
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* PC端布局 - 保持原有的左右排列 */}
+                <div className="hidden md:flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : '暂无数据'}% 海外读研的目标，推荐的各科目成绩如下：</CardTitle>
+                    <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
+                  </div>
                   <div className="flex-1 flex justify-center items-center gap-4">
                     {isEditMode ? (
                       <Button 
@@ -1355,7 +1403,7 @@ export default function Analysis() {
                         修改未来
                       </Button>
                     )}
-                    </div>
+                  </div>
                   <div className="w-32 flex justify-end">
                     {isEditMode && (
                       <Button 
@@ -1368,7 +1416,7 @@ export default function Analysis() {
                       </Button>
                     )}
                   </div>
-                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -1442,7 +1490,7 @@ export default function Analysis() {
                                 )}
                               </td>
                               {isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[150px] md:min-w-0">
                                   {score !== null && score !== undefined ? (
                                     <input
                                       type="number"
@@ -1639,7 +1687,55 @@ export default function Analysis() {
             {/* 课程成绩表格 */}
           <Card>
             <CardHeader>
-                <div className="flex justify-between items-center">
+                {/* 手机端布局 - 上下排列 */}
+                <div className="flex flex-col space-y-4 md:hidden">
+                  <div>
+                    <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : '暂无数据'}% 国内读研的目标，推荐的各科目成绩如下：</CardTitle>
+                    <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
+                  </div>
+                  <div className="flex flex-col space-y-3">
+                    {isEditMode ? (
+                      <>
+                        <Button 
+                          variant="default"
+                          size="lg"
+                          className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
+                          onClick={handleConfirmModification}
+                          disabled={loadingFeatures}
+                        >
+                          {loadingFeatures ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>计算中...</span>
+                            </div>
+                          ) : (
+                            '确认修改'
+                          )}
+                        </Button>
+                        <Button 
+                          variant="destructive"
+                          size="lg"
+                          className="w-full px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
+                          onClick={handleEditModeToggle}
+                        >
+                          退出修改
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        variant="default"
+                        size="lg"
+                        className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
+                        onClick={handleEditModeToggle}
+                      >
+                        修改未来
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* PC端布局 - 保持原有的左右排列 */}
+                <div className="hidden md:flex justify-between items-center">
                   <div>
                     <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : '暂无数据'}% 国内读研的目标，推荐的各科目成绩如下：</CardTitle>
                     <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
@@ -1672,9 +1768,6 @@ export default function Analysis() {
                         修改未来
                       </Button>
                     )}
-
-
-
                   </div>
                   <div className="w-32 flex justify-end">
                     {isEditMode && (
@@ -1754,7 +1847,7 @@ export default function Analysis() {
                                 )}
                               </td>
                               {isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[150px] md:min-w-0">
                                   {course.score !== null ? (
                                     <input
                                       type="number"
