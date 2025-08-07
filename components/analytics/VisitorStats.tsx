@@ -1,49 +1,96 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { 
-  BarChart3, 
-  Users, 
-  Eye, 
-  Clock, 
-  TrendingUp,
-  Loader2,
-  AlertCircle,
-  RefreshCw,
-  Database,
-  TestTube
-} from "lucide-react"
-import { 
-  getVisitorStats, 
-  formatNumber, 
-  formatDuration, 
-  getPeriodDisplayName 
-} from '@/lib/umami-api'
+import { useState, useEffect, useCallback } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { AlertCircle, RefreshCw, Database, TestTube, Wifi, WifiOff, Clock, TrendingUp } from 'lucide-react'
+import { getVisitorStats } from '@/lib/umami-api'
 
-interface UmamiMetrics {
+interface PeriodStats {
+  period: string
+  days: number
   pageviews: number
   visitors: number
   visits: number
+  bounces: number
+  totaltime: number
   bounceRate: number
   avgVisitDuration: number
+  error?: string
 }
 
 interface VisitorStats {
-  daily: UmamiMetrics
-  weekly: UmamiMetrics
-  monthly: UmamiMetrics
-  halfYear: UmamiMetrics
+  daily: PeriodStats
+  weekly: PeriodStats
+  monthly: PeriodStats
+  halfYearly: PeriodStats
+  meta?: {
+    lastUpdated: string
+    processingTime: number
+    successRate: string
+    cacheExpires: string
+    dataSource?: string // 新增：用于标识数据源
+    usingFallback?: boolean // 新增：用于标识是否使用降级数据
+    note?: string // 新增：用于提供额外的提示信息
+  }
 }
 
-// 示例数据
+// 演示数据
 const DEMO_DATA: VisitorStats = {
-  daily: { pageviews: 156, visitors: 89, visits: 98, bounceRate: 42, avgVisitDuration: 145 },
-  weekly: { pageviews: 892, visitors: 456, visits: 523, bounceRate: 38, avgVisitDuration: 168 },
-  monthly: { pageviews: 3456, visitors: 1789, visits: 2134, bounceRate: 35, avgVisitDuration: 192 },
-  halfYear: { pageviews: 18943, visitors: 8765, visits: 10234, bounceRate: 33, avgVisitDuration: 215 }
+  daily: {
+    period: 'daily',
+    days: 1,
+    pageviews: 45,
+    visitors: 32,
+    visits: 38,
+    bounces: 12,
+    totaltime: 4320,
+    bounceRate: 31.6,
+    avgVisitDuration: 113.7
+  },
+  weekly: {
+    period: 'weekly',
+    days: 7,
+    pageviews: 312,
+    visitors: 198,
+    visits: 234,
+    bounces: 89,
+    totaltime: 28440,
+    bounceRate: 38.0,
+    avgVisitDuration: 121.5
+  },
+  monthly: {
+    period: 'monthly',
+    days: 30,
+    pageviews: 1247,
+    visitors: 756,
+    visits: 892,
+    bounces: 312,
+    totaltime: 118720,
+    bounceRate: 35.0,
+    avgVisitDuration: 133.1
+  },
+  halfYearly: {
+    period: 'halfYearly',
+    days: 183,
+    pageviews: 7832,
+    visitors: 4231,
+    visits: 5124,
+    bounces: 1789,
+    totaltime: 702840,
+    bounceRate: 34.9,
+    avgVisitDuration: 137.2
+  },
+  meta: {
+    lastUpdated: new Date().toISOString(),
+    processingTime: 0,
+    successRate: '4/4',
+    cacheExpires: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    dataSource: 'demo', // 默认演示数据
+    usingFallback: false,
+    note: '演示数据仅供参考'
+  }
 }
 
 export default function VisitorStats() {
@@ -52,12 +99,24 @@ export default function VisitorStats() {
   const [error, setError] = useState<string | null>(null)
   const [dataSource, setDataSource] = useState<'real' | 'demo'>('real')
   const [attemptedReal, setAttemptedReal] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
+  const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
 
-  const fetchRealStats = async () => {
+  // 增强的数据获取函数
+  const fetchRealStats = useCallback(async (isRetry = false) => {
     try {
       setLoading(true)
       setError(null)
-      console.log('🔄 尝试获取真实统计数据...')
+      setConnectionStatus('checking')
+      
+      if (isRetry) {
+        setRetryCount(prev => prev + 1)
+        console.log(`🔄 手动重试获取数据 (第${retryCount + 1}次)...`)
+      } else {
+        console.log('🔄 尝试获取真实统计数据...')
+        setRetryCount(0)
+      }
       
       const data = await getVisitorStats()
       
@@ -65,279 +124,373 @@ export default function VisitorStats() {
         setStats(data)
         setDataSource('real')
         setAttemptedReal(true)
+        setConnectionStatus('connected')
+        setLastUpdateTime(new Date().toLocaleString('zh-CN'))
+        setRetryCount(0) // 成功后重置重试计数
         console.log('✅ 成功获取真实数据')
       } else {
         throw new Error('API返回空数据')
       }
     } catch (err) {
       console.error('❌ 获取真实数据失败:', err)
-      setError('无法连接到Umami API')
-      setStats(DEMO_DATA)
-      setDataSource('demo')
+      setConnectionStatus('disconnected')
+      
+      // 根据错误类型提供不同的错误信息
+      let errorMessage = '无法连接到Umami API'
+      if (err instanceof Error) {
+        if (err.message.includes('timeout')) {
+          errorMessage = '连接超时，请检查网络连接'
+        } else if (err.message.includes('401')) {
+          errorMessage = 'API认证失败，请检查配置'
+        } else if (err.message.includes('500')) {
+          errorMessage = '服务器内部错误'
+        } else if (err.message.includes('failed')) {
+          errorMessage = '网络连接失败'
+        }
+      }
+      
+      setError(errorMessage)
+      
+      // 只在第一次失败时自动切换到演示数据，不再自动重试
+      if (!isRetry) {
+        setStats(DEMO_DATA)
+        setDataSource('demo')
+        setLastUpdateTime(new Date().toLocaleString('zh-CN') + ' (演示数据)')
+      }
       setAttemptedReal(true)
     } finally {
       setLoading(false)
     }
-  }
+  }, [retryCount])
 
-  const useDemoData = () => {
+  // 禁用自动重试机制 - 移除原有的自动重试函数
+  // const handleAutoRetry = useCallback(async () => {
+  //   // 自动重试功能已禁用
+  // }, [])
+
+  // 手动刷新
+  const handleRefresh = useCallback(async () => {
+    setRetryCount(0)
+    await fetchRealStats(false)
+  }, [fetchRealStats])
+
+  // 使用演示数据
+  const useDemoData = useCallback(() => {
     setStats(DEMO_DATA)
     setDataSource('demo')
     setError(null)
     setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchRealStats()
+    setConnectionStatus('disconnected')
+    setLastUpdateTime(new Date().toLocaleString('zh-CN') + ' (演示数据)')
   }, [])
 
-  if (loading) {
+  // 组件挂载时获取数据（只执行一次）
+  useEffect(() => {
+    fetchRealStats()
+  }, []) // 移除依赖，只在挂载时执行一次
+
+  // 移除自动重试效果
+  // useEffect(() => {
+  //   // 自动重试功能已禁用
+  // }, [])
+
+  // 渲染连接状态指示器
+  const renderConnectionStatus = () => {
+    const statusConfig = {
+      checking: { icon: Clock, color: 'text-yellow-500', text: '检查中', bgColor: 'bg-yellow-50' },
+      connected: { icon: Wifi, color: 'text-green-500', text: '已连接', bgColor: 'bg-green-50' },
+      disconnected: { icon: WifiOff, color: 'text-red-500', text: '连接失败', bgColor: 'bg-red-50' }
+    }
+    
+    const { icon: StatusIcon, color, text, bgColor } = statusConfig[connectionStatus]
+    
     return (
-      <Card className="border-blue-200">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-6 w-6" />
-            网站访问统计
+      <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${bgColor}`}>
+        <StatusIcon className={`h-3 w-3 ${color}`} />
+        <span className={`text-xs ${color}`}>{text}</span>
+      </div>
+    )
+  }
+
+  // 加载状态
+  if (loading && !stats) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 animate-spin" />
+              正在获取访问统计...
+            </span>
+            {renderConnectionStatus()}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-3 text-blue-600">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span>正在加载访问统计数据...</span>
-            </div>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
     )
   }
 
-  if (!stats) {
+  // 无数据状态
+  if (!stats && !loading) {
     return (
-      <Card className="border-red-200">
-        <CardHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white">
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-6 w-6" />
-            访问统计
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              访问统计不可用
+            </span>
+            {renderConnectionStatus()}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="flex items-center gap-3 text-red-600 mb-4">
-              <AlertCircle className="h-6 w-6" />
-              <span>无法加载统计数据</span>
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={fetchRealStats} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                重试
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-gray-600">{error || '暂无统计数据'}</p>
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={handleRefresh} disabled={loading} size="sm">
+                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                重试连接
               </Button>
               <Button onClick={useDemoData} variant="outline" size="sm">
-                <TestTube className="h-4 w-4 mr-2" />
-                使用示例数据
+                <Database className="h-4 w-4 mr-1" />
+                查看演示数据
               </Button>
             </div>
+            {retryCount > 0 && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Clock className="h-4 w-4" />
+                <span>已重试 {retryCount} 次，点击"重试连接"继续尝试</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
     )
   }
 
-  const periods = [
-    { key: 'daily' as keyof VisitorStats, color: 'from-green-500 to-green-600' },
-    { key: 'weekly' as keyof VisitorStats, color: 'from-blue-500 to-blue-600' },
-    { key: 'monthly' as keyof VisitorStats, color: 'from-purple-500 to-purple-600' },
-    { key: 'halfYear' as keyof VisitorStats, color: 'from-orange-500 to-orange-600' }
-  ]
-
+  // 渲染统计数据
   return (
-    <div className="space-y-6">
-      {/* 标题和控制面板 */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-blue-900 mb-2">网站访问统计</h2>
-        <p className="text-blue-600">基于 Umami 分析的 butp.tech 访问数据</p>
-        
-        {/* 数据源指示器和控制 */}
-        <div className="flex items-center justify-center gap-4 mt-4">
-          <Badge 
-            variant={dataSource === 'real' ? 'default' : 'secondary'} 
-            className={`flex items-center gap-2 ${
-              dataSource === 'real' ? 'bg-green-100 text-green-800 border-green-300' : ''
-            }`}
-          >
-            <Database className="h-3 w-3" />
-            {dataSource === 'real' ? '实时数据' : '示例数据'}
-          </Badge>
-          
-          {attemptedReal && (
-            <div className="flex gap-2">
-              <Button 
-                onClick={fetchRealStats} 
-                variant="outline" 
-                size="sm"
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                刷新数据
-              </Button>
-              
-              {dataSource === 'real' && (
-                <Button 
-                  onClick={useDemoData} 
-                  variant="outline" 
-                  size="sm"
-                >
-                  <TestTube className="h-4 w-4 mr-2" />
-                  切换到示例
-                </Button>
-              )}
-              
-              {dataSource === 'demo' && (
-                <Button 
-                  onClick={fetchRealStats} 
-                  variant="outline" 
-                  size="sm"
-                  disabled={loading}
-                >
-                  <Database className="h-4 w-4 mr-2" />
-                  尝试真实数据
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 状态提示 */}
-      {error && dataSource === 'demo' && (
+    <div className="space-y-4">
+      {/* 警告提示和控制面板 */}
+      {(dataSource === 'demo' || (stats?.meta?.usingFallback)) && (
         <Card className="border-yellow-200 bg-yellow-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 text-yellow-800">
-              <AlertCircle className="h-5 w-5" />
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <span className="text-sm font-medium">当前显示示例数据</span>
-                <p className="text-xs mt-1">
-                  {error} - 这可能是由于网络连接、防火墙设置或Umami服务器暂时不可用导致的
+                <p className="text-yellow-800 font-medium">
+                  {stats?.meta?.dataSource === 'realistic-mock' ? '正在显示智能模拟数据' : 
+                   stats?.meta?.dataSource === 'mixed' ? '显示混合数据（部分真实 + 模拟）' :
+                   '正在显示演示数据'}
                 </p>
+                <p className="text-yellow-700 text-sm mt-1">
+                  {stats?.meta?.note || error || '无法连接到Umami API，当前显示的是演示数据，仅供参考'}
+                </p>
+                {retryCount > 0 && (
+                  <p className="text-yellow-600 text-xs mt-1">
+                    系统已尝试重连 {retryCount} 次
+                  </p>
+                )}
+                {stats?.meta?.dataSource === 'realistic-mock' && (
+                  <p className="text-yellow-600 text-xs mt-1">
+                    💡 智能模拟数据基于真实网站访问模式生成，包含时间和趋势因素
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {dataSource === 'real' && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 text-green-800">
-              <Database className="h-5 w-5" />
-              <span className="text-sm">正在显示来自Umami的实时统计数据</span>
+      {/* 主要统计卡片 */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              BuTP 网站访问统计
+            </span>
+            <div className="flex items-center gap-2">
+              {renderConnectionStatus()}
+              <Badge variant={dataSource === 'real' ? 'default' : 'secondary'}>
+                {dataSource === 'real' ? '实时数据' : '演示数据'}
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 统计卡片网格 */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {periods.map(({ key, color }) => {
-          const data = stats[key]
-          const displayName = getPeriodDisplayName(key)
-          
-          return (
-            <Card key={key} className="border-blue-200 hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className={`bg-gradient-to-r ${color} text-white pb-3`}>
-                <CardTitle className="text-lg font-medium">{displayName}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  {/* 页面浏览量 */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Eye className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm text-gray-600">浏览量</span>
-                    </div>
-                    <Badge variant="outline" className="font-mono">
-                      {formatNumber(data.pageviews)}
-                    </Badge>
-                  </div>
-
-                  {/* 访客数 */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-gray-600">访客数</span>
-                    </div>
-                    <Badge variant="outline" className="font-mono">
-                      {formatNumber(data.visitors)}
-                    </Badge>
-                  </div>
-
-                  {/* 访问次数 */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-purple-600" />
-                      <span className="text-sm text-gray-600">访问次数</span>
-                    </div>
-                    <Badge variant="outline" className="font-mono">
-                      {formatNumber(data.visits)}
-                    </Badge>
-                  </div>
-
-                  {/* 平均访问时长 */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm text-gray-600">平均时长</span>
-                    </div>
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {formatDuration(data.avgVisitDuration)}
-                    </Badge>
-                  </div>
-
-                  {/* 跳出率 */}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">跳出率</span>
-                    <span className="text-xs font-mono text-gray-600">
-                      {data.bounceRate}%
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* 数据说明 */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-4">
-          <div className="text-center">
-            <p className="text-sm text-blue-700">
-              数据更新时间：{new Date().toLocaleString('zh-CN')} | 
-              数据来源：
-              {dataSource === 'real' ? (
-                <a 
-                  href="https://umami-ruby-chi.vercel.app/dashboard" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline ml-1"
-                >
-                  Umami Analytics
-                </a>
-              ) : (
-                <span className="ml-1 text-blue-600">示例数据（用于演示）</span>
+          </CardTitle>
+          {lastUpdateTime && (
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>最后更新: {lastUpdateTime}</span>
+              {stats?.meta && (
+                <span>处理时间: {stats.meta.processingTime}ms | 成功率: {stats.meta.successRate}</span>
               )}
-            </p>
-            {dataSource === 'demo' && (
-              <p className="text-xs text-blue-600 mt-2">
-                💡 配置正确的Umami API凭据后可查看真实数据 | 
-                <a href="/test-umami" className="underline hover:text-blue-800">
-                  运行配置测试
-                </a>
-              </p>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent>
+          {/* 控制按钮 */}
+          <div className="flex gap-2 mb-6 flex-wrap">
+            <Button 
+              onClick={handleRefresh} 
+              disabled={loading} 
+              size="sm"
+              variant={dataSource === 'real' ? 'default' : 'outline'}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+              手动刷新
+              {retryCount > 0 && ` (${retryCount})`}
+            </Button>
+            
+            {dataSource === 'real' && (
+              <Button onClick={useDemoData} variant="outline" size="sm">
+                <Database className="h-4 w-4 mr-1" />
+                切换到演示
+              </Button>
             )}
+            
+            {dataSource === 'demo' && attemptedReal && (
+              <Button onClick={handleRefresh} variant="outline" size="sm">
+                <TestTube className="h-4 w-4 mr-1" />
+                尝试真实数据
+              </Button>
+            )}
+            
+            <div className="flex items-center text-xs text-gray-500 ml-2">
+              💡 数据不会自动刷新，需要手动点击刷新按钮
+            </div>
           </div>
+
+          {/* 统计数据网格 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 日访问量 */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <h3 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-1">
+                <span>日访问量</span>
+                {stats?.daily.error && <AlertCircle className="h-3 w-3 text-red-500" />}
+              </h3>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-blue-900">{formatNumber(stats?.daily.pageviews || 0)}</p>
+                <p className="text-xs text-blue-700">访客: {formatNumber(stats?.daily.visitors || 0)}</p>
+                <p className="text-xs text-blue-700">访问: {formatNumber(stats?.daily.visits || 0)}</p>
+                <p className="text-xs text-blue-600">跳出率: {(stats?.daily.bounceRate || 0).toFixed(1)}%</p>
+              </div>
+            </div>
+
+            {/* 周访问量 */}
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+              <h3 className="text-sm font-medium text-green-800 mb-2 flex items-center gap-1">
+                <span>周访问量</span>
+                {stats?.weekly.error && <AlertCircle className="h-3 w-3 text-red-500" />}
+              </h3>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-green-900">{formatNumber(stats?.weekly.pageviews || 0)}</p>
+                <p className="text-xs text-green-700">访客: {formatNumber(stats?.weekly.visitors || 0)}</p>
+                <p className="text-xs text-green-700">访问: {formatNumber(stats?.weekly.visits || 0)}</p>
+                <p className="text-xs text-green-600">跳出率: {(stats?.weekly.bounceRate || 0).toFixed(1)}%</p>
+              </div>
+            </div>
+
+            {/* 月访问量 */}
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+              <h3 className="text-sm font-medium text-purple-800 mb-2 flex items-center gap-1">
+                <span>月访问量</span>
+                {stats?.monthly.error && <AlertCircle className="h-3 w-3 text-red-500" />}
+              </h3>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-purple-900">{formatNumber(stats?.monthly.pageviews || 0)}</p>
+                <p className="text-xs text-purple-700">访客: {formatNumber(stats?.monthly.visitors || 0)}</p>
+                <p className="text-xs text-purple-700">访问: {formatNumber(stats?.monthly.visits || 0)}</p>
+                <p className="text-xs text-purple-600">跳出率: {(stats?.monthly.bounceRate || 0).toFixed(1)}%</p>
+              </div>
+            </div>
+
+            {/* 半年访问量 */}
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
+              <h3 className="text-sm font-medium text-orange-800 mb-2 flex items-center gap-1">
+                <span>半年访问量</span>
+                {stats?.halfYearly.error && <AlertCircle className="h-3 w-3 text-red-500" />}
+              </h3>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-orange-900">{formatNumber(stats?.halfYearly.pageviews || 0)}</p>
+                <p className="text-xs text-orange-700">访客: {formatNumber(stats?.halfYearly.visitors || 0)}</p>
+                <p className="text-xs text-orange-700">访问: {formatNumber(stats?.halfYearly.visits || 0)}</p>
+                <p className="text-xs text-orange-600">跳出率: {(stats?.halfYearly.bounceRate || 0).toFixed(1)}%</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 补充统计信息 */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">平均跳出率</p>
+              <p className="text-lg font-semibold">{((stats?.monthly.bounceRate || 0)).toFixed(1)}%</p>
+              <p className="text-xs text-gray-500">基于月度数据</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">平均访问时长</p>
+              <p className="text-lg font-semibold">{formatDuration(stats?.monthly.avgVisitDuration || 0)}</p>
+              <p className="text-xs text-gray-500">基于月度数据</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">数据状态</p>
+              <div className="flex items-center justify-center gap-1">
+                <Badge variant={dataSource === 'real' ? 'default' : 'secondary'}>
+                  {dataSource === 'real' ? 'Umami Analytics' : '演示数据'}
+                </Badge>
+              </div>
+              {connectionStatus === 'connected' && (
+                <p className="text-xs text-green-600 mt-1">连接正常</p>
+              )}
+              {connectionStatus === 'disconnected' && retryCount > 0 && (
+                <p className="text-xs text-red-600 mt-1">重试 {retryCount}/3</p>
+              )}
+            </div>
+          </div>
+
+          {/* 调试信息（仅在开发环境显示） */}
+          {process.env.NODE_ENV === 'development' && stats?.meta && (
+            <details className="mt-4 text-xs">
+              <summary className="cursor-pointer text-gray-500">调试信息</summary>
+              <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">
+                {JSON.stringify({
+                  meta: stats.meta,
+                  connectionStatus,
+                  retryCount,
+                  dataSource
+                }, null, 2)}
+              </pre>
+            </details>
+          )}
         </CardContent>
       </Card>
     </div>
   )
+}
+
+// 工具函数
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M'
+  } else if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K'
+  }
+  return num.toString()
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}秒`
+  } else if (seconds < 3600) {
+    return `${Math.round(seconds / 60)}分钟`
+  } else {
+    return `${Math.round(seconds / 3600)}小时`
+  }
 } 

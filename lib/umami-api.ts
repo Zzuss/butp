@@ -16,19 +16,30 @@ interface UmamiStats {
   totaltime: { value: number }
 }
 
-interface UmamiMetrics {
+interface PeriodStats {
+  period: string
+  days: number
   pageviews: number
   visitors: number
   visits: number
+  bounces: number
+  totaltime: number
   bounceRate: number
   avgVisitDuration: number
+  error?: string
 }
 
 interface VisitorStats {
-  daily: UmamiMetrics
-  weekly: UmamiMetrics
-  monthly: UmamiMetrics
-  halfYear: UmamiMetrics
+  daily: PeriodStats
+  weekly: PeriodStats
+  monthly: PeriodStats
+  halfYearly: PeriodStats
+  meta?: {
+    lastUpdated: string
+    processingTime: number
+    successRate: string
+    cacheExpires: string
+  }
 }
 
 // Umami 配置
@@ -122,47 +133,65 @@ function getDateRange(period: 'daily' | 'weekly' | 'monthly' | 'halfYear'): { st
 }
 
 // 处理统计数据
-function processStats(stats: UmamiStats): UmamiMetrics {
+function processStats(stats: UmamiStats): PeriodStats {
   const { pageviews, visitors, visits, bounces, totaltime } = stats
   
   return {
+    period: 'daily', // Placeholder, will be updated by caller
+    days: 1, // Placeholder, will be updated by caller
     pageviews: pageviews?.value || 0,
     visitors: visitors?.value || 0,
     visits: visits?.value || 0,
+    bounces: bounces?.value || 0,
+    totaltime: totaltime?.value || 0,
     bounceRate: visits?.value > 0 ? Math.round((bounces?.value || 0) / visits.value * 100) : 0,
     avgVisitDuration: visits?.value > 0 ? Math.round((totaltime?.value || 0) / visits.value / 1000) : 0, // 转换为秒
   }
 }
 
-// 主要的获取访问量统计函数
+// 获取访问统计数据
 export async function getVisitorStats(): Promise<VisitorStats | null> {
   try {
-    // 调用我们的API路由获取数据
-    const response = await fetch('/api/umami-stats', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`)
-    }
-
-    const result = await response.json()
+    console.log('🔄 调用本地API获取Umami统计数据...')
     
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch stats')
-    }
+    // 设置较短的超时时间，避免长时间等待
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8秒总超时
+    
+    try {
+      // 调用我们的API路由获取数据
+      const response = await fetch('/api/umami-stats', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal
+      })
 
-    return result.data as VisitorStats
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch stats')
+      }
+
+      return result.data as VisitorStats
+    } finally {
+      clearTimeout(timeoutId)
+    }
   } catch (error) {
     console.error('Error fetching visitor stats:', error)
+    // 快速失败，不再重试
     return null
   }
 }
 
-// 格式化数字显示
+// 工具函数
 export function formatNumber(num: number): string {
   if (num >= 1000000) {
     return (num / 1000000).toFixed(1) + 'M'
@@ -172,10 +201,9 @@ export function formatNumber(num: number): string {
   return num.toString()
 }
 
-// 格式化时长（秒转换为友好格式）
 export function formatDuration(seconds: number): string {
   if (seconds < 60) {
-    return `${seconds}秒`
+    return `${Math.round(seconds)}秒`
   } else if (seconds < 3600) {
     return `${Math.round(seconds / 60)}分钟`
   } else {
@@ -183,13 +211,12 @@ export function formatDuration(seconds: number): string {
   }
 }
 
-// 获取时间段显示名称
-export function getPeriodDisplayName(period: keyof VisitorStats): string {
-  const names = {
+export function getPeriodDisplayName(period: string): string {
+  const names: Record<string, string> = {
     daily: '日访问量',
     weekly: '周访问量', 
     monthly: '月访问量',
-    halfYear: '半年访问量'
+    halfYearly: '半年访问量'
   }
-  return names[period]
+  return names[period] || period
 } 

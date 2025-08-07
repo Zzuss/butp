@@ -6,125 +6,161 @@
  */
 
 require('dotenv').config({ path: '.env.local' })
+const https = require('https')
+const http = require('http')
 
-async function testUmamiConnection() {
-  console.log('🌐 测试Umami连接...\n')
+console.log('🔍 Umami 连接诊断工具')
+console.log('=' .repeat(50))
 
-  const config = {
-    baseUrl: process.env.UMAMI_BASE_URL || 'https://umami-ruby-chi.vercel.app',
-    username: process.env.UMAMI_USERNAME || '',
-    password: process.env.UMAMI_PASSWORD || '',
-    websiteId: process.env.UMAMI_WEBSITE_ID || ''
-  }
-
-  console.log('📡 测试服务器连接性...')
-  try {
-    // 首先测试基本的网络连接
-    const baseResponse = await fetch(config.baseUrl, { 
-      method: 'GET',
-      timeout: 5000 
-    })
-    console.log(`✅ 服务器响应: ${baseResponse.status} ${baseResponse.statusText}`)
-  } catch (error) {
-    console.log(`❌ 服务器连接失败: ${error.message}`)
-    console.log('🔧 建议检查:')
-    console.log('  • 网络连接是否正常')
-    console.log('  • 防火墙/代理设置')
-    console.log('  • Umami服务器是否在线')
+async function testConnection() {
+  console.log('📋 环境变量检查:')
+  const requiredVars = ['UMAMI_BASE_URL', 'UMAMI_USERNAME', 'UMAMI_PASSWORD', 'UMAMI_WEBSITE_ID']
+  let configOk = true
+  
+  requiredVars.forEach(varName => {
+    const value = process.env[varName]
+    if (value) {
+      console.log(`✅ ${varName}: ${varName.includes('PASSWORD') ? '***已设置***' : value}`)
+    } else {
+      console.log(`❌ ${varName}: 未设置`)
+      configOk = false
+    }
+  })
+  
+  if (!configOk) {
+    console.log('\n❌ 环境变量配置不完整，请检查 .env.local 文件')
     return
   }
 
-  console.log('\n🔑 测试认证接口...')
+  console.log('\n🌐 网络连接测试:')
+  console.log('═' .repeat(30))
+  
+  // 测试基础网络连接
   try {
-    const authResponse = await fetch(`${config.baseUrl}/api/auth/login`, {
+    console.log('🔄 测试基础网络连接...')
+    const testResponse = await fetch('https://httpbin.org/status/200', { 
+      signal: AbortSignal.timeout(5000) 
+    })
+    if (testResponse.ok) {
+      console.log('✅ 基础网络连接正常')
+    } else {
+      console.log('⚠️ 基础网络连接异常')
+    }
+  } catch (error) {
+    console.log('❌ 基础网络连接失败:', error.message)
+    console.log('💡 建议: 检查网络连接、防火墙或代理设置')
+    return
+  }
+
+  // 测试Umami服务器连接
+  const baseUrl = process.env.UMAMI_BASE_URL
+  console.log(`\n🔄 测试 Umami 服务器连接: ${baseUrl}`)
+  
+  try {
+    const startTime = Date.now()
+    const response = await fetch(baseUrl, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(10000)
+    })
+    const duration = Date.now() - startTime
+    
+    if (response.ok) {
+      console.log(`✅ Umami 服务器可达 (${duration}ms)`)
+      console.log(`   状态码: ${response.status}`)
+      console.log(`   服务器: ${response.headers.get('server') || '未知'}`)
+    } else {
+      console.log(`⚠️ Umami 服务器响应异常: ${response.status}`)
+    }
+  } catch (error) {
+    console.log('❌ Umami 服务器连接失败:', error.message)
+    if (error.name === 'TimeoutError') {
+      console.log('💡 建议: 连接超时，可能是网络问题或服务器暂时不可用')
+    }
+    return
+  }
+
+  // 测试认证
+  console.log('\n🔑 测试 Umami 认证:')
+  console.log('═' .repeat(25))
+  
+  try {
+    console.log('🔄 尝试登录...')
+    const authResponse = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: config.username,
-        password: config.password,
+        username: process.env.UMAMI_USERNAME,
+        password: process.env.UMAMI_PASSWORD
       }),
-      timeout: 8000
+      signal: AbortSignal.timeout(10000)
     })
 
-    console.log(`📡 认证响应状态: ${authResponse.status}`)
-    
     if (authResponse.ok) {
       const authData = await authResponse.json()
-      console.log('✅ 认证成功!')
-      console.log(`🎫 Token获取成功: ${authData.token ? '有效' : '无效'}`)
+      console.log('✅ 认证成功')
+      console.log(`   令牌: ${authData.token ? authData.token.substring(0, 20) + '...' : '未获取到'}`)
       
-      // 测试获取统计数据
+      // 测试数据获取
       if (authData.token) {
-        console.log('\n📊 测试统计数据接口...')
+        console.log('\n📊 测试数据获取:')
+        console.log('═' .repeat(20))
         
-        const endDate = new Date()
-        const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000) // 24小时前
-        
-        const params = new URLSearchParams({
-          startAt: startDate.getTime().toString(),
-          endAt: endDate.getTime().toString(),
-        })
-
-        const statsResponse = await fetch(
-          `${config.baseUrl}/api/websites/${config.websiteId}/stats?${params}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${authData.token}`,
-              'Content-Type': 'application/json',
-            },
-            timeout: 8000
-          }
-        )
-
-        console.log(`📈 统计数据响应: ${statsResponse.status}`)
-        
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json()
-          console.log('✅ 统计数据获取成功!')
-          console.log('📊 数据示例:', {
-            pageviews: statsData.pageviews?.value || 0,
-            visitors: statsData.visitors?.value || 0,
-            visits: statsData.visits?.value || 0
-          })
-        } else {
-          const errorText = await statsResponse.text().catch(() => 'Unknown error')
-          console.log(`❌ 统计数据获取失败: ${statsResponse.status}`)
-          console.log(`📝 错误详情: ${errorText}`)
+        try {
+          const websiteId = process.env.UMAMI_WEBSITE_ID
+          const now = Date.now()
+          const yesterday = now - 24 * 60 * 60 * 1000
           
-          if (statsResponse.status === 403) {
-            console.log('🔧 可能的问题: 网站ID不正确或没有权限访问该网站')
+          const statsResponse = await fetch(
+            `${baseUrl}/api/websites/${websiteId}/stats?startAt=${yesterday}&endAt=${now}`,
+            {
+              headers: { 'Authorization': `Bearer ${authData.token}` },
+              signal: AbortSignal.timeout(10000)
+            }
+          )
+
+          if (statsResponse.ok) {
+            const statsData = await statsResponse.json()
+            console.log('✅ 数据获取成功')
+            console.log(`   页面浏览量: ${statsData.pageviews?.value || 0}`)
+            console.log(`   访客数: ${statsData.visitors?.value || 0}`)
+            console.log(`   访问次数: ${statsData.visits?.value || 0}`)
+          } else {
+            const errorText = await statsResponse.text()
+            console.log(`❌ 数据获取失败: ${statsResponse.status}`)
+            console.log(`   错误信息: ${errorText}`)
+            if (statsResponse.status === 404) {
+              console.log('💡 建议: 检查 UMAMI_WEBSITE_ID 是否正确')
+            }
           }
+        } catch (error) {
+          console.log('❌ 数据获取异常:', error.message)
         }
       }
-      
     } else {
-      const errorText = await authResponse.text().catch(() => 'Unknown error')
+      const errorText = await authResponse.text()
       console.log(`❌ 认证失败: ${authResponse.status}`)
-      console.log(`📝 错误详情: ${errorText}`)
-      
+      console.log(`   错误信息: ${errorText}`)
       if (authResponse.status === 401) {
-        console.log('🔧 可能的问题: 用户名或密码错误')
-      } else if (authResponse.status === 404) {
-        console.log('🔧 可能的问题: API端点不存在或URL错误')
+        console.log('💡 建议: 检查用户名和密码是否正确')
       }
     }
-    
   } catch (error) {
-    console.log(`❌ 认证接口测试失败: ${error.message}`)
-    
-    if (error.message.includes('timeout') || error.message.includes('TIMEOUT')) {
-      console.log('🔧 建议: 网络连接超时，请检查网络设置')
+    console.log('❌ 认证过程异常:', error.message)
+    if (error.name === 'TimeoutError') {
+      console.log('💡 建议: 认证超时，可能是网络延迟问题')
     }
   }
 
-  console.log('\n🎯 测试完成!')
-  console.log('\n💡 提示:')
-  console.log('  • 如果认证成功但统计数据失败，检查网站ID')
-  console.log('  • 如果连接超时，可能是网络或防火墙问题')
-  console.log('  • 可以尝试直接访问 Umami 仪表板验证账户')
+  console.log('\n📋 诊断完成')
+  console.log('=' .repeat(50))
+  console.log('🔗 有用的链接:')
+  console.log(`   • Umami 控制台: ${baseUrl}/dashboard`)
+  console.log('   • 本地测试页面: http://localhost:3000/test-umami-connection')
+  console.log('   • 访问统计页面: http://localhost:3000/about')
+  console.log('   • API 调试接口: http://localhost:3000/api/umami-stats')
 }
 
-// 运行测试
-testUmamiConnection().catch(console.error) 
+// 执行诊断
+testConnection().catch(error => {
+  console.error('❌ 诊断工具异常:', error.message)
+}) 
