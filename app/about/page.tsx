@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Mail, Users, GraduationCap, BookOpen, Tag } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import VotingPoll from "@/components/voting-poll"
+import VisitorStats from "@/components/analytics/VisitorStats"
 
 // 版本号常量 - 固定为1.0版本
 const VERSION = "1.0"
@@ -167,6 +168,11 @@ export default function AboutPage() {
               </Card>
             ))}
           </div>
+        </div>
+
+        {/* 网站访问统计 */}
+        <div className="mt-16">
+          <VisitorStats />
         </div>
 
         {/* 投票排行榜 */}
