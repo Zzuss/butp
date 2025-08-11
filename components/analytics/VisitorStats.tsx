@@ -103,7 +103,7 @@ export default function VisitorStats() {
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
 
-  // 增强的数据获取函数
+  // 增强的数据获取函数 - 始终尝试获取真实数据
   const fetchRealStats = useCallback(async (isRetry = false) => {
     try {
       setLoading(true)
@@ -114,7 +114,7 @@ export default function VisitorStats() {
         setRetryCount(prev => prev + 1)
         console.log(`🔄 手动重试获取数据 (第${retryCount + 1}次)...`)
       } else {
-        console.log('🔄 尝试获取真实统计数据...')
+        console.log('🔄 积极尝试获取真实统计数据...')
         setRetryCount(0)
       }
       
@@ -122,42 +122,53 @@ export default function VisitorStats() {
       
       if (data) {
         setStats(data)
-        setDataSource('real')
         setAttemptedReal(true)
-        setConnectionStatus('connected')
-        setLastUpdateTime(new Date().toLocaleString('zh-CN'))
-        setRetryCount(0) // 成功后重置重试计数
-        console.log('✅ 成功获取真实数据')
+        setRetryCount(0)
+        
+        // 检查数据源类型，根据元数据判断是否为真实数据
+        const dataSource = (data.meta as any)?.dataSource || 'unknown'
+        const note = (data.meta as any)?.note || ''
+        
+        if (dataSource === 'umami-public') {
+          setDataSource('real')
+          setConnectionStatus('connected')
+          setLastUpdateTime(new Date().toLocaleString('zh-CN'))
+          console.log('✅ 成功获取真实 Umami 数据')
+        } else {
+          setDataSource('demo')
+          setConnectionStatus('disconnected')
+          
+          // 根据注释内容提供更具体的状态信息
+          if (note.includes('服务器问题') || note.includes('不稳定')) {
+            setLastUpdateTime(new Date().toLocaleString('zh-CN') + ' (服务暂时不可用)')
+            console.log('⚠️ Umami 服务暂时不稳定，使用智能模拟数据')
+          } else {
+            setLastUpdateTime(new Date().toLocaleString('zh-CN') + ' (智能模拟)')
+            console.log('📊 使用基于真实模式的智能模拟数据')
+          }
+        }
       } else {
         throw new Error('API返回空数据')
       }
     } catch (err) {
-      console.error('❌ 获取真实数据失败:', err)
+      console.error('❌ 获取数据失败:', err)
       setConnectionStatus('disconnected')
+      setAttemptedReal(true)
       
       // 根据错误类型提供不同的错误信息
-      let errorMessage = '无法连接到Umami API'
+      let errorMessage = '暂时无法获取实时数据'
       if (err instanceof Error) {
         if (err.message.includes('timeout')) {
-          errorMessage = '连接超时，请检查网络连接'
-        } else if (err.message.includes('401')) {
-          errorMessage = 'API认证失败，请检查配置'
-        } else if (err.message.includes('500')) {
-          errorMessage = '服务器内部错误'
-        } else if (err.message.includes('failed')) {
-          errorMessage = '网络连接失败'
+          errorMessage = '连接超时，显示模拟数据'
+        } else if (err.message.includes('fetch')) {
+          errorMessage = '网络连接问题，显示模拟数据'
         }
       }
       
       setError(errorMessage)
       
-      // 只在第一次失败时自动切换到演示数据，不再自动重试
-      if (!isRetry) {
-        setStats(DEMO_DATA)
-        setDataSource('demo')
-        setLastUpdateTime(new Date().toLocaleString('zh-CN') + ' (演示数据)')
-      }
-      setAttemptedReal(true)
+      // 不再使用静态演示数据，让 API 返回智能模拟数据
+      console.log('⚠️ 将依赖服务端智能模拟数据')
     } finally {
       setLoading(false)
     }
@@ -174,15 +185,15 @@ export default function VisitorStats() {
     await fetchRealStats(false)
   }, [fetchRealStats])
 
-  // 使用演示数据
-  const useDemoData = useCallback(() => {
-    setStats(DEMO_DATA)
-    setDataSource('demo')
+  // 强制刷新数据（移除演示数据选项）
+  const forceRefresh = useCallback(async () => {
+    setRetryCount(0)
+    await fetchRealStats(false)
     setError(null)
     setLoading(false)
-    setConnectionStatus('disconnected')
-    setLastUpdateTime(new Date().toLocaleString('zh-CN') + ' (演示数据)')
-  }, [])
+    setConnectionStatus('checking')
+    setLastUpdateTime('')
+  }, [fetchRealStats])
 
   // 组件挂载时获取数据（只执行一次）
   useEffect(() => {
@@ -260,9 +271,9 @@ export default function VisitorStats() {
                 <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
                 重试连接
               </Button>
-              <Button onClick={useDemoData} variant="outline" size="sm">
+              <Button onClick={forceRefresh} variant="outline" size="sm">
                 <Database className="h-4 w-4 mr-1" />
-                查看演示数据
+                强制刷新
               </Button>
             </div>
             {retryCount > 0 && (
@@ -295,6 +306,17 @@ export default function VisitorStats() {
                 <p className="text-yellow-700 text-sm mt-1">
                   {stats?.meta?.note || error || '无法连接到Umami API，当前显示的是演示数据，仅供参考'}
                 </p>
+                {stats?.meta?.note?.includes('登录问题') && (
+                  <div className="text-yellow-600 text-xs mt-2 p-2 bg-yellow-100 rounded">
+                    <strong>🔧 建议解决方案：</strong>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li>检查 Umami 服务是否需要重新登录</li>
+                      <li>确认共享链接权限设置是否正确</li>
+                      <li>联系 Umami 服务管理员重新部署服务</li>
+                      <li>验证 Vercel 部署状态是否正常</li>
+                    </ul>
+                  </div>
+                )}
                 {retryCount > 0 && (
                   <p className="text-yellow-600 text-xs mt-1">
                     系统已尝试重连 {retryCount} 次
@@ -350,14 +372,14 @@ export default function VisitorStats() {
             </Button>
             
             {dataSource === 'real' && (
-              <Button onClick={useDemoData} variant="outline" size="sm">
+              <Button onClick={forceRefresh} variant="outline" size="sm">
                 <Database className="h-4 w-4 mr-1" />
-                切换到演示
+                强制刷新
               </Button>
             )}
             
             {dataSource === 'demo' && attemptedReal && (
-              <Button onClick={handleRefresh} variant="outline" size="sm">
+              <Button onClick={forceRefresh} variant="outline" size="sm">
                 <TestTube className="h-4 w-4 mr-1" />
                 尝试真实数据
               </Button>

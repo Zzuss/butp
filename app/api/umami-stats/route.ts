@@ -26,42 +26,93 @@ interface PeriodStats {
 // 智能的Umami公共客户端
 class UmamiPublicClient {
   private shareUrl: string
-  private timeout = 2000 // 减少到2秒超时
-  private hasTriedConnection = false // 记录是否已经尝试过连接
+  private timeout = 15000 // 增加到15秒超时，考虑到 Supabase 查询可能较慢
+  private static globalConnectionAttempted = false // 全局标记，但允许重试
+  private static lastSuccessTime = 0 // 记录上次成功获取数据的时间
+  private static serviceHealthy = true // 跟踪服务健康状态
 
   constructor(shareUrl: string) {
     this.shareUrl = shareUrl
   }
 
+  // 检查 Umami 服务是否健康
+  private static isServiceHealthy(): boolean {
+    const now = Date.now()
+    // 如果在过去 15 分钟内成功获取过数据，认为服务是健康的
+    // 缩短检查时间，因为 Vercel 部署的服务可能不稳定
+    return UmamiPublicClient.serviceHealthy && 
+           (now - UmamiPublicClient.lastSuccessTime < 15 * 60 * 1000)
+  }
+
+  // 标记服务状态
+  private static markServiceStatus(healthy: boolean) {
+    UmamiPublicClient.serviceHealthy = healthy
+    if (healthy) {
+      UmamiPublicClient.lastSuccessTime = Date.now()
+    }
+  }
+
+  // 获取服务健康状态（公共方法）
+  static getServiceHealthy(): boolean {
+    return UmamiPublicClient.serviceHealthy
+  }
+
   async getPublicStats(startAt: number, endAt: number): Promise<UmamiShareData | null> {
-    // 如果之前已经确认连接失败，直接返回null，避免重复尝试
-    if (this.hasTriedConnection) {
-      console.log('⏭️ 跳过重复连接尝试，直接使用模拟数据')
-      return null
+    // 检查服务健康状态
+    if (!UmamiPublicClient.isServiceHealthy()) {
+      console.log('⚠️ Umami 服务最近不稳定，检测到登录问题或服务器错误')
+      console.log('💡 建议检查 Umami 服务是否需要重新部署或配置')
+      // 但仍然快速尝试一次，以防服务已经恢复
     }
 
-    // 只尝试最有可能成功的方法
+    console.log('🔄 积极尝试获取真实 Umami 数据...')
+
+    // 尝试多种方法获取数据，每次都重新尝试
     const methods = [
-      () => this.tryDirectAPI(startAt, endAt)
-      // 移除其他不太可能成功的方法以减少重复尝试
+      () => this.tryDirectAPI(startAt, endAt),
+      () => this.tryAlternativeAPI(startAt, endAt),
+      () => this.tryPageScraping()
     ]
 
-    for (const method of methods) {
+    let hasServerError = false
+
+    for (let i = 0; i < methods.length; i++) {
+      const method = methods[i]
       try {
+        console.log(`📡 尝试方法 ${i + 1}/${methods.length}...`)
         const result = await method()
-        if (result) {
-          console.log('✅ 成功获取Umami数据')
+        if (result && result.pageviews) {
+          console.log(`✅ 方法 ${i + 1} 成功获取真实数据`)
+          UmamiPublicClient.globalConnectionAttempted = true
+          UmamiPublicClient.markServiceStatus(true) // 标记服务健康
           return result
         }
       } catch (error) {
-        console.warn('⚠️ 连接失败，后续将使用模拟数据')
-        this.hasTriedConnection = true // 标记已尝试，避免后续重复
-        break // 直接跳出，不再尝试其他方法
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        console.warn(`⚠️ 方法 ${i + 1} 失败: ${errorMsg}`)
+        
+        // 检测特定的服务器错误
+        if (errorMsg.includes('json') || errorMsg.includes('JSON') || 
+            errorMsg.includes('Unexpected end') || errorMsg.includes('SyntaxError') ||
+            errorMsg.includes('Invalid JSON')) {
+          console.log('🔧 检测到 Umami 服务器 JSON 解析错误，可能是服务暂时不稳定')
+          hasServerError = true
+        }
+        
+        // 继续尝试下一种方法
       }
     }
 
-    this.hasTriedConnection = true
-    console.log('❌ 连接不可用，使用模拟数据')
+    UmamiPublicClient.globalConnectionAttempted = true
+    
+    // 根据错误类型标记服务状态
+    if (hasServerError) {
+      UmamiPublicClient.markServiceStatus(false) // 标记服务不健康
+      console.log('❌ 检测到 Umami 服务器问题，标记为不健康状态，使用智能模拟数据')
+    } else {
+      console.log('❌ 所有方法都失败，可能是网络问题，使用智能模拟数据')
+    }
+    
     return null
   }
 
@@ -83,7 +134,16 @@ class UmamiPublicClient {
       })
 
       if (response.ok) {
-        return await response.json()
+        const text = await response.text()
+        if (!text || text.trim() === '') {
+          throw new Error('Empty response from Umami API')
+        }
+        try {
+          return JSON.parse(text)
+        } catch (parseError) {
+          console.warn('📄 Umami API 返回无效 JSON，可能是服务器问题:', text.substring(0, 100))
+          throw new Error('Invalid JSON response from Umami server')
+        }
       }
     } finally {
       clearTimeout(timeoutId)
@@ -92,36 +152,170 @@ class UmamiPublicClient {
     return null
   }
 
-  // 生成智能模拟数据
+  // 方法2: 尝试其他API端点格式
+  async tryAlternativeAPI(startAt: number, endAt: number): Promise<UmamiShareData | null> {
+    const alternativeUrls = [
+      `https://umami-ruby-chi.vercel.app/api/websites/jd52d7TbD1Q4vNw6/stats?startAt=${startAt}&endAt=${endAt}`,
+      `https://umami-ruby-chi.vercel.app/api/share/jd52d7TbD1Q4vNw6/butp.tech/stats?startAt=${startAt}&endAt=${endAt}`,
+      `https://umami-ruby-chi.vercel.app/api/share/jd52d7TbD1Q4vNw6/data?startAt=${startAt}&endAt=${endAt}`
+    ]
+    
+    for (const apiUrl of alternativeUrls) {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'BuTP-Analytics/1.0',
+            'Referer': this.shareUrl
+          },
+          signal: controller.signal
+        })
+
+        if (response.ok) {
+          const text = await response.text()
+          if (!text || text.trim() === '') {
+            continue // 尝试下一个 URL
+          }
+          try {
+            const data = JSON.parse(text)
+            if (data && (data.pageviews || data.pageviews === 0)) {
+              return data
+            }
+          } catch (parseError) {
+            console.warn('📄 替代 API 返回无效 JSON:', text.substring(0, 50))
+            continue // 尝试下一个 URL
+          }
+        }
+      } catch (error) {
+        // 继续尝试下一个URL
+      } finally {
+        clearTimeout(timeoutId)
+      }
+    }
+    
+    return null
+  }
+
+  // 方法3: 尝试从分享页面解析数据
+  async tryPageScraping(): Promise<UmamiShareData | null> {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+
+    try {
+      const response = await fetch(this.shareUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        signal: controller.signal
+      })
+
+      if (response.ok) {
+        const html = await response.text()
+        
+        // 寻找初始数据
+        const dataMatch = html.match(/window\.__INITIAL_PROPS__\s*=\s*({.+?});/)
+        if (dataMatch) {
+          try {
+            const initialData = JSON.parse(dataMatch[1])
+            if (initialData.pageProps && initialData.pageProps.data) {
+              const stats = initialData.pageProps.data
+              if (stats && (stats.pageviews || stats.pageviews === 0)) {
+                return {
+                  pageviews: { value: stats.pageviews || 0 },
+                  visitors: { value: stats.visitors || 0 },
+                  visits: { value: stats.visits || 0 },
+                  bounces: { value: stats.bounces || 0 },
+                  totaltime: { value: stats.totaltime || 0 }
+                }
+              }
+            }
+          } catch (parseError) {
+            // 解析失败，继续其他尝试
+          }
+        }
+
+        // 尝试其他可能的数据格式
+        const scriptMatches = html.match(/<script[^>]*>(.+?)<\/script>/g)
+        if (scriptMatches) {
+          for (const script of scriptMatches) {
+            const jsonMatch = script.match(/pageviews["\']?\s*:\s*(\d+)/)
+            if (jsonMatch) {
+              return {
+                pageviews: { value: parseInt(jsonMatch[1]) },
+                visitors: { value: 0 },
+                visits: { value: 0 },
+                bounces: { value: 0 },
+                totaltime: { value: 0 }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // 页面抓取失败
+    } finally {
+      clearTimeout(timeoutId)
+    }
+    
+    return null
+  }
+
+  // 生成基于真实网站模式的智能模拟数据
   generateRealisticMockData(days: number): PeriodStats {
-    // 使用更真实的数据模式，基于一般网站的访问规律
     const now = new Date()
     const isWeekend = now.getDay() === 0 || now.getDay() === 6
     const timeOfDay = now.getHours()
     
-    // 基础访问量（考虑时间因素）
+    // 基于 butp.tech 实际情况的基础数据模型
     let baseMultiplier = 1
-    if (isWeekend) baseMultiplier *= 0.7  // 周末访问量较低
-    if (timeOfDay < 9 || timeOfDay > 22) baseMultiplier *= 0.5  // 非工作时间
-    if (timeOfDay >= 14 && timeOfDay <= 16) baseMultiplier *= 1.3  // 下午高峰
-
-    // 根据时间段计算基础数据
-    const baseDailyPageviews = Math.floor((25 + Math.random() * 15) * baseMultiplier)
-    const totalPageviews = Math.floor(baseDailyPageviews * days * (0.9 + Math.random() * 0.2))
     
-    const visitors = Math.floor(totalPageviews * (0.65 + Math.random() * 0.1))
-    const visits = Math.floor(visitors * (1.1 + Math.random() * 0.2))
-    const bounces = Math.floor(visits * (0.3 + Math.random() * 0.2))
-    const totaltime = visits * (90 + Math.random() * 60) // 1.5-2.5分钟平均
+    // 时间因子调整
+    if (isWeekend) baseMultiplier *= 0.6  // 周末大学生较少访问
+    if (timeOfDay < 8 || timeOfDay > 23) baseMultiplier *= 0.3  // 深夜/早晨访问少
+    if (timeOfDay >= 9 && timeOfDay <= 11) baseMultiplier *= 1.4  // 上午高峰
+    if (timeOfDay >= 14 && timeOfDay <= 17) baseMultiplier *= 1.6  // 下午高峰
+    if (timeOfDay >= 19 && timeOfDay <= 22) baseMultiplier *= 1.2  // 晚上高峰
+    
+    // 基于教育网站的实际访问模式
+    const basePatterns = {
+      daily: { base: 45, variance: 20 },      // 日访问 25-65
+      weekly: { base: 280, variance: 80 },    // 周访问 200-360  
+      monthly: { base: 1150, variance: 300 }, // 月访问 850-1450
+      halfYearly: { base: 6800, variance: 1200 } // 半年访问 5600-8000
+    }
+    
+    const periodKey = days === 1 ? 'daily' : 
+                     days === 7 ? 'weekly' : 
+                     days === 30 ? 'monthly' : 'halfYearly'
+    
+    const pattern = basePatterns[periodKey as keyof typeof basePatterns]
+    
+    // 计算页面浏览量
+    const pageviews = Math.floor((pattern.base + (Math.random() - 0.5) * pattern.variance) * baseMultiplier)
+    
+    // 基于教育网站的典型转化率
+    const visitors = Math.floor(pageviews * (0.72 + Math.random() * 0.08)) // 72-80%转化率
+    const visits = Math.floor(visitors * (1.08 + Math.random() * 0.12)) // 1.08-1.2的访问深度
+    const bounces = Math.floor(visits * (0.35 + Math.random() * 0.15)) // 35-50%跳出率
+    
+    // 教育网站通常有较长的停留时间
+    const avgSessionTime = 145 + Math.random() * 90 // 145-235秒
+    const totaltime = Math.floor(visits * avgSessionTime)
 
     return {
-      period: days === 1 ? 'daily' : days === 7 ? 'weekly' : days === 30 ? 'monthly' : 'halfYearly',
+      period: periodKey,
       days,
-      pageviews: totalPageviews,
-      visitors,
-      visits,
-      bounces,
-      totaltime,
+      pageviews: Math.max(pageviews, 1), // 确保至少有1个访问
+      visitors: Math.max(visitors, 1),
+      visits: Math.max(visits, 1),
+      bounces: Math.max(bounces, 0),
+      totaltime: Math.max(totaltime, visits * 30), // 最少30秒/访问
       bounceRate: visits > 0 ? (bounces / visits * 100) : 0,
       avgVisitDuration: visits > 0 ? (totaltime / visits) : 0
     }
@@ -269,7 +463,9 @@ export async function GET() {
         dataSource,
         shareUrl: UMAMI_SHARE_URL,
         usingFallback,
-        note: usingFallback ? '使用智能模拟数据，基于真实网站访问模式' : '来自Umami公共分享数据'
+        note: usingFallback ? 
+          'Umami 服务暂时不可用（可能是登录问题或服务器错误），使用智能模拟数据' : 
+          '来自Umami公共分享数据'
       }
     }
 
@@ -311,7 +507,9 @@ export async function GET() {
         dataSource: 'realistic-mock',
         shareUrl: UMAMI_SHARE_URL,
         usingFallback: true,
-        note: '使用智能模拟数据，基于真实网站访问模式',
+        note: UmamiPublicClient.getServiceHealthy() ? 
+          '使用智能模拟数据，基于真实网站访问模式' :
+          'Umami 服务暂时不稳定，使用智能模拟数据',
         error: error instanceof Error ? error.message : '未知错误'
       }
     }

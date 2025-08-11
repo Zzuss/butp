@@ -1,166 +1,107 @@
-#!/usr/bin/env node
+// Umami 连接测试脚本
+// 用于实时监控 Umami 服务状态
 
-/**
- * Umami连接测试脚本
- * 直接测试网络连接和API响应
- */
+const https = require('https');
 
-require('dotenv').config({ path: '.env.local' })
-const https = require('https')
-const http = require('http')
-
-console.log('🔍 Umami 连接诊断工具')
-console.log('=' .repeat(50))
+const UMAMI_BASE_URL = 'https://umami-teal-omega.vercel.app';
+const UMAMI_WEBSITE_ID = 'ec362d7d-1d62-46c2-8338-6e7c0df7c084';
 
 async function testConnection() {
-  console.log('📋 环境变量检查:')
-  const requiredVars = ['UMAMI_BASE_URL', 'UMAMI_USERNAME', 'UMAMI_PASSWORD', 'UMAMI_WEBSITE_ID']
-  let configOk = true
-  
-  requiredVars.forEach(varName => {
-    const value = process.env[varName]
-    if (value) {
-      console.log(`✅ ${varName}: ${varName.includes('PASSWORD') ? '***已设置***' : value}`)
-    } else {
-      console.log(`❌ ${varName}: 未设置`)
-      configOk = false
-    }
-  })
-  
-  if (!configOk) {
-    console.log('\n❌ 环境变量配置不完整，请检查 .env.local 文件')
-    return
-  }
-
-  console.log('\n🌐 网络连接测试:')
-  console.log('═' .repeat(30))
-  
-  // 测试基础网络连接
-  try {
-    console.log('🔄 测试基础网络连接...')
-    const testResponse = await fetch('https://httpbin.org/status/200', { 
-      signal: AbortSignal.timeout(5000) 
-    })
-    if (testResponse.ok) {
-      console.log('✅ 基础网络连接正常')
-    } else {
-      console.log('⚠️ 基础网络连接异常')
-    }
-  } catch (error) {
-    console.log('❌ 基础网络连接失败:', error.message)
-    console.log('💡 建议: 检查网络连接、防火墙或代理设置')
-    return
-  }
-
-  // 测试Umami服务器连接
-  const baseUrl = process.env.UMAMI_BASE_URL
-  console.log(`\n🔄 测试 Umami 服务器连接: ${baseUrl}`)
-  
-  try {
-    const startTime = Date.now()
-    const response = await fetch(baseUrl, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(10000)
-    })
-    const duration = Date.now() - startTime
+    console.log('🔄 测试新的 Umami 连接状态...\n');
     
-    if (response.ok) {
-      console.log(`✅ Umami 服务器可达 (${duration}ms)`)
-      console.log(`   状态码: ${response.status}`)
-      console.log(`   服务器: ${response.headers.get('server') || '未知'}`)
-    } else {
-      console.log(`⚠️ Umami 服务器响应异常: ${response.status}`)
-    }
-  } catch (error) {
-    console.log('❌ Umami 服务器连接失败:', error.message)
-    if (error.name === 'TimeoutError') {
-      console.log('💡 建议: 连接超时，可能是网络问题或服务器暂时不可用')
-    }
-    return
-  }
-
-  // 测试认证
-  console.log('\n🔑 测试 Umami 认证:')
-  console.log('═' .repeat(25))
-  
-  try {
-    console.log('🔄 尝试登录...')
-    const authResponse = await fetch(`${baseUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: process.env.UMAMI_USERNAME,
-        password: process.env.UMAMI_PASSWORD
-      }),
-      signal: AbortSignal.timeout(10000)
-    })
-
-    if (authResponse.ok) {
-      const authData = await authResponse.json()
-      console.log('✅ 认证成功')
-      console.log(`   令牌: ${authData.token ? authData.token.substring(0, 20) + '...' : '未获取到'}`)
-      
-      // 测试数据获取
-      if (authData.token) {
-        console.log('\n📊 测试数据获取:')
-        console.log('═' .repeat(20))
+    // 测试1: 基础健康检查
+    console.log('1. 测试 Umami 服务健康状态...');
+    try {
+        const response = await fetch(`${UMAMI_BASE_URL}/api/heartbeat`, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'BuTP-Test/1.0'
+            },
+            signal: AbortSignal.timeout(15000)
+        });
         
-        try {
-          const websiteId = process.env.UMAMI_WEBSITE_ID
-          const now = Date.now()
-          const yesterday = now - 24 * 60 * 60 * 1000
-          
-          const statsResponse = await fetch(
-            `${baseUrl}/api/websites/${websiteId}/stats?startAt=${yesterday}&endAt=${now}`,
-            {
-              headers: { 'Authorization': `Bearer ${authData.token}` },
-              signal: AbortSignal.timeout(10000)
-            }
-          )
-
-          if (statsResponse.ok) {
-            const statsData = await statsResponse.json()
-            console.log('✅ 数据获取成功')
-            console.log(`   页面浏览量: ${statsData.pageviews?.value || 0}`)
-            console.log(`   访客数: ${statsData.visitors?.value || 0}`)
-            console.log(`   访问次数: ${statsData.visits?.value || 0}`)
-          } else {
-            const errorText = await statsResponse.text()
-            console.log(`❌ 数据获取失败: ${statsResponse.status}`)
-            console.log(`   错误信息: ${errorText}`)
-            if (statsResponse.status === 404) {
-              console.log('💡 建议: 检查 UMAMI_WEBSITE_ID 是否正确')
-            }
-          }
-        } catch (error) {
-          console.log('❌ 数据获取异常:', error.message)
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Umami 服务正常:', data);
+        } else {
+            console.log('❌ Umami 服务响应异常:', response.status, response.statusText);
         }
-      }
-    } else {
-      const errorText = await authResponse.text()
-      console.log(`❌ 认证失败: ${authResponse.status}`)
-      console.log(`   错误信息: ${errorText}`)
-      if (authResponse.status === 401) {
-        console.log('💡 建议: 检查用户名和密码是否正确')
-      }
+    } catch (error) {
+        console.log('❌ Umami 服务连接失败:', error.message);
     }
-  } catch (error) {
-    console.log('❌ 认证过程异常:', error.message)
-    if (error.name === 'TimeoutError') {
-      console.log('💡 建议: 认证超时，可能是网络延迟问题')
-    }
-  }
 
-  console.log('\n📋 诊断完成')
-  console.log('=' .repeat(50))
-  console.log('🔗 有用的链接:')
-  console.log(`   • Umami 控制台: ${baseUrl}/dashboard`)
-  console.log('   • 本地测试页面: http://localhost:3000/test-umami-connection')
-  console.log('   • 访问统计页面: http://localhost:3000/about')
-  console.log('   • API 调试接口: http://localhost:3000/api/umami-stats')
+    // 测试2: 脚本文件可用性
+    console.log('\n2. 测试追踪脚本...');
+    try {
+        const response = await fetch(`${UMAMI_BASE_URL}/script.js`, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'BuTP-Test/1.0'
+            },
+            signal: AbortSignal.timeout(15000)
+        });
+        
+        if (response.ok) {
+            const script = await response.text();
+            if (script.includes('umami')) {
+                console.log('✅ 追踪脚本正常加载');
+            } else {
+                console.log('⚠️ 追踪脚本内容异常');
+            }
+        } else {
+            console.log('❌ 追踪脚本加载失败:', response.status);
+        }
+    } catch (error) {
+        console.log('❌ 追踪脚本连接失败:', error.message);
+    }
+
+    // 测试3: 主站点访问
+    console.log('\n3. 测试主站点访问...');
+    try {
+        const response = await fetch(UMAMI_BASE_URL, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'BuTP-Test/1.0'
+            },
+            signal: AbortSignal.timeout(15000)
+        });
+        
+        if (response.ok) {
+            const html = await response.text();
+            if (html.includes('Umami')) {
+                console.log('✅ 主站点正常访问');
+            } else {
+                console.log('⚠️ 主站点可访问，但内容异常');
+            }
+        } else {
+            console.log('❌ 主站点访问失败:', response.status);
+        }
+    } catch (error) {
+        console.log('❌ 主站点连接失败:', error.message);
+    }
+
+    console.log('\n📊 测试完成!\n');
+    console.log('🔗 访问链接:');
+    console.log(`   Umami 仪表板: ${UMAMI_BASE_URL}`);
+    console.log(`   网站ID: ${UMAMI_WEBSITE_ID}`);
 }
 
-// 执行诊断
-testConnection().catch(error => {
-  console.error('❌ 诊断工具异常:', error.message)
-}) 
+// 检查是否有命令行参数 --monitor
+if (process.argv.includes('--monitor')) {
+    console.log('🔄 启动持续监控模式 (每30秒检查一次)...\n');
+    
+    // 立即执行一次
+    testConnection();
+    
+    // 设置定时执行
+    setInterval(() => {
+        console.log('\n' + '='.repeat(50));
+        console.log('🕐 定时检查 -', new Date().toLocaleString());
+        console.log('='.repeat(50));
+        testConnection();
+    }, 30000);
+    
+} else {
+    // 单次执行
+    testConnection();
+} 
