@@ -1,10 +1,10 @@
 // Umami Analytics 配置
 export const ANALYTICS_CONFIG = {
   // Umami 网站ID (从您的Umami仪表板获取)
-  WEBSITE_ID: process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || 'ddf456a9-f046-48b0-b27b-95a6dc0182b9',
+  WEBSITE_ID: process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || 'ec362d7d-1d62-46c2-8338-6e7c0df7c084',
   
   // Umami 脚本URL
-  SCRIPT_URL: process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL || 'https://umami-ruby-chi.vercel.app/script.js',
+  SCRIPT_URL: process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL || 'https://umami-teal-omega.vercel.app/script.js',
   
   // 是否启用分析 (开发环境默认关闭)
   ENABLED: process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',

@@ -44,7 +44,7 @@ interface VisitorStats {
 
 // Umami 配置
 const UMAMI_CONFIG: UmamiApiConfig = {
-  baseUrl: 'https://umami-ruby-chi.vercel.app',
+  baseUrl: 'https://umami-teal-omega.vercel.app',
   username: process.env.NEXT_PUBLIC_UMAMI_USERNAME || '',
   password: process.env.NEXT_PUBLIC_UMAMI_PASSWORD || '', 
   websiteId: process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || ''
