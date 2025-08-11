@@ -92,7 +92,7 @@ export default function TestUmamiConnection() {
     try {
       updateTest(1, { status: 'pending', message: '正在测试Umami服务器...' })
       
-      const response = await fetch('https://umami-ruby-chi.vercel.app', { 
+      const response = await fetch('https://umami-teal-omega.vercel.app', { 
         method: 'HEAD',
         signal: AbortSignal.timeout(8000)
       })
@@ -129,7 +129,7 @@ export default function TestUmamiConnection() {
         duration: Date.now() - startTime2,
         details: { 
           error: error instanceof Error ? error.message : '未知错误',
-          serverUrl: 'https://umami-ruby-chi.vercel.app',
+          serverUrl: 'https://umami-teal-omega.vercel.app',
           suggestion: '服务器可能离线或网络连接问题'
         }
       })
@@ -395,14 +395,14 @@ export default function TestUmamiConnection() {
               <h4 className="font-medium text-red-600 mb-2">❌ Umami服务器不可达</h4>
               <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
                 <li>Umami服务器可能临时维护</li>
-                <li>检查服务器URL: https://umami-ruby-chi.vercel.app</li>
+                <li>检查服务器URL: https://umami-teal-omega.vercel.app</li>
                 <li>等待5-10分钟后重试</li>
                 <li>
                   访问 
                   <Button 
                     variant="link" 
                     className="h-auto p-0 ml-1" 
-                    onClick={() => window.open('https://umami-ruby-chi.vercel.app', '_blank')}
+                    onClick={() => window.open('https://umami-teal-omega.vercel.app', '_blank')}
                   >
                     Umami控制台
                     <ExternalLink className="h-3 w-3 ml-1" />
@@ -418,8 +418,8 @@ export default function TestUmamiConnection() {
                 <p className="text-sm text-gray-600">在项目根目录的 .env.local 文件中添加:</p>
                 <div className="bg-gray-100 p-3 rounded text-sm font-mono">
                   <div className="flex items-center justify-between">
-                    <span>UMAMI_BASE_URL=https://umami-ruby-chi.vercel.app</span>
-                    <Button size="sm" variant="ghost" onClick={() => copyToClipboard('UMAMI_BASE_URL=https://umami-ruby-chi.vercel.app')}>
+                    <span>UMAMI_BASE_URL=https://umami-teal-omega.vercel.app</span>
+                    <Button size="sm" variant="ghost" onClick={() => copyToClipboard('UMAMI_BASE_URL=https://umami-teal-omega.vercel.app')}>
                       <Copy className="h-3 w-3" />
                     </Button>
                   </div>
@@ -468,7 +468,7 @@ export default function TestUmamiConnection() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" onClick={() => window.open('https://umami-ruby-chi.vercel.app/dashboard', '_blank')}>
+            <Button variant="outline" onClick={() => window.open('https://umami-teal-omega.vercel.app/dashboard', '_blank')}>
               <ExternalLink className="h-4 w-4 mr-2" />
               Umami 控制台
             </Button>

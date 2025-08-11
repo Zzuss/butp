@@ -44,12 +44,14 @@ export async function GET(request: NextRequest) {
     
     // 获取session并设置数据
     const session = await getIronSession<SessionData>(request, tempResponse, sessionOptions);
+    const now = Date.now();
     session.userId = casUser.userId; // 原始学号
     session.userHash = hash; // 学号哈希值
     session.name = casUser.name || `学生${casUser.userId}`; // CAS返回的真实姓名，如果没有则使用学号
     session.isCasAuthenticated = true;
     session.isLoggedIn = false; // 最终登录在login页面完成
-    session.loginTime = Date.now();
+    session.loginTime = now;
+    session.lastActiveTime = now; // 🆕 设置最后活跃时间
     
     console.log('CAS verify: creating session with data:', {
       userId: session.userId,
@@ -57,7 +59,8 @@ export async function GET(request: NextRequest) {
       name: session.name,
       isCasAuthenticated: session.isCasAuthenticated,
       isLoggedIn: session.isLoggedIn,
-      loginTime: session.loginTime
+      loginTime: session.loginTime,
+      lastActiveTime: session.lastActiveTime
     });
     
     await session.save();

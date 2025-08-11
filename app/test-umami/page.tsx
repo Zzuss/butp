@@ -260,7 +260,7 @@ export default function TestUmamiPage() {
           <CardContent className="p-6">
             <div className="grid gap-4 md:grid-cols-2">
               <a 
-                href="https://umami-ruby-chi.vercel.app/dashboard"
+                href="https://umami-teal-omega.vercel.app/dashboard"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 p-3 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"

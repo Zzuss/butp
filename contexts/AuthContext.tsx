@@ -10,6 +10,7 @@ export interface User {
   isLoggedIn: boolean;
   isCasAuthenticated: boolean;
   loginTime: number;
+  lastActiveTime: number;
 }
 
 // AuthContext接口
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // 登出
   const logout = () => {
+    setUser(null);
     window.location.href = '/api/auth/cas/logout';
   };
 

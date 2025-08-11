@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
-import { SessionData, sessionOptions } from '@/lib/session';
+import { 
+  SessionData, 
+  sessionOptions, 
+  isSessionExpired, 
+  isSessionNearExpiry, 
+  updateSessionActivity, 
+  getSessionRemainingTime,
+  defaultSession 
+} from '@/lib/session';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +24,8 @@ export async function GET(request: NextRequest) {
       userId: session.userId,
       userHash: session.userHash,
       name: session.name,
-      loginTime: session.loginTime
+      loginTime: session.loginTime,
+      lastActiveTime: session.lastActiveTime
     });
     
     // 检查用户是否已登录
@@ -28,6 +37,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 🆕 检查会话是否过期
+    if (isSessionExpired(session)) {
+      console.log('User API: session expired, logging out');
+      
+      // 清除会话数据
+      Object.assign(session, defaultSession);
+      await session.save();
+      
+      return NextResponse.json(
+        { 
+          error: 'Session expired', 
+          reason: 'TIMEOUT',
+          message: '会话已过期，请重新登录'
+        },
+        { status: 401 }
+      );
+    }
+
+    // 🆕 更新最后活跃时间
+    updateSessionActivity(session);
+    await session.save();
+    
+    console.log('User API: session activity updated');
+
     // 返回用户信息
     console.log('User API: returning user info');
     return NextResponse.json({
@@ -37,6 +70,7 @@ export async function GET(request: NextRequest) {
       isLoggedIn: session.isLoggedIn,
       isCasAuthenticated: session.isCasAuthenticated,
       loginTime: session.loginTime,
+      lastActiveTime: session.lastActiveTime
     });
 
   } catch (error) {

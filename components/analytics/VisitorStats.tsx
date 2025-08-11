@@ -156,23 +156,74 @@ export default function VisitorStats() {
       setAttemptedReal(true)
       
       // 根据错误类型提供不同的错误信息
-      let errorMessage = '暂时无法获取实时数据'
+      let errorMessage = '暂时无法获取实时数据，显示智能模拟数据'
       if (err instanceof Error) {
         if (err.message.includes('timeout')) {
-          errorMessage = '连接超时，显示模拟数据'
+          errorMessage = '连接超时，显示智能模拟数据'
         } else if (err.message.includes('fetch')) {
-          errorMessage = '网络连接问题，显示模拟数据'
+          errorMessage = '网络连接问题，显示智能模拟数据'
         }
       }
       
       setError(errorMessage)
       
-      // 不再使用静态演示数据，让 API 返回智能模拟数据
-      console.log('⚠️ 将依赖服务端智能模拟数据')
+      // 🔧 修复：当API失败时，使用本地智能降级数据
+      console.log('🔄 API失败，使用本地智能降级数据')
+      const fallbackData = generateIntelligentFallbackData()
+      setStats(fallbackData)
+      setDataSource('demo')
+      setLastUpdateTime(new Date().toLocaleString('zh-CN') + ' (智能模拟)')
     } finally {
       setLoading(false)
     }
   }, [retryCount])
+
+// 🆕 添加智能降级数据生成函数
+const generateIntelligentFallbackData = (): VisitorStats => {
+  const now = Date.now()
+  const baseMultiplier = Math.sin(now / (1000 * 60 * 60 * 24)) * 0.3 + 1 // 基于日期的变化
+  
+  const generatePeriodData = (period: string, days: number): PeriodStats => {
+    const dayMultiplier = Math.log(days + 1) * 50
+    const randomFactor = 0.8 + Math.random() * 0.4 // 0.8-1.2
+    const timeVariation = Math.sin((now / (1000 * 60 * 60)) + days) * 0.2 + 1 // 基于时间的变化
+    
+    const pageviews = Math.round(dayMultiplier * randomFactor * baseMultiplier * timeVariation * 1.8)
+    const visitors = Math.round(pageviews * (0.6 + Math.random() * 0.2))
+    const visits = Math.round(visitors * (1.1 + Math.random() * 0.3))
+    const bounces = Math.round(visits * (0.3 + Math.random() * 0.4))
+    const avgDuration = Math.round(90 + Math.random() * 120)
+    const totaltime = visits * avgDuration
+    
+    return {
+      period,
+      days,
+      pageviews,
+      visitors,
+      visits,
+      bounces,
+      totaltime,
+      bounceRate: Math.round(30 + Math.random() * 40), // 30-70%
+      avgVisitDuration: avgDuration
+    }
+  }
+
+  return {
+    daily: generatePeriodData('daily', 1),
+    weekly: generatePeriodData('weekly', 7),
+    monthly: generatePeriodData('monthly', 30),
+    halfYearly: generatePeriodData('halfYearly', 180),
+    meta: {
+      lastUpdated: new Date().toISOString(),
+      processingTime: 0,
+      successRate: '0/4',
+      cacheExpires: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+      dataSource: 'realistic-mock',
+      usingFallback: true,
+      note: '无法连接到 Umami API，使用基于真实模式的智能模拟数据'
+    }
+  }
+}
 
   // 禁用自动重试机制 - 移除原有的自动重试函数
   // const handleAutoRetry = useCallback(async () => {
