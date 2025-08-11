@@ -815,7 +815,7 @@ export default function Profile() {
         <p className="text-muted-foreground">
           {studentInfo 
             ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-            : t('profile.description')
+            : t('profile.loading')
           }
         </p>
       </div>

@@ -45,6 +45,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Profile页面
     'profile.title': '我的信息',
     'profile.description': '管理您的个人信息和设置',
+    'profile.loading': '正在加载学生信息',
     'profile.awards.title': '获奖记录',
     'profile.awards.description': '您获得的奖项和荣誉',
     'profile.awards.add': '添加获奖',
@@ -198,6 +199,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Analysis页面
     'analysis.title': '学业分析',
     'analysis.description': '深入分析您的学业表现，提供个性化改进建议',
+    'analysis.loading': '正在加载学生信息',
     'analysis.efficiency.title': '学习效率',
     'analysis.efficiency.desc': '+5% 比上周',
     'analysis.target.title': '目标达成率',
@@ -344,6 +346,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Profile页面
     'profile.title': 'My Profile',
     'profile.description': 'Manage your personal information and settings',
+    'profile.loading': 'Loading',
     'profile.awards.title': 'Awards & Honors',
     'profile.awards.description': 'Your achievements and honors',
     'profile.awards.add': 'Add Award',
@@ -497,6 +500,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Analysis页面
     'analysis.title': 'Academic Analysis',
     'analysis.description': 'In-depth analysis of your academic performance with personalized improvement suggestions',
+    'analysis.loading': 'Loading',
     'analysis.efficiency.title': 'Learning Efficiency',
     'analysis.efficiency.desc': '+5% from last week',
     'analysis.target.title': 'Goal Achievement',

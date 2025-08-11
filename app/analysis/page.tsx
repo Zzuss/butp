@@ -837,7 +837,7 @@ export default function Analysis() {
           <p className="text-muted-foreground">
             {studentInfo 
               ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-              : t('analysis.description')
+              : t('analysis.loading')
             }
           </p>
         </div>
@@ -1000,20 +1000,16 @@ export default function Analysis() {
                   <div>
                     <CardTitle>培养方案</CardTitle>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-3 text-sm"
-                  >
-                    查看完整方案
-                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-4">
-                    <div className="text-lg font-medium mb-2">专业培养方案</div>
-                    <p className="text-sm text-muted-foreground">
-                      点击查看完整的专业培养方案
-                    </p>
+                  <div className="flex items-center justify-center h-24">
+                    <Button
+                      variant="default"
+                      size="lg"
+                      className="w-3/4 h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      点击下载培养方案文件
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
