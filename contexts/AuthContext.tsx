@@ -110,20 +110,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const handleBeforeUnload = () => {
       console.log('🚨 页面关闭检测 - beforeunload事件触发');
       
-      // 直接发送beacon到CAS服务器登出URL，而不是本地API
-      const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-      const beaconSuccess = navigator.sendBeacon(casLogoutUrl);
-      console.log('📡 sendBeacon到CAS服务器结果:', beaconSuccess);
+      // 只清除本地session，不调用CAS服务器登出
+      // 这样避免了CAS服务器和本地session状态不一致的问题
+      const beaconSuccess = navigator.sendBeacon('/api/auth/cas/logout');
+      console.log('📡 本地session清除结果:', beaconSuccess);
       
-      // 同时清除本地session
-      navigator.sendBeacon('/api/auth/cas/logout');
-      
-      // 如果sendBeacon失败，尝试备用方案
-      if (!beaconSuccess) {
-        console.warn('⚠️ CAS登出sendBeacon失败，尝试备用方案');
-        // 备用方案：直接重定向到CAS登出
-        window.location.href = casLogoutUrl;
-      }
+      // 注释掉CAS服务器登出，避免状态不一致
+      // const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+      // navigator.sendBeacon(casLogoutUrl);
     }
 
     // 添加页面关闭监听器
@@ -134,11 +128,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (document.visibilityState === 'hidden') {
         console.log('🔍 页面隐藏检测 - visibilitychange事件触发');
         
-        // 直接发送到CAS服务器登出
-        const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-        navigator.sendBeacon(casLogoutUrl);
-        
-        // 同时清除本地session
+        // 只清除本地session
         fetch('/api/auth/cas/logout', {
           method: 'POST',
           keepalive: true,
@@ -154,8 +144,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 添加页面卸载事件（作为最后的保障）
     const handlePageHide = () => {
       console.log('📤 页面卸载检测 - pagehide事件触发');
-      const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-      navigator.sendBeacon(casLogoutUrl);
+      // 只清除本地session
       navigator.sendBeacon('/api/auth/cas/logout');
     };
 

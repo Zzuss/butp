@@ -31,22 +31,11 @@ export async function GET(request: NextRequest) {
     const tempResponse = new NextResponse();
     await clearSession(request, tempResponse);
     
-    // 本地环境直接重定向到首页，不跳转到CAS服务器
-    if (isLocalhost) {
-      console.log('CAS logout: localhost detected, redirecting to home page');
-      const response = NextResponse.redirect(new URL('/', request.url));
-      
-      // 复制session cookies到响应
-      const sessionCookieHeader = tempResponse.headers.get('set-cookie');
-      if (sessionCookieHeader) {
-        response.headers.set('set-cookie', sessionCookieHeader);
-      }
-      
-      return response;
-    }
+    console.log('CAS logout: session cleared successfully');
     
-    // 生产环境跳转到CAS服务器退出
-    const response = NextResponse.redirect(buildCasLogoutUrl());
+    // 无论是什么环境，都只返回首页，不重定向到CAS服务器
+    // 这样避免页面关闭时的CAS服务器登出导致状态不一致
+    const response = NextResponse.redirect(new URL('/', request.url));
     
     // 复制session cookies到响应
     const sessionCookieHeader = tempResponse.headers.get('set-cookie');
