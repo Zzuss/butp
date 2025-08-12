@@ -82,82 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     window.location.href = '/api/auth/cas/logout';
   };
 
-  // 监听页面关闭事件，重定向到CAS logout
-  const handleBeforeUnload = () => {
-    console.log('🚨 页面关闭检测 - beforeunload事件触发');
-    
-    // 只清除本地session，不依赖CAS服务器登出
-    // 因为页面关闭时网络请求可能无法完成
-    const beaconSuccess = navigator.sendBeacon('/api/auth/cas/logout');
-    console.log('📡 本地session清除结果:', beaconSuccess);
-    
-    // 不再尝试CAS服务器登出，因为时间限制可能导致失败
-    // 改为依赖会话超时和定期检查机制
-  };
-
-  // 添加页面关闭监听器
-  window.addEventListener('beforeunload', handleBeforeUnload);
-
-  // 更可靠的方案：定期检查会话状态和清理
-  useEffect(() => {
-    let sessionCheckInterval: NodeJS.Timeout;
-    
-    // 每30秒检查一次会话状态
-    const checkSessionStatus = async () => {
-      try {
-        const response = await fetch('/api/auth/user', {
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          console.log('🔄 会话已失效，需要重新认证');
-          // 会话失效时，清除CAS服务器状态
-          window.location.href = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-        }
-      } catch (error) {
-        console.error('❌ 会话检查失败:', error);
-      }
-    };
-    
-    // 启动定期检查
-    sessionCheckInterval = setInterval(checkSessionStatus, 30000); // 30秒检查一次
-    
-    // 页面可见性变化时也检查
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('🔍 页面重新可见，检查会话状态');
-        checkSessionStatus();
-      } else if (document.visibilityState === 'hidden') {
-        console.log('🔍 页面隐藏检测 - visibilitychange事件触发');
-        // 只清除本地session
-        navigator.sendBeacon('/api/auth/cas/logout');
-      }
-    };
-
-    window.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // 页面卸载时只做最小化操作
-    const handlePageHide = () => {
-      console.log('📤 页面卸载检测 - pagehide事件触发');
-      // 只清除本地session，不依赖网络请求
-      navigator.sendBeacon('/api/auth/cas/logout');
-    };
-
-    window.addEventListener('pagehide', handlePageHide);
-
-    // 清理函数
-    return () => {
-      if (sessionCheckInterval) {
-        clearInterval(sessionCheckInterval);
-      }
-      
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pagehide', handlePageHide);
-    }
-  }, [pathname]);
-
-  // 30分钟无活动计时器保持不变
+  // 初始化时获取用户信息
   useEffect(() => {
     refreshUser();
 
@@ -171,23 +96,80 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       console.log('重置30分钟无访问计时器 - 路径:', pathname);
       
-      // 30分钟后自动退出到CAS logout
+      // 30分钟后跳转到CAS登出页面
       inactivityTimer = setTimeout(() => {
-        console.log('30分钟无页面访问，自动退出到CAS logout');
-        window.location.href = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+        console.log('30分钟无页面访问，跳转到CAS登出页面');
+        // 跳转到CAS登出页面，这会清除CAS服务器认证并重定向回登录
+        window.location.href = '/api/auth/cas/logout';
       }, 30 * 60 * 1000); // 30分钟
     };
 
-    // 初始启动计时器
+    // 初始启动计时器（访问当前页面时重置）
     resetInactivityTimer();
+
+    // 监听页面关闭事件，只删除本地session
+    const handleBeforeUnload = () => {
+      console.log('🚨 页面关闭检测 - beforeunload事件触发');
+      
+      // 只清除本地session，不调用CAS服务器登出
+      // 这样CAS服务器保持认证状态，30分钟内重新打开可以快速重新认证
+      const beaconSuccess = navigator.sendBeacon('/api/auth/cas/logout');
+      console.log('📡 本地session清除结果:', beaconSuccess);
+      
+      // 注释掉CAS服务器登出，让30分钟超时机制处理
+      // const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+      // navigator.sendBeacon(casLogoutUrl);
+    }
+
+    // 添加页面关闭监听器
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // 添加更可靠的页面隐藏检测
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        console.log('🔍 页面隐藏检测 - visibilitychange事件触发');
+        
+        // 只清除本地session
+        fetch('/api/auth/cas/logout', {
+          method: 'POST',
+          keepalive: true,
+          credentials: 'include'
+        }).catch(error => {
+          console.error('❌ 本地登出请求失败:', error);
+        });
+        
+        // 注释掉CAS服务器登出
+        // const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+        // navigator.sendBeacon(casLogoutUrl);
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 添加页面卸载事件（作为最后的保障）
+    const handlePageHide = () => {
+      console.log('📤 页面卸载检测 - pagehide事件触发');
+      // 只清除本地session
+      navigator.sendBeacon('/api/auth/cas/logout');
+      
+      // 注释掉CAS服务器登出
+      // const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+      // navigator.sendBeacon(casLogoutUrl);
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
 
     // 清理函数
     return () => {
       if (inactivityTimer) {
         clearTimeout(inactivityTimer);
       }
+      
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
     }
-  }, [pathname]);
+  }, [pathname]); // 依赖于pathname，每次路由变化都会重新运行
 
   const value: AuthContextType = {
     user,

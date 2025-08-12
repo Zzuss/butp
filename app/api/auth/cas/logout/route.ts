@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
       response.headers.set('set-cookie', sessionCookieHeader);
     }
     
+    console.log('✅ CAS logout GET: redirecting to:', buildCasLogoutUrl());
     return response;
   } catch (error) {
     console.error('Error in CAS logout GET:', error);

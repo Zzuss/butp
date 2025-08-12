@@ -45,27 +45,8 @@ export async function POST(request: NextRequest) {
     // 检查是否已通过CAS认证
     if (!session.isCasAuthenticated) {
       console.error('Complete CAS login: not CAS authenticated');
-      console.error('Complete CAS login: session details:', {
-        isCasAuthenticated: session.isCasAuthenticated,
-        isLoggedIn: session.isLoggedIn,
-        userId: session.userId,
-        userHash: session.userHash,
-        name: session.name,
-        loginTime: session.loginTime,
-        lastActiveTime: session.lastActiveTime
-      });
-      
-      // 提供更详细的错误信息帮助调试
       return NextResponse.json(
-        { 
-          error: 'Not CAS authenticated',
-          debug: {
-            sessionExists: !!session,
-            isCasAuthenticated: session.isCasAuthenticated,
-            userId: session.userId,
-            suggestion: '请重新进行CAS认证，或清除浏览器cookies后重试'
-          }
-        },
+        { error: 'Not CAS authenticated' },
         { status: 401 }
       );
     }
