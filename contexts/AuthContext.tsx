@@ -108,14 +108,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // 监听页面关闭事件，重定向到CAS logout
     const handleBeforeUnload = () => {
+      console.log('🚨 页面关闭检测 - beforeunload事件触发');
+      
       // 使用navigator.sendBeacon确保请求在页面卸载时发送
-      navigator.sendBeacon('/api/auth/cas/logout');
-      // 备用方案：同步重定向
-      window.location.href = '/api/auth/cas/logout';
+      const beaconSuccess = navigator.sendBeacon('/api/auth/cas/logout');
+      console.log('📡 sendBeacon结果:', beaconSuccess);
+      
+      // 如果sendBeacon失败，尝试备用方案
+      if (!beaconSuccess) {
+        console.warn('⚠️ sendBeacon失败，尝试备用方案');
+        // 备用方案：同步重定向
+        window.location.href = '/api/auth/cas/logout';
+      }
     }
 
     // 添加页面关闭监听器
     window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // 添加更可靠的页面隐藏检测
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        console.log('🔍 页面隐藏检测 - visibilitychange事件触发');
+        
+        // 使用更可靠的方式发送登出请求
+        fetch('/api/auth/cas/logout', {
+          method: 'POST',
+          keepalive: true, // 确保在页面关闭时仍能发送
+          credentials: 'include'
+        }).catch(error => {
+          console.error('❌ 登出请求失败:', error);
+        });
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 添加页面卸载事件（作为最后的保障）
+    const handlePageHide = () => {
+      console.log('📤 页面卸载检测 - pagehide事件触发');
+      navigator.sendBeacon('/api/auth/cas/logout');
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
 
     // 清理函数
     return () => {
@@ -124,6 +158,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
     }
   }, [pathname]); // 依赖于pathname，每次路由变化都会重新运行
 
