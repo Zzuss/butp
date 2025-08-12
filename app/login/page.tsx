@@ -41,6 +41,9 @@ export default function LoginPage() {
     if (errorParam) {
       let errorMessage = ''
       switch (errorParam) {
+        case 'cas_session_expired':
+          errorMessage = 'CAS会话已过期，请重新登录'
+          break
         case 'ticket_expired':
           errorMessage = messageParam || '登录票据已过期，请重新登录'
           break

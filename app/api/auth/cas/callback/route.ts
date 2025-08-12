@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
     session.isLoggedIn = false; // 最终登录在login页面完成
     session.loginTime = now;
     session.lastActiveTime = now; // 设置最后活跃时间
+    session.casSessionCheckTime = now; // 设置CAS session检查时间
     
     console.log('CAS callback: creating session with data:', {
       userId: session.userId,
@@ -57,7 +58,8 @@ export async function GET(request: NextRequest) {
       isCasAuthenticated: session.isCasAuthenticated,
       isLoggedIn: session.isLoggedIn,
       loginTime: session.loginTime,
-      lastActiveTime: session.lastActiveTime
+      lastActiveTime: session.lastActiveTime,
+      casSessionCheckTime: session.casSessionCheckTime
     });
     
     await session.save();
