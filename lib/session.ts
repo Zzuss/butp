@@ -8,14 +8,10 @@ export interface SessionData {
   isCasAuthenticated: boolean; // 是否通过CAS认证
   loginTime: number;        // 登录时间
   lastActiveTime: number;   // 最后活跃时间
-  casSessionCheckTime: number; // 最后一次CAS session检查时间
 }
 
-// 会话超时配置 (30分钟 = 30 * 60 * 1000 毫秒)
-export const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分钟
-
-// CAS session检查间隔 (5分钟 = 5 * 60 * 1000 毫秒)
-export const CAS_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5分钟
+// 会话超时配置 (2分钟用于测试 = 2 * 60 * 1000 毫秒)
+export const SESSION_TIMEOUT_MS = 2 * 60 * 1000; // 2分钟 (测试用)
 
 // 默认会话数据（导出以供将来使用）
 export const defaultSession: SessionData = {
@@ -26,7 +22,6 @@ export const defaultSession: SessionData = {
   isCasAuthenticated: false,
   loginTime: 0,
   lastActiveTime: 0,
-  casSessionCheckTime: 0,
 };
 
 export const sessionOptions: SessionOptions = {
