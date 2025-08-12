@@ -83,6 +83,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // 初始化时获取用户信息
   useEffect(() => {
     refreshUser();
+
+    // 监听页面关闭事件，清除session
+    const handleBeforeUnload = async () => {
+      try {
+        // 发送请求清除session
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        })
+      } catch (error) {
+        console.error('Error clearing session on page close:', error)
+      }
+    }
+
+    // 添加事件监听器
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // 清理函数
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
   }, []);
 
   const value: AuthContextType = {

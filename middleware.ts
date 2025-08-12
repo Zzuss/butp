@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
-import { SessionData, sessionOptions, isSessionExpired, updateSessionActivity } from '@/lib/session';
+import { SessionData, sessionOptions } from '@/lib/session';
 
 // 需要保护的路由路径
 const PROTECTED_PATHS = [
@@ -63,28 +63,8 @@ export async function middleware(request: NextRequest) {
         isLoggedIn: session.isLoggedIn,
         isCasAuthenticated: session.isCasAuthenticated,
         userId: session.userId,
-        userHash: session.userHash,
-        lastActiveTime: session.lastActiveTime,
-        timeoutCheck: isSessionExpired(session)
+        userHash: session.userHash
       });
-      
-      // 检查session是否过期
-      if (isSessionExpired(session)) {
-        console.log('Middleware: session expired, clearing session and redirecting to CAS login');
-        // 清除过期的session
-        session.isLoggedIn = false;
-        session.isCasAuthenticated = false;
-        session.userId = '';
-        session.userHash = '';
-        session.name = '';
-        session.loginTime = 0;
-        session.lastActiveTime = 0;
-        await session.save();
-        
-        const loginUrl = new URL('/api/auth/cas/login', request.url);
-        loginUrl.searchParams.set('returnUrl', pathname);
-        return NextResponse.redirect(loginUrl);
-      }
       
       // 检查用户是否已完全登录（既要CAS认证又要最终登录完成）
       if (!session.isLoggedIn || !session.isCasAuthenticated) {
@@ -93,10 +73,6 @@ export async function middleware(request: NextRequest) {
         loginUrl.searchParams.set('returnUrl', pathname);
         return NextResponse.redirect(loginUrl);
       }
-      
-      // 更新session活跃时间
-      updateSessionActivity(session);
-      await session.save();
       
       return response;
     } catch (error) {
