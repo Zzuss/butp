@@ -8,7 +8,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { getTopPercentageGPAThreshold, getStudentInfo } from "@/lib/dashboard-data"
 import { getStudentAbilityData } from "@/lib/ability-data"
 import { RadarChart } from "@/components/ui/radar-chart"
-import { EnhancedPDFExport } from '@/components/pdf/EnhancedPDFExport'
+
 import { useAuth } from "@/contexts/AuthContext"
 
 // 能力标签（支持中英文）
@@ -841,11 +841,6 @@ export default function Analysis() {
             }
           </p>
         </div>
-        <EnhancedPDFExport 
-          pageTitle="学习分析报告"
-          fileName={`learning_analysis_${new Date().toISOString().split('T')[0]}.pdf`}
-          contentSelector=".analysis-content"
-        />
       </div>
 
       {/* 免责声明 */}

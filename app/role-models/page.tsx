@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { getUserProbabilityData } from "@/lib/dashboard-data"
 import { useState, useEffect } from "react"
 
+
 // 可能性卡片组件
 function PossibilityCard({ activeTab }: { activeTab: string }) {
   const { t } = useLanguage()
