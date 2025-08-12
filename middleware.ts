@@ -80,10 +80,20 @@ export async function middleware(request: NextRequest) {
       if (!session.isLoggedIn || !session.isCasAuthenticated) {
         // 如果有CAS认证但未登录，说明是页面关闭后重新访问
         if (session.isCasAuthenticated && !session.isLoggedIn && session.userId && session.userHash) {
-          console.log('Middleware: has CAS auth but not logged in, completing login automatically');
-          // 自动完成登录
+          console.log('Middleware: has CAS auth but not logged in, checking timeout before auto-login');
+          
+          // 先检查是否超过30分钟（使用保留的lastActiveTime）
+          if (isSessionExpired(session)) {
+            console.log('Middleware: session expired during auto-login check, redirecting to CAS logout');
+            // 超时了，需要完全重新认证
+            const logoutUrl = new URL('/api/auth/cas/logout', request.url);
+            return NextResponse.redirect(logoutUrl);
+          }
+          
+          console.log('Middleware: within timeout window, completing auto-login');
+          // 在30分钟内，自动完成登录
           session.isLoggedIn = true;
-          session.lastActiveTime = Date.now();
+          session.lastActiveTime = Date.now();  // 更新为当前访问时间
           await session.save();
           
           // 创建新的响应继续处理

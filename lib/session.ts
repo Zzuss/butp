@@ -38,12 +38,20 @@ export const sessionOptions: SessionOptions = {
 
 // 会话超时检查函数
 export function isSessionExpired(session: SessionData): boolean {
-  if (!session.isLoggedIn || !session.lastActiveTime) {
+  // 如果没有lastActiveTime，说明从未活跃过，视为过期
+  if (!session.lastActiveTime) {
     return true;
   }
   
   const now = Date.now();
   const timeSinceLastActive = now - session.lastActiveTime;
+  
+  console.log('Session timeout check:', {
+    lastActiveTime: new Date(session.lastActiveTime).toISOString(),
+    timeSinceLastActive: Math.round(timeSinceLastActive / 1000 / 60) + ' minutes',
+    timeoutThreshold: SESSION_TIMEOUT_MS / 1000 / 60 + ' minutes',
+    isExpired: timeSinceLastActive > SESSION_TIMEOUT_MS
+  });
   
   return timeSinceLastActive > SESSION_TIMEOUT_MS;
 }

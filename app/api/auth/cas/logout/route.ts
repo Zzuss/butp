@@ -26,8 +26,11 @@ async function clearLoginSession(request: NextRequest, response: NextResponse) {
   
   // 只清除登录状态，保留CAS认证信息
   session.isLoggedIn = false;
-  session.lastActiveTime = 0;
-  // 保留：userId, userHash, name, isCasAuthenticated, loginTime
+  // 保留lastActiveTime作为页面关闭时间，用于30分钟超时检查
+  // session.lastActiveTime = 0;  // ❌ 删除这行，保持关闭时的时间戳
+  // 保留：userId, userHash, name, isCasAuthenticated, loginTime, lastActiveTime
+  
+  console.log('CAS logout POST: preserving lastActiveTime for timeout check:', session.lastActiveTime);
   
   await session.save();
   return session;
