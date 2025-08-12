@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle, Download } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { EnhancedPDFExport } from '@/components/pdf/EnhancedPDFExport'
+import { FixedPDFExport } from '@/components/pdf/FixedPDFExport'
+import { DebugPDFExport } from '@/components/pdf/DebugPDFExport'
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage } from '@/contexts/language-context'
@@ -123,11 +124,17 @@ export default function DashboardPage() {
             }
           </p>
         </div>
-        <EnhancedPDFExport 
-          pageTitle="学生仪表板"
-          fileName={`${user?.name || 'student'}_dashboard_${new Date().toISOString().split('T')[0]}.pdf`}
-          contentSelector=".dashboard-content"
-        />
+        <div className="flex flex-col gap-2">
+          <FixedPDFExport 
+            pageTitle="学生仪表板"
+            fileName={`${user?.name || 'student'}_dashboard_${new Date().toISOString().split('T')[0]}.pdf`}
+            contentSelector=".dashboard-content"
+          />
+          <DebugPDFExport 
+            pageTitle="学生仪表板"
+            contentSelector=".dashboard-content"
+          />
+        </div>
       </div>
       
       {/* 统计卡片 */}
