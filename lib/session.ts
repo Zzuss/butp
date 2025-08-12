@@ -7,7 +7,11 @@ export interface SessionData {
   isLoggedIn: boolean;      // 是否已登录
   isCasAuthenticated: boolean; // 是否通过CAS认证
   loginTime: number;        // 登录时间
+  lastActiveTime: number;   // 最后活跃时间
 }
+
+// 会话超时配置 (30分钟 = 30 * 60 * 1000 毫秒)
+export const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分钟
 
 // 默认会话数据（导出以供将来使用）
 export const defaultSession: SessionData = {
@@ -17,6 +21,7 @@ export const defaultSession: SessionData = {
   isLoggedIn: false,
   isCasAuthenticated: false,
   loginTime: 0,
+  lastActiveTime: 0,
 };
 
 export const sessionOptions: SessionOptions = {
@@ -29,4 +34,34 @@ export const sessionOptions: SessionOptions = {
     // 不设置maxAge，session会在浏览器关闭时自动清除
     path: '/', // 明确设置路径
   },
-}; 
+};
+
+// 会话超时检查函数
+export function isSessionExpired(session: SessionData): boolean {
+  if (!session.isLoggedIn || !session.lastActiveTime) {
+    return true;
+  }
+  
+  const now = Date.now();
+  const timeSinceLastActive = now - session.lastActiveTime;
+  
+  return timeSinceLastActive > SESSION_TIMEOUT_MS;
+}
+
+// 更新会话活跃时间
+export function updateSessionActivity(session: SessionData): void {
+  session.lastActiveTime = Date.now();
+}
+
+// 获取会话剩余时间（毫秒）
+export function getSessionRemainingTime(session: SessionData): number {
+  if (!session.isLoggedIn || !session.lastActiveTime) {
+    return 0;
+  }
+  
+  const now = Date.now();
+  const timeSinceLastActive = now - session.lastActiveTime;
+  const remainingTime = SESSION_TIMEOUT_MS - timeSinceLastActive;
+  
+  return Math.max(0, remainingTime);
+} 

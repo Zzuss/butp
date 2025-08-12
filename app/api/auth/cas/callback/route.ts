@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     session.isCasAuthenticated = true;
     session.isLoggedIn = false; // 最终登录在login页面完成
     session.loginTime = now;
+    session.lastActiveTime = now; // 设置最后活跃时间
     
     console.log('CAS callback: creating session with data:', {
       userId: session.userId,
@@ -55,7 +56,8 @@ export async function GET(request: NextRequest) {
       name: session.name,
       isCasAuthenticated: session.isCasAuthenticated,
       isLoggedIn: session.isLoggedIn,
-      loginTime: session.loginTime
+      loginTime: session.loginTime,
+      lastActiveTime: session.lastActiveTime
     });
     
     await session.save();

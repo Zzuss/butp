@@ -84,25 +84,59 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     refreshUser();
 
-    // 监听页面关闭事件，清除session
-    const handleBeforeUnload = async () => {
-      try {
-        // 发送请求清除session
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          credentials: 'include'
-        })
-      } catch (error) {
-        console.error('Error clearing session on page close:', error)
+    let inactivityTimer: NodeJS.Timeout;
+    
+    // 重置无活动计时器
+    const resetInactivityTimer = () => {
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
       }
+      
+      // 30分钟后自动退出到CAS logout
+      inactivityTimer = setTimeout(() => {
+        console.log('30分钟无活动，自动退出到CAS logout');
+        window.location.href = '/api/auth/cas/logout';
+      }, 30 * 60 * 1000); // 30分钟
+    };
+
+    // 检测用户活动的事件
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    // 重置计时器的处理函数
+    const handleUserActivity = () => {
+      resetInactivityTimer();
+    };
+
+    // 添加活动监听器
+    activityEvents.forEach(event => {
+      document.addEventListener(event, handleUserActivity, true);
+    });
+
+    // 初始启动计时器
+    resetInactivityTimer();
+
+    // 监听页面关闭事件，重定向到CAS logout
+    const handleBeforeUnload = () => {
+      // 使用navigator.sendBeacon确保请求在页面卸载时发送
+      navigator.sendBeacon('/api/auth/cas/logout');
+      // 备用方案：同步重定向
+      window.location.href = '/api/auth/cas/logout';
     }
 
-    // 添加事件监听器
-    window.addEventListener('beforeunload', handleBeforeUnload)
+    // 添加页面关闭监听器
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     // 清理函数
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+      }
+      
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, handleUserActivity, true);
+      });
+      
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     }
   }, []);
 

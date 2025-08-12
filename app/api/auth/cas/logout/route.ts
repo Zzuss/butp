@@ -3,6 +3,23 @@ import { getIronSession } from 'iron-session';
 import { buildCasLogoutUrl } from '@/lib/cas';
 import { SessionData, sessionOptions, defaultSession } from '@/lib/session';
 
+// 清除session的通用函数
+async function clearSession(request: NextRequest, response: NextResponse) {
+  const session = await getIronSession<SessionData>(request, response, sessionOptions);
+  
+  // 清除会话数据
+  session.userId = defaultSession.userId;
+  session.userHash = defaultSession.userHash;
+  session.name = defaultSession.name;
+  session.isLoggedIn = defaultSession.isLoggedIn;
+  session.isCasAuthenticated = defaultSession.isCasAuthenticated;
+  session.loginTime = defaultSession.loginTime;
+  session.lastActiveTime = defaultSession.lastActiveTime;
+  
+  await session.save();
+  return session;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // 检查是否为本地开发环境
@@ -12,17 +29,7 @@ export async function GET(request: NextRequest) {
     
     // 获取并清除用户会话
     const tempResponse = new NextResponse();
-    const session = await getIronSession<SessionData>(request, tempResponse, sessionOptions);
-    
-    // 清除会话数据（匹配新的session结构）
-    session.userId = defaultSession.userId;
-    session.userHash = defaultSession.userHash;
-    session.name = defaultSession.name;
-    session.isLoggedIn = defaultSession.isLoggedIn;
-    session.isCasAuthenticated = defaultSession.isCasAuthenticated;
-    session.loginTime = defaultSession.loginTime;
-    
-    await session.save();
+    await clearSession(request, tempResponse);
     
     // 本地环境直接重定向到首页，不跳转到CAS服务器
     if (isLocalhost) {
@@ -50,6 +57,26 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Error in CAS logout:', error);
+    return NextResponse.json(
+      { error: 'Logout failed' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST方法用于处理sendBeacon和AJAX调用
+export async function POST(request: NextRequest) {
+  try {
+    console.log('CAS logout POST: clearing session via sendBeacon/fetch');
+    
+    // 清除session
+    const response = NextResponse.json({ success: true, redirectTo: buildCasLogoutUrl() });
+    await clearSession(request, response);
+    
+    console.log('CAS logout POST: session cleared successfully');
+    return response;
+  } catch (error) {
+    console.error('Error in CAS logout POST:', error);
     return NextResponse.json(
       { error: 'Logout failed' },
       { status: 500 }
