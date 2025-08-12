@@ -26,12 +26,46 @@ export default function LoginPage() {
   const [casAuthInfo, setCasAuthInfo] = useState<CasAuthInfo | null>(null)
   const [isDevMode, setIsDevMode] = useState(false)
 
-  // 检查是否为开发环境
+  // 检查是否为开发环境和处理URL错误参数
   useEffect(() => {
     const isDev = process.env.NODE_ENV === 'development' || 
                   window.location.hostname === 'localhost' || 
                   window.location.hostname === '127.0.0.1'
     setIsDevMode(isDev)
+    
+    // 🆕 处理URL错误参数
+    const urlParams = new URLSearchParams(window.location.search)
+    const errorParam = urlParams.get('error')
+    const messageParam = urlParams.get('message')
+    
+    if (errorParam) {
+      let errorMessage = ''
+      switch (errorParam) {
+        case 'ticket_expired':
+          errorMessage = messageParam || '登录票据已过期，请重新登录'
+          break
+        case 'missing_ticket':
+          errorMessage = '缺少登录票据，请重新登录'
+          break
+        case 'auth_failed':
+          errorMessage = messageParam || '认证失败，请重试'
+          break
+        case 'verify_failed':
+          errorMessage = '票据验证失败，请重新登录'
+          break
+        default:
+          errorMessage = messageParam || '登录过程中发生错误，请重试'
+      }
+      
+      setError(errorMessage)
+      console.log('Login page: URL error detected:', { errorParam, messageParam, errorMessage })
+      
+      // 清除URL中的错误参数，避免刷新时重复显示
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('error')
+      newUrl.searchParams.delete('message')
+      window.history.replaceState({}, '', newUrl.toString())
+    }
     
     // 本地开发环境直接跳过CAS认证检查
     if (isDev) {

@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getIronSession } from 'iron-session';
+import { validateCasTicket } from '@/lib/cas';
+import { SessionData, sessionOptions } from '@/lib/session';
+import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,62 +13,76 @@ export async function GET(request: NextRequest) {
     console.log('CAS callback: received params', { ticket, username });
 
     if (!ticket) {
-      return NextResponse.json(
-        { error: 'Missing ticket parameter' },
-        { status: 400 }
-      );
+      console.error('CAS callback: missing ticket parameter');
+      return NextResponse.redirect(new URL('/login?error=missing_ticket', request.url));
     }
 
-    try {
-      // 调用verify端点进行实际的ticket验证
-      const verifyUrl = new URL('/api/auth/cas/verify', request.url);
-      verifyUrl.searchParams.set('ticket', ticket);
-      
-      // 如果有username参数（Mock环境），也传递给verify
-      if (username) {
-        verifyUrl.searchParams.set('username', username);
-      }
-      
-      console.log('CAS callback: calling verify URL:', verifyUrl.toString());
-      
-      // 使用fetch调用verify端点
-      const verifyResponse = await fetch(verifyUrl.toString(), {
-        headers: {
-          'Cookie': request.headers.get('cookie') || '',
-        },
-      });
-      
-      if (!verifyResponse.ok) {
-        throw new Error(`Verify failed: ${verifyResponse.statusText}`);
-      }
-      
-      // verify成功后，总是重定向到login页面完成最终认证
-      const redirectResponse = NextResponse.redirect(new URL('/login', request.url));
-      
-      // 复制verify响应的cookies到callback响应
-      const setCookieHeader = verifyResponse.headers.get('set-cookie');
-      if (setCookieHeader) {
-        console.log('CAS callback: found Set-Cookie header:', setCookieHeader);
-        redirectResponse.headers.set('Set-Cookie', setCookieHeader);
-      } else {
-        console.log('CAS callback: no Set-Cookie header found in verify response');
-        // 输出所有headers进行调试
-        console.log('CAS callback: verify response headers:', Array.from(verifyResponse.headers.entries()));
-      }
-      
-      console.log('CAS callback: redirect response cookies:', redirectResponse.cookies.getAll());
-      
-      return redirectResponse;
-      
-    } catch (error) {
-      console.error('CAS callback: verify request failed:', error);
-      return NextResponse.redirect(new URL('/login?error=verify_failed', request.url));
+    console.log('CAS callback: starting ticket validation directly');
+    
+    // 🆕 直接在 callback 中验证票据，避免额外重定向
+    const casUser = await validateCasTicket(ticket, username);
+    console.log('CAS callback: validateCasTicket result:', casUser);
+    
+    if (!casUser) {
+      console.error('CAS callback: ticket validation failed');
+      // 票据验证失败，重定向到登录页面并显示友好错误信息
+      return NextResponse.redirect(new URL('/login?error=ticket_expired&message=登录票据已过期，请重新登录', request.url));
     }
+
+    console.log('CAS callback: ticket validation successful, creating session');
+
+    // 🆕 直接在这里创建会话，避免额外跳转
+    // 生成学号哈希值
+    const hash = crypto.createHash('sha256').update(casUser.userId).digest('hex');
+    console.log('CAS callback: generated hash for student:', hash);
+
+    // 创建响应对象用于设置 session
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    
+    // 获取session并设置数据
+    const session = await getIronSession<SessionData>(request, response, sessionOptions);
+    const now = Date.now();
+    session.userId = casUser.userId; // 原始学号
+    session.userHash = hash; // 学号哈希值
+    session.name = casUser.name || `学生${casUser.userId}`; // CAS返回的真实姓名
+    session.isCasAuthenticated = true;
+    session.isLoggedIn = false; // 最终登录在login页面完成
+    session.loginTime = now;
+    session.lastActiveTime = now; // 设置最后活跃时间
+    
+    console.log('CAS callback: creating session with data:', {
+      userId: session.userId,
+      userHash: session.userHash,
+      name: session.name,
+      isCasAuthenticated: session.isCasAuthenticated,
+      isLoggedIn: session.isLoggedIn,
+      loginTime: session.loginTime,
+      lastActiveTime: session.lastActiveTime
+    });
+    
+    await session.save();
+    console.log('CAS callback: session saved successfully');
+
+    // 清除可能存在的返回URL cookie
+    response.cookies.set('cas-return-url', '', {
+      expires: new Date(0),
+      path: '/'
+    });
+    
+    console.log('CAS callback: redirecting to login page for final authentication');
+    return response;
+      
   } catch (error) {
     console.error('Error in CAS callback:', error);
-    return NextResponse.json(
-      { error: 'Callback processing failed' },
-      { status: 500 }
-    );
+    
+    // 提供更详细的错误信息
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('CAS callback: detailed error:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
+    
+    return NextResponse.redirect(new URL('/login?error=auth_failed&message=认证过程中发生错误，请重试', request.url));
   }
 } 
