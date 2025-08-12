@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
       userId: session.userId,
       userHash: session.userHash,
       name: session.name,
-      loginTime: session.loginTime
+      loginTime: session.loginTime,
+      lastActiveTime: session.lastActiveTime,
+      sessionAge: session.loginTime ? Date.now() - session.loginTime : 0,
+      timeSinceActivity: session.lastActiveTime ? Date.now() - session.lastActiveTime : 0
     });
     
     // 返回session状态信息
@@ -26,6 +29,14 @@ export async function GET(request: NextRequest) {
       isLoggedIn: session.isLoggedIn || false,
       isCasAuthenticated: session.isCasAuthenticated || false,
       loginTime: session.loginTime || 0,
+      lastActiveTime: session.lastActiveTime || 0,
+      // 调试信息
+      debug: {
+        sessionAge: session.loginTime ? Date.now() - session.loginTime : 0,
+        timeSinceActivity: session.lastActiveTime ? Date.now() - session.lastActiveTime : 0,
+        hasSession: !!(session.userId || session.userHash),
+        timestamp: Date.now()
+      }
     });
 
   } catch (error) {

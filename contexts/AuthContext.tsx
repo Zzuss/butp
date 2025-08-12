@@ -110,15 +110,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const handleBeforeUnload = () => {
       console.log('🚨 页面关闭检测 - beforeunload事件触发');
       
-      // 同时清除本地session和CAS服务器认证状态
-      // 这样确保用户重新打开时需要完整的CAS认证流程
+      // 序列化执行logout，避免状态不一致
+      // 先清除本地session
       const beaconSuccess = navigator.sendBeacon('/api/auth/cas/logout');
       console.log('📡 本地session清除结果:', beaconSuccess);
       
-      // 同时调用CAS服务器登出，确保完全退出
-      const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-      const casBeaconSuccess = navigator.sendBeacon(casLogoutUrl);
-      console.log('📡 CAS服务器登出结果:', casBeaconSuccess);
+      // 延迟一点再调用CAS服务器登出，确保本地session先清除
+      setTimeout(() => {
+        const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+        const casBeaconSuccess = navigator.sendBeacon(casLogoutUrl);
+        console.log('📡 CAS服务器登出结果:', casBeaconSuccess);
+      }, 50); // 50ms延迟
     }
 
     // 添加页面关闭监听器
@@ -129,18 +131,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (document.visibilityState === 'hidden') {
         console.log('🔍 页面隐藏检测 - visibilitychange事件触发');
         
-        // 清除本地session
+        // 序列化执行logout
         fetch('/api/auth/cas/logout', {
           method: 'POST',
           keepalive: true,
           credentials: 'include'
+        }).then(() => {
+          // 本地session清除后再调用CAS登出
+          const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+          navigator.sendBeacon(casLogoutUrl);
         }).catch(error => {
           console.error('❌ 本地登出请求失败:', error);
+          // 即使失败也尝试CAS登出
+          const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+          navigator.sendBeacon(casLogoutUrl);
         });
-        
-        // 同时调用CAS服务器登出
-        const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-        navigator.sendBeacon(casLogoutUrl);
       }
     };
 
@@ -149,10 +154,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 添加页面卸载事件（作为最后的保障）
     const handlePageHide = () => {
       console.log('📤 页面卸载检测 - pagehide事件触发');
-      // 清除本地session和CAS服务器认证
+      // 在pagehide中使用同步方式，确保执行顺序
       navigator.sendBeacon('/api/auth/cas/logout');
-      const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-      navigator.sendBeacon(casLogoutUrl);
+      // 短暂延迟后执行CAS登出
+      setTimeout(() => {
+        const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+        navigator.sendBeacon(casLogoutUrl);
+      }, 30);
     };
 
     window.addEventListener('pagehide', handlePageHide);
