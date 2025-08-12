@@ -6,7 +6,7 @@ import { getSubjectGrades, getRadarChartData } from "@/lib/dashboard-data"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 import { RadarChart } from "@/components/ui/radar-chart"
-import { SimplePDFExport } from '@/components/pdf/SimplePDFExport'
+import { EnhancedPDFExport } from '@/components/pdf/EnhancedPDFExport'
 import Link from 'next/link'
 
 export default function AllGrades() {
@@ -125,7 +125,7 @@ export default function AllGrades() {
           <p className="text-muted-foreground">{t('grades.description').replace('{name}', user?.name || '')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <SimplePDFExport 
+          <EnhancedPDFExport 
             pageTitle="学生成绩单"
             fileName={`${user?.name || 'student'}_grades_${new Date().toISOString().split('T')[0]}.pdf`}
             contentSelector=".grades-content"

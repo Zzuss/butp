@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle, Download } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { SimplePDFExport } from '@/components/pdf/SimplePDFExport'
+import { EnhancedPDFExport } from '@/components/pdf/EnhancedPDFExport'
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage } from '@/contexts/language-context'
@@ -123,7 +123,7 @@ export default function DashboardPage() {
             }
           </p>
         </div>
-        <SimplePDFExport 
+        <EnhancedPDFExport 
           pageTitle="学生仪表板"
           fileName={`${user?.name || 'student'}_dashboard_${new Date().toISOString().split('T')[0]}.pdf`}
           contentSelector=".dashboard-content"
