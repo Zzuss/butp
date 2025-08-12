@@ -110,15 +110,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const handleBeforeUnload = () => {
       console.log('🚨 页面关闭检测 - beforeunload事件触发');
       
-      // 使用navigator.sendBeacon确保请求在页面卸载时发送
-      const beaconSuccess = navigator.sendBeacon('/api/auth/cas/logout');
-      console.log('📡 sendBeacon结果:', beaconSuccess);
+      // 直接发送beacon到CAS服务器登出URL，而不是本地API
+      const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+      const beaconSuccess = navigator.sendBeacon(casLogoutUrl);
+      console.log('📡 sendBeacon到CAS服务器结果:', beaconSuccess);
+      
+      // 同时清除本地session
+      navigator.sendBeacon('/api/auth/cas/logout');
       
       // 如果sendBeacon失败，尝试备用方案
       if (!beaconSuccess) {
-        console.warn('⚠️ sendBeacon失败，尝试备用方案');
-        // 备用方案：同步重定向
-        window.location.href = '/api/auth/cas/logout';
+        console.warn('⚠️ CAS登出sendBeacon失败，尝试备用方案');
+        // 备用方案：直接重定向到CAS登出
+        window.location.href = casLogoutUrl;
       }
     }
 
@@ -130,13 +134,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (document.visibilityState === 'hidden') {
         console.log('🔍 页面隐藏检测 - visibilitychange事件触发');
         
-        // 使用更可靠的方式发送登出请求
+        // 直接发送到CAS服务器登出
+        const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+        navigator.sendBeacon(casLogoutUrl);
+        
+        // 同时清除本地session
         fetch('/api/auth/cas/logout', {
           method: 'POST',
-          keepalive: true, // 确保在页面关闭时仍能发送
+          keepalive: true,
           credentials: 'include'
         }).catch(error => {
-          console.error('❌ 登出请求失败:', error);
+          console.error('❌ 本地登出请求失败:', error);
         });
       }
     };
@@ -146,6 +154,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 添加页面卸载事件（作为最后的保障）
     const handlePageHide = () => {
       console.log('📤 页面卸载检测 - pagehide事件触发');
+      const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+      navigator.sendBeacon(casLogoutUrl);
       navigator.sendBeacon('/api/auth/cas/logout');
     };
 
