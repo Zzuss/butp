@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 // 用户信息接口
 export interface User {
@@ -34,6 +35,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname(); // 监听路由变化
 
   // 获取用户信息
   const fetchUser = async (): Promise<User | null> => {
@@ -92,27 +94,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearTimeout(inactivityTimer);
       }
       
+      console.log('重置30分钟无访问计时器 - 路径:', pathname);
+      
       // 30分钟后自动退出到CAS logout
       inactivityTimer = setTimeout(() => {
-        console.log('30分钟无活动，自动退出到CAS logout');
+        console.log('30分钟无页面访问，自动退出到CAS logout');
         window.location.href = '/api/auth/cas/logout';
       }, 30 * 60 * 1000); // 30分钟
     };
 
-    // 检测用户活动的事件
-    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    // 重置计时器的处理函数
-    const handleUserActivity = () => {
-      resetInactivityTimer();
-    };
-
-    // 添加活动监听器
-    activityEvents.forEach(event => {
-      document.addEventListener(event, handleUserActivity, true);
-    });
-
-    // 初始启动计时器
+    // 初始启动计时器（访问当前页面时重置）
     resetInactivityTimer();
 
     // 监听页面关闭事件，重定向到CAS logout
@@ -132,13 +123,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearTimeout(inactivityTimer);
       }
       
-      activityEvents.forEach(event => {
-        document.removeEventListener(event, handleUserActivity, true);
-      });
-      
       window.removeEventListener('beforeunload', handleBeforeUnload);
     }
-  }, []);
+  }, [pathname]); // 依赖于pathname，每次路由变化都会重新运行
 
   const value: AuthContextType = {
     user,
