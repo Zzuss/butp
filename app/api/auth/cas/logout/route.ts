@@ -31,11 +31,25 @@ export async function GET(request: NextRequest) {
     const tempResponse = new NextResponse();
     await clearSession(request, tempResponse);
     
-    console.log('CAS logout: session cleared successfully');
+    console.log('CAS logout GET: session cleared successfully');
     
-    // 无论是什么环境，都只返回首页，不重定向到CAS服务器
-    // 这样避免页面关闭时的CAS服务器登出导致状态不一致
-    const response = NextResponse.redirect(new URL('/', request.url));
+    // 本地环境直接重定向到首页，不跳转到CAS服务器
+    if (isLocalhost) {
+      console.log('CAS logout GET: localhost detected, redirecting to home page');
+      const response = NextResponse.redirect(new URL('/', request.url));
+      
+      // 复制session cookies到响应
+      const sessionCookieHeader = tempResponse.headers.get('set-cookie');
+      if (sessionCookieHeader) {
+        response.headers.set('set-cookie', sessionCookieHeader);
+      }
+      
+      return response;
+    }
+    
+    // 生产环境跳转到CAS服务器退出
+    console.log('CAS logout GET: production environment, redirecting to CAS logout');
+    const response = NextResponse.redirect(buildCasLogoutUrl());
     
     // 复制session cookies到响应
     const sessionCookieHeader = tempResponse.headers.get('set-cookie');
@@ -45,7 +59,7 @@ export async function GET(request: NextRequest) {
     
     return response;
   } catch (error) {
-    console.error('Error in CAS logout:', error);
+    console.error('Error in CAS logout GET:', error);
     return NextResponse.json(
       { error: 'Logout failed' },
       { status: 500 }
@@ -56,13 +70,13 @@ export async function GET(request: NextRequest) {
 // POST方法用于处理sendBeacon和AJAX调用
 export async function POST(request: NextRequest) {
   try {
-    console.log('CAS logout POST: clearing session via sendBeacon/fetch');
+    console.log('CAS logout POST: clearing session via sendBeacon/fetch (local session only)');
     
     // 清除session
-    const response = NextResponse.json({ success: true, redirectTo: buildCasLogoutUrl() });
+    const response = NextResponse.json({ success: true, message: 'Local session cleared' });
     await clearSession(request, response);
     
-    console.log('CAS logout POST: session cleared successfully');
+    console.log('CAS logout POST: local session cleared successfully');
     return response;
   } catch (error) {
     console.error('Error in CAS logout POST:', error);

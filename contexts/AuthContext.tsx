@@ -110,14 +110,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const handleBeforeUnload = () => {
       console.log('🚨 页面关闭检测 - beforeunload事件触发');
       
-      // 只清除本地session，不调用CAS服务器登出
-      // 这样避免了CAS服务器和本地session状态不一致的问题
+      // 同时清除本地session和CAS服务器认证状态
+      // 这样确保用户重新打开时需要完整的CAS认证流程
       const beaconSuccess = navigator.sendBeacon('/api/auth/cas/logout');
       console.log('📡 本地session清除结果:', beaconSuccess);
       
-      // 注释掉CAS服务器登出，避免状态不一致
-      // const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-      // navigator.sendBeacon(casLogoutUrl);
+      // 同时调用CAS服务器登出，确保完全退出
+      const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+      const casBeaconSuccess = navigator.sendBeacon(casLogoutUrl);
+      console.log('📡 CAS服务器登出结果:', casBeaconSuccess);
     }
 
     // 添加页面关闭监听器
@@ -128,7 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (document.visibilityState === 'hidden') {
         console.log('🔍 页面隐藏检测 - visibilitychange事件触发');
         
-        // 只清除本地session
+        // 清除本地session
         fetch('/api/auth/cas/logout', {
           method: 'POST',
           keepalive: true,
@@ -136,6 +137,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }).catch(error => {
           console.error('❌ 本地登出请求失败:', error);
         });
+        
+        // 同时调用CAS服务器登出
+        const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+        navigator.sendBeacon(casLogoutUrl);
       }
     };
 
@@ -144,8 +149,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 添加页面卸载事件（作为最后的保障）
     const handlePageHide = () => {
       console.log('📤 页面卸载检测 - pagehide事件触发');
-      // 只清除本地session
+      // 清除本地session和CAS服务器认证
       navigator.sendBeacon('/api/auth/cas/logout');
+      const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
+      navigator.sendBeacon(casLogoutUrl);
     };
 
     window.addEventListener('pagehide', handlePageHide);
