@@ -133,9 +133,25 @@ export default function LoginPage() {
 
   // CAS登录
   const handleCasLogin = () => {
+    console.log('🚀 CAS登录按钮被点击')
     setLoading(true)
     setError("")
-    window.location.href = '/api/auth/cas/login?returnUrl=/dashboard'
+    
+    try {
+      const loginUrl = '/api/auth/cas/login?returnUrl=/dashboard'
+      console.log('�� 准备跳转到:', loginUrl)
+      
+      // 添加一个小延迟以确保状态更新
+      setTimeout(() => {
+        console.log('⏰ 开始跳转到CAS登录')
+        window.location.href = loginUrl
+      }, 100)
+      
+    } catch (error) {
+      console.error('❌ CAS登录跳转失败:', error)
+      setError('登录跳转失败，请重试')
+      setLoading(false)
+    }
   }
 
   // 开发模式直接哈希登录
