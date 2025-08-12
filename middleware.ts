@@ -78,6 +78,24 @@ export async function middleware(request: NextRequest) {
       
       // 检查用户是否已完全登录（既要CAS认证又要最终登录完成）
       if (!session.isLoggedIn || !session.isCasAuthenticated) {
+        // 如果有CAS认证但未登录，说明是页面关闭后重新访问
+        if (session.isCasAuthenticated && !session.isLoggedIn && session.userId && session.userHash) {
+          console.log('Middleware: has CAS auth but not logged in, completing login automatically');
+          // 自动完成登录
+          session.isLoggedIn = true;
+          session.lastActiveTime = Date.now();
+          await session.save();
+          
+          // 创建新的响应继续处理
+          const continueResponse = NextResponse.next();
+          // 复制session cookie到响应
+          const sessionCookieHeader = response.headers.get('set-cookie');
+          if (sessionCookieHeader) {
+            continueResponse.headers.set('set-cookie', sessionCookieHeader);
+          }
+          return continueResponse;
+        }
+        
         console.log('Middleware: redirecting to CAS login for path:', pathname);
         const loginUrl = new URL('/api/auth/cas/login', request.url);
         loginUrl.searchParams.set('returnUrl', pathname);

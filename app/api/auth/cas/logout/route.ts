@@ -20,6 +20,19 @@ async function clearSession(request: NextRequest, response: NextResponse) {
   return session;
 }
 
+// 页面关闭时的部分清除函数（保留CAS认证信息）
+async function clearLoginSession(request: NextRequest, response: NextResponse) {
+  const session = await getIronSession<SessionData>(request, response, sessionOptions);
+  
+  // 只清除登录状态，保留CAS认证信息
+  session.isLoggedIn = false;
+  session.lastActiveTime = 0;
+  // 保留：userId, userHash, name, isCasAuthenticated, loginTime
+  
+  await session.save();
+  return session;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // 检查是否为本地开发环境
@@ -71,13 +84,13 @@ export async function GET(request: NextRequest) {
 // POST方法用于处理sendBeacon和AJAX调用
 export async function POST(request: NextRequest) {
   try {
-    console.log('CAS logout POST: clearing session via sendBeacon/fetch (local session only)');
+    console.log('CAS logout POST: clearing login session only (preserving CAS auth info)');
     
-    // 清除session
-    const response = NextResponse.json({ success: true, message: 'Local session cleared' });
-    await clearSession(request, response);
+    // 只清除登录状态，保留CAS认证信息
+    const response = NextResponse.json({ success: true, message: 'Login session cleared, CAS auth preserved' });
+    await clearLoginSession(request, response);
     
-    console.log('CAS logout POST: local session cleared successfully');
+    console.log('CAS logout POST: login session cleared, CAS auth info preserved');
     return response;
   } catch (error) {
     console.error('Error in CAS logout POST:', error);
