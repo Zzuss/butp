@@ -15,9 +15,25 @@ export async function GET(request: NextRequest) {
       name: session.name
     });
 
-    // 检查用户是否已登录
-    if (!session.isLoggedIn || !session.isCasAuthenticated) {
-      console.log('Auth check: user not logged in');
+    // 🔧 修复：与中间件逻辑保持一致，如果有CAS认证信息则自动恢复登录状态
+    if (session.userId && session.userHash && session.isCasAuthenticated) {
+      // 如果有完整的认证信息但isLoggedIn为false，说明是页面刷新或重新访问
+      if (!session.isLoggedIn) {
+        console.log('Auth check: restoring login state after page refresh');
+        session.isLoggedIn = true;
+        
+        // 更新活跃时间
+        session.lastActiveTime = Date.now();
+        await session.save();
+      }
+      
+      console.log('Auth check: user is authenticated');
+    } else {
+      console.log('Auth check: user not authenticated', {
+        hasUserId: !!session.userId,
+        hasUserHash: !!session.userHash,
+        isCasAuthenticated: session.isCasAuthenticated
+      });
       return NextResponse.json(
         { 
           isLoggedIn: false,
@@ -27,14 +43,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('Auth check: user is logged in');
     return NextResponse.json({
       isLoggedIn: true,
       userId: session.userId,
       userHash: session.userHash,
       name: session.name,
       isCasAuthenticated: session.isCasAuthenticated,
-      loginTime: session.loginTime
+      loginTime: session.loginTime,
+      lastActiveTime: session.lastActiveTime
     });
   } catch (error) {
     console.error('Auth check error:', error);

@@ -40,10 +40,31 @@ export const sessionOptions: SessionOptions = {
 // 🔧 修复说明：此函数检查本地会话是否超过30分钟无活动
 // 当检测到超时时，系统会强制执行完整的CAS logout流程，确保CAS服务器端也清除认证状态
 export function isSessionExpired(session: SessionData): boolean {
-  // 如果没有lastActiveTime，说明从未活跃过，视为过期
+  // 🔧 关键修复：如果用户已经通过CAS认证但没有lastActiveTime，不应该视为过期
+  // 这种情况通常发生在页面关闭后重新打开，此时应该保持认证状态
   if (!session.lastActiveTime) {
-    console.log('⚠️ Session timeout check: No lastActiveTime found, treating as expired');
-    return true;
+    // 如果有CAS认证信息，使用loginTime作为lastActiveTime
+    if (session.isCasAuthenticated && session.loginTime > 0) {
+      console.log('⚠️ Session timeout check: No lastActiveTime but has CAS auth, using loginTime as fallback');
+      // 不要直接修改session对象，而是用loginTime作为参考时间
+      const referenceTime = session.loginTime;
+      const now = Date.now();
+      const timeSinceLogin = now - referenceTime;
+      const isExpired = timeSinceLogin > SESSION_TIMEOUT_MS;
+      
+      console.log('🕒 Session timeout check (using loginTime):', {
+        loginTime: new Date(referenceTime).toISOString(),
+        currentTime: new Date(now).toISOString(),
+        timeSinceLogin: Math.round(timeSinceLogin / 1000 / 60) + ' minutes',
+        timeoutThreshold: SESSION_TIMEOUT_MS / 1000 / 60 + ' minutes',
+        isExpired: isExpired
+      });
+      
+      return isExpired;
+    } else {
+      console.log('⚠️ Session timeout check: No lastActiveTime and no CAS auth, treating as expired');
+      return true;
+    }
   }
   
   const now = Date.now();
