@@ -4,7 +4,7 @@ export const ANALYTICS_CONFIG = {
   WEBSITE_ID: process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || 'ec362d7d-1d62-46c2-8338-6e7c0df7c084',
   
   // Umami 脚本URL
-  SCRIPT_URL: process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL || 'https://umami-teal-omega.vercel.app/script.js',
+  SCRIPT_URL: process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL || 'https://umami-mysql-mauve.vercel.app/script.js',
   
   // 是否启用分析 (开发环境默认关闭)
   ENABLED: process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',

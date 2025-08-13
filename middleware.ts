@@ -26,14 +26,18 @@ const PUBLIC_PATHS = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  console.log('🚀 Middleware triggered for path:', pathname);
+
   // 检查是否是API路由
   if (pathname.startsWith('/api/')) {
     // API路由不在中间件中处理认证，由各自的API处理
+    console.log('📝 Middleware: API route detected, skipping auth check');
     return NextResponse.next();
   }
 
   // 检查是否是公开路径
   if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+    console.log('🔓 Middleware: public path detected, allowing access');
     return NextResponse.next();
   }
 
@@ -41,6 +45,8 @@ export async function middleware(request: NextRequest) {
   const isProtectedPath = PROTECTED_PATHS.some(path => pathname.startsWith(path));
   
   if (isProtectedPath) {
+    console.log('🔒 Middleware: protected path detected, checking auth');
+    
     // 检查是否为本地开发环境
     const isLocalhost = request.nextUrl.hostname === 'localhost' || 
                        request.nextUrl.hostname === '127.0.0.1' ||
@@ -48,7 +54,7 @@ export async function middleware(request: NextRequest) {
     
     if (isLocalhost) {
       // 本地开发环境：直接重定向到登录页面，跳过CAS认证
-      console.log('Middleware: localhost detected, redirecting to login page for path:', pathname);
+      console.log('💻 Middleware: localhost detected, redirecting to login page for path:', pathname);
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('returnUrl', pathname);
       return NextResponse.redirect(loginUrl);
@@ -59,18 +65,19 @@ export async function middleware(request: NextRequest) {
       const response = NextResponse.next();
       const session = await getIronSession<SessionData>(request, response, sessionOptions);
       
-      console.log('Middleware: checking session for path:', pathname, {
+      console.log('🔍 Middleware: checking session for path:', pathname, {
         isLoggedIn: session.isLoggedIn,
         isCasAuthenticated: session.isCasAuthenticated,
         userId: session.userId,
         userHash: session.userHash,
-        lastActiveTime: session.lastActiveTime,
+        lastActiveTime: session.lastActiveTime ? new Date(session.lastActiveTime).toISOString() : 'none',
         timeoutCheck: isSessionExpired(session)
       });
       
-      // 检查session是否过期 (30分钟无活动)
+      // 🔧 关键修复：优先检查session是否过期，无论登录状态如何
       if (isSessionExpired(session)) {
-        console.log('Middleware: session expired due to inactivity, forcing complete CAS logout');
+        console.log('⏰ Middleware: session expired due to inactivity, forcing complete CAS logout');
+        console.log('🔄 Middleware: redirecting to CAS logout URL');
         // 🔧 强制完整的CAS logout流程：这会清除本地session并强制CAS服务器也清除认证状态
         // 用户下次访问时必须进行完整的重新认证
         const logoutUrl = new URL('/api/auth/cas/logout', request.url);
@@ -81,17 +88,10 @@ export async function middleware(request: NextRequest) {
       if (!session.isLoggedIn || !session.isCasAuthenticated) {
         // 如果有CAS认证但未登录，说明是页面关闭后重新访问
         if (session.isCasAuthenticated && !session.isLoggedIn && session.userId && session.userHash) {
-          console.log('Middleware: has CAS auth but not logged in, checking timeout before auto-login');
+          console.log('🔄 Middleware: has CAS auth but not logged in, auto-login flow');
           
-          // 先检查是否超过30分钟（使用保留的lastActiveTime）
-          if (isSessionExpired(session)) {
-            console.log('Middleware: session expired during auto-login check, forcing complete CAS logout');
-            // 🔧 超时了，需要完全重新认证：强制清除CAS服务器认证状态
-            const logoutUrl = new URL('/api/auth/cas/logout', request.url);
-            return NextResponse.redirect(logoutUrl);
-          }
-          
-          console.log('Middleware: within timeout window, completing auto-login');
+          // 💡 这里不需要再次检查超时，因为上面已经检查过了
+          console.log('✅ Middleware: within timeout window, completing auto-login');
           // 在30分钟内，自动完成登录
           session.isLoggedIn = true;
           session.lastActiveTime = Date.now();  // 更新为当前访问时间
@@ -107,19 +107,21 @@ export async function middleware(request: NextRequest) {
           return continueResponse;
         }
         
-        console.log('Middleware: redirecting to CAS login for path:', pathname);
+        console.log('🚪 Middleware: redirecting to CAS login for path:', pathname);
         const loginUrl = new URL('/api/auth/cas/login', request.url);
         loginUrl.searchParams.set('returnUrl', pathname);
         return NextResponse.redirect(loginUrl);
       }
       
       // 更新session活跃时间
+      console.log('🔄 Middleware: updating session activity time');
       updateSessionActivity(session);
       await session.save();
       
+      console.log('✅ Middleware: auth check passed, allowing access');
       return response;
     } catch (error) {
-      console.error('Middleware error:', error);
+      console.error('❌ Middleware error:', error);
       // 如果会话检查失败，重定向到登录页面
       const loginUrl = new URL('/api/auth/cas/login', request.url);
       loginUrl.searchParams.set('returnUrl', pathname);
@@ -127,6 +129,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  console.log('🔓 Middleware: non-protected path, allowing access');
   return NextResponse.next();
 }
 

@@ -42,20 +42,29 @@ export const sessionOptions: SessionOptions = {
 export function isSessionExpired(session: SessionData): boolean {
   // 如果没有lastActiveTime，说明从未活跃过，视为过期
   if (!session.lastActiveTime) {
+    console.log('⚠️ Session timeout check: No lastActiveTime found, treating as expired');
     return true;
   }
   
   const now = Date.now();
   const timeSinceLastActive = now - session.lastActiveTime;
+  const isExpired = timeSinceLastActive > SESSION_TIMEOUT_MS;
   
-  console.log('Session timeout check:', {
+  console.log('🕒 Session timeout check:', {
     lastActiveTime: new Date(session.lastActiveTime).toISOString(),
+    currentTime: new Date(now).toISOString(),
     timeSinceLastActive: Math.round(timeSinceLastActive / 1000 / 60) + ' minutes',
     timeoutThreshold: SESSION_TIMEOUT_MS / 1000 / 60 + ' minutes',
-    isExpired: timeSinceLastActive > SESSION_TIMEOUT_MS
+    isExpired: isExpired
   });
   
-  return timeSinceLastActive > SESSION_TIMEOUT_MS;
+  if (isExpired) {
+    console.log('🚨 Session has expired! Time since last active (' + Math.round(timeSinceLastActive / 1000 / 60) + ' min) > threshold (' + (SESSION_TIMEOUT_MS / 1000 / 60) + ' min)');
+  } else {
+    console.log('✅ Session is still valid. Remaining time: ' + Math.round((SESSION_TIMEOUT_MS - timeSinceLastActive) / 1000 / 60) + ' minutes');
+  }
+  
+  return isExpired;
 }
 
 // 更新会话活跃时间
