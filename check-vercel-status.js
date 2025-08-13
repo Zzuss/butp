@@ -9,7 +9,7 @@ console.log('='.repeat(40));
 const CHECKS = [
   {
     name: 'Umami服务直接访问',
-    url: 'https://umami-teal-omega.vercel.app',
+    url: 'https://umami-mysql-mauve.vercel.app',
     timeout: 5000
   },
   {
@@ -19,7 +19,7 @@ const CHECKS = [
   },
   {
     name: 'DNS解析检查',
-    url: 'https://umami-teal-omega.vercel.app/robots.txt',
+    url: 'https://umami-mysql-mauve.vercel.app/robots.txt',
     timeout: 5000
   }
 ];
@@ -77,7 +77,7 @@ async function analyzeDeployment() {
   
   console.log('1️⃣ **检查Vercel控制台**:');
   console.log('   • 登录 https://vercel.com/dashboard');
-  console.log('   • 查找 umami-teal-omega 项目');
+  console.log('   • 查找 umami-mysql-mauve 项目');
   console.log('   • 检查最近的部署状态');
   console.log('');
   
