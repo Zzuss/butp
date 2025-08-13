@@ -52,10 +52,10 @@ interface VisitorStats {
 const UMAMI_CONFIGS: UmamiApiConfig[] = [
   // MySQL版本 (优先使用，更稳定)
   {
-    baseUrl: process.env.NEXT_PUBLIC_UMAMI_MYSQL_BASE_URL || '',
-    username: process.env.NEXT_PUBLIC_UMAMI_MYSQL_USERNAME || '',
-    password: process.env.NEXT_PUBLIC_UMAMI_MYSQL_PASSWORD || '',
-    websiteId: process.env.NEXT_PUBLIC_UMAMI_MYSQL_WEBSITE_ID || '',
+    baseUrl: process.env.NEXT_PUBLIC_UMAMI_MYSQL_BASE_URL || 'https://umami-mysql-mauve.vercel.app',
+    username: process.env.NEXT_PUBLIC_UMAMI_MYSQL_USERNAME || 'admin',
+    password: process.env.NEXT_PUBLIC_UMAMI_MYSQL_PASSWORD || 'umami',
+    websiteId: process.env.NEXT_PUBLIC_UMAMI_MYSQL_WEBSITE_ID || '4bd87e19-b721-41e5-9de5-0c694e046425',
     version: 'mysql' as const
   },
   // Supabase版本 (备用，不稳定)
