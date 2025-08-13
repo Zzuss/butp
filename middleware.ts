@@ -74,52 +74,36 @@ export async function middleware(request: NextRequest) {
         timeoutCheck: isSessionExpired(session)
       });
       
-      // 🔧 关键修复：优先检查session是否过期，无论登录状态如何
+      // 🔧 关键修复：只有在真正超时时才清除session
       if (isSessionExpired(session)) {
-        console.log('⏰ Middleware: session expired due to inactivity, forcing complete CAS logout');
+        console.log('⏰ Middleware: session expired due to inactivity (30min), forcing complete CAS logout');
         console.log('🔄 Middleware: redirecting to CAS logout URL');
-        // 🔧 强制完整的CAS logout流程：这会清除本地session并强制CAS服务器也清除认证状态
-        // 用户下次访问时必须进行完整的重新认证
         const logoutUrl = new URL('/api/auth/cas/logout', request.url);
         return NextResponse.redirect(logoutUrl);
       }
       
-      // 检查用户是否已完全登录（既要CAS认证又要最终登录完成）
-      if (!session.isLoggedIn || !session.isCasAuthenticated) {
-        // 如果有CAS认证但未登录，说明是页面关闭后重新访问
-        if (session.isCasAuthenticated && !session.isLoggedIn && session.userId && session.userHash) {
-          console.log('🔄 Middleware: has CAS auth but not logged in, auto-login flow');
-          
-          // 💡 这里不需要再次检查超时，因为上面已经检查过了
-          console.log('✅ Middleware: within timeout window, completing auto-login');
-          // 在30分钟内，自动完成登录
+      // 🔧 修复：检查用户是否已登录
+      // 如果session存在且未过期，但登录状态不完整，则自动恢复登录状态
+      if (session.userId && session.userHash && session.isCasAuthenticated) {
+        // 如果有完整的认证信息但isLoggedIn为false，说明是页面刷新或重新访问
+        if (!session.isLoggedIn) {
+          console.log('🔄 Middleware: restoring login state after page refresh');
           session.isLoggedIn = true;
-          session.lastActiveTime = Date.now();  // 更新为当前访问时间
-          await session.save();
-          
-          // 创建新的响应继续处理
-          const continueResponse = NextResponse.next();
-          // 复制session cookie到响应
-          const sessionCookieHeader = response.headers.get('set-cookie');
-          if (sessionCookieHeader) {
-            continueResponse.headers.set('set-cookie', sessionCookieHeader);
-          }
-          return continueResponse;
         }
         
-        console.log('🚪 Middleware: redirecting to CAS login for path:', pathname);
-        const loginUrl = new URL('/api/auth/cas/login', request.url);
-        loginUrl.searchParams.set('returnUrl', pathname);
-        return NextResponse.redirect(loginUrl);
+        // 更新活跃时间并保存
+        console.log('✅ Middleware: user authenticated, updating activity time');
+        updateSessionActivity(session);
+        await session.save();
+        
+        return response;
       }
       
-      // 更新session活跃时间
-      console.log('🔄 Middleware: updating session activity time');
-      updateSessionActivity(session);
-      await session.save();
-      
-      console.log('✅ Middleware: auth check passed, allowing access');
-      return response;
+      // 如果没有完整的认证信息，重定向到登录
+      console.log('🚪 Middleware: no valid authentication, redirecting to CAS login for path:', pathname);
+      const loginUrl = new URL('/api/auth/cas/login', request.url);
+      loginUrl.searchParams.set('returnUrl', pathname);
+      return NextResponse.redirect(loginUrl);
     } catch (error) {
       console.error('❌ Middleware error:', error);
       // 如果会话检查失败，重定向到登录页面

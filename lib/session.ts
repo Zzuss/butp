@@ -31,7 +31,7 @@ export const sessionOptions: SessionOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // 生产环境使用HTTPS
     sameSite: 'lax',
-    // 不设置maxAge，session会在浏览器关闭时自动清除
+    maxAge: SESSION_TIMEOUT_MS / 1000, // 30分钟，以秒为单位
     path: '/', // 明确设置路径
   },
 };
