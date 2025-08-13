@@ -107,56 +107,69 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 初始启动计时器（访问当前页面时重置）
     resetInactivityTimer();
 
-    // 监听页面关闭事件，只删除本地session
-    const handleBeforeUnload = () => {
+    // 用于判断是否真正关闭标签页的状态
+    let isTabClosing = false;
+    let tabCloseTimer: NodeJS.Timeout | null = null;
+
+    // 监听页面关闭事件，只在真正关闭标签页时清除本地session
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       console.log('🚨 页面关闭检测 - beforeunload事件触发');
       
-      // 只清除本地session，不调用CAS服务器登出
-      // 这样CAS服务器保持认证状态，30分钟内重新打开可以快速重新认证
-      const beaconSuccess = navigator.sendBeacon('/api/auth/cas/logout');
-      console.log('📡 本地session清除结果:', beaconSuccess);
+      // 标记可能要关闭标签页
+      isTabClosing = true;
       
-      // 注释掉CAS服务器登出，让30分钟超时机制处理
-      // const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-      // navigator.sendBeacon(casLogoutUrl);
-    }
+      // 设置一个短暂的延迟来判断是否真的关闭了
+      if (tabCloseTimer) {
+        clearTimeout(tabCloseTimer);
+      }
+      
+      tabCloseTimer = setTimeout(() => {
+        console.log('⏰ beforeunload后2秒未检测到focus，确认为关闭标签页');
+        // 只清除本地session，不调用CAS服务器登出
+        // 这样CAS服务器保持认证状态，30分钟内重新打开可以快速重新认证
+        navigator.sendBeacon('/api/auth/cas/logout');
+        isTabClosing = false;
+      }, 2000); // 2秒延迟判断
+    };
 
-    // 添加页面关闭监听器
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    // 添加更可靠的页面隐藏检测
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        console.log('🔍 页面隐藏检测 - visibilitychange事件触发');
-        
-        // 只清除本地session
-        fetch('/api/auth/cas/logout', {
-          method: 'POST',
-          keepalive: true,
-          credentials: 'include'
-        }).catch(error => {
-          console.error('❌ 本地登出请求失败:', error);
-        });
-        
-        // 注释掉CAS服务器登出
-        // const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-        // navigator.sendBeacon(casLogoutUrl);
+    // 监听窗口重新获得焦点（说明没有真正关闭）
+    const handleFocus = () => {
+      if (isTabClosing && tabCloseTimer) {
+        console.log('🎯 窗口重新获得焦点，取消关闭标签页操作');
+        clearTimeout(tabCloseTimer);
+        isTabClosing = false;
       }
     };
 
-    window.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // 添加页面卸载事件（作为最后的保障）
-    const handlePageHide = () => {
-      console.log('📤 页面卸载检测 - pagehide事件触发');
-      // 只清除本地session
-      navigator.sendBeacon('/api/auth/cas/logout');
-      
-      // 注释掉CAS服务器登出
-      // const casLogoutUrl = 'https://auth.bupt.edu.cn/authserver/logout?service=https%3A%2F%2Fbutp.tech';
-      // navigator.sendBeacon(casLogoutUrl);
+    // 监听页面可见性变化，但只作为备用机制
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // 页面重新可见，取消关闭操作
+        if (isTabClosing && tabCloseTimer) {
+          console.log('👁️ 页面重新可见，取消关闭标签页操作');
+          clearTimeout(tabCloseTimer);
+          isTabClosing = false;
+        }
+      } else if (document.visibilityState === 'hidden') {
+        console.log('🔍 页面隐藏检测 - visibilitychange事件触发（不执行登出）');
+        // 不在这里执行登出操作，因为切换标签页也会触发
+      }
     };
 
+    // 页面卸载事件（最后的保障，仅在确实关闭时执行）
+    const handlePageHide = (event: PageTransitionEvent) => {
+      // 只有在persisted为false时才表示真正的页面卸载
+      if (!event.persisted) {
+        console.log('📤 页面真正卸载检测 - pagehide事件触发');
+        // 只清除本地session
+        navigator.sendBeacon('/api/auth/cas/logout');
+      }
+    };
+
+    // 添加事件监听器
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pagehide', handlePageHide);
 
     // 清理函数
@@ -165,7 +178,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearTimeout(inactivityTimer);
       }
       
+      if (tabCloseTimer) {
+        clearTimeout(tabCloseTimer);
+      }
+      
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('focus', handleFocus);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
     }

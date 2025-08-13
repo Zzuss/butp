@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// 使用新的 Umami 服务
-const UMAMI_BASE_URL = 'https://umami-teal-omega.vercel.app'
-const UMAMI_WEBSITE_ID = 'ec362d7d-1d62-46c2-8338-6e7c0df7c084'
+// 使用 Umami 公开分享链接，避免认证问题
+const UMAMI_BASE_URL = 'https://umami-ruby-chi.vercel.app'
+const UMAMI_WEBSITE_ID = 'ddf456a9-f046-48b0-b27b-95a6dc0182b9'
+const UMAMI_SHARE_URL = 'https://umami-ruby-chi.vercel.app/share/jd52d7TbD1Q4vNw6/butp.tech'
+
+// 添加多种获取策略
+const UMAMI_API_ENDPOINTS = [
+  `/api/share/jd52d7TbD1Q4vNw6/stats`, // 公开分享API
+  `/api/websites/${UMAMI_WEBSITE_ID}/stats`, // 标准API（如果可访问）
+]
 
 interface UmamiApiResponse {
   pageviews: { value: number }
@@ -148,36 +155,75 @@ class UmamiStatsService {
     const endAt = Date.now()
     const startAt = endAt - (days * 24 * 60 * 60 * 1000)
 
-    try {
-      // 尝试通过 API 获取数据
-      const apiUrl = `${UMAMI_BASE_URL}/api/websites/${UMAMI_WEBSITE_ID}/stats?startAt=${startAt}&endAt=${endAt}`
+    // 尝试多个API端点
+    for (let i = 0; i < UMAMI_API_ENDPOINTS.length; i++) {
+      const endpoint = UMAMI_API_ENDPOINTS[i]
       
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+      try {
+        const apiUrl = `${UMAMI_BASE_URL}${endpoint}?startAt=${startAt}&endAt=${endAt}`
+        
+        console.log(`🌐 尝试 Umami API 端点 ${i + 1}/${UMAMI_API_ENDPOINTS.length} (${period}): ${apiUrl}`)
+        
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout)
 
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'BuTP-Analytics/1.0'
-        },
-        signal: controller.signal
-      })
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'BuTP-Analytics/1.0',
+            'Cache-Control': 'no-cache'
+          },
+          signal: controller.signal
+        })
 
-      clearTimeout(timeoutId)
+        clearTimeout(timeoutId)
 
-      if (response.ok) {
-        const data: UmamiApiResponse = await response.json()
-        return this.processUmamiData(period, days, data)
+        console.log(`📊 Umami API响应 (${period}, 端点${i + 1}): ${response.status} ${response.statusText}`)
+
+        if (response.ok) {
+          const data: UmamiApiResponse = await response.json()
+          console.log(`✅ 成功获取 ${period} 数据 (端点${i + 1}):`, data)
+          return this.processUmamiData(period, days, data)
+        } else {
+          const errorText = await response.text().catch(() => 'Unknown error')
+          console.warn(`❌ API 端点${i + 1}请求失败 (${period}): ${response.status} - ${errorText}`)
+          
+          // 如果是401错误且还有其他端点可尝试，继续下一个
+          if (response.status === 401 && i < UMAMI_API_ENDPOINTS.length - 1) {
+            console.log(`🔄 端点${i + 1}认证失败，尝试下一个端点...`)
+            continue
+          }
+          
+          // 最后一个端点也失败了，记录详细错误
+          if (i === UMAMI_API_ENDPOINTS.length - 1) {
+            console.error('🔐 所有 Umami API端点都失败 - 可能原因:')
+            console.error('   1. Umami服务器访问限制')
+            console.error('   2. 网站ID或分享ID不正确')
+            console.error('   3. 网络连接问题')
+            console.error(`   当前配置: ${UMAMI_BASE_URL}`)
+            console.error(`   网站ID: ${UMAMI_WEBSITE_ID}`)
+            console.error(`   分享URL: ${UMAMI_SHARE_URL}`)
+          }
+        }
+
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn(`⏰ 端点${i + 1}获取 ${period} 数据超时 (${this.timeout}ms)`)
+        } else {
+          console.warn(`💥 端点${i + 1}获取 ${period} 数据异常:`, error)
+        }
+        
+        // 如果还有其他端点可尝试，继续
+        if (i < UMAMI_API_ENDPOINTS.length - 1) {
+          console.log(`🔄 端点${i + 1}失败，尝试下一个端点...`)
+          continue
+        }
       }
-
-      console.warn(`API 请求失败 (${days}天): ${response.status}`)
-      return null
-
-    } catch (error) {
-      console.warn(`获取 ${days} 天数据失败:`, error)
-      return null
     }
+    
+    console.warn(`🚫 所有 ${UMAMI_API_ENDPOINTS.length} 个API端点都失败 (${period})，使用模拟数据`)
+    return null
   }
 
   // 处理 Umami API 返回的数据
