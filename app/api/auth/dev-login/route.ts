@@ -53,12 +53,14 @@ export async function POST(request: NextRequest) {
     const session = await getIronSession<SessionData>(request, tempResponse, sessionOptions);
     
     // 设置会话数据
+    const now = Date.now();
     session.userId = `dev-${userHash.substring(0, 8)}`;
     session.userHash = userHash;
     session.name = `开发用户-${userHash.substring(0, 8)}`;
     session.isCasAuthenticated = true; // 模拟CAS认证完成
     session.isLoggedIn = true; // 直接完成登录
-    session.loginTime = Date.now();
+    session.loginTime = now;
+    session.lastActiveTime = now; // 🆕 设置最后活跃时间
     
     await session.save();
     
@@ -73,7 +75,8 @@ export async function POST(request: NextRequest) {
         name: session.name,
         isLoggedIn: session.isLoggedIn,
         isCasAuthenticated: session.isCasAuthenticated,
-        loginTime: session.loginTime
+        loginTime: session.loginTime,
+        lastActiveTime: session.lastActiveTime
       }
     });
     

@@ -1,28 +1,31 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { 
-  User, 
+  Home, 
   BarChart3, 
+  GraduationCap, 
+  User, 
   Users, 
-  TrendingUp,
-  GraduationCap,
-  LogOut,
+  ChevronLeft, 
+  ChevronRight, 
+  Globe,
   Menu,
   X,
-  ChevronLeft,
-  ChevronRight,
+  TrendingUp,
   Info,
   Languages,
+  LogOut,
   FileText
-} from "lucide-react"
+} from 'lucide-react'
 import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 import { trackUserAction } from "@/lib/analytics"
+import { CompletePDFExport } from '@/components/pdf/CompletePDFExport'
 
 const sidebarItems = [
   {
@@ -48,12 +51,6 @@ const sidebarItems = [
     titleKey: "sidebar.rolemodels",
     href: "/role-models",
     icon: Users,
-  },
-  {
-    title: "PDF演示",
-    titleKey: "sidebar.pdfdemo",
-    href: "/pdf-demo",
-    icon: FileText,
   },
   {
     title: "关于BuTP",
@@ -85,17 +82,6 @@ export function AppSidebar() {
   // 切换语言函数
   const toggleLanguage = () => {
     setLanguage(language === 'zh' ? 'en' : 'zh')
-  }
-
-  // 导出PDF函数
-  const exportToPDF = () => {
-    try {
-      // 直接使用浏览器内置的打印功能，不隐藏任何元素
-      window.print();
-    } catch (error) {
-      console.error('PDF导出失败:', error);
-      alert('PDF导出失败，请重试');
-    }
   }
 
   // 检测是否为移动设备
@@ -190,22 +176,17 @@ export function AppSidebar() {
         </nav>
       </SidebarContent>
       
-      {/* 用户信息和登出按钮 */}
       {user && user.isLoggedIn && (
           <div className={`border-t border-border mt-auto ${isCollapsed ? 'p-2' : 'p-4'}`}>
             {!isCollapsed ? (
               <>
           {/* PDF导出按钮 */}
           <div className="mb-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={exportToPDF}
-              className="w-full flex items-center gap-2 justify-start"
-            >
-              <FileText className="h-4 w-4" />
-              <span>{language === 'zh' ? '导出PDF' : 'Export PDF'}</span>
-            </Button>
+            <CompletePDFExport 
+              pageTitle="当前页面"
+              fileName={`page_export_${new Date().toISOString().split('T')[0]}.pdf`}
+              className="sidebar"
+            />
           </div>
           
           {/* 语言切换按钮 */}
@@ -220,7 +201,8 @@ export function AppSidebar() {
               <span>{language === 'zh' ? 'Change to English' : '切换为中文'}</span>
             </Button>
           </div>
-          
+
+          {/* 用户信息 */}
           <div className="flex items-center gap-3 mb-3">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
@@ -235,28 +217,28 @@ export function AppSidebar() {
               )}
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            {t('sidebar.logout')}
-          </Button>
+
+          {/* 登出按钮 */}
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={logout}
+              className="w-full flex items-center gap-2 justify-start border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-all duration-200"
+            >
+              <LogOut className="h-4 w-4 flex-shrink-0" />
+              <span>{language === 'zh' ? '退出登录' : 'Logout'}</span>
+            </Button>
+          </div>
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 {/* PDF导出按钮 - 折叠状态 */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={exportToPDF}
-                  title={language === 'zh' ? '导出PDF' : 'Export PDF'}
-                  className="w-8 h-8"
-                >
-                  <FileText className="h-4 w-4" />
-                </Button>
+                <CompletePDFExport 
+                  pageTitle="当前页面"
+                  fileName={`page_export_${new Date().toISOString().split('T')[0]}.pdf`}
+                  className="sidebar-collapsed"
+                />
                 
                 {/* 语言切换按钮 - 折叠状态 */}
                 <Button
@@ -269,23 +251,26 @@ export function AppSidebar() {
                   <Languages className="h-4 w-4" />
                 </Button>
                 
+                {/* 用户头像 - 折叠状态 */}
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                   <User className="h-4 w-4 text-primary-foreground" />
                 </div>
-                <Button 
-                  variant="outline" 
+                
+                {/* 登出按钮 - 折叠状态 */}
+                <Button
+                  variant="outline"
                   size="icon"
-                  onClick={handleLogout}
-                  title={t('sidebar.logout')}
-                  className="w-8 h-8"
+                  onClick={logout}
+                  title={language === 'zh' ? '退出登录' : 'Logout'}
+                  className="w-8 h-8 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-all duration-200"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>
             )}
-        </div>
-      )}
-    </Sidebar>
+          </div>
+        )}
+      </Sidebar>
       
       {/* 移动设备上的遮罩层，点击时关闭侧边栏 */}
       {isMobile && isOpen && (

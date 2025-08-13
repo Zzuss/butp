@@ -6,7 +6,8 @@ import { getSubjectGrades, getRadarChartData } from "@/lib/dashboard-data"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 import { RadarChart } from "@/components/ui/radar-chart"
-import { SimplePDFExport } from '@/components/pdf/SimplePDFExport'
+import { CourseResult } from '@/lib/dashboard-data'
+
 import Link from 'next/link'
 
 export default function AllGrades() {
@@ -16,7 +17,7 @@ export default function AllGrades() {
   const [loading, setLoading] = useState(false)
   const [selectedRow, setSelectedRow] = useState<number | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [radarData, setRadarData] = useState<{ [key: string]: number } | null>(null)
+  const [radarData, setRadarData] = useState<number[] | null>(null)
   const [loadingRadar, setLoadingRadar] = useState(false)
   const [selectedCourseName, setSelectedCourseName] = useState<string>('')
 
@@ -28,24 +29,48 @@ export default function AllGrades() {
 
   useEffect(() => {
     if (user?.isLoggedIn) {
-      loadGrades(user.userId)
+      loadGrades(user.userHash)
     }
   }, [user, language])
 
   async function loadGrades(studentId: string) {
     setLoading(true)
     try {
-      // 获取学生信息（年级和专业）
-      const { getStudentInfo } = await import('@/lib/dashboard-data')
-      const studentInfo = await getStudentInfo(studentId)
+      // 优先使用缓存的数据
+      const { getStudentResults, getFromCache } = await import('@/lib/dashboard-data')
       
-      // 获取所有成绩
-      const allGrades = await getSubjectGrades(studentId, language, studentInfo?.major, studentInfo?.year)
-      // 按学分从高到低排序
-      const sortedGrades = [...allGrades].sort((a, b) => b.credit - a.credit)
-      setGrades(sortedGrades)
+      // 检查是否有缓存数据
+      const cacheKey = `student_results_${studentId}`
+      const cachedData = getFromCache<CourseResult[]>(cacheKey)
+      
+      let results: CourseResult[]
+      if (cachedData) {
+        console.log('使用缓存的学生成绩数据')
+        results = cachedData
+      } else {
+        console.log('缓存中没有数据，开始查询数据库')
+        // 获取学生信息（年级和专业）
+        const { getStudentInfo } = await import('@/lib/dashboard-data')
+        const studentInfo = await getStudentInfo(studentId)
+        
+        // 获取所有成绩
+        results = await getStudentResults(studentId)
+      }
+      
+      if (results && results.length > 0) {
+        // 按学分从高到低排序
+        const sortedGrades = [...results].sort((a, b) => {
+          const creditA = typeof a.credit === 'number' ? a.credit : parseFloat(String(a.credit)) || 0
+          const creditB = typeof b.credit === 'number' ? b.credit : parseFloat(String(b.credit)) || 0
+          return creditB - creditA
+        })
+        setGrades(sortedGrades)
+      } else {
+        setGrades([])
+      }
     } catch (_error) {
       console.error('Failed to load grades data:', _error)
+      setGrades([])
     } finally {
       setLoading(false)
     }
@@ -72,7 +97,19 @@ export default function AllGrades() {
       setSelectedCourseName(grades[index].course_name) // 设置课程名称
       try {
         const data = await getRadarChartData(grades[index].course_id!)
-        setRadarData(data)
+        if (data) {
+          // 转换RadarChartData为RadarChart组件期望的格式
+          const chartData = [
+            data.knowledge,
+            data.application,
+            data.analysis,
+            data.synthesis,
+            data.evaluation
+          ]
+          setRadarData(chartData)
+        } else {
+          setRadarData(null)
+        }
       } catch (_error) {
         console.error('Failed to load radar chart data:', _error)
         setRadarData(null)
@@ -85,11 +122,6 @@ export default function AllGrades() {
       setRadarData(null)
       setSelectedCourseName('')
     }
-  }
-
-  // 格式化学分为保留一位小数
-  const formatCredit = (credit: number): string => {
-    return credit.toFixed(1)
   }
 
   if (!user?.isLoggedIn) {
@@ -125,11 +157,6 @@ export default function AllGrades() {
           <p className="text-muted-foreground">{t('grades.description').replace('{name}', user?.name || '')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <SimplePDFExport 
-            pageTitle="学生成绩单"
-            fileName={`${user?.name || 'student'}_grades_${new Date().toISOString().split('T')[0]}.pdf`}
-            contentSelector=".grades-content"
-          />
           <Link href="/dashboard" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
             {t('grades.back.to.dashboard')}
           </Link>
@@ -157,6 +184,7 @@ export default function AllGrades() {
               <thead>
                 <tr className="border-b">
                   <th className="py-3 px-4 text-left">{t('grades.table.course.name')}</th>
+                  <th className="py-3 px-4 text-center">{t('grades.table.semester')}</th>
                   <th className="py-3 px-4 text-center">{t('grades.table.credit')}</th>
                   <th className="py-3 px-4 text-center">{t('grades.table.score')}</th>
                 </tr>
@@ -169,12 +197,13 @@ export default function AllGrades() {
                     onClick={() => handleRowClick(index)}
                   >
                     <td className="py-3 px-4">{item.course_name}</td>
-                    <td className="py-3 px-4 text-center">{formatCredit(item.credit)}</td>
+                    <td className="py-3 px-4 text-center">{item.semester}</td>
+                    <td className="py-3 px-4 text-center">{item.credit}</td>
                     <td className="py-3 px-4 text-center">{item.grade}</td>
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={3} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={4} className="py-8 text-center text-muted-foreground">
                       {t('grades.no.data')}
                     </td>
                   </tr>
@@ -210,7 +239,10 @@ export default function AllGrades() {
                   <div className="text-muted-foreground">加载中...</div>
                 </div>
               ) : radarData ? (
-                <RadarChart data={radarData} width={500} height={500} />
+                <RadarChart 
+                  data={radarData} 
+                  labels={['知识掌握', '应用能力', '分析能力', '综合能力', '评价能力']} 
+                />
               ) : (
                 <div className="flex items-center justify-center h-48">
                   <div className="text-muted-foreground">暂无数据</div>
@@ -220,6 +252,7 @@ export default function AllGrades() {
           </div>
         </div>
       )}
+      
     </div>
   )
 } 

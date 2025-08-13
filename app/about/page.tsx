@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Mail, Users, GraduationCap, BookOpen, Tag } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import VotingPoll from "@/components/voting-poll"
+import VisitorStats from "@/components/analytics/VisitorStats"
 
 // 版本号常量 - 固定为1.0版本
 const VERSION = "1.0"
@@ -167,6 +168,27 @@ export default function AboutPage() {
               </Card>
             ))}
           </div>
+        </div>
+
+        {/* 网站访问统计 */}
+        <div className="mt-16">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-blue-900 mb-4">
+              📊 BuTP 网站真实访问统计
+            </h2>
+            <p className="text-blue-700 text-lg">
+              基于 Umami Analytics 的真实访问数据
+            </p>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50">
+                实时数据源
+              </Badge>
+              <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">
+                隐私友好
+              </Badge>
+            </div>
+          </div>
+          <VisitorStats />
         </div>
 
         {/* 投票排行榜 */}

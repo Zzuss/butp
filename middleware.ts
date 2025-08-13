@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
-import { SessionData, sessionOptions } from '@/lib/session';
+import { SessionData, sessionOptions, isSessionExpired, updateSessionActivity } from '@/lib/session';
 
 // 需要保护的路由路径
 const PROTECTED_PATHS = [
@@ -63,16 +63,58 @@ export async function middleware(request: NextRequest) {
         isLoggedIn: session.isLoggedIn,
         isCasAuthenticated: session.isCasAuthenticated,
         userId: session.userId,
-        userHash: session.userHash
+        userHash: session.userHash,
+        lastActiveTime: session.lastActiveTime,
+        timeoutCheck: isSessionExpired(session)
       });
+      
+      // 检查session是否过期 (30分钟无活动)
+      if (isSessionExpired(session)) {
+        console.log('Middleware: session expired due to inactivity, redirecting to CAS logout');
+        // 重定向到CAS logout，这会清除CAS服务器认证并重定向回登录
+        const logoutUrl = new URL('/api/auth/cas/logout', request.url);
+        return NextResponse.redirect(logoutUrl);
+      }
       
       // 检查用户是否已完全登录（既要CAS认证又要最终登录完成）
       if (!session.isLoggedIn || !session.isCasAuthenticated) {
+        // 如果有CAS认证但未登录，说明是页面关闭后重新访问
+        if (session.isCasAuthenticated && !session.isLoggedIn && session.userId && session.userHash) {
+          console.log('Middleware: has CAS auth but not logged in, checking timeout before auto-login');
+          
+          // 先检查是否超过30分钟（使用保留的lastActiveTime）
+          if (isSessionExpired(session)) {
+            console.log('Middleware: session expired during auto-login check, redirecting to CAS logout');
+            // 超时了，需要完全重新认证
+            const logoutUrl = new URL('/api/auth/cas/logout', request.url);
+            return NextResponse.redirect(logoutUrl);
+          }
+          
+          console.log('Middleware: within timeout window, completing auto-login');
+          // 在30分钟内，自动完成登录
+          session.isLoggedIn = true;
+          session.lastActiveTime = Date.now();  // 更新为当前访问时间
+          await session.save();
+          
+          // 创建新的响应继续处理
+          const continueResponse = NextResponse.next();
+          // 复制session cookie到响应
+          const sessionCookieHeader = response.headers.get('set-cookie');
+          if (sessionCookieHeader) {
+            continueResponse.headers.set('set-cookie', sessionCookieHeader);
+          }
+          return continueResponse;
+        }
+        
         console.log('Middleware: redirecting to CAS login for path:', pathname);
         const loginUrl = new URL('/api/auth/cas/login', request.url);
         loginUrl.searchParams.set('returnUrl', pathname);
         return NextResponse.redirect(loginUrl);
       }
+      
+      // 更新session活跃时间
+      updateSessionActivity(session);
+      await session.save();
       
       return response;
     } catch (error) {

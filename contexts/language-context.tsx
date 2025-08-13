@@ -171,15 +171,16 @@ const translations: Record<Language, Record<string, string>> = {
     'grades.login.required': '请先登录查看学习数据',
     'grades.loading': '正在加载 {name} 的数据...',
     'grades.loading.message': '数据加载中...',
-    'grades.back.to.dashboard': '返回总览',
+    'grades.back.to.dashboard': '返回数据总览',
     'grades.all.courses.title': '所有课程成绩',
-    'grades.all.courses.description': '课程成绩详细列表（按学分从高到低排序）',
-    'grades.all.courses.click.hint': '点击课程查看详细信息',
-    'grades.table.course.name': '课程名称',
-    'grades.table.credit': '学分',
-    'grades.table.score': '分数',
+    'grades.all.courses.description': '点击任意行查看课程详情',
+    'grades.all.courses.click.hint': '点击任意行查看课程详情',
     'grades.no.data': '暂无成绩数据',
     'grades.total.courses': '共 {count} 门课程',
+    'grades.table.course.name': '课程名称',
+    'grades.table.semester': '学期',
+    'grades.table.credit': '学分',
+    'grades.table.score': '分数',
     
     // Role Models页面
     'rolemodels.description': '了解不同职业方向的典型人才特征，规划自己的职业发展路径',
@@ -481,6 +482,7 @@ const translations: Record<Language, Record<string, string>> = {
     'grades.table.score': 'Score',
     'grades.no.data': 'No grade data available',
     'grades.total.courses': 'Total {count} courses',
+    'grades.table.semester': 'Semester',
     
     // Role Models页面
     'rolemodels.description': 'Understand typical talent characteristics for different career directions and plan your professional development path',

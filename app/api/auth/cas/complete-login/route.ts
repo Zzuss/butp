@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
 
     // 完成最终登录
     session.isLoggedIn = true;
+    session.lastActiveTime = Date.now(); // 更新活跃时间
     
     console.log('Complete CAS login: updating session to logged in');
     console.log('Complete CAS login: session before save:', {
@@ -75,7 +76,8 @@ export async function POST(request: NextRequest) {
       isCasAuthenticated: session.isCasAuthenticated,
       userId: session.userId,
       userHash: session.userHash,
-      name: session.name
+      name: session.name,
+      lastActiveTime: session.lastActiveTime
     });
     
     await session.save();

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle, Download } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { SimplePDFExport } from '@/components/pdf/SimplePDFExport'
+
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage } from '@/contexts/language-context'
@@ -15,6 +15,7 @@ import {
   getStudentResults,
   calculateDashboardStats, 
   getRecentSubjectGrades, 
+  getLatestSemesterTopCreditCourses,
   getCourseTypeStats, 
   getSemesterTrends,
   getStudentInfo,
@@ -64,9 +65,9 @@ export default function DashboardPage() {
         const dashboardStats = calculateDashboardStats(results)
         setStats(dashboardStats)
         
-        // 获取最近的科目成绩
-        const recentGrades = await getRecentSubjectGrades(results, 6, language, info?.major, info?.year)
-        setSubjectGrades(recentGrades)
+        // 获取最新学期中学分最高的5门课程（用于数据总览显示）
+        const topCreditCourses = getLatestSemesterTopCreditCourses(results, 5)
+        setSubjectGrades(topCreditCourses)
         
         // 获取课程类型统计
         const typeStats = getCourseTypeStats(results)
@@ -123,11 +124,6 @@ export default function DashboardPage() {
             }
           </p>
         </div>
-        <SimplePDFExport 
-          pageTitle="学生仪表板"
-          fileName={`${user?.name || 'student'}_dashboard_${new Date().toISOString().split('T')[0]}.pdf`}
-          contentSelector=".dashboard-content"
-        />
       </div>
       
       {/* 统计卡片 */}
