@@ -234,13 +234,19 @@ export async function getVisitorStats(): Promise<VisitorStats | null> {
   
   try {
     console.log('🔄 调用本地API获取Umami统计数据...');
+    console.log('📍 环境信息:', {
+      nodeEnv: process.env.NODE_ENV,
+      hasUmamiMysqlUrl: !!process.env.NEXT_PUBLIC_UMAMI_MYSQL_BASE_URL,
+      hasUmamiMysqlId: !!process.env.NEXT_PUBLIC_UMAMI_MYSQL_WEBSITE_ID
+    });
     
-    // 设置较短的超时时间，避免长时间等待
+    // 设置较长的超时时间，确保API能够正常响应
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒总超时
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒总超时
     
     try {
       // 调用我们的API路由获取数据
+      console.log('📡 正在调用 /api/umami-stats...');
       const response = await fetch('/api/umami-stats', {
         method: 'GET',
         headers: {
@@ -250,12 +256,16 @@ export async function getVisitorStats(): Promise<VisitorStats | null> {
       });
 
       clearTimeout(timeoutId);
+      console.log('📡 API响应状态:', response.status, response.statusText);
 
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ API响应错误:', errorText);
+        throw new Error(`API request failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('📊 API返回数据类型:', typeof result, result?.success ? '成功' : '失败');
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch stats');

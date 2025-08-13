@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// 使用 Umami 公开分享链接，避免认证问题
-const UMAMI_BASE_URL = 'https://umami-ruby-chi.vercel.app'
-const UMAMI_WEBSITE_ID = 'ddf456a9-f046-48b0-b27b-95a6dc0182b9'
-const UMAMI_SHARE_URL = 'https://umami-ruby-chi.vercel.app/share/jd52d7TbD1Q4vNw6/butp.tech'
+// 使用新的 MySQL 版本 Umami
+const UMAMI_BASE_URL = 'https://umami-mysql-mauve.vercel.app'
+const UMAMI_WEBSITE_ID = '4bd87e19-b721-41e5-9de5-0c694e046425'
+const UMAMI_SHARE_URL = 'https://umami-mysql-mauve.vercel.app' // 暂时不使用分享链接，直接API认证
 
-// 添加多种获取策略
+// 添加认证配置
+const UMAMI_USERNAME = 'admin'
+const UMAMI_PASSWORD = 'umami'
+
+// 使用标准认证API
 const UMAMI_API_ENDPOINTS = [
-  `/api/share/jd52d7TbD1Q4vNw6/stats`, // 公开分享API
-  `/api/websites/${UMAMI_WEBSITE_ID}/stats`, // 标准API（如果可访问）
+  `/api/websites/${UMAMI_WEBSITE_ID}/stats`, // 标准认证API
 ]
 
 interface UmamiApiResponse {
@@ -63,10 +66,46 @@ const TIME_RANGES: TimeRange[] = [
 ]
 
 class UmamiStatsService {
-  private timeout = 10000 // 10秒超时
+  private timeout = 15000 // 15秒超时
   private maxRetries = 3
+  private authToken: string | null = null
 
   constructor() {}
+
+  // 获取认证token
+  private async getAuthToken(): Promise<string | null> {
+    if (this.authToken) {
+      return this.authToken
+    }
+
+    try {
+      console.log('🔑 正在获取 Umami 认证 token...')
+      
+      const response = await fetch(`${UMAMI_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: UMAMI_USERNAME,
+          password: UMAMI_PASSWORD,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        this.authToken = data.token
+        console.log('✅ 成功获取认证 token')
+        return this.authToken
+      } else {
+        console.error('❌ 认证失败:', response.status, response.statusText)
+        return null
+      }
+    } catch (error) {
+      console.error('❌ 获取认证 token 失败:', error)
+      return null
+    }
+  }
 
   // 主要获取方法
   async getStats(): Promise<{ success: boolean; data?: VisitorStats; error?: string; timestamp: string }> {
@@ -155,6 +194,13 @@ class UmamiStatsService {
     const endAt = Date.now()
     const startAt = endAt - (days * 24 * 60 * 60 * 1000)
 
+    // 获取认证token
+    const token = await this.getAuthToken()
+    if (!token) {
+      console.error('❌ 无法获取认证token，跳过真实数据获取')
+      return null
+    }
+
     // 尝试多个API端点
     for (let i = 0; i < UMAMI_API_ENDPOINTS.length; i++) {
       const endpoint = UMAMI_API_ENDPOINTS[i]
@@ -171,6 +217,7 @@ class UmamiStatsService {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
             'User-Agent': 'BuTP-Analytics/1.0',
             'Cache-Control': 'no-cache'
           },
