@@ -48,7 +48,7 @@ async function scrapeStatsFromSharePage(): Promise<Record<string, PeriodStats> |
     console.log(`🌐 抓取共享页面数据: ${shareUrl}`)
     
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8秒超时
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30秒超时
     
     const response = await fetch(shareUrl, {
       method: 'GET',
@@ -69,15 +69,29 @@ async function scrapeStatsFromSharePage(): Promise<Record<string, PeriodStats> |
     const html = await response.text()
     console.log(`✅ 成功获取共享页面HTML (${html.length} 字符)`)
     
+    // 调试：记录HTML的前500字符
+    console.log('📄 HTML内容预览:', html.substring(0, 500))
+    
+    // 调试：检查是否包含统计数据关键词
+    const hasStats = html.includes('pageviews') || html.includes('visitors') || html.includes('__NEXT_DATA__')
+    console.log('🔍 是否包含统计数据:', hasStats)
+    
     // 解析HTML中的统计数据
     const stats = parseStatsFromHTML(html)
+    console.log('📊 解析结果:', stats ? '成功' : '失败')
     return stats
     
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.warn('⏰ 共享页面抓取超时')
+      console.warn('⏰ 共享页面抓取超时 (30秒)')
+    } else if (error instanceof Error) {
+      console.error('💥 共享页面抓取异常:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack?.substring(0, 200)
+      })
     } else {
-      console.error('💥 共享页面抓取异常:', error)
+      console.error('💥 共享页面抓取未知错误:', error)
     }
     return null
   }
@@ -86,32 +100,65 @@ async function scrapeStatsFromSharePage(): Promise<Record<string, PeriodStats> |
 // 解析HTML中的统计数据
 function parseStatsFromHTML(html: string): Record<string, PeriodStats> | null {
   try {
+    console.log('🔍 开始解析HTML数据...')
+    
     // 查找Next.js页面数据
     const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/)
     if (nextDataMatch) {
-      const nextData = JSON.parse(nextDataMatch[1])
       console.log('📊 找到Next.js数据结构')
-      
-      // 从Next.js数据中提取统计信息
-      const pageProps = nextData?.props?.pageProps
-      if (pageProps) {
-        return extractStatsFromPageProps(pageProps)
+      try {
+        const nextData = JSON.parse(nextDataMatch[1])
+        console.log('📊 Next.js数据解析成功，结构:', Object.keys(nextData))
+        
+        // 从Next.js数据中提取统计信息
+        const pageProps = nextData?.props?.pageProps
+        if (pageProps) {
+          console.log('📊 找到pageProps，键:', Object.keys(pageProps))
+          const result = extractStatsFromPageProps(pageProps)
+          if (result) {
+            console.log('✅ 从Next.js数据成功提取统计')
+            return result
+          }
+        }
+      } catch (parseError) {
+        console.error('❌ Next.js数据解析失败:', parseError)
       }
+    } else {
+      console.log('❌ 未找到Next.js数据结构')
     }
     
     // 备用方案：查找JavaScript变量
+    console.log('🔍 尝试查找JavaScript变量...')
     const statsMatches = html.match(/window\.__UMAMI_DATA__\s*=\s*({.*?});/) ||
                         html.match(/const\s+stats\s*=\s*({.*?});/) ||
                         html.match(/statsData\s*:\s*({.*?})/)
     
     if (statsMatches) {
       console.log('📊 找到统计数据变量')
-      const statsData = JSON.parse(statsMatches[1])
-      return processRawStatsData(statsData)
+      try {
+        const statsData = JSON.parse(statsMatches[1])
+        console.log('📊 变量数据解析成功')
+        const result = processRawStatsData(statsData)
+        if (result) {
+          console.log('✅ 从JavaScript变量成功提取统计')
+          return result
+        }
+      } catch (parseError) {
+        console.error('❌ JavaScript变量解析失败:', parseError)
+      }
+    } else {
+      console.log('❌ 未找到JavaScript变量')
     }
     
     // 最后备用方案：正则表达式提取数值
-    return extractStatsWithRegex(html)
+    console.log('🔍 尝试正则表达式提取...')
+    const result = extractStatsWithRegex(html)
+    if (result) {
+      console.log('✅ 正则表达式提取成功')
+    } else {
+      console.log('❌ 正则表达式提取失败')
+    }
+    return result
     
   } catch (error) {
     console.error('❌ 解析HTML数据失败:', error)
