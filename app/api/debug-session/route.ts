@@ -13,9 +13,12 @@ export async function GET(request: NextRequest) {
       name: session.name,
       isLoggedIn: session.isLoggedIn,
       isCasAuthenticated: session.isCasAuthenticated,
-      loginTime: session.loginTime ? new Date(session.loginTime).toISOString() : null,
-      lastActiveTime: session.lastActiveTime ? new Date(session.lastActiveTime).toISOString() : null,
+      loginTime: session.loginTime || null, // 保持时间戳格式
+      lastActiveTime: session.lastActiveTime || null, // 保持时间戳格式
+      loginTimeISO: session.loginTime ? new Date(session.loginTime).toISOString() : null,
+      lastActiveTimeISO: session.lastActiveTime ? new Date(session.lastActiveTime).toISOString() : null,
       currentTime: new Date().toISOString(),
+      currentTimeStamp: Date.now(),
       timeSinceLastActive: session.lastActiveTime ? 
         Math.round((Date.now() - session.lastActiveTime) / 1000 / 60) + ' minutes' : 'N/A',
       isExpired: isSessionExpired(session),

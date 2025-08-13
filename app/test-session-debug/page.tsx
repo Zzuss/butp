@@ -30,15 +30,50 @@ export default function SessionDebugPage() {
         addLog(`isCasAuthenticated: ${data.session?.isCasAuthenticated}`)
         addLog(`userId: ${data.session?.userId || 'none'}`)
         addLog(`userHash: ${data.session?.userHash || 'none'}`)
-        addLog(`lastActiveTime: ${data.session?.lastActiveTime ? new Date(data.session.lastActiveTime).toLocaleString() : 'none'}`)
+        
+        // 详细显示时间信息
+        if (data.session?.lastActiveTimeISO) {
+          addLog(`lastActiveTime: ${data.session.lastActiveTimeISO}`)
+        }
+        if (data.session?.loginTimeISO) {
+          addLog(`loginTime: ${data.session.loginTimeISO}`)
+        }
+        
+        // 显示API预计算的时间差
+        if (data.session?.timeSinceLastActive) {
+          addLog(`API计算的时间差: ${data.session.timeSinceLastActive}`)
+        }
         
         // 检查超时状态
         if (data.session?.lastActiveTime) {
           const now = Date.now()
-          const timeSinceActive = now - data.session.lastActiveTime
-          const minutesSinceActive = Math.round(timeSinceActive / 1000 / 60)
-          addLog(`距离最后活跃时间: ${minutesSinceActive} 分钟`)
-          addLog(`是否超时: ${minutesSinceActive > 30 ? '是' : '否'}`)
+          const lastActiveTime = data.session.lastActiveTime
+          
+          // 验证lastActiveTime是否为有效数字
+          if (typeof lastActiveTime === 'number' && !isNaN(lastActiveTime) && lastActiveTime > 0) {
+            const timeSinceActive = now - lastActiveTime
+            const minutesSinceActive = Math.round(timeSinceActive / 1000 / 60)
+            addLog(`距离最后活跃时间: ${minutesSinceActive} 分钟`)
+            addLog(`是否超时: ${minutesSinceActive > 30 ? '是' : '否'}`)
+          } else {
+            addLog(`lastActiveTime无效: ${lastActiveTime} (类型: ${typeof lastActiveTime})`)
+            addLog(`建议检查session设置逻辑`)
+          }
+        } else {
+          addLog(`lastActiveTime未设置或为空`)
+          
+          // 检查是否有loginTime作为参考
+          if (data.session?.loginTime) {
+            const loginTime = data.session.loginTime
+            if (typeof loginTime === 'number' && !isNaN(loginTime) && loginTime > 0) {
+              const now = Date.now()
+              const timeSinceLogin = now - loginTime
+              const minutesSinceLogin = Math.round(timeSinceLogin / 1000 / 60)
+              addLog(`参考登录时间，距离登录: ${minutesSinceLogin} 分钟`)
+            } else {
+              addLog(`loginTime也无效: ${loginTime}`)
+            }
+          }
         }
       } else {
         addLog(`Session检查失败: ${data.message || 'Unknown error'}`)
