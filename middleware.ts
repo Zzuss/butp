@@ -70,8 +70,9 @@ export async function middleware(request: NextRequest) {
       
       // 检查session是否过期 (30分钟无活动)
       if (isSessionExpired(session)) {
-        console.log('Middleware: session expired due to inactivity, redirecting to CAS logout');
-        // 重定向到CAS logout，这会清除CAS服务器认证并重定向回登录
+        console.log('Middleware: session expired due to inactivity, forcing complete CAS logout');
+        // 🔧 强制完整的CAS logout流程：这会清除本地session并强制CAS服务器也清除认证状态
+        // 用户下次访问时必须进行完整的重新认证
         const logoutUrl = new URL('/api/auth/cas/logout', request.url);
         return NextResponse.redirect(logoutUrl);
       }
@@ -84,8 +85,8 @@ export async function middleware(request: NextRequest) {
           
           // 先检查是否超过30分钟（使用保留的lastActiveTime）
           if (isSessionExpired(session)) {
-            console.log('Middleware: session expired during auto-login check, redirecting to CAS logout');
-            // 超时了，需要完全重新认证
+            console.log('Middleware: session expired during auto-login check, forcing complete CAS logout');
+            // 🔧 超时了，需要完全重新认证：强制清除CAS服务器认证状态
             const logoutUrl = new URL('/api/auth/cas/logout', request.url);
             return NextResponse.redirect(logoutUrl);
           }

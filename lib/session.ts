@@ -37,6 +37,8 @@ export const sessionOptions: SessionOptions = {
 };
 
 // 会话超时检查函数
+// 🔧 修复说明：此函数检查本地会话是否超过30分钟无活动
+// 当检测到超时时，系统会强制执行完整的CAS logout流程，确保CAS服务器端也清除认证状态
 export function isSessionExpired(session: SessionData): boolean {
   // 如果没有lastActiveTime，说明从未活跃过，视为过期
   if (!session.lastActiveTime) {
