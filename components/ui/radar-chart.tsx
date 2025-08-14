@@ -19,12 +19,12 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
     if (!ctx) return
 
     // 设置画布大小 - 大幅增加为标签留出充足空间
-    const size = 450 // 大幅增加画布大小
+    const size = 450 // 改回450
     canvas.width = size
     canvas.height = size
     const centerX = size / 2
     const centerY = size / 2
-    const radius = size / 2 - 80 // 大幅增加边距，为标签留出充足空间
+    const radius = size / 2 - 80 // 改回80
 
     // 清除画布
     ctx.clearRect(0, 0, size, size)
@@ -69,7 +69,9 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
     ctx.beginPath()
     for (let i = 0; i < data.length; i++) {
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2
-      const normalizedValue = Math.min(data[i] / 100, 1)
+      // 调整数值映射比例：数值10到第二个多边形，15到第三个，20到第四个
+      // 第二个多边形是半径的2/5，所以调整系数为 (2/5) / (10/100) = 4
+      const normalizedValue = Math.min((data[i] / 100) * 4, 1)
       const r = radius * normalizedValue
       const x = centerX + r * Math.cos(angle)
       const y = centerY + r * Math.sin(angle)
@@ -87,24 +89,25 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
     ctx.fillStyle = '#3b82f6'
     for (let i = 0; i < data.length; i++) {
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2
-      const normalizedValue = Math.min(data[i] / 100, 1)
+      // 使用相同的数值映射比例
+      const normalizedValue = Math.min((data[i] / 100) * 4, 1)
       const r = radius * normalizedValue
       const x = centerX + r * Math.cos(angle)
       const y = centerY + r * Math.sin(angle)
       ctx.beginPath()
-      ctx.arc(x, y, 4, 0, 2 * Math.PI) // 稍微增大数据点
+      ctx.arc(x, y, 4, 0, 2 * Math.PI) // 改回4
       ctx.fill()
     }
 
     // 绘制标签
     ctx.fillStyle = '#374151'
-    ctx.font = 'bold 12px Arial' // 调整字体大小和粗细
+    ctx.font = 'bold 12px Arial' // 改回12px
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     for (let i = 0; i < labels.length; i++) {
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2
       // 增加标签偏移距离，确保文字不被截断
-      const labelRadius = radius + 50
+      const labelRadius = radius + 50 // 改回50
       const x = centerX + labelRadius * Math.cos(angle)
       const y = centerY + labelRadius * Math.sin(angle)
       
@@ -128,17 +131,18 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
 
     // 绘制数值
     ctx.fillStyle = '#3b82f6'
-    ctx.font = 'bold 13px Arial' // 增大字体
+    ctx.font = 'bold 13px Arial' // 改回13px
     ctx.textAlign = 'center'
     for (let i = 0; i < data.length; i++) {
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2
-      const normalizedValue = Math.min(data[i] / 100, 1)
+      // 使用相同的数值映射比例
+      const normalizedValue = Math.min((data[i] / 100) * 4, 1)
       const r = radius * normalizedValue
       const x = centerX + r * Math.cos(angle)
       const y = centerY + r * Math.sin(angle)
       
       // 在数据点旁边显示数值（保留一位小数）
-      const offsetX = 20 * Math.cos(angle) // 增大偏移
+      const offsetX = 20 * Math.cos(angle) // 改回20
       const offsetY = 20 * Math.sin(angle)
       ctx.fillText(data[i].toFixed(1), x + offsetX, y + offsetY)
     }

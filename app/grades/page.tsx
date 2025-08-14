@@ -37,7 +37,7 @@ export default function AllGrades() {
     setLoading(true)
     try {
       // 优先使用缓存的数据
-      const { getStudentResults, getFromCache } = await import('@/lib/dashboard-data')
+      const { getStudentResults, getFromCache, getStudentInfo, getCourseNameTranslation } = await import('@/lib/dashboard-data')
       
       // 检查是否有缓存数据
       const cacheKey = `student_results_${studentId}`
@@ -50,7 +50,6 @@ export default function AllGrades() {
       } else {
         console.log('缓存中没有数据，开始查询数据库')
         // 获取学生信息（年级和专业）
-        const { getStudentInfo } = await import('@/lib/dashboard-data')
         const studentInfo = await getStudentInfo(studentId)
         
         // 获取所有成绩
@@ -58,6 +57,39 @@ export default function AllGrades() {
       }
       
       if (results && results.length > 0) {
+        // 如果是英文模式，需要翻译课程名称
+        if (language === 'en') {
+          try {
+            // 获取学生信息用于翻译
+            const studentInfo = await getStudentInfo(studentId)
+            
+            // 翻译所有课程名称
+            const translatedResults = await Promise.all(
+              results.map(async (course) => {
+                try {
+                  const englishName = await getCourseNameTranslation(
+                    course.course_name,
+                    studentInfo?.major,
+                    studentInfo?.year
+                  )
+                  return {
+                    ...course,
+                    course_name: englishName
+                  }
+                } catch (error) {
+                  console.error('翻译课程名称失败:', course.course_name, error)
+                  // 如果翻译失败，使用原中文名称
+                  return course
+                }
+              })
+            )
+            results = translatedResults
+          } catch (error) {
+            console.error('批量翻译课程名称失败:', error)
+            // 如果批量翻译失败，保持原数据
+          }
+        }
+        
         // 按学分从高到低排序
         const sortedGrades = [...results].sort((a, b) => {
           const creditA = typeof a.credit === 'number' ? a.credit : parseFloat(String(a.credit)) || 0
@@ -241,7 +273,10 @@ export default function AllGrades() {
               ) : radarData ? (
                 <RadarChart 
                   data={radarData} 
-                  labels={['知识掌握', '应用能力', '分析能力', '综合能力', '评价能力']} 
+                  labels={language === 'en' 
+                    ? ['Knowledge', 'Application', 'Analysis', 'Synthesis', 'Evaluation']
+                    : ['知识掌握', '应用能力', '分析能力', '综合能力', '评价能力']
+                  } 
                 />
               ) : (
                 <div className="flex items-center justify-center h-48">

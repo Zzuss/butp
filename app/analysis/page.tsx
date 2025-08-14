@@ -13,8 +13,8 @@ import { useAuth } from "@/contexts/AuthContext"
 
 // 能力标签（支持中英文）
 const abilityLabels = {
-  zh: ['公共课程', '实践课程', '数学科学', '政治课程', '基础学科', '创新课程', '英语课程', '基础专业', '专业课程'],
-  en: ['Public Courses', 'Practice Courses', 'Math & Science', 'Political Courses', 'Basic Subjects', 'Innovation Courses', 'English Courses', 'Basic Major', 'Major Courses']
+  zh: ['数理逻辑与科学基础', '专业核心技术', '人文与社会素养', '工程实践与创新应用', '职业发展与团队协作'],
+  en: ['Math & Science Foundation', 'Professional Core Technology', 'Humanities & Social Literacy', 'Engineering Practice & Innovation', 'Career Development & Teamwork']
 }
 
 export default function Analysis() {
@@ -39,7 +39,7 @@ export default function Analysis() {
   const [selectedButton, setSelectedButton] = useState<'graduation' | 'overseas' | 'domestic' | null>(null);
 
   // 能力数据状态
-  const [abilityData, setAbilityData] = useState<number[]>([50, 70, 80, 50, 70, 80, 50, 70, 80]);
+  const [abilityData, setAbilityData] = useState<number[]>([50, 70, 80, 50, 70]);
   const [loadingAbility, setLoadingAbility] = useState(false);
 
   // 毕业要求状态
