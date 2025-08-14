@@ -36,7 +36,7 @@ export default function RootLayout({
             <PageViewTracker />
           </AuthProvider>
         </LanguageProvider>
-        <UmamiAnalytics websiteId="ec362d7d-1d62-46c2-8338-6e7c0df7c084" />
+        <UmamiAnalytics websiteId="4bd87e19-b721-41e5-9de5-0c694e046425" />
       </body>
     </html>
   );

@@ -26,14 +26,18 @@ const PUBLIC_PATHS = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  console.log('🚀 Middleware triggered for path:', pathname);
+
   // 检查是否是API路由
   if (pathname.startsWith('/api/')) {
     // API路由不在中间件中处理认证，由各自的API处理
+    console.log('📝 Middleware: API route detected, skipping auth check');
     return NextResponse.next();
   }
 
   // 检查是否是公开路径
   if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+    console.log('🔓 Middleware: public path detected, allowing access');
     return NextResponse.next();
   }
 
@@ -41,91 +45,103 @@ export async function middleware(request: NextRequest) {
   const isProtectedPath = PROTECTED_PATHS.some(path => pathname.startsWith(path));
   
   if (isProtectedPath) {
+    console.log('🔒 Middleware: protected path detected, checking auth');
+    
     // 检查是否为本地开发环境
     const isLocalhost = request.nextUrl.hostname === 'localhost' || 
                        request.nextUrl.hostname === '127.0.0.1' ||
                        process.env.NODE_ENV === 'development';
     
-    if (isLocalhost) {
-      // 本地开发环境：直接重定向到登录页面，跳过CAS认证
-      console.log('Middleware: localhost detected, redirecting to login page for path:', pathname);
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('returnUrl', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-    
     try {
-      // 生产环境：检查用户会话
+      // 本地和生产环境：都需要检查用户会话
       const response = NextResponse.next();
       const session = await getIronSession<SessionData>(request, response, sessionOptions);
       
-      console.log('Middleware: checking session for path:', pathname, {
+      console.log(`🔍 Middleware: checking session for path ${pathname} (${isLocalhost ? 'localhost' : 'production'}):`, {
         isLoggedIn: session.isLoggedIn,
         isCasAuthenticated: session.isCasAuthenticated,
         userId: session.userId,
-        userHash: session.userHash,
-        lastActiveTime: session.lastActiveTime,
+        userHash: session.userHash ? session.userHash.substring(0, 12) + '...' : 'none',
+        lastActiveTime: session.lastActiveTime ? new Date(session.lastActiveTime).toISOString() : 'none',
         timeoutCheck: isSessionExpired(session)
       });
       
-      // 检查session是否过期 (30分钟无活动)
+      // 🔧 关键修复：只有在真正超时时才清除session
       if (isSessionExpired(session)) {
-        console.log('Middleware: session expired due to inactivity, redirecting to CAS logout');
-        // 重定向到CAS logout，这会清除CAS服务器认证并重定向回登录
+        console.log('⏰ Middleware: session expired due to inactivity (30min), forcing complete CAS logout');
+        console.log('🔄 Middleware: redirecting to CAS logout URL');
         const logoutUrl = new URL('/api/auth/cas/logout', request.url);
         return NextResponse.redirect(logoutUrl);
       }
       
-      // 检查用户是否已完全登录（既要CAS认证又要最终登录完成）
-      if (!session.isLoggedIn || !session.isCasAuthenticated) {
-        // 如果有CAS认证但未登录，说明是页面关闭后重新访问
-        if (session.isCasAuthenticated && !session.isLoggedIn && session.userId && session.userHash) {
-          console.log('Middleware: has CAS auth but not logged in, checking timeout before auto-login');
-          
-          // 先检查是否超过30分钟（使用保留的lastActiveTime）
-          if (isSessionExpired(session)) {
-            console.log('Middleware: session expired during auto-login check, redirecting to CAS logout');
-            // 超时了，需要完全重新认证
-            const logoutUrl = new URL('/api/auth/cas/logout', request.url);
-            return NextResponse.redirect(logoutUrl);
-          }
-          
-          console.log('Middleware: within timeout window, completing auto-login');
-          // 在30分钟内，自动完成登录
+      // 🔧 修复：检查用户是否已登录
+      // 如果session存在且未过期，但登录状态不完整，则自动恢复登录状态
+      if (session.userId && session.userHash && session.isCasAuthenticated) {
+        let sessionChanged = false;
+        
+        // 如果有完整的认证信息但isLoggedIn为false，说明是页面刷新或重新访问
+        if (!session.isLoggedIn) {
+          console.log('🔄 Middleware: restoring login state after page refresh/reopen');
           session.isLoggedIn = true;
-          session.lastActiveTime = Date.now();  // 更新为当前访问时间
-          await session.save();
+          sessionChanged = true;
           
-          // 创建新的响应继续处理
-          const continueResponse = NextResponse.next();
-          // 复制session cookie到响应
-          const sessionCookieHeader = response.headers.get('set-cookie');
-          if (sessionCookieHeader) {
-            continueResponse.headers.set('set-cookie', sessionCookieHeader);
+          // 📝 显示上次活跃时间信息，帮助调试
+          if (session.lastActiveTime) {
+            const timeSinceLastActive = Date.now() - session.lastActiveTime;
+            const minutesSince = Math.round(timeSinceLastActive / 1000 / 60);
+            console.log(`📊 Last active: ${new Date(session.lastActiveTime).toISOString()} (${minutesSince} minutes ago)`);
           }
-          return continueResponse;
         }
         
-        console.log('Middleware: redirecting to CAS login for path:', pathname);
+        // 更新活跃时间为当前访问时间
+        const oldActiveTime = session.lastActiveTime;
+        updateSessionActivity(session);
+        if (session.lastActiveTime !== oldActiveTime) {
+          sessionChanged = true;
+          console.log('⏰ Updated lastActiveTime from', oldActiveTime ? new Date(oldActiveTime).toISOString() : 'none', 'to', new Date(session.lastActiveTime).toISOString());
+        }
+        
+        // 只有在session数据发生变化时才保存
+        if (sessionChanged) {
+          console.log('✅ Middleware: session data changed, saving...');
+          await session.save();
+        } else {
+          console.log('✅ Middleware: session valid, no changes needed');
+        }
+        
+        return response;
+      }
+      
+      // 如果没有完整的认证信息，重定向到登录
+      if (isLocalhost) {
+        console.log('🚪 Middleware: localhost - no valid authentication, redirecting to local login page for path:', pathname);
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('returnUrl', pathname);
+        return NextResponse.redirect(loginUrl);
+      } else {
+        console.log('🚪 Middleware: production - no valid authentication, redirecting to CAS login for path:', pathname);
         const loginUrl = new URL('/api/auth/cas/login', request.url);
         loginUrl.searchParams.set('returnUrl', pathname);
         return NextResponse.redirect(loginUrl);
       }
-      
-      // 更新session活跃时间
-      updateSessionActivity(session);
-      await session.save();
-      
-      return response;
     } catch (error) {
-      console.error('Middleware error:', error);
+      console.error('❌ Middleware error:', error);
       // 如果会话检查失败，重定向到登录页面
-      const loginUrl = new URL('/api/auth/cas/login', request.url);
-      loginUrl.searchParams.set('returnUrl', pathname);
-      return NextResponse.redirect(loginUrl);
+      if (isLocalhost) {
+        console.log('❌ Middleware error in localhost, redirecting to local login');
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('returnUrl', pathname);
+        return NextResponse.redirect(loginUrl);
+      } else {
+        console.log('❌ Middleware error in production, redirecting to CAS login');
+        const loginUrl = new URL('/api/auth/cas/login', request.url);
+        loginUrl.searchParams.set('returnUrl', pathname);
+        return NextResponse.redirect(loginUrl);
+      }
     }
   }
 
+  console.log('🔓 Middleware: non-protected path, allowing access');
   return NextResponse.next();
 }
 

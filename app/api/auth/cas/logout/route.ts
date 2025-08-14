@@ -26,11 +26,19 @@ async function clearLoginSession(request: NextRequest, response: NextResponse) {
   
   // 只清除登录状态，保留CAS认证信息
   session.isLoggedIn = false;
-  // 保留lastActiveTime作为页面关闭时间，用于30分钟超时检查
-  // session.lastActiveTime = 0;  // ❌ 删除这行，保持关闭时的时间戳
-  // 保留：userId, userHash, name, isCasAuthenticated, loginTime, lastActiveTime
   
-  console.log('CAS logout POST: preserving lastActiveTime for timeout check:', session.lastActiveTime);
+  // 🔧 关键修复：更新lastActiveTime为当前时间（页面关闭时间）
+  // 这样下次重新打开页面时可以正确计算30分钟超时
+  const now = Date.now();
+  session.lastActiveTime = now;
+  
+  // 保留：userId, userHash, name, isCasAuthenticated, loginTime, lastActiveTime（已更新为关闭时间）
+  
+  console.log('CAS logout POST: updated lastActiveTime to page close time:', {
+    closeTime: new Date(now).toISOString(),
+    preservedUserId: session.userId,
+    preservedCasAuth: session.isCasAuthenticated
+  });
   
   await session.save();
   return session;
@@ -65,7 +73,11 @@ export async function GET(request: NextRequest) {
     
     // 生产环境跳转到CAS服务器退出
     console.log('CAS logout GET: production environment, redirecting to CAS logout');
-    const response = NextResponse.redirect(buildCasLogoutUrl());
+    
+    // 🔧 强制清除CAS服务器认证状态：重定向到CAS logout，完成后重定向到登录页面而不是首页
+    // 这样确保用户下次访问时必须重新进行完整的CAS认证流程
+    const casLogoutUrl = buildCasLogoutUrl();
+    const response = NextResponse.redirect(casLogoutUrl);
     
     // 复制session cookies到响应
     const sessionCookieHeader = tempResponse.headers.get('set-cookie');
@@ -73,7 +85,7 @@ export async function GET(request: NextRequest) {
       response.headers.set('set-cookie', sessionCookieHeader);
     }
     
-    console.log('✅ CAS logout GET: redirecting to:', buildCasLogoutUrl());
+    console.log('✅ CAS logout GET: force logout from CAS server, redirecting to:', casLogoutUrl);
     return response;
   } catch (error) {
     console.error('Error in CAS logout GET:', error);

@@ -43,8 +43,10 @@ export function buildCasLoginUrl(): string {
 
 // 构建CAS登出URL
 export function buildCasLogoutUrl(): string {
+  // 🔧 修改：登出后重定向到登录页面而不是首页，确保用户必须重新认证
+  const logoutServiceUrl = `${CAS_CONFIG.siteUrl}/login`;
   const params = new URLSearchParams({
-    service: CAS_CONFIG.siteUrl,
+    service: logoutServiceUrl,
   });
   
   return `${CAS_CONFIG.serverUrl}/logout?${params.toString()}`;
