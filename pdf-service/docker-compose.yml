@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  pdf-service:
+    build: .
+    image: pdf-service:latest
+    container_name: pdf-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - ALLOWED_ORIGIN=https://butp.tech
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+    shm_size: '1g'
+
+

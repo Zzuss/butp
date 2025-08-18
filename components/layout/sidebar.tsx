@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 import { trackUserAction } from "@/lib/analytics"
 import { CompletePDFExport } from '@/components/pdf/CompletePDFExport'
+import PreserveLayoutPdfButton from '@/components/pdf/PreserveLayoutPdfButton'
 
 const sidebarItems = [
   {
@@ -182,11 +183,7 @@ export function AppSidebar() {
               <>
           {/* PDF导出按钮 */}
           <div className="mb-3">
-            <CompletePDFExport 
-              pageTitle="当前页面"
-              fileName={`page_export_${new Date().toISOString().split('T')[0]}.pdf`}
-              className="sidebar"
-            />
+            <PreserveLayoutPdfButton defaultViewport={1366} />
           </div>
           
           {/* 语言切换按钮 */}
