@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { getTopPercentageGPAThreshold, getStudentInfo } from "@/lib/dashboard-data"
 import { getStudentAbilityData } from "@/lib/ability-data"
 import { RadarChart } from "@/components/ui/radar-chart"
+import { Slider } from "@/components/ui/slider"
 
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -1422,7 +1423,7 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩可查看趋势变化
+                            修改成绩
                           </th>
                         )}
                       </tr>
@@ -1481,26 +1482,23 @@ export default function Analysis() {
                                 )}
                               </td>
                               {isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[150px] md:min-w-0">
+                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
                                   {score !== null && score !== undefined ? (
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      step="0.5"
-                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    <Slider
                                       value={(() => {
                                         // 从modified缓存中查找当前课程的最新成绩
                                         const modifiedScores = getModifiedScores();
                                         const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
                                         if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
-                                          return modifiedCourse.score;
+                                          return Number(modifiedCourse.score);
                                         }
-                                        return score; // 如果没有修改，显示原始成绩
+                                        return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      placeholder="输入新成绩"
-                                      onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
-                                      onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
+                                      className="w-full"
                                     />
                                   ) : (
                                     <span className="text-gray-400 italic text-xs">无原始成绩</span>
@@ -1787,7 +1785,7 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩可查看趋势变化
+                            修改成绩
                           </th>
                         )}
                       </tr>
@@ -1838,29 +1836,26 @@ export default function Analysis() {
                                 )}
                               </td>
                               {isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[150px] md:min-w-0">
-                                  {course.score !== null ? (
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      step="0.5"
-                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
+                                  {score !== null && score !== undefined ? (
+                                    <Slider
                                       value={(() => {
                                         // 从modified缓存中查找当前课程的最新成绩
                                         const modifiedScores = getModifiedScores();
                                         const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
                                         if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
-                                          return modifiedCourse.score;
+                                          return Number(modifiedCourse.score);
                                         }
-                                        return course.score; // 如果没有修改，显示原始成绩
+                                        return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
-                                      onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
-                                      placeholder={t('analysis.course.scores.input.placeholder')}
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
+                                      className="w-full"
                                     />
                                   ) : (
-                                    <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
+                                    <span className="text-gray-400 italic text-xs">无原始成绩</span>
                                   )}
                                 </td>
                               )}
