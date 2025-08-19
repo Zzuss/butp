@@ -27,7 +27,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { trackUserAction } from "@/lib/analytics"
 import { CompletePDFExport } from '@/components/pdf/CompletePDFExport'
 import PreserveLayoutPdfButton from '@/components/pdf/PreserveLayoutPdfButton'
-import ExternalPdfServiceButton from '@/components/pdf/ExternalPdfServiceButton'
+import ClientPdfButton from '@/components/pdf/ClientPdfButton'
 
 const sidebarItems = [
   {
@@ -185,8 +185,12 @@ export function AppSidebar() {
           {/* PDF导出按钮 */}
           {/* 提高按钮层级并确保可点击，避免被页面其他浮层遮挡 */}
           <div className="mb-3 relative z-60 pointer-events-auto">
-            <ExternalPdfServiceButton serviceUrl="/api/generate-pdf-proxy" />
-            <PreserveLayoutPdfButton defaultViewport={1366} />
+            <div className="space-y-2">
+              <PreserveLayoutPdfButton defaultViewport={1366} />
+              <div className="border-t pt-2">
+                <ClientPdfButton defaultViewport={1366} />
+              </div>
+            </div>
           </div>
           
           {/* 语言切换按钮 */}

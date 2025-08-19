@@ -39,6 +39,7 @@ export async function POST(req: Request) {
         'Content-Disposition': contentDisposition
       }
     })
+
   } catch (err: any) {
     console.error('generate-pdf-proxy error', err && (err.stack || err.message || err))
     return new Response(JSON.stringify({ error: String(err && err.message) }), { status: 500 })
