@@ -26,6 +26,8 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
 import { trackUserAction } from "@/lib/analytics"
 import { CompletePDFExport } from '@/components/pdf/CompletePDFExport'
+import PreserveLayoutPdfButton from '@/components/pdf/PreserveLayoutPdfButton'
+import ExternalPdfServiceButton from '@/components/pdf/ExternalPdfServiceButton'
 
 const sidebarItems = [
   {
@@ -181,12 +183,10 @@ export function AppSidebar() {
             {!isCollapsed ? (
               <>
           {/* PDF导出按钮 */}
-          <div className="mb-3">
-            <CompletePDFExport 
-              pageTitle="当前页面"
-              fileName={`page_export_${new Date().toISOString().split('T')[0]}.pdf`}
-              className="sidebar"
-            />
+          {/* 提高按钮层级并确保可点击，避免被页面其他浮层遮挡 */}
+          <div className="mb-3 relative z-60 pointer-events-auto">
+            <ExternalPdfServiceButton serviceUrl="/api/generate-pdf-proxy" />
+            <PreserveLayoutPdfButton defaultViewport={1366} />
           </div>
           
           {/* 语言切换按钮 */}
