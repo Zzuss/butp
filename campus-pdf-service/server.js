@@ -172,17 +172,35 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
       console.log(`尝试访问URL: ${url}`);
       
       try {
-        // 先测试网络连通性
-        const testResponse = await fetch(url, { 
-          method: 'HEAD', 
-          timeout: 10000 
-        }).catch(e => {
-          console.warn('网络连通性测试失败:', e.message);
-          return null;
-        });
+        // 先测试网络连通性（使用Node.js内置模块）
+        const https = require('https');
+        const http = require('http');
         
-        if (!testResponse) {
-          throw new Error(`无法连接到 ${url}，请检查网络配置`);
+        const testConnection = () => {
+          return new Promise((resolve) => {
+            const urlObj = new URL(url);
+            const client = urlObj.protocol === 'https:' ? https : http;
+            
+            const req = client.request({
+              hostname: urlObj.hostname,
+              port: urlObj.port,
+              path: '/',
+              method: 'HEAD',
+              timeout: 10000
+            }, (res) => {
+              resolve(true);
+            });
+            
+            req.on('error', () => resolve(false));
+            req.on('timeout', () => resolve(false));
+            req.end();
+          });
+        };
+        
+        const canConnect = await testConnection();
+        if (!canConnect) {
+          console.warn('网络连通性测试失败');
+          // 注意：即使连通性测试失败，仍然尝试用Puppeteer加载页面
         }
         
         // 尝试访问页面

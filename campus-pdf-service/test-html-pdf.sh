@@ -97,16 +97,16 @@ TEST_HTML='<!DOCTYPE html>
 </body>
 </html>'
 
-# 转义HTML内容用于JSON
-ESCAPED_HTML=$(echo "$TEST_HTML" | sed 's/"/\\"/g' | tr -d '\n')
+# 转义HTML内容用于JSON（更安全的方式）
+ESCAPED_HTML=$(echo "$TEST_HTML" | jq -Rs .)
 
 echo "正在生成测试PDF..."
 
-# 调用PDF服务
+# 调用PDF服务（使用jq构建JSON）
 curl -X POST http://localhost:8000/generate-pdf \
   -H "Content-Type: application/json" \
   -H "x-pdf-key: campus-pdf-2024-1755617095" \
-  -d "{\"html\":\"$ESCAPED_HTML\",\"viewportWidth\":1366,\"filename\":\"test-html-butp.pdf\"}" \
+  -d "$(jq -n --arg html "$TEST_HTML" '{html: $html, viewportWidth: 1366, filename: "test-html-butp.pdf"}')" \
   -o test-html-butp.pdf
 
 # 检查结果
