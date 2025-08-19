@@ -28,6 +28,7 @@ import { trackUserAction } from "@/lib/analytics"
 import { CompletePDFExport } from '@/components/pdf/CompletePDFExport'
 import PreserveLayoutPdfButton from '@/components/pdf/PreserveLayoutPdfButton'
 import ClientPdfButton from '@/components/pdf/ClientPdfButton'
+import CampusPdfServiceButton from '@/components/pdf/CampusPdfServiceButton'
 
 const sidebarItems = [
   {
@@ -187,7 +188,8 @@ export function AppSidebar() {
           <div className="mb-3 relative z-60 pointer-events-auto">
             <div className="space-y-2">
               <PreserveLayoutPdfButton defaultViewport={1366} />
-              <div className="border-t pt-2">
+              <div className="border-t pt-2 space-y-2">
+                <CampusPdfServiceButton />
                 <ClientPdfButton defaultViewport={1366} />
               </div>
             </div>

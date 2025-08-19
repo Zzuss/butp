@@ -86,7 +86,7 @@ export default function CampusPdfServiceButton({
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json', 
-              'x-pdf-key': 'campus-pdf-2024',
+              'x-pdf-key': 'campus-pdf-2024-1755617095',
               // 转发用户的认证信息到校内服务
               'Cookie': document.cookie
             },
