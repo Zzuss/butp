@@ -166,13 +166,38 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
     if (html) {
       await page.setContent(html, { 
         waitUntil: 'networkidle0',
-        timeout: 30000 
+        timeout: 60000 
       });
     } else if (url) {
-      await page.goto(url, { 
-        waitUntil: 'networkidle0',
-        timeout: 30000 
-      });
+      console.log(`尝试访问URL: ${url}`);
+      
+      try {
+        // 先测试网络连通性
+        const testResponse = await fetch(url, { 
+          method: 'HEAD', 
+          timeout: 10000 
+        }).catch(e => {
+          console.warn('网络连通性测试失败:', e.message);
+          return null;
+        });
+        
+        if (!testResponse) {
+          throw new Error(`无法连接到 ${url}，请检查网络配置`);
+        }
+        
+        // 尝试访问页面
+        await page.goto(url, { 
+          waitUntil: 'domcontentloaded', // 改为更宽松的等待条件
+          timeout: 60000 // 增加超时时间
+        });
+        
+        // 等待页面渲染
+        await page.waitForTimeout(3000);
+        
+      } catch (error) {
+        console.error('页面加载失败:', error.message);
+        throw new Error(`无法加载页面 ${url}: ${error.message}`);
+      }
     } else {
       return res.status(400).json({ error: '需要提供 url 或 html 参数' });
     }

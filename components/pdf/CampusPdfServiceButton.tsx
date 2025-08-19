@@ -66,9 +66,66 @@ export default function CampusPdfServiceButton({
         try {
           setStatusMessage('检测校园网连接...')
           
-          // 构建请求体 - 发送当前页面URL给校内服务
+          // 获取当前页面的完整HTML内容（保留所有样式和状态）
+          const getPageHTML = () => {
+            // 克隆整个文档
+            const docClone = document.cloneNode(true) as Document
+            
+            // 收集所有内联CSS样式
+            const styleSheets = Array.from(document.styleSheets)
+            let allCSS = ''
+            
+            styleSheets.forEach(sheet => {
+              try {
+                if (sheet.href && !sheet.href.startsWith(window.location.origin)) {
+                  // 跨域样式表，添加链接
+                  const linkElement = docClone.createElement('link')
+                  linkElement.rel = 'stylesheet'
+                  linkElement.href = sheet.href
+                  docClone.head.appendChild(linkElement)
+                } else {
+                  // 同域样式表，内联CSS规则
+                  const rules = Array.from(sheet.cssRules || sheet.rules || [])
+                  rules.forEach(rule => {
+                    allCSS += rule.cssText + '\n'
+                  })
+                }
+              } catch (e) {
+                // 无法访问的样式表，尝试添加链接
+                if (sheet.href) {
+                  const linkElement = docClone.createElement('link')
+                  linkElement.rel = 'stylesheet'
+                  linkElement.href = sheet.href
+                  docClone.head.appendChild(linkElement)
+                }
+              }
+            })
+            
+            // 添加收集到的内联样式
+            if (allCSS) {
+              const styleElement = docClone.createElement('style')
+              styleElement.textContent = allCSS
+              docClone.head.appendChild(styleElement)
+            }
+            
+            // 添加基础URL以确保相对路径资源正确加载
+            const baseElement = docClone.createElement('base')
+            baseElement.href = window.location.origin + '/'
+            docClone.head.insertBefore(baseElement, docClone.head.firstChild)
+            
+            // 添加视口优化
+            const viewportMeta = docClone.createElement('meta')
+            viewportMeta.name = 'viewport'
+            viewportMeta.content = `width=${viewport}, initial-scale=1`
+            docClone.head.appendChild(viewportMeta)
+            
+            // 返回完整HTML
+            return '<!DOCTYPE html>' + docClone.documentElement.outerHTML
+          }
+
+          // 构建请求体 - 发送完整HTML内容而不是URL（避免网络问题，质量更好）
           const pdfRequestBody = {
-            url: currentUrl, // 让校内服务访问butp.tech来渲染PDF
+            html: getPageHTML(), // 发送完整HTML内容，包含所有样式和当前状态
             viewportWidth: viewport,
             filename: filename && filename.trim() !== '' ? filename : `export_${new Date().toISOString().slice(0,10)}.pdf`,
             pdfOptions: {
