@@ -21,69 +21,250 @@ export function CompletePDFExport({
   const [progress, setProgress] = useState('')
 
   const generatePDF = async () => {
-    console.log('🚀 Starting viewport-independent PDF generation')
-    
     setIsGenerating(true)
-    setProgress('Creating virtual environment...')
-    
+    setProgress('Preparing print-like capture...')
+
     try {
-      // 保存原始状态
+      // 目标元素：优先尝试 main，其次 body
+      const target = document.querySelector('main') || document.body
+      if (!target) throw new Error('未找到要导出的页面内容')
+
+      // 保存原始滚动位置
       const originalScrollTop = window.pageYOffset
       const originalScrollLeft = window.pageXOffset
-      
-      // 创建一个完全独立的虚拟环境
-      await createVirtualEnvironment()
-      
-      setProgress('Analyzing content in virtual space...')
-      
-      // 在虚拟环境中获取真实尺寸
-      const dimensions = await getVirtualDimensions()
-      console.log('📐 Virtual environment dimensions:', dimensions)
-      
-      setProgress('Capturing in virtual environment...')
-      
-      // 在虚拟环境中进行截图
-      const canvas = await captureInVirtualEnvironment(dimensions)
-      
-      // 恢复原始环境
-      await restoreOriginalEnvironment()
-      
-      console.log('✅ Virtual capture complete:', {
-        width: canvas.width,
-        height: canvas.height,
-        dataSize: Math.round(canvas.toDataURL('image/png', 0.1).length / 1024) + 'KB'
-      })
-      
-      if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error('Generated canvas is empty')
+
+      // 克隆到 iframe，并内联所有计算样式，确保布局与渲染一致
+      setProgress('Cloning page into offscreen iframe...')
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'absolute'
+      iframe.style.left = '-99999px'
+      iframe.style.top = '0'
+      iframe.style.width = `${Math.max(document.documentElement.scrollWidth, 1920)}px`
+      iframe.style.height = `${Math.max(document.documentElement.scrollHeight, 1080)}px`
+      iframe.setAttribute('aria-hidden', 'true')
+      document.body.appendChild(iframe)
+
+      const idoc = iframe.contentDocument || iframe.contentWindow?.document
+      if (!idoc) throw new Error('无法创建 iframe 文档')
+
+      // 基础 head（保留 base），并注入必要样式
+      const base = document.querySelector('base')
+      idoc.open()
+      idoc.write('<!doctype html><html><head>' + (base ? base.outerHTML : '') + '</head><body></body></html>')
+      idoc.close()
+
+      // 克隆目标节点
+      const cloned = target.cloneNode(true) as HTMLElement
+      // 将克隆的根元素加入 iframe
+      idoc.body.style.margin = '0'
+      idoc.body.appendChild(cloned)
+
+      // 递归将计算样式内联到克隆节点
+      const inlineComputedStyles = (sourceElem: Element, destElem: Element) => {
+        const computed = window.getComputedStyle(sourceElem)
+        // 复制所有可枚举的计算样式属性
+        for (let i = 0; i < computed.length; i++) {
+          const prop = computed[i]
+          try {
+            (destElem as HTMLElement).style.setProperty(prop, computed.getPropertyValue(prop), computed.getPropertyPriority(prop))
+          } catch (e) {
+            // 某些只读属性可能会抛错，忽略
+          }
+        }
+
+        // 递归子节点
+        const srcChildren = Array.from(sourceElem.children)
+        const dstChildren = Array.from(destElem.children)
+        for (let i = 0; i < srcChildren.length; i++) {
+          if (dstChildren[i]) inlineComputedStyles(srcChildren[i], dstChildren[i])
+        }
       }
-      
-      setProgress('Creating PDF...')
-      
-      // 创建PDF
-      await createPDFFromCanvas(canvas)
-      
+
+      inlineComputedStyles(target, cloned)
+
+      // 等待字体和外部资源加载
+      setProgress('Waiting for fonts and images to load...')
+      await (document.fonts ? document.fonts.ready : Promise.resolve())
+      // 等待 iframe 内部图片加载
+      const imgs = Array.from(idoc.images || []) as HTMLImageElement[]
+      await Promise.all(imgs.map(img => new Promise<void>(resolve => {
+        if (img.complete) return resolve()
+        img.onload = () => resolve()
+        img.onerror = () => resolve()
+      })))
+
+      // 计算 iframe 内容尺寸
+      const contentWidth = Math.max(idoc.documentElement.scrollWidth, idoc.body.scrollWidth)
+      const contentHeight = Math.max(idoc.documentElement.scrollHeight, idoc.body.scrollHeight)
+
+      setProgress('Capturing iframe content to canvas (segmented)...')
+
+      // 分段截图以避免单个 canvas 超过浏览器限制
+      const scale = 2
+      const MAX_CANVAS = 32767 // 浏览器画布尺寸上限（近似）
+      const maxSegmentHeightDomPx = Math.floor(MAX_CANVAS / scale)
+
+      const segments: HTMLCanvasElement[] = []
+      let capturedHeight = 0
+      let index = 0
+
+      while (capturedHeight < contentHeight) {
+        const segHeight = Math.min(maxSegmentHeightDomPx, contentHeight - capturedHeight)
+        setProgress(`Capturing segment ${index + 1} (height ${segHeight}px)...`)
+
+        const segCanvas = await html2canvas(idoc.documentElement as any, {
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: contentWidth,
+          height: segHeight,
+          x: 0,
+          y: capturedHeight,
+          windowWidth: contentWidth,
+          windowHeight: segHeight,
+          logging: true,
+          foreignObjectRendering: true,
+          imageTimeout: 0,
+          onclone: (clonedDoc) => {
+            const all = clonedDoc.querySelectorAll('*')
+            all.forEach(el => {
+              if (el instanceof HTMLElement) el.style.visibility = 'visible'
+            })
+          }
+        })
+
+        if (segCanvas.width === 0 || segCanvas.height === 0) throw new Error('Segment canvas generated empty')
+        segments.push(segCanvas)
+
+        capturedHeight += segHeight
+        index += 1
+      }
+
+      // 清理 iframe
+      iframe.remove()
+
+      setProgress('Generating PDF from segments...')
+      await createPDFFromCanvases(segments)
+
       // 恢复滚动位置
       window.scrollTo(originalScrollLeft, originalScrollTop)
-      
-      console.log('🎉 PDF Generation Complete!')
       setProgress('PDF generated successfully!')
-      
-      setTimeout(() => {
-        setProgress('')
-      }, 3000)
-      
-    } catch (error) {
-      console.error('❌ PDF Generation Failed:', error)
-      alert(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setTimeout(() => setProgress(''), 2000)
+    } catch (err) {
+      console.error('❌ Print-like PDF generation failed:', err)
+      alert(`导出失败: ${err instanceof Error ? err.message : String(err)}`)
       setProgress('Generation failed')
-      
-      setTimeout(() => {
-        setProgress('')
-      }, 3000)
+      setTimeout(() => setProgress(''), 2000)
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  // 从多段 canvas 生成 PDF（用于分段截图）
+  const createPDFFromCanvases = async (canvases: HTMLCanvasElement[]) => {
+    // 将分段的 canvas 当作一个长画布来处理，但按页按需拼接每页图像，避免创建超大 canvas
+    const canvasFullWidth = canvases[0].width
+    const canvasFullHeight = canvases.reduce((s, c) => s + c.height, 0)
+
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    const pdfWidth = pdf.internal.pageSize.getWidth()
+    const pdfHeight = pdf.internal.pageSize.getHeight()
+    const margin = 15
+    const contentWidth = pdfWidth - (margin * 2)
+    const contentHeight = pdfHeight - (margin * 2) - 20
+
+    const imgRatio = canvasFullWidth / canvasFullHeight
+    const pdfRatio = contentWidth / contentHeight
+
+    let imgWidthPdfUnits: number
+    let imgHeightPdfUnits: number
+    if (imgRatio > pdfRatio) {
+      imgWidthPdfUnits = contentWidth
+      imgHeightPdfUnits = contentWidth / imgRatio
+    } else {
+      imgHeightPdfUnits = contentHeight
+      imgWidthPdfUnits = contentHeight * imgRatio
+    }
+
+    const pixelsPerPdfUnit = canvasFullWidth / imgWidthPdfUnits
+    const totalPages = Math.ceil(imgHeightPdfUnits / contentHeight)
+
+    console.log('📄 Segments -> PDF layout:', { totalPages, canvasFullWidth, canvasFullHeight, pixelsPerPdfUnit })
+
+    let remainingHeightPdf = imgHeightPdfUnits
+    let currentYPdf = 0
+
+    // 预计算段的起始 offset
+    const segmentOffsets: number[] = []
+    let acc = 0
+    for (const c of canvases) {
+      segmentOffsets.push(acc)
+      acc += c.height
+    }
+
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      if (pageNum > 1) pdf.addPage()
+
+      // 页眉
+      pdf.setFontSize(12)
+      pdf.setTextColor(0, 0, 0)
+      pdf.text(pageTitle, margin, margin + 8)
+      pdf.setFontSize(8)
+      pdf.setTextColor(100, 100, 100)
+      pdf.text(`Page ${pageNum} of ${totalPages}`, pdfWidth - margin - 25, margin + 8)
+      pdf.text(`Generated: ${new Date().toLocaleString('en-US')}`, pdfWidth - margin - 50, margin + 15)
+
+      const pageHeightPdf = Math.min(remainingHeightPdf, contentHeight)
+      const sourceYpx = Math.round(currentYPdf * pixelsPerPdfUnit)
+      const sourceHeightPx = Math.max(1, Math.round(pageHeightPdf * pixelsPerPdfUnit))
+
+      // 创建页面片段 canvas（像素为单位）
+      const pageCanvas = document.createElement('canvas')
+      pageCanvas.width = canvasFullWidth
+      pageCanvas.height = sourceHeightPx
+      const pageCtx = pageCanvas.getContext('2d')!
+      pageCtx.fillStyle = '#ffffff'
+      pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+
+      // 将需要的像素区域从各段中逐个复制到 pageCanvas
+      let remainingToCopy = sourceHeightPx
+      let destY = 0
+      // 找到第一个包含 sourceYpx 的段
+      let segIndex = segmentOffsets.findIndex((off, idx) => {
+        const start = off
+        const end = off + canvases[idx].height
+        return sourceYpx >= start && sourceYpx < end
+      })
+      if (segIndex === -1) segIndex = 0
+
+      let readY = sourceYpx - segmentOffsets[segIndex]
+
+      while (remainingToCopy > 0 && segIndex < canvases.length) {
+        const seg = canvases[segIndex]
+        const available = seg.height - readY
+        const take = Math.min(available, remainingToCopy)
+
+        // draw from seg: srcX=0, srcY=readY, srcW=seg.width, srcH=take, destX=0, destY
+        pageCtx.drawImage(seg, 0, readY, seg.width, take, 0, destY, pageCanvas.width, take)
+
+        remainingToCopy -= take
+        destY += take
+        segIndex += 1
+        readY = 0
+      }
+
+      const pageImgData = pageCanvas.toDataURL('image/png', 0.92)
+      const xPosition = (pdfWidth - imgWidthPdfUnits) / 2
+      const yPosition = margin + 20
+      pdf.addImage(pageImgData, 'PNG', xPosition, yPosition, imgWidthPdfUnits, pageHeightPdf)
+
+      remainingHeightPdf -= pageHeightPdf
+      currentYPdf += pageHeightPdf
+    }
+
+    const defaultFileName = fileName || `${pageTitle.replace(/[^\w\s-]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+    pdf.save(defaultFileName)
   }
 
   // 创建虚拟环境，不受当前视窗影响
@@ -374,36 +555,38 @@ export function CompletePDFExport({
     const contentWidth = pdfWidth - (margin * 2)
     const contentHeight = pdfHeight - (margin * 2) - 20
 
-    // 计算图片尺寸
+    // 将 canvas 像素映射到 PDF 单位：先计算在 PDF 中显示时的图片尺寸（保持比例）
     const imgRatio = canvas.width / canvas.height
     const pdfRatio = contentWidth / contentHeight
 
-    let imgWidth, imgHeight
+    let imgWidthPdfUnits: number
+    let imgHeightPdfUnits: number
     if (imgRatio > pdfRatio) {
-      imgWidth = contentWidth
-      imgHeight = contentWidth / imgRatio
+      imgWidthPdfUnits = contentWidth
+      imgHeightPdfUnits = contentWidth / imgRatio
     } else {
-      imgHeight = contentHeight
-      imgWidth = contentHeight * imgRatio
+      imgHeightPdfUnits = contentHeight
+      imgWidthPdfUnits = contentHeight * imgRatio
     }
 
-    const totalPages = Math.ceil(imgHeight / contentHeight)
-    const imgData = canvas.toDataURL('image/png', 0.85)
+    // 计算像素到 PDF 单位的缩放（pixels per PDF-unit）
+    const pixelsPerPdfUnit = canvas.width / imgWidthPdfUnits
+
+    // 总页数按 PDF 单位高度计算
+    const totalPages = Math.ceil(imgHeightPdfUnits / contentHeight)
 
     console.log('📄 PDF layout:', {
       totalPages,
-      imgDimensions: { width: imgWidth, height: imgHeight },
-      canvasDimensions: { width: canvas.width, height: canvas.height }
+      imgDimensionsPdf: { width: imgWidthPdfUnits, height: imgHeightPdfUnits },
+      canvasDimensionsPx: { width: canvas.width, height: canvas.height },
+      pixelsPerPdfUnit
     })
 
-    // 生成多页PDF
-    let remainingHeight = imgHeight
-    let currentY = 0
+    let remainingHeightPdf = imgHeightPdfUnits
+    let currentYPdf = 0
 
     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-      if (pageNum > 1) {
-        pdf.addPage()
-      }
+      if (pageNum > 1) pdf.addPage()
 
       // 页眉
       pdf.setFontSize(12)
@@ -415,39 +598,41 @@ export function CompletePDFExport({
       pdf.text(`Page ${pageNum} of ${totalPages}`, pdfWidth - margin - 25, margin + 8)
       pdf.text(`Generated: ${new Date().toLocaleString('en-US')}`, pdfWidth - margin - 50, margin + 15)
 
-      const pageHeight = Math.min(remainingHeight, contentHeight)
-      const sourceY = (currentY / imgHeight) * canvas.height
-      const sourceHeight = (pageHeight / imgHeight) * canvas.height
+      const pageHeightPdf = Math.min(remainingHeightPdf, contentHeight)
 
-      console.log(`📑 Page ${pageNum}: sourceY=${Math.round(sourceY)}, sourceHeight=${Math.round(sourceHeight)}`)
+      // 将当前 PDF 单位坐标转换为 canvas 像素坐标
+      const sourceYpx = Math.round(currentYPdf * pixelsPerPdfUnit)
+      const sourceHeightPx = Math.max(1, Math.round(pageHeightPdf * pixelsPerPdfUnit))
 
-      // 创建页面片段
+      console.log(`📑 Page ${pageNum}: sourceYpx=${sourceYpx}, sourceHeightPx=${sourceHeightPx}`)
+
+      // 创建页面切片 canvas（像素为单位）
       const pageCanvas = document.createElement('canvas')
       const pageCtx = pageCanvas.getContext('2d')!
 
       pageCanvas.width = canvas.width
-      pageCanvas.height = sourceHeight
+      pageCanvas.height = sourceHeightPx
 
       pageCtx.fillStyle = '#ffffff'
       pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
 
       pageCtx.drawImage(
         canvas,
-        0, sourceY, canvas.width, sourceHeight,
-        0, 0, canvas.width, sourceHeight
+        0, sourceYpx, canvas.width, sourceHeightPx,
+        0, 0, pageCanvas.width, pageCanvas.height
       )
 
-      const pageImgData = pageCanvas.toDataURL('image/png', 0.85)
-      const xPosition = (pdfWidth - imgWidth) / 2
+      const pageImgData = pageCanvas.toDataURL('image/png', 0.92)
+      const xPosition = (pdfWidth - imgWidthPdfUnits) / 2
       const yPosition = margin + 20
 
-      pdf.addImage(pageImgData, 'PNG', xPosition, yPosition, imgWidth, pageHeight)
+      // 将切片以 PDF 单位尺寸插入（保持在 contentWidth/contentHeight 区域内）
+      pdf.addImage(pageImgData, 'PNG', xPosition, yPosition, imgWidthPdfUnits, pageHeightPdf)
 
-      remainingHeight -= pageHeight
-      currentY += pageHeight
+      remainingHeightPdf -= pageHeightPdf
+      currentYPdf += pageHeightPdf
     }
 
-    // 保存PDF
     const defaultFileName = fileName || `${pageTitle.replace(/[^\w\s-]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
     pdf.save(defaultFileName)
   }
