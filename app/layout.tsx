@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/layout/sidebar";
 import { LanguageProvider } from "@/contexts/language-context";
 import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
 import { PageViewTracker } from "@/components/analytics/PageViewTracker";
+import { SidebarLayout } from "@/components/layout/SidebarLayout";
 
 export const metadata: Metadata = {
   title: "学生管理系统",
@@ -27,12 +28,9 @@ export default function RootLayout({
       <body className="antialiased">
         <LanguageProvider>
           <AuthProvider>
-            <div className="flex h-screen flex-col md:flex-row">
-              <AppSidebar />
-              <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-4">
-                {children}
-              </main>
-            </div>
+            <SidebarLayout>
+              {children}
+            </SidebarLayout>
             <PageViewTracker />
           </AuthProvider>
         </LanguageProvider>

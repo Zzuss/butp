@@ -332,7 +332,22 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.domestic.title': '国内读研',
     'analysis.edit.cancel': '取消编辑',
     'analysis.edit.start': '编辑',
-    'analysis.edit.welcome': '欢迎进入编辑模式'
+    'analysis.edit.welcome': '欢迎进入编辑模式',
+    
+    // 隐私条款页面
+    'privacy.title': '隐私条款同意',
+    'privacy.description': '请仔细阅读以下隐私政策与用户数据使用条款，同意后方可使用系统服务',
+    'privacy.loading': '正在加载隐私条款内容...',
+    'privacy.error.loading': '加载隐私条款失败，请刷新页面重试',
+    'privacy.error.network': '网络错误，请重试',
+    'privacy.error.agree': '同意失败，请重试',
+    'privacy.button.agree': '我同意隐私条款',
+    'privacy.button.disagree': '我不同意',
+    'privacy.button.processing': '处理中...',
+    'privacy.confirm.disagree': '如果您不同意隐私条款，将无法使用系统服务。确定要退出吗？',
+    'privacy.hint.agree': '点击"我同意"表示您已阅读并同意上述隐私条款',
+    'privacy.hint.disagree': '如果您不同意，将无法使用系统服务',
+    'privacy.last.updated': '最后更新时间：{date}'
   },
   en: {
     // 登录页面
@@ -649,7 +664,22 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.domestic.title': 'Domestic Study',
     'analysis.edit.cancel': 'Cancel Edit',
     'analysis.edit.start': 'Edit',
-    'analysis.edit.welcome': 'Welcome to Edit Mode'
+    'analysis.edit.welcome': 'Welcome to Edit Mode',
+    
+    // Privacy Agreement Page
+    'privacy.title': 'Privacy Agreement',
+    'privacy.description': 'Please carefully read the following privacy policy and user data usage terms. You must agree to use the system services.',
+    'privacy.loading': 'Loading privacy policy content...',
+    'privacy.error.loading': 'Failed to load privacy policy, please refresh the page and try again',
+    'privacy.error.network': 'Network error, please try again',
+    'privacy.error.agree': 'Agreement failed, please try again',
+    'privacy.button.agree': 'I Agree to Privacy Policy',
+    'privacy.button.disagree': 'I Disagree',
+    'privacy.button.processing': 'Processing...',
+    'privacy.confirm.disagree': 'If you disagree with the privacy policy, you will not be able to use the system services. Are you sure you want to exit?',
+    'privacy.hint.agree': 'Clicking "I Agree" means you have read and agreed to the above privacy policy',
+    'privacy.hint.disagree': 'If you disagree, you will not be able to use the system services',
+    'privacy.last.updated': 'Last updated: {date}'
   }
 }
 

@@ -189,7 +189,29 @@ export default function LoginPage() {
         })
         
         await refreshUser()
-        router.push('/dashboard')
+        
+        // 检查隐私条款同意状态
+        try {
+          const privacyResponse = await fetch('/api/auth/privacy-agreement', {
+            credentials: 'include'
+          })
+          
+          if (privacyResponse.ok) {
+            const privacyData = await privacyResponse.json()
+            if (privacyData.hasAgreed) {
+              router.push('/dashboard')
+            } else {
+              router.push('/privacy-agreement')
+            }
+          } else {
+            // 如果检查失败，默认跳转到隐私条款页面
+            router.push('/privacy-agreement')
+          }
+        } catch (error) {
+          console.error('检查隐私条款状态失败:', error)
+          // 如果检查失败，默认跳转到隐私条款页面
+          router.push('/privacy-agreement')
+        }
       } else {
         // 追踪登录失败事件
         trackUserAction('login_failed', { 
@@ -278,7 +300,29 @@ export default function LoginPage() {
         })
         
         await refreshUser()
-        router.push('/dashboard')
+        
+        // 检查隐私条款同意状态
+        try {
+          const privacyResponse = await fetch('/api/auth/privacy-agreement', {
+            credentials: 'include'
+          })
+          
+          if (privacyResponse.ok) {
+            const privacyData = await privacyResponse.json()
+            if (privacyData.hasAgreed) {
+              router.push('/dashboard')
+            } else {
+              router.push('/privacy-agreement')
+            }
+          } else {
+            // 如果检查失败，默认跳转到隐私条款页面
+            router.push('/privacy-agreement')
+          }
+        } catch (error) {
+          console.error('检查隐私条款状态失败:', error)
+          // 如果检查失败，默认跳转到隐私条款页面
+          router.push('/privacy-agreement')
+        }
       } else {
         // 追踪登录失败事件
         trackUserAction('login_failed', { 
