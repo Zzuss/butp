@@ -11,6 +11,7 @@ import { getUserProbabilityData } from "@/lib/dashboard-data"
 import { useState, useEffect } from "react"
 
 
+
 // 可能性卡片组件
 function PossibilityCard({ activeTab }: { activeTab: string }) {
   const { t } = useLanguage()
@@ -1143,6 +1144,7 @@ export default function RoleModels() {
         <div className="mb-4">
           <h1 className="text-3xl font-bold">Role Models</h1>
           <p className="text-muted-foreground">{t('rolemodels.description')}</p>
+
         </div>
         <div className="flex justify-center">
           <PossibilityCard activeTab={activeTab} />

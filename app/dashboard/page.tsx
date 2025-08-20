@@ -27,6 +27,8 @@ import {
 
 // 导入图表组件
 import { CourseStatsChart } from '@/components/ui/chart'
+import { AuthenticatedUrlExportButton } from '@/components/pdf/AuthenticatedUrlExportButton'
+import { QuickExternalTestButton } from '@/components/pdf/QuickExternalTestButton'
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
@@ -123,6 +125,12 @@ export default function DashboardPage() {
               : t('dashboard.description', { name: user?.name || '' })
             }
           </p>
+        </div>
+        
+        {/* Dashboard导出按钮 */}
+        <div className="flex gap-2">
+          <QuickExternalTestButton />
+          <AuthenticatedUrlExportButton />
         </div>
       </div>
       
