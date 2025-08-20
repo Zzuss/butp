@@ -29,6 +29,7 @@ import {
 import { CourseStatsChart } from '@/components/ui/chart'
 import { AuthenticatedUrlExportButton } from '@/components/pdf/AuthenticatedUrlExportButton'
 import { QuickExternalTestButton } from '@/components/pdf/QuickExternalTestButton'
+import { ProxyHealthCheck } from '@/components/pdf/ProxyHealthCheck'
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
@@ -379,6 +380,11 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      
+      {/* PDF代理服务状态检查 */}
+      <div className="flex justify-center">
+        <ProxyHealthCheck />
+      </div>
       
       {/* 免责声明 */}
       <div className="text-xs text-muted-foreground text-center p-4 border-t">
