@@ -1,30 +1,11 @@
 {
-  "version": 2,
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "devCommand": "npm run dev",
-  "regions": ["hkg1"],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
+  "functions": {
+    "app/api/generate-pdf/route.ts": {
+      "maxDuration": 30
     }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
-    }
-  ]
-} 
+  },
+  "env": {
+    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
+    "PUPPETEER_EXECUTABLE_PATH": "/opt/google/chrome/chrome"
+  }
+}
