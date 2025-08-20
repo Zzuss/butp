@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 // 我们知道这些哈希值在数据库中存在
 const knownWorkingHashes = [
   {
-    hash: "353214f8e1ccebe2297a845d528311086a2a582f4470dfe362c0114d4898bc06",
+    hash: "0886e2a5c75eaa21b81977e56f67c6faceafb1ee67eeb8a85c1eacc8bbd2447b",
     description: "测试哈希值1"
   },
   {

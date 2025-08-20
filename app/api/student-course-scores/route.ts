@@ -93,7 +93,7 @@ const courseNameToIdMapping: Record<string, string> = {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { studentHash } = body;
+    const { studentHash, major } = body;
 
     if (!studentHash) {
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 })
@@ -105,83 +105,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid hash format' }, { status: 400 })
     }
 
-    // 1. 从cohort_predictions表获取学生成绩数据
+    // 1) 按专业映射选择表
+    const majorToTable: Record<string, string> = {
+      '智能科学与技术': 'Cohort2023_Predictions_ai',
+      '电子信息工程': 'Cohort2023_Predictions_ee',
+      '电信工程及管理': 'Cohort2023_Predictions_tewm',
+      '物联网工程': 'Cohort2023_Predictions_iot'
+    };
+
+    if (!major || !(major in majorToTable)) {
+      return NextResponse.json({ error: 'Invalid or unsupported major' }, { status: 400 })
+    }
+
+    const tableName = majorToTable[major];
+
+    // 2) 查询该表一行（选取全部列，后续过滤课程列）
     const { data: predictionsData, error: predictionsError } = await supabase
-      .from('cohort_predictions')
-      .select(`
-        SNH,
-        major,
-        year,
-        "思想道德与法治",
-        "中国近现代史纲要",
-        "马克思主义基本原理",
-        "毛泽东思想和中国特色社会主义理论体系概论",
-        "形势与政策1",
-        "形势与政策2",
-        "形势与政策3",
-        "形势与政策4",
-        "形势与政策5",
-        "习近平新时代中国特色社会主义思想概论",
-        "体育基础",
-        "军事理论",
-        "大学生心理健康",
-        "安全教育",
-        "综合英语（上）",
-        "综合英语（下）",
-        "进阶听说（上）",
-        "进阶听说（下）",
-        "线性代数",
-        "高等数学A(上)",
-        "高等数学A(下)",
-        "大学物理D（上）",
-        "大学物理D（下）",
-        "工程数学",
-        "概率论与随机过程",
-        "程序设计基础",
-        "数据设计",
-        "Java高级语言程序设计",
-        "软件工程",
-        "电子信息工程专业导论",
-        "电子系统基础",
-        "电子电路基础",
-        "信号与系统",
-        "数字电路设计",
-        "数字信号处理",
-        "计算机网络",
-        "人工智能导论",
-        "产品开发与管理",
-        "电磁场与电磁波",
-        "通信原理I",
-        "多媒体基础",
-        "数字音频基础",
-        "信息论",
-        "机器学习",
-        "高级变换",
-        "图形与视频处理",
-        "交互式媒体设计",
-        "3D图形程序设计",
-        "深度学习与计算视觉",
-        "军训",
-        "思想道德与法治（实践环节）",
-        "毛泽东思想和中国特色社会主义理论体系概论实",
-        "物理实验C",
-        "电路实验",
-        "学术交流技能1",
-        "学术交流技能2",
-        "Design & Build实训（电子）",
-        "通信原理实验",
-        "电子工艺实习",
-        "电子信息工程专业实习",
-        "个人发展计划1",
-        "个人发展计划2",
-        "个人发展计划3",
-        "毕业设计"
-      `)
+      .from(tableName)
+      .select('*')
       .eq('SNH', trimmedHash)
+      .limit(1)
       .single();
 
     if (predictionsError || !predictionsData) {
-      return NextResponse.json({ error: 'Student not found in predictions table' }, { status: 404 })
+      return NextResponse.json({ error: `Student not found in table ${tableName}` }, { status: 404 })
     }
 
     // 2. 从courses表获取课程详细信息
@@ -215,17 +162,26 @@ export async function POST(request: NextRequest) {
     console.log('Found courses in database:', coursesData?.length || 0);
     console.log('Course IDs in mapping:', courseIds.length);
 
-    // 4. 构建课程成绩数据
+    // 4. 构建课程成绩数据（过滤非课程字段，规范数值）
+    const reservedKeys = new Set([
+      'SNH', 'major', 'year', 'grade', 'count',
+      'current_public','current_practice','current_math_science','current_political','current_basic_subject','current_innovation','current_english','current_basic_major','current_major','current_pred',
+      'target1_min_required_score','target2_min_required_score'
+    ]);
+
     const courseScores = Object.entries(predictionsData)
-      .filter(([key, value]) => key !== 'SNH' && key !== 'major' && key !== 'year')
-      .map(([courseName, score]) => {
-        // 使用映射表获取课程ID
+      .filter(([key]) => !reservedKeys.has(key))
+      .map(([courseName, raw]) => {
+        let score: number | null = null;
+        if (typeof raw === 'number') score = raw;
+        else if (typeof raw === 'string' && raw.trim() !== '' && !isNaN(Number(raw))) score = Number(raw);
+
         const courseId = courseNameToIdMapping[courseName];
         const courseInfo = courseId ? courseIdToInfoMap[courseId] : null;
 
         return {
           courseName,
-          score: score as number | null,
+          score,
           semester: courseInfo?.semester || null,
           category: courseInfo?.category || null,
           courseId: courseId || null,
@@ -259,9 +215,9 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         studentInfo: {
-          SNH: predictionsData.SNH,
-          major: predictionsData.major,
-          year: predictionsData.year
+          SNH: (predictionsData as any).SNH,
+          major: (predictionsData as any).major || major,
+          year: (predictionsData as any).year || (predictionsData as any).grade || null
         },
         courseScores
       }
