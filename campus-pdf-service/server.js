@@ -223,29 +223,61 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
     // 等待页面完全渲染
     await page.waitForTimeout(2000);
 
-    // 注入样式优化
+    // 注入样式优化 - 支持长内容多页生成
     await page.addStyleTag({
       content: `
         html, body {
           height: auto !important;
           min-height: auto !important;
           overflow: visible !important;
+          page-break-inside: auto !important;
         }
         * {
           max-height: none !important;
           overflow: visible !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+          page-break-inside: auto !important;
         }
-        .no-export, .hide-on-pdf { display: none !important; }
+        
+        /* 改善长内容的分页效果 */
+        main, .main-content, article {
+          page-break-inside: auto !important;
+          break-inside: auto !important;
+        }
+        
+        /* 避免重要内容被截断 */
+        h1, h2, h3, h4, h5, h6 {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+        }
+        
+        /* 确保表格和卡片能够合理分页 */
+        table, .card, .panel {
+          page-break-inside: auto !important;
+          break-inside: auto !important;
+        }
+        
+        /* 隐藏不需要导出的元素 */
+        .no-export, .hide-on-pdf { 
+          display: none !important; 
+        }
+        
+        /* 打印媒体查询优化 */
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
       `
     });
 
-    // PDF生成选项
+    // PDF生成选项 - 支持多页长内容
     const defaultPdfOptions = {
       format: 'A4',
       printBackground: true,
-      preferCSSPageSize: true,
+      preferCSSPageSize: false, // 允许内容超出单页
       margin: { 
         top: '12mm', 
         bottom: '12mm', 
@@ -253,6 +285,10 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
         right: '12mm' 
       },
       displayHeaderFooter: false,
+      // 关键：设置高度为自动，允许多页生成
+      height: null, // 自动高度
+      // 确保长内容能够正确分页
+      pageRanges: '', // 生成所有页面
     };
 
     const finalOptions = { ...defaultPdfOptions, ...pdfOptions };

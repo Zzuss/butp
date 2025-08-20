@@ -11,22 +11,25 @@ export default function CampusPdfServiceButton({
   const [filename, setFilename] = useState<string>('')
   const [statusMessage, setStatusMessage] = useState<string>('')
 
-  // 检测校园VPN连接
+  // 检测校园VPN连接（避免Mixed Content问题）
   const checkCampusVPNConnection = async (): Promise<boolean> => {
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 2000) // 2秒超时
+      // 对于HTTPS页面，我们不能直接检测HTTP服务
+      // 改为基于环境智能判断
+      const hostname = window.location.hostname
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+      const isIntranet = hostname.includes('10.') || hostname.includes('192.168.') || hostname.includes('bupt')
       
-      const response = await fetch('http://10.3.58.3:8000/health', {
-        method: 'GET',
-        signal: controller.signal,
-        mode: 'no-cors' // 避免CORS问题
-      })
+      // 如果是本地开发或内网环境，假设可以访问校内服务
+      if (isLocal || isIntranet) {
+        return true
+      }
       
-      clearTimeout(timeoutId)
-      return true // 如果能连通，说明在校园网或VPN环境
+      // 对于外网HTTPS，由于Mixed Content限制，无法直接测试HTTP校内服务
+      // 我们让用户尝试，如果失败会自动降级到客户端
+      return false
     } catch (error) {
-      return false // 无法连通，说明在外网
+      return false
     }
   }
 
@@ -64,7 +67,26 @@ export default function CampusPdfServiceButton({
       // 1) 浏览器直接调用校内PDF服务（用户需要在校园网或VPN环境）
       if (canUseCampusService) {
         try {
-          setStatusMessage('检测校园网连接...')
+          setStatusMessage('尝试连接校内PDF服务...')
+          
+          // 对于HTTPS站点访问HTTP校内服务，需要用户允许Mixed Content
+          if (window.location.protocol === 'https:' && campusService.startsWith('http:')) {
+            const userConfirm = confirm(
+              '检测到您在HTTPS站点尝试使用校内PDF服务。\n\n' +
+              '由于浏览器安全限制，您需要：\n' +
+              '1. 允许此页面的"不安全内容"（Mixed Content）\n' +
+              '2. 或者在浏览器地址栏点击"盾牌"图标，选择"允许不安全内容"\n\n' +
+              '是否继续尝试连接校内服务？\n' +
+              '（如果失败会自动使用客户端导出）'
+            )
+            
+            if (!userConfirm) {
+              setStatusMessage('用户取消，使用客户端导出...')
+              throw new Error('用户取消校内服务')
+            }
+            
+            setStatusMessage('正在尝试连接校内服务（可能需要允许Mixed Content）...')
+          }
           
           // 获取当前页面的完整HTML内容（保留所有样式和状态）
           const getPageHTML = () => {
@@ -131,6 +153,9 @@ export default function CampusPdfServiceButton({
             pdfOptions: {
               printBackground: true,
               format: 'A4',
+              preferCSSPageSize: false, // 允许内容超出单页
+              height: null, // 自动高度，支持多页
+              pageRanges: '', // 生成所有页面
               margin: { top: '12mm', bottom: '12mm', left: '12mm', right: '12mm' }
             }
           }
@@ -203,6 +228,47 @@ export default function CampusPdfServiceButton({
       `
       
       const clonedContent = contentElement.cloneNode(true) as HTMLElement
+      
+      // 修复oklch颜色函数问题 - 将不支持的颜色替换为fallback
+      const fixModernColors = (element: HTMLElement) => {
+        const walker = document.createTreeWalker(
+          element,
+          NodeFilter.SHOW_ELEMENT,
+          null
+        )
+        
+        const elementsToFix: Element[] = []
+        let node = walker.nextNode()
+        while (node) {
+          elementsToFix.push(node as Element)
+          node = walker.nextNode()
+        }
+        
+        elementsToFix.forEach(el => {
+          const htmlEl = el as HTMLElement
+          const computedStyle = window.getComputedStyle(htmlEl)
+          
+          // 替换可能包含oklch的样式属性
+          const styleProps = ['color', 'backgroundColor', 'borderColor', 'fill', 'stroke']
+          styleProps.forEach(prop => {
+            const value = computedStyle.getPropertyValue(prop)
+            if (value && (value.includes('oklch') || value.includes('lch') || value.includes('lab'))) {
+              // 使用计算后的RGB值替换
+              const rgb = computedStyle.getPropertyValue(prop)
+              if (rgb && rgb !== value) {
+                htmlEl.style.setProperty(prop, rgb, 'important')
+              } else {
+                // fallback到安全颜色
+                if (prop === 'backgroundColor') htmlEl.style.setProperty(prop, '#ffffff', 'important')
+                else if (prop === 'color') htmlEl.style.setProperty(prop, '#000000', 'important')
+                else htmlEl.style.setProperty(prop, 'transparent', 'important')
+              }
+            }
+          })
+        })
+      }
+      
+      fixModernColors(clonedContent)
       tempContainer.appendChild(clonedContent)
       document.body.appendChild(tempContainer)
       
@@ -219,7 +285,14 @@ export default function CampusPdfServiceButton({
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          // 在克隆文档中也应用颜色修复
+          const clonedBody = clonedDoc.body
+          if (clonedBody) {
+            fixModernColors(clonedBody)
+          }
+        }
       })
       
       // 清理临时元素
@@ -265,7 +338,7 @@ export default function CampusPdfServiceButton({
         </Button>
       </div>
       <div className="text-xs text-muted-foreground mt-1">
-        {statusMessage ? statusMessage : `使用校内 PDF 服务生成，需要校园网或VPN连接。`}
+        {statusMessage ? statusMessage : `使用校内 PDF 服务生成高质量PDF，需要校园网或VPN连接。HTTPS站点可能需要允许Mixed Content。`}
       </div>
     </div>
   )
