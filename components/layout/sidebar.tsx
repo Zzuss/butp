@@ -104,11 +104,6 @@ export function AppSidebar() {
       window.removeEventListener('resize', checkIfMobile)
     }
   }, [])
-
-  // 如果sidebar不可见，则不渲染
-  if (!isSidebarVisible) {
-    return null
-  }
   
   // 从本地存储加载侧边栏状态
   useEffect(() => {
@@ -117,6 +112,11 @@ export function AppSidebar() {
       setIsCollapsed(savedState === 'true')
     }
   }, [])
+
+  // 如果sidebar不可见，则不渲染
+  if (!isSidebarVisible) {
+    return null
+  }
 
   // 切换侧边栏折叠状态
   const toggleCollapse = () => {
