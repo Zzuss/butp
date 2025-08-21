@@ -234,11 +234,10 @@ export default function VotingPoll() {
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <h4 className="font-semibold text-blue-900 mb-2">投票规则</h4>
           <ul className="text-sm text-blue-700 space-y-1">
-            <li>• 每个账户只能投一票</li>
+            <li>• 每个账户在每个版本中只能投一票</li>
             <li>• 可以随时撤销投票并重新选择</li>
             <li>• 票数实时更新，按票数从高到低排序</li>
-            <li>• 前三名将获得特殊标识</li>
-            <li>• 数据保存在本地浏览器中</li>
+            <li>• 如果有任何其他想添加的功能，请通过下方邮箱联系我们</li>
           </ul>
         </div>
       </CardContent>

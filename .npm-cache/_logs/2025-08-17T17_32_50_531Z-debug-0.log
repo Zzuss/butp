@@ -1,0 +1,172 @@
+0 verbose cli D:\down\nodejs\node.exe D:\down\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.3
+2 info using node@v22.18.0
+3 silly config load:file:D:\down\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Lenovo\AppData\Local\Microsoft\TypeScript\5.8\.npmrc
+5 silly config load:file:C:\Users\Lenovo\.npmrc
+6 silly config load:file:D:\down\nodejs\node-global\etc\npmrc
+7 verbose title npm install @types/pg@ts5.8 @types/react@ts5.8 @types/react-dom@ts5.8 @types/xml2js@ts5.8
+8 verbose argv "install" "--ignore-scripts" "@types/pg@ts5.8" "@types/react@ts5.8" "@types/react-dom@ts5.8" "@types/xml2js@ts5.8" "--save-dev" "--user-agent" "typesInstaller/5.8.2"
+9 verbose logfile logs-max:10 dir:D:\butp\.npm-cache\_logs\2025-08-17T17_32_50_531Z-
+10 verbose logfile D:\butp\.npm-cache\_logs\2025-08-17T17_32_50_531Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly packumentCache corgi:https://registry.npmjs.org/@types%2fpg cache-miss
+14 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact cache-miss
+15 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact-dom cache-miss
+16 silly packumentCache corgi:https://registry.npmjs.org/@types%2fxml2js cache-miss
+17 http fetch GET 200 https://registry.npmjs.org/@types%2fxml2js 968ms (cache miss)
+18 silly packumentCache corgi:https://registry.npmjs.org/@types%2fxml2js set size:undefined disposed:false
+19 http fetch GET 200 https://registry.npmjs.org/@types%2fpg 1048ms (cache miss)
+20 silly packumentCache corgi:https://registry.npmjs.org/@types%2fpg set size:undefined disposed:false
+21 http fetch GET 200 https://registry.npmjs.org/@types%2freact-dom 1287ms (cache miss)
+22 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact-dom set size:undefined disposed:false
+23 http fetch GET 200 https://registry.npmjs.org/@types%2freact 1362ms (cache miss)
+24 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact set size:undefined disposed:false
+25 silly idealTree buildDeps
+26 silly fetch manifest @types/xml2js@0.4.14
+27 silly packumentCache full:https://registry.npmjs.org/@types%2fxml2js cache-miss
+28 http fetch GET 200 https://registry.npmjs.org/@types%2fxml2js 351ms (cache miss)
+29 silly packumentCache full:https://registry.npmjs.org/@types%2fxml2js set size:undefined disposed:false
+30 silly fetch manifest @types/pg@8.15.5
+31 silly packumentCache full:https://registry.npmjs.org/@types%2fpg cache-miss
+32 http fetch GET 200 https://registry.npmjs.org/@types%2fpg 291ms (cache miss)
+33 silly packumentCache full:https://registry.npmjs.org/@types%2fpg set size:undefined disposed:false
+34 silly fetch manifest @types/react-dom@19.1.7
+35 silly packumentCache full:https://registry.npmjs.org/@types%2freact-dom cache-miss
+36 http fetch GET 200 https://registry.npmjs.org/@types%2freact-dom 403ms (cache miss)
+37 silly packumentCache full:https://registry.npmjs.org/@types%2freact-dom set size:undefined disposed:false
+38 silly fetch manifest @types/react@19.1.10
+39 silly packumentCache full:https://registry.npmjs.org/@types%2freact cache-miss
+40 http fetch GET 200 https://registry.npmjs.org/@types%2freact 504ms (cache miss)
+41 silly packumentCache full:https://registry.npmjs.org/@types%2freact set size:undefined disposed:false
+42 silly placeDep ROOT @types/pg@8.15.5 OK for:  want: 8.15.5
+43 silly placeDep ROOT @types/react@19.1.10 OK for:  want: 19.1.10
+44 silly placeDep ROOT @types/react-dom@19.1.7 OK for:  want: 19.1.7
+45 silly placeDep ROOT @types/xml2js@0.4.14 OK for:  want: 0.4.14
+46 silly fetch manifest pg-types@^2.2.0
+47 silly packumentCache full:https://registry.npmjs.org/pg-types cache-miss
+48 silly fetch manifest @types/node@*
+49 silly packumentCache full:https://registry.npmjs.org/@types%2fnode cache-miss
+50 silly fetch manifest pg-protocol@*
+51 silly packumentCache full:https://registry.npmjs.org/pg-protocol cache-miss
+52 silly fetch manifest csstype@^3.0.2
+53 silly packumentCache full:https://registry.npmjs.org/csstype cache-miss
+54 silly fetch manifest @types/node@*
+55 silly packumentCache full:https://registry.npmjs.org/@types%2fnode cache-miss
+56 http fetch GET 200 https://registry.npmjs.org/csstype 272ms (cache miss)
+57 silly packumentCache full:https://registry.npmjs.org/csstype set size:undefined disposed:false
+58 http fetch GET 200 https://registry.npmjs.org/pg-types 287ms (cache miss)
+59 silly packumentCache full:https://registry.npmjs.org/pg-types set size:undefined disposed:false
+60 http fetch GET 200 https://registry.npmjs.org/pg-protocol 288ms (cache miss)
+61 silly packumentCache full:https://registry.npmjs.org/pg-protocol set size:undefined disposed:false
+62 http fetch GET 200 https://registry.npmjs.org/@types%2fnode 1316ms (cache miss)
+63 silly packumentCache full:https://registry.npmjs.org/@types%2fnode set size:undefined disposed:false
+64 http fetch GET 200 https://registry.npmjs.org/@types%2fnode 2117ms (cache miss)
+65 silly packumentCache full:https://registry.npmjs.org/@types%2fnode set size:undefined disposed:false
+66 silly placeDep ROOT @types/node@24.3.0 OK for: @types/pg@8.15.5 want: *
+67 silly placeDep ROOT pg-protocol@1.10.3 OK for: @types/pg@8.15.5 want: *
+68 silly placeDep ROOT pg-types@2.2.0 OK for: @types/pg@8.15.5 want: ^2.2.0
+69 silly fetch manifest undici-types@~7.10.0
+70 silly packumentCache full:https://registry.npmjs.org/undici-types cache-miss
+71 silly fetch manifest pg-int8@1.0.1
+72 silly packumentCache full:https://registry.npmjs.org/pg-int8 cache-miss
+73 silly fetch manifest postgres-date@~1.0.4
+74 silly packumentCache full:https://registry.npmjs.org/postgres-date cache-miss
+75 silly fetch manifest postgres-array@~2.0.0
+76 silly packumentCache full:https://registry.npmjs.org/postgres-array cache-miss
+77 silly fetch manifest postgres-bytea@~1.0.0
+78 silly packumentCache full:https://registry.npmjs.org/postgres-bytea cache-miss
+79 silly fetch manifest postgres-interval@^1.1.0
+80 silly packumentCache full:https://registry.npmjs.org/postgres-interval cache-miss
+81 http fetch GET 200 https://registry.npmjs.org/pg-int8 249ms (cache miss)
+82 silly packumentCache full:https://registry.npmjs.org/pg-int8 set size:undefined disposed:false
+83 http fetch GET 200 https://registry.npmjs.org/undici-types 251ms (cache miss)
+84 silly packumentCache full:https://registry.npmjs.org/undici-types set size:undefined disposed:false
+85 http fetch GET 200 https://registry.npmjs.org/postgres-array 273ms (cache miss)
+86 silly packumentCache full:https://registry.npmjs.org/postgres-array set size:undefined disposed:false
+87 http fetch GET 200 https://registry.npmjs.org/postgres-bytea 281ms (cache miss)
+88 silly packumentCache full:https://registry.npmjs.org/postgres-bytea set size:undefined disposed:false
+89 http fetch GET 200 https://registry.npmjs.org/postgres-date 312ms (cache miss)
+90 silly packumentCache full:https://registry.npmjs.org/postgres-date set size:undefined disposed:false
+91 http fetch GET 200 https://registry.npmjs.org/postgres-interval 1082ms (cache miss)
+92 silly packumentCache full:https://registry.npmjs.org/postgres-interval set size:undefined disposed:false
+93 silly placeDep ROOT undici-types@7.10.0 OK for: @types/node@24.3.0 want: ~7.10.0
+94 silly placeDep ROOT csstype@3.1.3 OK for: @types/react@19.1.10 want: ^3.0.2
+95 silly placeDep ROOT pg-int8@1.0.1 OK for: pg-types@2.2.0 want: 1.0.1
+96 silly placeDep ROOT postgres-array@2.0.0 OK for: pg-types@2.2.0 want: ~2.0.0
+97 silly placeDep ROOT postgres-bytea@1.0.0 OK for: pg-types@2.2.0 want: ~1.0.0
+98 silly placeDep ROOT postgres-date@1.0.7 OK for: pg-types@2.2.0 want: ~1.0.4
+99 silly placeDep ROOT postgres-interval@1.2.0 OK for: pg-types@2.2.0 want: ^1.1.0
+100 silly fetch manifest xtend@^4.0.0
+101 silly packumentCache full:https://registry.npmjs.org/xtend cache-miss
+102 http fetch GET 200 https://registry.npmjs.org/xtend 224ms (cache miss)
+103 silly packumentCache full:https://registry.npmjs.org/xtend set size:undefined disposed:false
+104 silly placeDep ROOT xtend@4.0.2 OK for: postgres-interval@1.2.0 want: ^4.0.0
+105 silly reify moves {}
+106 silly audit bulk request {
+106 silly audit   'types-registry': [ '0.1.734' ],
+106 silly audit   '@types/pg': [ '8.15.5' ],
+106 silly audit   '@types/react': [ '19.1.10' ],
+106 silly audit   '@types/react-dom': [ '19.1.7' ],
+106 silly audit   '@types/xml2js': [ '0.4.14' ],
+106 silly audit   '@types/node': [ '24.3.0' ],
+106 silly audit   'pg-protocol': [ '1.10.3' ],
+106 silly audit   'pg-types': [ '2.2.0' ],
+106 silly audit   'undici-types': [ '7.10.0' ],
+106 silly audit   csstype: [ '3.1.3' ],
+106 silly audit   'pg-int8': [ '1.0.1' ],
+106 silly audit   'postgres-array': [ '2.0.0' ],
+106 silly audit   'postgres-bytea': [ '1.0.0' ],
+106 silly audit   'postgres-date': [ '1.0.7' ],
+106 silly audit   'postgres-interval': [ '1.2.0' ],
+106 silly audit   xtend: [ '4.0.2' ]
+106 silly audit }
+107 http cache xtend@https://registry.npmjs.org/xtend/-/xtend-4.0.2.tgz 0ms (cache hit)
+108 http cache postgres-interval@https://registry.npmjs.org/postgres-interval/-/postgres-interval-1.2.0.tgz 0ms (cache hit)
+109 http cache postgres-date@https://registry.npmjs.org/postgres-date/-/postgres-date-1.0.7.tgz 0ms (cache hit)
+110 http cache pg-int8@https://registry.npmjs.org/pg-int8/-/pg-int8-1.0.1.tgz 0ms (cache hit)
+111 http cache undici-types@https://registry.npmjs.org/undici-types/-/undici-types-7.10.0.tgz 0ms (cache hit)
+112 http cache pg-types@https://registry.npmjs.org/pg-types/-/pg-types-2.2.0.tgz 0ms (cache hit)
+113 http cache csstype@https://registry.npmjs.org/csstype/-/csstype-3.1.3.tgz 0ms (cache hit)
+114 http cache postgres-bytea@https://registry.npmjs.org/postgres-bytea/-/postgres-bytea-1.0.0.tgz 0ms (cache hit)
+115 http cache postgres-array@https://registry.npmjs.org/postgres-array/-/postgres-array-2.0.0.tgz 0ms (cache hit)
+116 http cache @types/node@https://registry.npmjs.org/@types/node/-/node-24.3.0.tgz 0ms (cache hit)
+117 http cache @types/pg@https://registry.npmjs.org/@types/pg/-/pg-8.15.5.tgz 0ms (cache hit)
+118 http cache @types/xml2js@https://registry.npmjs.org/@types/xml2js/-/xml2js-0.4.14.tgz 0ms (cache hit)
+119 http cache pg-protocol@https://registry.npmjs.org/pg-protocol/-/pg-protocol-1.10.3.tgz 0ms (cache hit)
+120 http cache @types/react-dom@https://registry.npmjs.org/@types/react-dom/-/react-dom-19.1.7.tgz 0ms (cache hit)
+121 http cache @types/react@https://registry.npmjs.org/@types/react/-/react-19.1.10.tgz 0ms (cache hit)
+122 silly tarball no local data for undici-types@https://registry.npmjs.org/undici-types/-/undici-types-7.10.0.tgz. Extracting by manifest.
+123 silly tarball no local data for @types/node@https://registry.npmjs.org/@types/node/-/node-24.3.0.tgz. Extracting by manifest.
+124 silly tarball no local data for @types/pg@https://registry.npmjs.org/@types/pg/-/pg-8.15.5.tgz. Extracting by manifest.
+125 silly tarball no local data for @types/react-dom@https://registry.npmjs.org/@types/react-dom/-/react-dom-19.1.7.tgz. Extracting by manifest.
+126 silly tarball no local data for @types/react@https://registry.npmjs.org/@types/react/-/react-19.1.10.tgz. Extracting by manifest.
+127 http fetch GET 200 https://registry.npmjs.org/@types/react-dom/-/react-dom-19.1.7.tgz 288ms (cache miss)
+128 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 307ms
+129 silly audit report {}
+130 http fetch GET 200 https://registry.npmjs.org/@types/react/-/react-19.1.10.tgz 316ms (cache miss)
+131 http fetch GET 200 https://registry.npmjs.org/undici-types/-/undici-types-7.10.0.tgz 322ms (cache miss)
+132 http fetch GET 200 https://registry.npmjs.org/@types/pg/-/pg-8.15.5.tgz 370ms (cache miss)
+133 http fetch GET 200 https://registry.npmjs.org/@types/node/-/node-24.3.0.tgz 420ms (cache miss)
+134 silly ADD node_modules/xtend
+135 silly ADD node_modules/postgres-interval
+136 silly ADD node_modules/postgres-date
+137 silly ADD node_modules/postgres-bytea
+138 silly ADD node_modules/postgres-array
+139 silly ADD node_modules/pg-int8
+140 silly ADD node_modules/csstype
+141 silly ADD node_modules/undici-types
+142 silly ADD node_modules/pg-types
+143 silly ADD node_modules/pg-protocol
+144 silly ADD node_modules/@types/node
+145 silly ADD node_modules/@types/xml2js
+146 silly ADD node_modules/@types/react-dom
+147 silly ADD node_modules/@types/react
+148 silly ADD node_modules/@types/pg
+149 verbose cwd C:\Users\Lenovo\AppData\Local\Microsoft\TypeScript\5.8
+150 verbose os Windows_NT 10.0.26100
+151 verbose node v22.18.0
+152 verbose npm  v10.9.3
+153 verbose exit 0
+154 info ok
