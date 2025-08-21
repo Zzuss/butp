@@ -11,7 +11,10 @@ async function checkHashInTables() {
   console.log('🔍 检查哈希值在各个表中的存在情况...\n');
   
   const tables = [
-    'cohort_predictions',
+    'Cohort2023_Predictions_ai',
+  'Cohort2023_Predictions_ee',
+  'Cohort2023_Predictions_tewm',
+  'Cohort2023_Predictions_iot',
     'academic_results',
     'cohort_probability',
     'student_profiles',
@@ -40,23 +43,35 @@ async function checkHashInTables() {
     }
   }
   
-  // 查找一个在cohort_predictions表中存在的哈希值
-  console.log('\n🔍 查找在cohort_predictions表中存在的哈希值...');
-  try {
-    const { data, error } = await supabase
-      .from('cohort_predictions')
-      .select('SNH')
-      .limit(1);
-    
-    if (error) {
-      console.log(`❌ 查询cohort_predictions失败: ${error.message}`);
-    } else if (data && data.length > 0) {
-      console.log(`✅ 找到哈希值: ${data[0].SNH}`);
-    } else {
-      console.log('❌ cohort_predictions表为空');
+  // 查找一个在专业预测表中存在的哈希值
+  console.log('\n🔍 查找在专业预测表中存在的哈希值...');
+  
+  // 尝试从四个专业预测表中查找数据
+  let foundData = null;
+  let foundTable = '';
+  
+  for (const table of ['Cohort2023_Predictions_ai', 'Cohort2023_Predictions_ee', 'Cohort2023_Predictions_tewm', 'Cohort2023_Predictions_iot']) {
+    try {
+      const { data, error } = await supabase
+        .from(table)
+        .select('SNH')
+        .limit(1);
+      
+      if (!error && data && data.length > 0) {
+        foundData = data;
+        foundTable = table;
+        break;
+      }
+    } catch (tableError) {
+      console.log(`❌ 查询${table}失败: ${tableError.message}`);
+      continue;
     }
-  } catch (err) {
-    console.log(`❌ 查询失败: ${err.message}`);
+  }
+  
+  if (foundData) {
+    console.log(`✅ 在${foundTable}中找到哈希值: ${foundData[0].SNH}`);
+  } else {
+    console.log('❌ 所有专业预测表都为空或查询失败');
   }
 }
 

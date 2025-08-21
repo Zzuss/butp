@@ -50,7 +50,10 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
     const tables = [
       'academic_results', 
       'cohort_probability',
-      'cohort_predictions',
+      'Cohort2023_Predictions_ai',
+      'Cohort2023_Predictions_ee',
+      'Cohort2023_Predictions_tewm',
+      'Cohort2023_Predictions_iot',
       'student_profiles',
       'course_enrollments',
       'grade_records',
@@ -103,23 +106,33 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
 }
 
   /**
-   * 获取学生的原始课程数据（来源1：cohort_predictions）
+   * 获取学生的原始课程数据（来源1：专业预测表）
    * @param studentHash 学生哈希值
    * @returns 原始课程数据
    */
   export async function getOriginalScores(studentHash: string): Promise<CourseData[]> {
     try {
-      const { data, error } = await supabase
-        .from('cohort_predictions')
-        .select('Course_Name, Grade, Semester_Offered, Course_Attribute, Course_ID, Credit')
-        .eq('SNH', studentHash);
-
-      if (error) {
-        console.error('Error fetching original scores:', error);
-        return [];
+      // 从四个专业预测表中查询数据
+      const tables = ['Cohort2023_Predictions_ai', 'Cohort2023_Predictions_ee', 'Cohort2023_Predictions_tewm', 'Cohort2023_Predictions_iot'];
+      let allData: any[] = [];
+      
+      for (const table of tables) {
+        try {
+          const { data, error } = await supabase
+            .from(table)
+            .select('Course_Name, Grade, Semester_Offered, Course_Attribute, Course_ID, Credit')
+            .eq('SNH', studentHash);
+          
+          if (!error && data) {
+            allData = allData.concat(data);
+          }
+        } catch (tableError) {
+          console.log(`Error querying table ${table}:`, tableError);
+          continue;
+        }
       }
 
-      return (data || []).map(course => ({
+      return allData.map((course: any) => ({
         courseName: course.Course_Name || '',
         score: course.Grade ? parseFloat(course.Grade) : null,
         semester: course.Semester_Offered ? parseInt(course.Semester_Offered) : null,

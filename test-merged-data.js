@@ -62,14 +62,14 @@ async function testMergedData() {
             allCourses[existingIndex] = {
               ...allCourses[existingIndex],
               score: course.score,
-              source: 'cohort_predictions (override)'
+              source: '专业预测表 (覆盖)'
             };
             console.log(`🔄 覆盖冲突: ${course.courseName} (来源2: ${oldScore} → 来源1: ${course.score})`);
           } else {
             // 新课程：直接添加
             allCourses.push({
               ...course,
-              source: 'cohort_predictions'
+              source: '专业预测表'
             });
             processedCourseNames.add(course.courseName);
             console.log(`✅ 添加来源1: ${course.courseName} (成绩: ${course.score})`);
@@ -82,8 +82,8 @@ async function testMergedData() {
       console.log('\n📊 合并结果统计:');
       console.log(`总课程数: ${allCourses.length}`);
       console.log(`来源2课程: ${allCourses.filter(c => c.source === 'academic_results').length}`);
-      console.log(`来源1课程: ${allCourses.filter(c => c.source === 'cohort_predictions').length}`);
-      console.log(`覆盖课程: ${allCourses.filter(c => c.source === 'cohort_predictions (override)').length}`);
+      console.log(`来源1课程: ${allCourses.filter(c => c.source === '专业预测表').length}`);
+console.log(`覆盖课程: ${allCourses.filter(c => c.source === '专业预测表 (覆盖)').length}`);
       
       // 显示前10个合并后的课程
       console.log('\n📋 前10个合并后的课程:');
