@@ -23,7 +23,7 @@ export default function CampusPdfServiceButton({
       
       // 尝试快速ping校内服务（用于VPN检测）
       try {
-        // 使用API代理进行健康检查
+        // 统一走应用的健康检查代理
         const testUrl = '/api/pdf/health'
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 3000) // 3秒超时
@@ -47,9 +47,9 @@ export default function CampusPdfServiceButton({
         })
         
         // 如果是本地开发环境，仍然尝试
-        if (isLocal || isIntranet) {
+      if (isLocal || isIntranet) {
           console.log('🏠 本地/内网环境，仍会尝试校内服务')
-          return true
+        return true
         }
         return false
       }
@@ -72,16 +72,17 @@ export default function CampusPdfServiceButton({
       const isIntranet = hostname.includes('10.') || hostname.includes('192.168.')
       const isCampusVPN = await checkCampusVPNConnection()
       
-      const canUseCampusService = (isLocalDev || isIntranet || isCampusVPN)
+      // 华为云PDF服务对所有环境开放
+      const canUseCampusService = true
       
-      // 使用API代理模式，避免Mixed Content问题
+      // 统一走应用代理，避免Mixed Content，并复用后端环境变量
       const campusService = campusServiceUrl || '/api/pdf/generate'
       
       console.log('🔒 校内服务URL:', campusService)
 
       const body: any = { viewportWidth: viewport }
 
-      // If local dev, send HTML; otherwise prefer URL
+      // 本地开发发送HTML（云端无法访问localhost），线上发送URL以获得高保真
       const useHtml = hostname === 'localhost' || hostname === '127.0.0.1' || window.location.protocol === 'file:'
       if (useHtml) {
         let html = document.documentElement.outerHTML || '<html></html>'
@@ -137,7 +138,7 @@ export default function CampusPdfServiceButton({
               mainContent = document.querySelector('main') ||
                            document.querySelector('.container') ||
                            document.querySelector('[role="main"]')
-            } else {
+                } else {
               // 其他页面：使用通用选择器
               mainContent = document.querySelector('main') || 
                            document.querySelector('.dashboard-content') || 
@@ -338,23 +339,38 @@ export default function CampusPdfServiceButton({
             return htmlContent
           }
 
-          // 获取页面HTML并进行优化
-          const pageHTML = getPageHTML()
-          
-          // 构建请求体 - 发送完整HTML内容而不是URL（避免网络问题，质量更好）
-          const pdfRequestBody = {
-            html: pageHTML,
-            viewportWidth: viewport,
-            filename: `export_${new Date().toISOString().slice(0,10)}.pdf`,
-            pdfOptions: {
-              printBackground: true,
-              format: 'A4',
-              preferCSSPageSize: false, // 允许内容超出单页
-              height: null, // 自动高度，支持多页
-              pageRanges: '', // 生成所有页面
-              margin: { top: '12mm', bottom: '12mm', left: '12mm', right: '12mm' },
-              displayHeaderFooter: false,
-              scale: 1
+          // 构建请求体
+          let pdfRequestBody: any
+          if (useHtml) {
+            const pageHTML = getPageHTML()
+            pdfRequestBody = {
+              html: pageHTML,
+              viewportWidth: viewport,
+              filename: `export_${new Date().toISOString().slice(0,10)}.pdf`,
+              pdfOptions: {
+                printBackground: true,
+                format: 'A4',
+                preferCSSPageSize: false,
+                height: null,
+                pageRanges: '',
+                margin: { top: '12mm', bottom: '12mm', left: '12mm', right: '12mm' },
+                displayHeaderFooter: false,
+                scale: 1
+              }
+            }
+          } else {
+            pdfRequestBody = {
+              url: currentUrl,
+              viewportWidth: viewport,
+              filename: `export_${new Date().toISOString().slice(0,10)}.pdf`,
+              pdfOptions: {
+                printBackground: true,
+                format: 'A4',
+                preferCSSPageSize: false,
+                margin: { top: '12mm', bottom: '12mm', left: '12mm', right: '12mm' },
+                displayHeaderFooter: false,
+                scale: 1
+              }
             }
           }
 
@@ -378,15 +394,15 @@ export default function CampusPdfServiceButton({
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json', 
-              'x-pdf-key': 'campus-pdf-2024-1755617095',
+              'x-pdf-key': 'huawei-pdf-2024-secure-key', // 华为云服务密钥
               // 添加必要的CORS头
               'Access-Control-Request-Method': 'POST',
               'Access-Control-Request-Headers': 'Content-Type, x-pdf-key'
             },
             body: JSON.stringify(pdfRequestBody),
             signal: controller.signal,
-            mode: 'cors', // 明确指定CORS模式
-            credentials: 'omit' // 暂时不发送cookie避免复杂的CORS问题
+            mode: 'cors',
+            credentials: 'include' // 让Next API接收到cookie并转发给服务端，保证登录态
           })
           
           console.log('📥 收到PDF服务响应:', {
@@ -696,7 +712,7 @@ export default function CampusPdfServiceButton({
             {statusMessage}
           </span>
         ) : (
-          `使用校内 PDF 服务生成高质量PDF，需要校园网或VPN连接。`
+          `使用华为云 PDF 服务生成高质量PDF，支持公网访问。`
         )}
       </div>
     </div>

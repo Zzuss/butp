@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server'
 
 // 校内PDF服务健康检查代理端点
 export async function GET() {
+  // 根据部署环境动态选择健康检查地址
+  const campusHealthUrl = process.env.CAMPUS_PDF_SERVICE_URL?.replace('/generate-pdf', '/health') || 'http://139.159.233.180/health';
+  
+  console.log('🏥 健康检查请求:', {
+    isProduction: process.env.NODE_ENV === 'production',
+    hostname: process.env.VERCEL_URL || 'localhost',
+    healthCheckUrl: campusHealthUrl
+  });
+
   try {
     // 检查校内PDF服务状态
-    const healthResponse = await fetch('http://10.3.58.3:8000/health', {
+    const healthResponse = await fetch(campusHealthUrl, {
       method: 'GET',
       signal: AbortSignal.timeout(5000) // 5秒超时
     })

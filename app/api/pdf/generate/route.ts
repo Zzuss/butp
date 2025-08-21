@@ -12,13 +12,19 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent')
     })
     
-    // 构建转发到校内PDF服务的请求
-    const campusServiceUrl = 'http://10.3.58.3:8000/generate-pdf'
+    // 根据部署环境动态选择PDF服务地址
+    const campusServiceUrl = process.env.CAMPUS_PDF_SERVICE_URL || 'http://139.159.233.180/generate-pdf'
+    
+    console.log('🏢 当前环境:', {
+      isProduction: process.env.NODE_ENV === 'production',
+      hostname: process.env.VERCEL_URL || 'localhost',
+      pdfServiceUrl: campusServiceUrl
+    })
     
     // 转发请求头（包括认证信息）
     const forwardHeaders: HeadersInit = {
       'Content-Type': 'application/json',
-      'x-pdf-key': 'campus-pdf-2024-1755617095',
+      'x-pdf-key': 'huawei-pdf-2024-secure-key',
       'User-Agent': request.headers.get('user-agent') || 'BuTP-PDF-Proxy/1.0'
     }
     
