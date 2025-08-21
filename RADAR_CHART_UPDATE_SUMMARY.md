@@ -6,7 +6,7 @@
 ## 具体修改内容
 
 ### 1. 修改 `lib/ability-data.ts` 文件
-- **原数据源**: `cohort_predictions` 表
+- **原数据源**: `cohort_predictions` 表（已废弃）
 - **新数据源**: `student_abilities_rada` 表
 - **原字段**: 9个能力维度字段
 - **新字段**: 5个能力维度字段

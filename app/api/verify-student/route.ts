@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
     const tables = [
       { name: 'academic_results', snhColumn: 'SNH', majorColumn: 'Current_Major' },
       { name: 'cohort_probability', snhColumn: 'SNH', majorColumn: 'major' },
-      { name: 'cohort_predictions', snhColumn: 'SNH', majorColumn: 'major' },
+      { name: 'Cohort2023_Predictions_ai', snhColumn: 'SNH', majorColumn: 'major' },
+    { name: 'Cohort2023_Predictions_ee', snhColumn: 'SNH', majorColumn: 'major' },
+    { name: 'Cohort2023_Predictions_tewm', snhColumn: 'SNH', majorColumn: 'major' },
+    { name: 'Cohort2023_Predictions_iot', snhColumn: 'SNH', majorColumn: 'major' },
       { name: 'student_grades', snhColumn: 'SNH', majorColumn: null }
     ];
 

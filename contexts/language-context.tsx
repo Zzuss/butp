@@ -263,7 +263,7 @@ const translations: Record<Language, Record<string, string>> = {
       'analysis.graduation.required.political': '思政课程学分: {required}，已获得: {earned}',
       'analysis.graduation.required.innovation': '创新创业学分: {required}，已获得: {earned}',
       'analysis.curriculum.title': '培养方案',
-      'analysis.curriculum.view.full': '查看完整培养方案',
+      'analysis.curriculum.view.full': '下载完整培养方案',
       'analysis.curriculum.major': '专业：{major}',
       'analysis.curriculum.click.hint': '点击上方按钮查看完整培养方案',
       'analysis.curriculum.no.major': '暂无专业信息',
@@ -306,7 +306,7 @@ const translations: Record<Language, Record<string, string>> = {
     // 目标分数显示
     'analysis.target.score.loading': '加载中...',
     'analysis.target.score.no.data': '暂无目标分数数据',
-    'analysis.target.score.minimum': '想要达到该目标，最低均分为',
+    'analysis.target.score.minimum': '最低目标分数：',
     
     // 修改未来提示窗
     'analysis.edit.modal.title': '修改你的未来',
@@ -317,7 +317,37 @@ const translations: Record<Language, Record<string, string>> = {
     'about.version': '当前版本 {version}',
     
     // 雷达图相关
-    'radar.modal.title': '测试字段'
+    'radar.modal.title': '测试字段',
+    // 新增缺失的翻译键
+    'analysis.login.required': '请登录查看学业分析',
+    'analysis.overseas.target': '为达到{score}%海外读研的目标，推荐的各科目成绩如下：',
+    'analysis.domestic.target': '为达到{score}%国内读研的目标，推荐的各科目成绩如下：',
+    'analysis.view.all.courses': '查看所有课程数据',
+    'analysis.prediction.result': '当前去向的新可能性为{current}%，另一去向的新可能性为{other}%',
+    'analysis.prediction.not.started': '还未开始计算新百分比',
+    'analysis.course.recommendation': '查看和修改您的课程推荐成绩',
+    'analysis.calculating': '计算中...',
+    'analysis.no.student.data': '该学生数据不存在',
+    'analysis.overseas.title': '海外读研',
+    'analysis.domestic.title': '国内读研',
+    'analysis.edit.cancel': '取消编辑',
+    'analysis.edit.start': '编辑',
+    'analysis.edit.welcome': '欢迎进入编辑模式',
+    
+    // 隐私条款页面
+    'privacy.title': '隐私条款同意',
+    'privacy.description': '请仔细阅读以下隐私政策与用户数据使用条款，同意后方可使用系统服务',
+    'privacy.loading': '正在加载隐私条款内容...',
+    'privacy.error.loading': '加载隐私条款失败，请刷新页面重试',
+    'privacy.error.network': '网络错误，请重试',
+    'privacy.error.agree': '同意失败，请重试',
+    'privacy.button.agree': '我同意隐私条款',
+    'privacy.button.disagree': '我不同意',
+    'privacy.button.processing': '处理中...',
+    'privacy.confirm.disagree': '如果您不同意隐私条款，将无法使用系统服务。确定要退出吗？',
+    'privacy.hint.agree': '点击"我同意"表示您已阅读并同意上述隐私条款',
+    'privacy.hint.disagree': '如果您不同意，将无法使用系统服务',
+    'privacy.last.updated': '最后更新时间：{date}'
   },
   en: {
     // 登录页面
@@ -565,7 +595,7 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.confirm.modal.step.calculating': '🧮 Calculating weighted average...',
     'analysis.confirm.modal.step.complete': '✅ Calculation complete!',
     'analysis.curriculum.title': 'Curriculum',
-    'analysis.curriculum.view.full': 'View Full Curriculum',
+    'analysis.curriculum.view.full': 'Download Full Curriculum',
     'analysis.curriculum.major': 'Major: {major}',
     'analysis.curriculum.click.hint': 'Click the button above to view the full curriculum',
     'analysis.curriculum.no.major': 'No major information available',
@@ -619,7 +649,37 @@ const translations: Record<Language, Record<string, string>> = {
     'about.version': 'Version {version}',
     
     // 雷达图相关
-    'radar.modal.title': 'test content'
+    'radar.modal.title': 'test content',
+    // 新增缺失的翻译键
+    'analysis.login.required': 'Please log in to view academic analysis',
+    'analysis.overseas.target': 'To achieve the {score}% overseas study goal, the recommended course scores are as follows:',
+    'analysis.domestic.target': 'To achieve the {score}% domestic study goal, the recommended course scores are as follows:',
+    'analysis.view.all.courses': 'View All Course Data',
+    'analysis.prediction.result': 'Current path new possibility: {current}%, other path new possibility: {other}%',
+    'analysis.prediction.not.started': 'New percentage calculation not started yet',
+    'analysis.course.recommendation': 'View and modify your recommended course scores',
+    'analysis.calculating': 'Calculating...',
+    'analysis.no.student.data': 'Student data does not exist',
+    'analysis.overseas.title': 'Overseas Study',
+    'analysis.domestic.title': 'Domestic Study',
+    'analysis.edit.cancel': 'Cancel Edit',
+    'analysis.edit.start': 'Edit',
+    'analysis.edit.welcome': 'Welcome to Edit Mode',
+    
+    // Privacy Agreement Page
+    'privacy.title': 'Privacy Agreement',
+    'privacy.description': 'Please carefully read the following privacy policy and user data usage terms. You must agree to use the system services.',
+    'privacy.loading': 'Loading privacy policy content...',
+    'privacy.error.loading': 'Failed to load privacy policy, please refresh the page and try again',
+    'privacy.error.network': 'Network error, please try again',
+    'privacy.error.agree': 'Agreement failed, please try again',
+    'privacy.button.agree': 'I Agree to Privacy Policy',
+    'privacy.button.disagree': 'I Disagree',
+    'privacy.button.processing': 'Processing...',
+    'privacy.confirm.disagree': 'If you disagree with the privacy policy, you will not be able to use the system services. Are you sure you want to exit?',
+    'privacy.hint.agree': 'Clicking "I Agree" means you have read and agreed to the above privacy policy',
+    'privacy.hint.disagree': 'If you disagree, you will not be able to use the system services',
+    'privacy.last.updated': 'Last updated: {date}'
   }
 }
 

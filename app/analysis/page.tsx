@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { getTopPercentageGPAThreshold, getStudentInfo } from "@/lib/dashboard-data"
 import { getStudentAbilityData } from "@/lib/ability-data"
 import { RadarChart } from "@/components/ui/radar-chart"
+import { Slider } from "@/components/ui/slider"
 
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -64,6 +65,13 @@ export default function Analysis() {
   } | null>(null);
   const [loadingTargetScores, setLoadingTargetScores] = useState(false);
   const [targetScoresCache, setTargetScoresCache] = useState<Record<string, any>>({});
+
+  // 概率数据状态（来自 cohort_probability 表）
+  const [probabilityData, setProbabilityData] = useState<{
+    proba_1: number | null;
+    proba_2: number | null;
+  } | null>(null);
+  const [loadingProbability, setLoadingProbability] = useState(false);
   
   // Original缓存状态
   const [originalScoresCache, setOriginalScoresCache] = useState<Record<string, any>>({});
@@ -133,6 +141,10 @@ export default function Analysis() {
 
   // 学生信息状态
   const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
+  // 原始分数加载重试计数
+  const originalRetryRef = useRef(0)
+  // 概率数据加载重试计数
+  const probabilityRetryRef = useRef(0)
   
 
 
@@ -471,6 +483,7 @@ export default function Analysis() {
   // 加载目标分数（带缓存）
   const loadTargetScores = async () => {
     if (!user?.userHash) return;
+    if (!studentInfo?.major) return; // 等待专业加载
 
     // 检查缓存
     if (targetScoresCache[user.userHash]) {
@@ -485,7 +498,7 @@ export default function Analysis() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ studentHash: user.userHash }),
+        body: JSON.stringify({ studentHash: user.userHash, major: studentInfo?.major }),
       });
       
       if (response.ok) {
@@ -511,6 +524,34 @@ export default function Analysis() {
     }
   };
 
+  // 加载概率数据（按钮旁百分比），来自 cohort_probability 表
+  const loadProbabilityData = async () => {
+    if (!user?.userHash) return;
+
+    setLoadingProbability(true);
+    try {
+      const response = await fetch('/api/probability-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: user.userHash })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProbabilityData({
+          proba_1: typeof data.proba_1 === 'number' ? data.proba_1 : null,
+          proba_2: typeof data.proba_2 === 'number' ? data.proba_2 : null
+        });
+      } else {
+        setProbabilityData(null);
+      }
+    } catch (error) {
+      setProbabilityData(null);
+    } finally {
+      setLoadingProbability(false);
+    }
+  };
+
   // 加载Original缓存（从student-course-scores API，对标模板）
   const loadOriginalScores = async () => {
     if (!user?.userHash) return;
@@ -528,7 +569,10 @@ export default function Analysis() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ studentHash: user.userHash }),
+        body: JSON.stringify({ 
+          studentHash: user.userHash,
+          major: studentInfo?.major
+        }),
       });
       
       if (response.ok) {
@@ -559,7 +603,11 @@ export default function Analysis() {
           return [];
         }
       } else {
-        console.error('Failed to load original scores');
+        // 若404等，前端显示"该学生数据不存在"
+        try {
+          const err = await response.json();
+          console.error('Failed to load original scores:', err?.error || response.statusText);
+        } catch {}
         return [];
       }
     } catch (error) {
@@ -761,23 +809,58 @@ export default function Analysis() {
     }
   }, [user?.userHash, authLoading]);
 
-  // 加载目标分数
+  // 加载目标分数（等待专业加载）
   useEffect(() => {
     if (authLoading) return;
-    
-    if (user?.userHash) {
-      loadTargetScores();
+    if (!user?.userHash) return;
+    if (!studentInfo?.major) return;
+    loadTargetScores();
+  }, [user?.userHash, authLoading, studentInfo?.major]);
+
+  // 加载按钮旁概率数据（增加轻量重试，最多5次，每次500ms）
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user?.userHash) return;
+
+    // 如果已经有数据，不再重试
+    if (probabilityData) return;
+
+    // 首次尝试
+    loadProbabilityData();
+
+    // 若没有数据且未超过重试次数，安排下次重试
+    if (probabilityRetryRef.current < 5) {
+      const timer = setTimeout(() => {
+        // 只有在还没有数据的情况下才继续重试
+        if (!probabilityData) {
+          probabilityRetryRef.current += 1;
+          loadProbabilityData();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [user?.userHash, authLoading]);
 
   // 加载Original缓存
   useEffect(() => {
     if (authLoading) return;
-    
-    if (user?.userHash) {
+    if (!user?.userHash) return;
+
+    // 只有当 studentInfo.major 可用时，才触发加载；否则等待并重试
+    if (studentInfo?.major) {
       loadOriginalScores();
+    } else {
+      // 简单重试：最多重试 5 次，每次延迟 500ms
+      if (originalRetryRef.current < 5) {
+        originalRetryRef.current += 1;
+        const timer = setTimeout(() => {
+          // 触发一次重新渲染以再次进入 effect 判断
+          setStudentInfo((prev) => prev);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [user?.userHash, authLoading]);
+  }, [user?.userHash, authLoading, studentInfo?.major]);
 
   // 加载Source2缓存
   useEffect(() => {
@@ -816,6 +899,38 @@ export default function Analysis() {
 
   // 获取当前语言的能力标签
   const currentAbilityLabels = abilityLabels[language as keyof typeof abilityLabels] || abilityLabels.zh;
+  
+  // 下载状态
+  const [downloading, setDownloading] = useState(false);
+  
+  // 下载培养方案处理函数
+  const handleDownloadCurriculum = async () => {
+    try {
+      setDownloading(true);
+      
+      const response = await fetch('/api/download-curriculum', {
+        method: 'GET',
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Education_Plan_PDF_2023.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('下载失败');
+      }
+    } catch (error) {
+      console.error('下载失败:', error);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // 如果未登录，显示登录提示
   if (!authLoading && !user?.isLoggedIn) {
@@ -841,6 +956,7 @@ export default function Analysis() {
             }
           </p>
         </div>
+
       </div>
 
       {/* 免责声明 */}
@@ -861,9 +977,9 @@ export default function Analysis() {
           }`}
           onClick={() => handleButtonSelect('graduation')}
         >
-          <span>毕业</span>
+          <span>{t('analysis.graduation.title')}</span>
           <span className="text-xs text-red-500 mt-1 px-1 text-center leading-tight break-words whitespace-normal">
-            您还有毕业要求未完成
+            {t('analysis.graduation.pending')}
           </span>
         </Button>
                  <Button
@@ -877,14 +993,14 @@ export default function Analysis() {
          >
            <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
              <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-               <span>海外读研</span>
+               <span>{t('analysis.overseas.title')}</span>
              </div>
              <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
                <span className="text-base text-blue-500 font-medium">
-                 {loadingTargetScores ? '加载中...' : 
-                  targetScores && targetScores.target2_score !== null ? 
-                  `${targetScores.target2_score}%` : 
-                  '暂无数据'}
+                 {loadingProbability ? t('analysis.target.score.loading') : 
+                  probabilityData && probabilityData.proba_2 !== null ? 
+                  `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
+                  t('analysis.target.score.no.data')}
                </span>
              </div>
            </div>
@@ -900,14 +1016,14 @@ export default function Analysis() {
          >
            <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
              <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-               <span>国内读研</span>
+               <span>{t('analysis.domestic.title')}</span>
              </div>
              <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
                <span className="text-base text-blue-500 font-medium">
-                 {loadingTargetScores ? '加载中...' : 
-                  targetScores && targetScores.target1_score !== null ? 
-                  `${targetScores.target1_score}%` : 
-                  '暂无数据'}
+                 {loadingProbability ? t('analysis.target.score.loading') : 
+                  probabilityData && probabilityData.proba_1 !== null ? 
+                  `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
+                  t('analysis.target.score.no.data')}
                </span>
              </div>
            </div>
@@ -918,8 +1034,8 @@ export default function Analysis() {
         {/* 初始界面内容 - 仅在未选择按钮时显示 */}
         {!selectedButton && (
           <>
-            {/* GPA门槛值分析 - 独立卡片，填满整个宽度 */}
-            <div className="mb-6">
+            {/* GPA门槛值分析 - 独立卡片，填满整个宽度 - 已隐藏 */}
+            <div className="mb-6 hidden">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-lg font-medium">{t('analysis.tops.title')}</CardTitle>
@@ -929,7 +1045,7 @@ export default function Analysis() {
                 {/* 前10% GPA */}
                 <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
                   <div className="text-lg font-medium mb-2">
-                    {loadingGPA ? '计算中...' : (gpaThresholds.top10 !== null ? gpaThresholds.top10.toFixed(2) : '暂无数据')}
+                    {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top10 !== null ? gpaThresholds.top10.toFixed(2) : t('analysis.target.score.no.data'))}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {t('analysis.tops.top10')} GPA
@@ -939,7 +1055,7 @@ export default function Analysis() {
                 {/* 前20% GPA */}
                 <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
                   <div className="text-lg font-medium mb-2">
-                    {loadingGPA ? '计算中...' : (gpaThresholds.top20 !== null ? gpaThresholds.top20.toFixed(2) : '暂无数据')}
+                    {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top20 !== null ? gpaThresholds.top20.toFixed(2) : t('analysis.target.score.no.data'))}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {t('analysis.tops.top20')} GPA
@@ -949,7 +1065,7 @@ export default function Analysis() {
                 {/* 前30% GPA */}
                 <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
                   <div className="text-lg font-medium mb-2">
-                    {loadingGPA ? '计算中...' : (gpaThresholds.top30 !== null ? gpaThresholds.top30.toFixed(2) : '暂无数据')}
+                    {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top30 !== null ? gpaThresholds.top30.toFixed(2) : t('analysis.target.score.no.data'))}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {t('analysis.tops.top30')} GPA
@@ -970,7 +1086,7 @@ export default function Analysis() {
             <CardContent>
                   {loadingAbility ? (
                     <div className="flex justify-center items-center h-64">
-                      <div className="text-muted-foreground">加载中...</div>
+                      <div className="text-muted-foreground">{t('analysis.target.score.loading')}</div>
                     </div>
                   ) : (
                     <RadarChart 
@@ -993,7 +1109,7 @@ export default function Analysis() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <div>
-                    <CardTitle>培养方案</CardTitle>
+                    <CardTitle>{t('analysis.curriculum.title')}</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -1002,8 +1118,10 @@ export default function Analysis() {
                       variant="default"
                       size="lg"
                       className="w-3/4 h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                      onClick={handleDownloadCurriculum}
+                      disabled={downloading}
                     >
-                      点击下载培养方案文件
+                      {downloading ? '下载中...' : t('analysis.curriculum.view.full')}
                     </Button>
                   </div>
                 </CardContent>
@@ -1018,8 +1136,8 @@ export default function Analysis() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div>
-                  <CardTitle>毕业要求检查</CardTitle>
-                  <CardDescription>检查您的毕业要求完成情况</CardDescription>
+                  <CardTitle>{t('analysis.graduation.title')}</CardTitle>
+                  <CardDescription>{t('analysis.graduation.description')}</CardDescription>
                 </div>
                 <Button
                   variant="outline"
@@ -1028,7 +1146,7 @@ export default function Analysis() {
                   disabled={submitting}
                   className="h-8 px-3 text-sm"
                 >
-                  {isEditing ? '取消编辑' : '编辑'}
+                  {isEditing ? t('analysis.edit.cancel') : t('analysis.edit.start')}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -1260,11 +1378,11 @@ export default function Analysis() {
                 <div className="flex-1">
                   <div className="text-center">
                     <p className="text-blue-800 font-medium">
-                      最低目标分数：{' '}
+                      {t('analysis.target.score.minimum')}{' '}
                       <span className="text-blue-600 font-bold">
                         {loadingTargetScores ? '加载中...' : 
                          targetScores && targetScores.target2_score !== null ? 
-                         `${targetScores.target2_score}%` : 
+                         `${targetScores.target2_score}` : 
                          '暂无数据'}
                       </span>
                     </p>
@@ -1278,7 +1396,7 @@ export default function Analysis() {
                     onClick={loadAllCourseData}
                     disabled={loadingAllCourseData}
                   >
-                    {loadingAllCourseData ? '加载中...' : '查看所有课程数据'}
+                    {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
                   </Button>
                 </div>
               </div>
@@ -1292,14 +1410,14 @@ export default function Analysis() {
                     <p className="text-blue-800 font-medium">
                       {predictionResult ? (
                         selectedButton === 'overseas' ? (
-                          `当前去向的新可能性为${predictionResult.overseasPercentage}%，另一去向的新可能性为${predictionResult.domesticPercentage}%`
+                          t('analysis.prediction.result', { current: predictionResult.overseasPercentage || 0, other: predictionResult.domesticPercentage || 0 })
                         ) : selectedButton === 'domestic' ? (
-                          `当前去向的新可能性为${predictionResult.domesticPercentage}%，另一去向的新可能性为${predictionResult.overseasPercentage}%`
+                          t('analysis.prediction.result', { current: predictionResult.domesticPercentage || 0, other: predictionResult.overseasPercentage || 0 })
                         ) : (
-                          `当前去向的新可能性为${predictionResult.overseasPercentage}%，另一去向的新可能性为${predictionResult.domesticPercentage}%`
+                          t('analysis.prediction.result', { current: predictionResult.overseasPercentage || 0, other: predictionResult.domesticPercentage || 0 })
                         )
                       ) : (
-                        '还未开始计算新百分比'
+                        t('analysis.prediction.not.started')
                       )}
                     </p>
                   </div>
@@ -1316,8 +1434,8 @@ export default function Analysis() {
                 {/* 手机端布局 - 上下排列 */}
                 <div className="flex flex-col space-y-4 md:hidden">
                   <div>
-                    <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : '暂无数据'}% 海外读研的目标，推荐的各科目成绩如下：</CardTitle>
-                    <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
+                    <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingTargetScores ? t('analysis.target.score.loading') : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : t('analysis.target.score.no.data') })}</CardTitle>
+                    <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                   </div>
                   <div className="flex flex-col space-y-3">
                     {isEditMode ? (
@@ -1332,10 +1450,10 @@ export default function Analysis() {
                           {loadingFeatures ? (
                             <div className="flex items-center gap-2">
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              <span>计算中...</span>
+                              <span>{t('analysis.calculating')}</span>
                             </div>
                           ) : (
-                            '确认修改'
+                            t('analysis.course.scores.confirm.modify')
                           )}
                         </Button>
                         <Button 
@@ -1344,7 +1462,7 @@ export default function Analysis() {
                           className="w-full px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
                           onClick={handleEditModeToggle}
                         >
-                          退出修改
+                          {t('analysis.course.scores.exit.modify')}
                         </Button>
                       </>
                     ) : (
@@ -1354,7 +1472,7 @@ export default function Analysis() {
                         className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
                         onClick={handleEditModeToggle}
                       >
-                        修改未来
+                        {t('analysis.course.scores.modify.future')}
                       </Button>
                     )}
                   </div>
@@ -1363,8 +1481,8 @@ export default function Analysis() {
                 {/* PC端布局 - 保持原有的左右排列 */}
                 <div className="hidden md:flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : '暂无数据'}% 海外读研的目标，推荐的各科目成绩如下：</CardTitle>
-                    <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
+                    <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingTargetScores ? t('analysis.target.score.loading') : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : t('analysis.target.score.no.data') })}</CardTitle>
+                    <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                   </div>
                   <div className="flex-1 flex justify-center items-center gap-4">
                     {isEditMode ? (
@@ -1378,10 +1496,10 @@ export default function Analysis() {
                         {loadingFeatures ? (
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>计算中...</span>
+                            <span>{t('analysis.calculating')}</span>
                           </div>
                         ) : (
-                          '确认修改'
+                          t('analysis.course.scores.confirm.modify')
                         )}
                       </Button>
                     ) : (
@@ -1391,7 +1509,7 @@ export default function Analysis() {
                         className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
                         onClick={handleEditModeToggle}
                       >
-                        修改未来
+                        {t('analysis.course.scores.modify.future')}
                       </Button>
                     )}
                   </div>
@@ -1422,7 +1540,7 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩可查看趋势变化
+                            修改成绩
                           </th>
                         )}
                       </tr>
@@ -1439,7 +1557,7 @@ export default function Analysis() {
                           return (
                             <tr>
                               <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                                {loadingOriginalScores ? '加载中...' : '暂无有成绩的课程数据'}
+                                {loadingOriginalScores ? t('analysis.target.score.loading') : t('analysis.course.scores.no.data')}
                               </td>
                             </tr>
                           );
@@ -1481,26 +1599,23 @@ export default function Analysis() {
                                 )}
                               </td>
                               {isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[150px] md:min-w-0">
+                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
                                   {score !== null && score !== undefined ? (
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      step="0.5"
-                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    <Slider
                                       value={(() => {
                                         // 从modified缓存中查找当前课程的最新成绩
                                         const modifiedScores = getModifiedScores();
                                         const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
                                         if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
-                                          return modifiedCourse.score;
+                                          return Number(modifiedCourse.score);
                                         }
-                                        return score; // 如果没有修改，显示原始成绩
+                                        return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      placeholder="输入新成绩"
-                                      onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
-                                      onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
+                                      className="w-full"
                                     />
                                   ) : (
                                     <span className="text-gray-400 italic text-xs">无原始成绩</span>
@@ -1631,11 +1746,11 @@ export default function Analysis() {
                 <div className="flex-1">
                   <div className="text-center">
                     <p className="text-blue-800 font-medium">
-                      最低目标分数：{' '}
+                      {t('analysis.target.score.minimum')}{' '}
                       <span className="text-blue-600 font-bold">
                         {loadingTargetScores ? '加载中...' : 
                          targetScores && targetScores.target1_score !== null ? 
-                         `${targetScores.target1_score}%` : 
+                         `${targetScores.target1_score}` : 
                          '暂无数据'}
                       </span>
                     </p>
@@ -1649,7 +1764,7 @@ export default function Analysis() {
                     onClick={loadAllCourseData}
                     disabled={loadingAllCourseData}
                   >
-                    {loadingAllCourseData ? '加载中...' : '查看所有课程数据'}
+                    {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
                   </Button>
                 </div>
               </div>
@@ -1662,9 +1777,9 @@ export default function Analysis() {
                   <div className="text-center">
                     <p className="text-blue-800 font-medium">
                       {predictionResult ? (
-                        `当前去向的新可能性为${predictionResult.domesticPercentage}%，另一去向的新可能性为${predictionResult.overseasPercentage}%`
+                        t('analysis.prediction.result', { current: predictionResult.domesticPercentage || 0, other: predictionResult.overseasPercentage || 0 })
                       ) : (
-                        '还未开始计算新百分比'
+                        t('analysis.prediction.not.started')
                       )}
                     </p>
                   </div>
@@ -1681,8 +1796,8 @@ export default function Analysis() {
                 {/* 手机端布局 - 上下排列 */}
                 <div className="flex flex-col space-y-4 md:hidden">
                   <div>
-                    <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : '暂无数据'}% 国内读研的目标，推荐的各科目成绩如下：</CardTitle>
-                    <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
+                    <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingTargetScores ? t('analysis.target.score.loading') : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : t('analysis.target.score.no.data') })}</CardTitle>
+                    <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                   </div>
                   <div className="flex flex-col space-y-3">
                     {isEditMode ? (
@@ -1697,10 +1812,10 @@ export default function Analysis() {
                           {loadingFeatures ? (
                             <div className="flex items-center gap-2">
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              <span>计算中...</span>
+                              <span>{t('analysis.calculating')}</span>
                             </div>
                           ) : (
-                            '确认修改'
+                            t('analysis.course.scores.confirm.modify')
                           )}
                         </Button>
                         <Button 
@@ -1709,7 +1824,7 @@ export default function Analysis() {
                           className="w-full px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
                           onClick={handleEditModeToggle}
                         >
-                          退出修改
+                          {t('analysis.course.scores.exit.modify')}
                         </Button>
                       </>
                     ) : (
@@ -1719,7 +1834,7 @@ export default function Analysis() {
                         className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
                         onClick={handleEditModeToggle}
                       >
-                        修改未来
+                        {t('analysis.course.scores.modify.future')}
                       </Button>
                     )}
                   </div>
@@ -1728,8 +1843,8 @@ export default function Analysis() {
                 {/* PC端布局 - 保持原有的左右排列 */}
                 <div className="hidden md:flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-lg font-medium">为达到{loadingTargetScores ? '加载中...' : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : '暂无数据'}% 国内读研的目标，推荐的各科目成绩如下：</CardTitle>
-                    <CardDescription>查看和修改您的课程推荐成绩</CardDescription>
+                    <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingTargetScores ? t('analysis.target.score.loading') : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : t('analysis.target.score.no.data') })}</CardTitle>
+                    <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                   </div>
                   <div className="flex-1 flex justify-center items-center gap-4">
                     {isEditMode ? (
@@ -1743,10 +1858,10 @@ export default function Analysis() {
                         {loadingFeatures ? (
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>计算中...</span>
+                            <span>{t('analysis.calculating')}</span>
                           </div>
                         ) : (
-                          '确认修改'
+                          t('analysis.course.scores.confirm.modify')
                         )}
                       </Button>
                     ) : (
@@ -1756,7 +1871,7 @@ export default function Analysis() {
                         className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
                         onClick={handleEditModeToggle}
                       >
-                        修改未来
+                        {t('analysis.course.scores.modify.future')}
                       </Button>
                     )}
                   </div>
@@ -1787,7 +1902,7 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩可查看趋势变化
+                            修改成绩
                           </th>
                         )}
                       </tr>
@@ -1838,29 +1953,26 @@ export default function Analysis() {
                                 )}
                               </td>
                               {isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[150px] md:min-w-0">
-                                  {course.score !== null ? (
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      step="0.5"
-                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
+                                  {score !== null && score !== undefined ? (
+                                    <Slider
                                       value={(() => {
                                         // 从modified缓存中查找当前课程的最新成绩
                                         const modifiedScores = getModifiedScores();
                                         const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
                                         if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
-                                          return modifiedCourse.score;
+                                          return Number(modifiedCourse.score);
                                         }
-                                        return course.score; // 如果没有修改，显示原始成绩
+                                        return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      onChange={(e) => handleScoreChange(course.courseName, e.target.value)}
-                                      onBlur={(e) => handleScoreBlur(course.courseName, e.target.value)}
-                                      placeholder={t('analysis.course.scores.input.placeholder')}
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
+                                      className="w-full"
                                     />
                                   ) : (
-                                    <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
+                                    <span className="text-gray-400 italic text-xs">无原始成绩</span>
                                   )}
                                 </td>
                               )}
@@ -2024,7 +2136,7 @@ export default function Analysis() {
               </div>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">
-              欢迎进入编辑模式
+              {t('analysis.edit.welcome')}
             </h3>
             <p className="text-lg text-gray-600">
               您现在可以修改课程成绩，探索不同的人生可能性
@@ -2080,7 +2192,7 @@ export default function Analysis() {
 
             {/* 来源1数据表格 */}
             <div className="mb-6">
-              <h4 className="font-semibold mb-3 text-green-700">来源1：cohort_predictions 表（包含修改后的成绩）</h4>
+              <h4 className="font-semibold mb-3 text-green-700">来源1：专业预测表（包含修改后的成绩）</h4>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-200 text-sm">
                   <thead>
@@ -2187,11 +2299,11 @@ export default function Analysis() {
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="border border-gray-200 px-3 py-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            course.source === 'cohort_predictions' 
+                            course.source === '专业预测表' 
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-orange-100 text-orange-800'
                           }`}>
-                            {course.source === 'cohort_predictions' ? '来源1' : '来源2'}
+                            {course.source === '专业预测表' ? '来源1' : '来源2'}
                           </span>
                         </td>
                         <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
