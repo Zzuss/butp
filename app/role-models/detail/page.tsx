@@ -1,112 +1,43 @@
 "use client"
 
+import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { GraduationCap, Briefcase, MapPin, Star, Building, School, Award, BookOpen, Layers, Globe } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollableContainer } from "../../components/ui/scrollable-container"
+import { 
+  GraduationCap, 
+  Briefcase, 
+  MapPin, 
+  Star, 
+  Building, 
+  School, 
+  Award, 
+  BookOpen, 
+  Layers, 
+  Globe, 
+  ArrowLeft, 
+  Users, 
+  Calendar, 
+  Target, 
+  CheckCircle 
+} from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/contexts/AuthContext"
-import { getUserProbabilityData } from "@/lib/dashboard-data"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense } from "react"
 
-
-
-// 可能性卡片组件
-function PossibilityCard({ activeTab }: { activeTab: string }) {
-  const { t } = useLanguage()
-  const { user } = useAuth()
-  const [probabilityData, setProbabilityData] = useState<{
-    proba_1: number;
-    proba_2: number;
-    proba_3: number;
-  } | null>(null)
-  const [loading, setLoading] = useState(true)
-  
-  // 获取用户概率数据
-  useEffect(() => {
-    async function fetchProbabilityData() {
-      if (user?.isLoggedIn) {
-        try {
-          const data = await getUserProbabilityData(user.userId)
-          setProbabilityData(data)
-        } catch (error) {
-          console.error('Error fetching probability data:', error)
-        } finally {
-          setLoading(false)
-        }
-      } else {
-        setLoading(false)
-      }
-    }
-    
-    fetchProbabilityData()
-  }, [user])
-  
-  // 根据不同标签页显示不同的可能性类型和数值
-  const getPossibilityData = () => {
-    // 默认值（当没有数据时使用）
-    const defaultValues = {
-      companies: { type: t('rolemodels.possibility.employment'), percentage: '70%' },
-      schools: { type: t('rolemodels.possibility.graduate'), percentage: '80%' },
-      internships: { type: t('rolemodels.possibility.internship'), percentage: '90%' }
-    }
-    
-    // 如果没有数据或正在加载，使用默认值
-    if (loading || !probabilityData) {
-      return defaultValues[activeTab as keyof typeof defaultValues] || defaultValues.companies
-    }
-    
-    // 根据当前标签页返回对应的概率数据
-    switch (activeTab) {
-      case 'companies':
-        return {
-          type: t('rolemodels.possibility.employment'),
-          percentage: `${(probabilityData.proba_1 * 100).toFixed(1)}%`
-        }
-      case 'schools':
-        return {
-          type: t('rolemodels.possibility.graduate'),
-          percentage: `${(probabilityData.proba_2 * 100).toFixed(1)}%`
-        }
-      case 'internships':
-        return {
-          type: t('rolemodels.possibility.internship'),
-          percentage: `${(probabilityData.proba_3 * 100).toFixed(1)}%`
-        }
-      default:
-        return {
-          type: t('rolemodels.possibility.employment'),
-          percentage: `${(probabilityData.proba_1 * 100).toFixed(1)}%`
-        }
-    }
-  }
-  
-  const { type, percentage } = getPossibilityData()
+// Badge组件
+function Badge({ children, variant = "secondary" }: { children: React.ReactNode, variant?: "secondary" | "outline" }) {
+  const baseClass = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+  const variantClass = variant === "outline" 
+    ? "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
   
   return (
-    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300 shadow-lg hover:shadow-xl transition-shadow duration-300 min-w-[280px] max-w-[320px]">
-      <CardContent className="px-8 py-4">
-        <div className="text-center mb-3">
-          <div className="text-sm text-blue-600 opacity-80">
-            {t('rolemodels.possibility.estimate')}
-          </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="text-xl font-semibold text-blue-700">
-            {type}
-          </div>
-          <div className="text-4xl font-bold text-blue-800 tracking-tight">
-            {percentage}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className={`${baseClass} ${variantClass}`}>
+      {children}
+    </div>
   )
 }
 
-// 按公司和学校分类的虚拟角色模型数据
+// 公司数据（从原页面复制）
 const companyModels = {
   "腾讯": {
     "大模型": [
@@ -297,7 +228,7 @@ const companyModels = {
   "阿里巴巴": {
     "算法": [
       {
-        id: 3,
+        id: 9,
         name: "阿里巴巴算法工程师画像",
         position: "算法工程师",
         location: "杭州/北京",
@@ -320,7 +251,7 @@ const companyModels = {
     ],
     "前端": [
       {
-        id: 4,
+        id: 10,
         name: "阿里巴巴前端开发画像",
         position: "前端开发工程师",
         location: "杭州/北京",
@@ -345,7 +276,7 @@ const companyModels = {
   "字节跳动": {
     "算法": [
       {
-        id: 5,
+        id: 11,
         name: "字节跳动算法工程师画像",
         position: "算法工程师",
         location: "北京/上海",
@@ -368,7 +299,7 @@ const companyModels = {
     ],
     "前端": [
       {
-        id: 6,
+        id: 12,
         name: "字节跳动前端开发画像",
         position: "前端开发工程师",
         location: "北京/上海",
@@ -396,7 +327,7 @@ const schoolModels = {
   "清华大学": {
     "电子信息工程": [
       {
-        id: 4,
+        id: 101,
         name: "清华大学电子信息工程研究生画像",
         graduateMajor: "电子信息工程",
         location: "北京",
@@ -420,7 +351,7 @@ const schoolModels = {
     ],
     "计算机科学与技术": [
       {
-        id: 5,
+        id: 102,
         name: "清华大学计算机科学与技术研究生画像",
         graduateMajor: "计算机科学与技术",
         location: "北京",
@@ -444,7 +375,7 @@ const schoolModels = {
     ],
     "自动化": [
       {
-        id: 6,
+        id: 103,
         name: "清华大学自动化研究生画像",
         graduateMajor: "自动化",
         location: "北京",
@@ -470,7 +401,7 @@ const schoolModels = {
   "北京大学": {
     "理论物理": [
       {
-        id: 7,
+        id: 104,
         name: "北京大学理论物理研究生画像",
         graduateMajor: "理论物理",
         location: "北京",
@@ -494,7 +425,7 @@ const schoolModels = {
     ],
     "计算机科学与技术": [
       {
-        id: 8,
+        id: 105,
         name: "北京大学计算机科学与技术研究生画像",
         graduateMajor: "计算机科学与技术",
         location: "北京",
@@ -518,7 +449,7 @@ const schoolModels = {
     ],
     "生物科学": [
       {
-        id: 9,
+        id: 106,
         name: "北京大学生物科学研究生画像",
         graduateMajor: "生物科学",
         location: "北京",
@@ -544,7 +475,7 @@ const schoolModels = {
   "哈佛大学": {
     "分子生物学": [
       {
-        id: 10,
+        id: 107,
         name: "哈佛大学分子生物学留学生画像",
         graduateMajor: "分子生物学",
         location: "波士顿",
@@ -569,7 +500,7 @@ const schoolModels = {
     ],
     "公共政策": [
       {
-        id: 11,
+        id: 108,
         name: "哈佛大学公共政策留学生画像",
         graduateMajor: "公共政策",
         location: "波士顿",
@@ -594,7 +525,7 @@ const schoolModels = {
     ],
     "计算机科学": [
       {
-        id: 12,
+        id: 109,
         name: "哈佛大学计算机科学留学生画像",
         graduateMajor: "计算机科学",
         location: "波士顿",
@@ -624,7 +555,7 @@ const internshipModels = {
   "腾讯": {
     "技术类": [
       {
-        id: 1,
+        id: 201,
         name: "腾讯技术实习生画像",
         position: "技术实习生",
         duration: "3-6个月",
@@ -644,7 +575,7 @@ const internshipModels = {
     ],
     "产品类": [
       {
-        id: 2,
+        id: 202,
         name: "腾讯产品实习生画像",
         position: "产品实习生",
         duration: "3-6个月",
@@ -666,7 +597,7 @@ const internshipModels = {
   "阿里巴巴": {
     "技术类": [
       {
-        id: 3,
+        id: 203,
         name: "阿里巴巴技术实习生画像",
         position: "技术实习生",
         duration: "3-6个月",
@@ -686,7 +617,7 @@ const internshipModels = {
     ],
     "运营类": [
       {
-        id: 4,
+        id: 204,
         name: "阿里巴巴运营实习生画像",
         position: "运营实习生",
         duration: "3-6个月",
@@ -708,7 +639,7 @@ const internshipModels = {
   "字节跳动": {
     "技术类": [
       {
-        id: 5,
+        id: 205,
         name: "字节跳动技术实习生画像",
         position: "技术实习生",
         duration: "3-6个月",
@@ -728,7 +659,7 @@ const internshipModels = {
     ],
     "内容类": [
       {
-        id: 6,
+        id: 206,
         name: "字节跳动内容实习生画像",
         position: "内容实习生",
         duration: "3-6个月",
@@ -749,19 +680,7 @@ const internshipModels = {
   }
 }
 
-function Badge({ children, variant = "secondary" }: { children: React.ReactNode, variant?: "secondary" | "outline" }) {
-  const baseClass = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-  const variantClass = variant === "outline" 
-    ? "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
-    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-  
-  return (
-    <div className={`${baseClass} ${variantClass}`}>
-      {children}
-    </div>
-  )
-}
-
+// 接口定义
 interface CompanyModel {
   id: number
   name: string
@@ -776,6 +695,30 @@ interface CompanyModel {
   englishScores: {
     toefl: string
     ielts: string
+  }
+  skills: string[]
+  tags: string[]
+  description: string
+  rating: number
+  consultations: number
+}
+
+interface SchoolModel {
+  id: number
+  name: string
+  graduateMajor: string
+  location: string
+  academics: {
+    gpa: string
+    courses: string[]
+  }
+  competitions: string[]
+  research: string[]
+  englishScores: {
+    toefl: string
+    ielts: string
+    gre: string
+    sat?: string
   }
   skills: string[]
   tags: string[]
@@ -803,464 +746,586 @@ interface InternshipModel {
   applications: number
 }
 
-function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onViewDetails: () => void }) {
+// 查找数据的辅助函数
+function findCompanyModel(company: string, position: string, id: number): CompanyModel | null {
+  const companyData = companyModels[company as keyof typeof companyModels]
+  if (!companyData) return null
+  
+  const positionData = companyData[position as keyof typeof companyData] as CompanyModel[] | undefined
+  if (!positionData) return null
+  
+  return positionData.find((model: CompanyModel) => model.id === id) || null
+}
+
+function findSchoolModel(school: string, major: string, id: number): SchoolModel | null {
+  const schoolData = schoolModels[school as keyof typeof schoolModels]
+  if (!schoolData) return null
+  
+  const majorData = schoolData[major as keyof typeof schoolData] as SchoolModel[] | undefined
+  if (!majorData) return null
+  
+  return majorData.find((model: SchoolModel) => model.id === id) || null
+}
+
+function findInternshipModel(company: string, category: string, id: number): InternshipModel | null {
+  const companyData = internshipModels[company as keyof typeof internshipModels]
+  if (!companyData) return null
+  
+  const categoryData = companyData[category as keyof typeof companyData] as InternshipModel[] | undefined
+  if (!categoryData) return null
+  
+  return categoryData.find((model: InternshipModel) => model.id === id) || null
+}
+
+// 公司详情内容组件
+function CompanyDetailContent({ model }: { model: CompanyModel }) {
   const { t } = useLanguage()
   
   return (
-    <Card className="hover:shadow-lg transition-shadow min-w-[350px] w-[350px] flex-shrink-0 flex flex-col h-full">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-              <Briefcase className="h-6 w-6 text-primary" />
+    <div className="space-y-6">
+      {/* 基本信息 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              基本信息
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">工作地点：</span>
+              <span>{model.location}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-500" />
+              <span className="font-medium">评分：</span>
+              <span>{model.rating}/5.0</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">咨询次数：</span>
+              <span>{model.consultations}次</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              学术要求
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <span className="font-medium">GPA要求：</span>
+              <span className="ml-2">{model.academics.gpa}</span>
             </div>
             <div>
-              <CardTitle className="text-lg">{model.name}</CardTitle>
-              <CardDescription className="flex items-center gap-1">
-                <Briefcase className="h-3 w-3" />
-                {model.position}
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-            <span className="text-sm font-medium">{model.rating}</span>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-1 flex flex-col">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{model.location}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <span>{t('rolemodels.internship.duration')}: {model.duration}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <Award className="h-4 w-4 text-muted-foreground" />
-            <span>GPA: {model.academics.gpa}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            <span>{t('rolemodels.internship.benefits')}: {model.benefits.join(", ")}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          {model.tags.map((tag: string) => (
-            <Badge key={tag} variant="outline">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-
-        <p className="text-sm text-muted-foreground flex-1 overflow-auto">
-          {model.description}
-        </p>
-
-        <div className="flex items-center justify-between pt-2 mt-auto">
-          <span className="text-xs text-muted-foreground">{model.applications} {t('rolemodels.internship.applications')}</span>
-          <Button size="sm" onClick={onViewDetails}>
-            {t('rolemodels.internship.details')}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDetails: () => void }) {
-  const { t } = useLanguage()
-  
-  return (
-    <Card className="hover:shadow-lg transition-shadow w-full md:min-w-[350px] md:w-[350px] flex-shrink-0 flex flex-col min-h-[650px] md:h-auto">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-              <Building className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{model.name}</CardTitle>
-              <CardDescription className="flex items-center gap-1">
-                <Briefcase className="h-3 w-3" />
-                {model.position}
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-            <span className="text-sm font-medium">{model.rating}</span>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-1 flex flex-col">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{model.location}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <span>GPA: {model.academics.gpa}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <Award className="h-4 w-4 text-muted-foreground" />
-            <span>{model.competitions.join(", ")}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-            <span>{model.internships.join(", ")}</span>
-        </div>
-
-          <div className="flex items-center gap-2 text-sm">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span>托福: {model.englishScores.toefl} | 雅思: {model.englishScores.ielts}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          {model.tags.map((tag: string) => (
-            <Badge key={tag} variant="outline">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-
-        <p className="text-sm text-muted-foreground flex-1 overflow-auto">
-          {model.description}
-        </p>
-
-        <div className="flex items-center justify-between pt-2 mt-auto">
-          <Button size="sm" onClick={onViewDetails}>
-            {t('rolemodels.common.details')}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-interface SchoolModel {
-  id: number
-  name: string
-  graduateMajor: string
-  location: string
-  academics: {
-    gpa: string
-    courses: string[]
-  }
-  competitions: string[]
-  research: string[]
-  englishScores: {
-    toefl: string
-    ielts: string
-    gre: string
-    sat?: string
-  }
-  skills: string[]
-  tags: string[]
-  description: string
-  rating: number
-  consultations: number
-}
-
-function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetails: () => void }) {
-  const { t } = useLanguage()
-  
-  return (
-    <Card className="hover:shadow-lg transition-shadow w-full md:min-w-[350px] md:w-[350px] flex-shrink-0 flex flex-col min-h-[650px] md:h-auto">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-              <School className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{model.name}</CardTitle>
-              <CardDescription className="flex items-center gap-1">
-                <GraduationCap className="h-3 w-3" />
-                {model.graduateMajor}
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-            <span className="text-sm font-medium">{model.rating}</span>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-1 flex flex-col">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{model.location}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <span>GPA: {model.academics.gpa}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <Award className="h-4 w-4 text-muted-foreground" />
-            <span>{model.competitions.join(", ")}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            <span>{model.research.join(", ")}</span>
-        </div>
-
-          <div className="flex items-center gap-2 text-sm">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span>托福: {model.englishScores.toefl} | 雅思: {model.englishScores.ielts}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          {model.tags.map((tag: string) => (
-            <Badge key={tag} variant="outline">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-
-        <p className="text-sm text-muted-foreground flex-1 overflow-auto">
-          {model.description}
-        </p>
-
-        <div className="flex items-center justify-between pt-2 mt-auto">
-          <Button size="sm" onClick={onViewDetails}>
-            {t('rolemodels.common.details')}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// 公司行组件
-function CompanyRow({ company, positions, onViewDetails }: { company: string, positions: Record<string, CompanyModel[]>, onViewDetails: (model: CompanyModel) => void }) {
-  return (
-    <div className="mb-12">
-              <div className="flex items-center gap-2 mb-4">
-                <Building className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">{company}</h2>
-              </div>
-              <ScrollableContainer>
-                {Object.entries(positions).map(([position, models]) => (
-                  models.map((model) => (
-            <div key={`${company}-${position}-${model.id}`} className="mr-4 min-w-[350px]">
-              <div className="mb-2 flex items-center gap-2 md:ml-0">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-base font-medium">{position}</span>
-                      </div>
-                      <CompanyCard model={model} onViewDetails={() => onViewDetails(model)} />
-                    </div>
-                  ))
+              <span className="font-medium">核心课程：</span>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {model.academics.courses.map((course, index) => (
+                  <Badge key={index} variant="secondary">{course}</Badge>
                 ))}
-              </ScrollableContainer>
-            </div>
-  );
-}
-
-// 学校行组件
-function SchoolRow({ school, majors, onViewDetails }: { school: string, majors: Record<string, SchoolModel[]>, onViewDetails: (model: SchoolModel) => void }) {
-  return (
-    <div className="mb-12">
-              <div className="flex items-center gap-2 mb-4">
-                <School className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">{school}</h2>
               </div>
-              <ScrollableContainer>
-                {Object.entries(majors).map(([major, models]) => (
-                  models.map((model) => (
-            <div key={`${school}-${major}-${model.id}`} className="mr-4 min-w-[350px]">
-              <div className="mb-2 flex items-center gap-2 md:ml-0">
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-base font-medium">{major}</span>
-                      </div>
-                      <SchoolCard model={model} onViewDetails={() => onViewDetails(model)} />
-                    </div>
-                  ))
-                ))}
-              </ScrollableContainer>
             </div>
-  );
-}
-
-// 实习行组件
-function InternshipRow({ company, categories, onViewDetails }: { company: string, categories: Record<string, InternshipModel[]>, onViewDetails: (model: InternshipModel) => void }) {
-  return (
-    <div className="mb-12">
-      <div className="flex items-center gap-2 mb-4">
-        <Building className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-semibold">{company}</h2>
+          </CardContent>
+        </Card>
       </div>
-      <ScrollableContainer>
-        {Object.entries(categories).map(([category, models]) => (
-          models.map((model) => (
-            <div key={`${company}-${category}-${model.id}`} className="mr-4 min-w-[350px]">
-              <div className="mb-2 flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-                <span className="text-base font-medium">{category}</span>
+
+      {/* 能力技能 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            能力技能
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {model.skills.map((skill, index) => (
+              <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                <CheckCircle className="h-4 w-4 text-blue-600" />
+                <span className="text-sm">{skill}</span>
               </div>
-              <InternshipCard model={model} onViewDetails={() => onViewDetails(model)} />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 竞赛经历 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            竞赛经历
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {model.competitions.map((competition, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
+                <Award className="h-4 w-4 text-yellow-600" />
+                <span>{competition}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 实习经历 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Briefcase className="h-5 w-5" />
+            实习经历
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {model.internships.map((internship, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
+                <Building className="h-4 w-4 text-green-600" />
+                <span>{internship}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 英语成绩 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            英语成绩要求
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-green-50 rounded-lg">
+              <div className="font-medium">TOEFL</div>
+              <div className="text-2xl font-bold text-green-600">{model.englishScores.toefl}</div>
             </div>
-          ))
-        ))}
-      </ScrollableContainer>
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <div className="font-medium">IELTS</div>
+              <div className="text-2xl font-bold text-blue-600">{model.englishScores.ielts}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 详细描述 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>详细描述</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600 leading-relaxed">{model.description}</p>
+        </CardContent>
+      </Card>
     </div>
-  );
+  )
 }
 
-
-
-
-
-
-
-
-
-export default function RoleModels() {
+// 学校详情内容组件
+function SchoolDetailContent({ model }: { model: SchoolModel }) {
   const { t } = useLanguage()
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState("companies")
   
-  // 创建URL参数的辅助函数
-  const createDetailUrl = (type: 'company' | 'school' | 'internship', params: any) => {
-    const searchParams = new URLSearchParams({ type, ...params })
-    return `/role-models/detail?${searchParams.toString()}`
-  }
+  return (
+    <div className="space-y-6">
+      {/* 基本信息 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <School className="h-5 w-5" />
+              基本信息
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">专业：</span>
+              <span>{model.graduateMajor}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">地点：</span>
+              <span>{model.location}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-500" />
+              <span className="font-medium">评分：</span>
+              <span>{model.rating}/5.0</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">咨询次数：</span>
+              <span>{model.consultations}次</span>
+            </div>
+          </CardContent>
+        </Card>
 
-  // 公司详情导航
-  const navigateToCompanyDetail = (company: string, position: string, model: CompanyModel) => {
-    const url = createDetailUrl('company', {
-      company: encodeURIComponent(company),
-      position: encodeURIComponent(position),
-      id: model.id.toString()
-    })
-    router.push(url)
-  }
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              学术要求
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <span className="font-medium">GPA要求：</span>
+              <span className="ml-2">{model.academics.gpa}</span>
+            </div>
+            <div>
+              <span className="font-medium">核心课程：</span>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {model.academics.courses.map((course, index) => (
+                  <Badge key={index} variant="secondary">{course}</Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-  // 学校详情导航
-  const navigateToSchoolDetail = (school: string, major: string, model: SchoolModel) => {
-    const url = createDetailUrl('school', {
-      school: encodeURIComponent(school),
-      major: encodeURIComponent(major),
-      id: model.id.toString()
-    })
-    router.push(url)
-  }
+      {/* 能力技能 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            能力技能
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {model.skills.map((skill, index) => (
+              <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                <CheckCircle className="h-4 w-4 text-blue-600" />
+                <span className="text-sm">{skill}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-  // 实习详情导航
-  const navigateToInternshipDetail = (company: string, category: string, model: InternshipModel) => {
-    const url = createDetailUrl('internship', {
-      company: encodeURIComponent(company),
-      category: encodeURIComponent(category),
-      id: model.id.toString()
-    })
-    router.push(url)
+      {/* 竞赛经历 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            竞赛经历
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {model.competitions.map((competition, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
+                <Award className="h-4 w-4 text-yellow-600" />
+                <span>{competition}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 科研经历 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Layers className="h-5 w-5" />
+            科研经历
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {model.research.map((research, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
+                <BookOpen className="h-4 w-4 text-purple-600" />
+                <span>{research}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 标准化考试成绩 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            标准化考试成绩要求
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-3 bg-green-50 rounded-lg">
+              <div className="font-medium">TOEFL</div>
+              <div className="text-xl font-bold text-green-600">{model.englishScores.toefl}</div>
+            </div>
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <div className="font-medium">IELTS</div>
+              <div className="text-xl font-bold text-blue-600">{model.englishScores.ielts}</div>
+            </div>
+            <div className="p-3 bg-purple-50 rounded-lg">
+              <div className="font-medium">GRE</div>
+              <div className="text-xl font-bold text-purple-600">{model.englishScores.gre}</div>
+            </div>
+            {model.englishScores.sat && (
+              <div className="p-3 bg-orange-50 rounded-lg">
+                <div className="font-medium">SAT</div>
+                <div className="text-xl font-bold text-orange-600">{model.englishScores.sat}</div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 详细描述 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>详细描述</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600 leading-relaxed">{model.description}</p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// 实习详情内容组件
+function InternshipDetailContent({ model }: { model: InternshipModel }) {
+  const { t } = useLanguage()
+  
+  return (
+    <div className="space-y-6">
+      {/* 基本信息 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              基本信息
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">职位：</span>
+              <span>{model.position}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">时长：</span>
+              <span>{model.duration}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">地点：</span>
+              <span>{model.location}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-500" />
+              <span className="font-medium">评分：</span>
+              <span>{model.rating}/5.0</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">申请数：</span>
+              <span>{model.applications}人</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              学术要求
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <span className="font-medium">GPA要求：</span>
+              <span className="ml-2">{model.academics.gpa}</span>
+            </div>
+            <div>
+              <span className="font-medium">相关课程：</span>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {model.academics.courses.map((course, index) => (
+                  <Badge key={index} variant="secondary">{course}</Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 技能要求 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            技能要求
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {model.skills.map((skill, index) => (
+              <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                <CheckCircle className="h-4 w-4 text-blue-600" />
+                <span className="text-sm">{skill}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 申请要求 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            申请要求
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {model.requirements.map((requirement, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>{requirement}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 实习收益 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5" />
+            实习收益
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {model.benefits.map((benefit, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>{benefit}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 详细描述 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>详细描述</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600 leading-relaxed">{model.description}</p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// 详情页面主组件
+function DetailPageContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const { t } = useLanguage()
+  
+  const type = searchParams.get('type') || 'company'
+  const company = searchParams.get('company') || ''
+  const position = searchParams.get('position') || ''
+  const school = searchParams.get('school') || ''
+  const major = searchParams.get('major') || ''
+  const category = searchParams.get('category') || ''
+  const id = parseInt(searchParams.get('id') || '0')
+  
+  let model: CompanyModel | SchoolModel | InternshipModel | null = null
+  let title = ''
+  
+  if (type === 'company') {
+    model = findCompanyModel(decodeURIComponent(company), decodeURIComponent(position), id)
+    title = model?.name || '公司职位详情'
+  } else if (type === 'school') {
+    model = findSchoolModel(decodeURIComponent(school), decodeURIComponent(major), id)
+    title = model?.name || '学校专业详情'
+  } else if (type === 'internship') {
+    model = findInternshipModel(decodeURIComponent(company), decodeURIComponent(category), id)
+    title = model?.name || '实习机会详情'
+  }
+  
+  if (!model) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">未找到相关信息</h1>
+          <Button onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            返回
+          </Button>
+        </div>
+      </div>
+    )
   }
   
   return (
-    <div className="p-6">
-      {/* 电脑端布局：标题和可能性卡片在同一行 */}
-      <div className="mb-6 hidden md:flex justify-between items-start gap-6">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Role Models</h1>
-          <p className="text-muted-foreground">{t('rolemodels.description')}</p>
-        </div>
-        <div className="flex-shrink-0">
-          <PossibilityCard activeTab={activeTab} />
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      {/* 页面头部 */}
+      <div className="mb-8">
+        <Button 
+          variant="ghost" 
+          onClick={() => router.back()}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          返回职业模型
+        </Button>
+        <h1 className="text-3xl font-bold">{title}</h1>
+        <p className="text-muted-foreground mt-2">
+          {type === 'company' && '公司职位详细信息'}
+          {type === 'school' && '学校专业详细信息'}
+          {type === 'internship' && '实习机会详细信息'}
+        </p>
       </div>
       
-      {/* 手机端布局：标题和可能性卡片分开显示 */}
-      <div className="mb-6 md:hidden">
-        <div className="mb-4">
-          <h1 className="text-3xl font-bold">Role Models</h1>
-          <p className="text-muted-foreground">{t('rolemodels.description')}</p>
+      {/* 详情内容 */}
+      {type === 'company' && (
+        <CompanyDetailContent model={model as CompanyModel} />
+      )}
+      {type === 'school' && (
+        <SchoolDetailContent model={model as SchoolModel} />
+      )}
+      {type === 'internship' && (
+        <InternshipDetailContent model={model as InternshipModel} />
+      )}
+    </div>
+  )
+}
 
-        </div>
-        <div className="flex justify-center">
-          <PossibilityCard activeTab={activeTab} />
+// 主页面组件
+export default function DetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <p>加载中...</p>
         </div>
       </div>
-
-      <Tabs defaultValue="companies" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="companies">{t('rolemodels.tab.companies')}</TabsTrigger>
-          <TabsTrigger value="schools">{t('rolemodels.tab.schools')}</TabsTrigger>
-          <TabsTrigger value="internships">{t('rolemodels.tab.internships')}</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="companies">
-          {Object.entries(companyModels).map(([company, positions]) => (
-            <CompanyRow 
-              key={company} 
-              company={company} 
-              positions={positions} 
-              onViewDetails={(model) => {
-                // 查找当前模型对应的职位
-                for (const [position, models] of Object.entries(positions)) {
-                  if (models.some(m => m.id === model.id)) {
-                    navigateToCompanyDetail(company, position, model)
-                    return
-                  }
-                }
-              }}
-            />
-          ))}
-        </TabsContent>
-        
-        <TabsContent value="schools">
-          {Object.entries(schoolModels).map(([school, majors]) => (
-            <SchoolRow 
-              key={school} 
-              school={school} 
-              majors={majors} 
-              onViewDetails={(model) => {
-                // 查找当前模型对应的专业
-                for (const [major, models] of Object.entries(majors)) {
-                  if (models.some(m => m.id === model.id)) {
-                    navigateToSchoolDetail(school, major, model)
-                    return
-                  }
-                }
-              }}
-            />
-          ))}
-        </TabsContent>
-        
-        <TabsContent value="internships">
-          {Object.entries(internshipModels).map(([company, categories]) => (
-            <InternshipRow 
-              key={company} 
-              company={company} 
-              categories={categories} 
-              onViewDetails={(model) => {
-                // 查找当前模型对应的类别
-                for (const [category, models] of Object.entries(categories)) {
-                  if (models.some(m => m.id === model.id)) {
-                    navigateToInternshipDetail(company, category, model)
-                    return
-                  }
-                }
-              }}
-            />
-          ))}
-        </TabsContent>
-      </Tabs>
-    </div>
+    }>
+      <DetailPageContent />
+    </Suspense>
   )
 }

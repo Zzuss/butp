@@ -15,7 +15,12 @@ export function QuickExternalTestButton() {
     try {
       console.log('🧪 快速测试外部URL: butp.tech')
       
-      const response = await fetch('http://10.3.58.3:8000/generate-pdf', {
+      // 使用API代理，避免Mixed Content问题
+      const proxyUrl = '/api/pdf/generate'
+      
+      console.log('🔄 快速测试使用PDF代理API:', proxyUrl)
+      
+      const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

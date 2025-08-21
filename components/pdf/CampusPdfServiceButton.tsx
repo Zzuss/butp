@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 
 export default function CampusPdfServiceButton({
-  campusServiceUrl = 'http://10.3.58.3:8000/generate-pdf'
+  campusServiceUrl
 }: { campusServiceUrl?: string }) {
   const [isLoading, setIsLoading] = useState(false)
   const [viewport, setViewport] = useState<number>(1366)
@@ -23,7 +23,8 @@ export default function CampusPdfServiceButton({
       
       // 尝试快速ping校内服务（用于VPN检测）
       try {
-        const testUrl = campusServiceUrl.replace('/generate-pdf', '/health')
+        // 使用API代理进行健康检查
+        const testUrl = '/api/pdf/health'
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 3000) // 3秒超时
         
@@ -72,7 +73,11 @@ export default function CampusPdfServiceButton({
       const isCampusVPN = await checkCampusVPNConnection()
       
       const canUseCampusService = (isLocalDev || isIntranet || isCampusVPN)
-      const campusService = campusServiceUrl
+      
+      // 使用API代理模式，避免Mixed Content问题
+      const campusService = campusServiceUrl || '/api/pdf/generate'
+      
+      console.log('🔒 校内服务URL:', campusService)
 
       const body: any = { viewportWidth: viewport }
 

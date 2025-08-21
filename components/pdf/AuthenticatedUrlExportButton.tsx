@@ -84,8 +84,13 @@ export function AuthenticatedUrlExportButton() {
       
       setMessage('校内服务器正在以认证身份访问页面...')
       
-      // 发送到校内PDF服务，包含认证头
-      const response = await fetch('http://10.3.58.3:8000/generate-pdf', {
+      // 使用API代理，避免Mixed Content问题（类似CAS认证的代理模式）
+      const proxyUrl = '/api/pdf/generate'
+      
+      console.log('🔄 使用PDF代理API:', proxyUrl)
+      
+      // 发送到代理API，自动转发到校内服务
+      const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

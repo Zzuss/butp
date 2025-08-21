@@ -2,11 +2,28 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Award, Briefcase, Languages, Plus, Edit, Trash2, X } from "lucide-react"
+import { Award, Briefcase, Languages, Plus, Edit, Trash2, X, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import { useState, FormEvent, useRef, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/contexts/AuthContext"
 import { getStudentInfo } from "@/lib/dashboard-data"
+import { 
+  getUserLanguageScores, 
+  getUserAwards, 
+  getUserInternships,
+  saveLanguageScore,
+  saveAward,
+  saveInternship,
+  deleteLanguageScore,
+  deleteAward,
+  deleteInternship,
+  convertToToeflScore,
+  convertToIeltsScore,
+  convertToGreScore,
+  type Award as DbAward,
+  type Internship as DbInternship,
+  type LanguageScore
+} from "@/lib/profile-data"
 
 
 // 定义各类考试成绩的接口
@@ -35,6 +52,7 @@ interface GreScore {
 
 // 定义获奖记录接口
 interface Award {
+  id?: string;
   title: string;
   organization: string;
   level: string;
@@ -44,6 +62,7 @@ interface Award {
 
 // 定义实习经历接口
 interface Internship {
+  id?: string;
   title: string;
   company: string;
   period: string;
@@ -58,6 +77,8 @@ export default function Profile() {
   const [selectedScoreType, setSelectedScoreType] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
   
   // 添加获奖记录和实习经历的表单状态
   const [showAwardForm, setShowAwardForm] = useState(false);
@@ -69,6 +90,7 @@ export default function Profile() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteItemType, setDeleteItemType] = useState<"award" | "internship" | "score" | null>(null);
   const [deleteItemIndex, setDeleteItemIndex] = useState<number | null>(null);
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [deleteScoreType, setDeleteScoreType] = useState<string | null>(null);
   
   // 颜色数组，用于生成随机颜色
@@ -156,7 +178,7 @@ export default function Profile() {
   const awardFormRef = useRef<HTMLFormElement>(null);
   const internshipFormRef = useRef<HTMLFormElement>(null);
 
-  // 加载学生信息
+  // 加载学生信息和用户个人资料数据
   useEffect(() => {
     if (authLoading) return;
     
@@ -165,17 +187,45 @@ export default function Profile() {
       return;
     }
     
-    async function loadStudentInfo() {
+    async function loadData() {
+      if (!user?.userHash) return;
+      
+      setIsLoading(true);
       try {
-        const info = await getStudentInfo(user.userHash);
+        // 并行加载所有数据
+        const [info, languageScores, userAwards, userInternships] = await Promise.all([
+          getStudentInfo(user.userHash),
+          getUserLanguageScores(user.userHash),
+          getUserAwards(user.userHash),
+          getUserInternships(user.userHash)
+        ]);
+        
         setStudentInfo(info);
+        
+        // 更新语言成绩
+        languageScores.forEach(score => {
+          if (score.scoreType === 'toefl') {
+            setToeflScore(convertToToeflScore(score));
+          } else if (score.scoreType === 'ielts') {
+            setIeltsScore(convertToIeltsScore(score));
+          } else if (score.scoreType === 'gre') {
+            setGreScore(convertToGreScore(score));
+          }
+        });
+        
+        // 更新获奖记录和实习经历
+        setAwards(userAwards);
+        setInternships(userInternships);
+        
       } catch (error) {
-        console.error('Error loading student info:', error);
+        console.error('Error loading data:', error);
         setStudentInfo(null);
+      } finally {
+        setIsLoading(false);
       }
     }
     
-    loadStudentInfo();
+    loadData();
   }, [user, authLoading]);
   
   const handleAddScore = () => {
@@ -211,13 +261,18 @@ export default function Profile() {
     setEditingAward(null);
   };
   
-  const handleAwardSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleAwardSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (!user?.userHash) return;
     
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
     
+    setSaveStatus('saving');
+    
     const newAward: Award = {
+      id: editingAward?.id,
       title: formData.get("title") as string,
       organization: formData.get("organization") as string,
       level: formData.get("level") as string,
@@ -225,14 +280,30 @@ export default function Profile() {
       colorIndex: editingAward ? editingAward.colorIndex : getRandomColorIndex(awards.map(item => item.colorIndex))
     };
     
-    if (editingAward) {
-      // 更新现有奖项
-      setAwards(awards.map(award => 
-        award === editingAward ? newAward : award
-      ));
-    } else {
-      // 添加新奖项
-      setAwards([...awards, newAward]);
+    try {
+      const success = await saveAward(user.userHash, newAward);
+      
+      if (success) {
+        if (editingAward) {
+          // 更新现有奖项
+          setAwards(awards.map(award => 
+            award.id === editingAward.id ? newAward : award
+          ));
+        } else {
+          // 重新加载获奖记录以获取新的ID
+          const updatedAwards = await getUserAwards(user.userHash);
+          setAwards(updatedAwards);
+        }
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving award:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
     
     setShowAwardForm(false);
@@ -255,13 +326,18 @@ export default function Profile() {
     setEditingInternship(null);
   };
   
-  const handleInternshipSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleInternshipSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (!user?.userHash) return;
     
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
     
+    setSaveStatus('saving');
+    
     const newInternship: Internship = {
+      id: editingInternship?.id,
       title: formData.get("title") as string,
       company: formData.get("company") as string,
       period: (formData.get("period") as string) || "",
@@ -269,14 +345,30 @@ export default function Profile() {
       colorIndex: editingInternship ? editingInternship.colorIndex : getRandomColorIndex(internships.map(item => item.colorIndex))
     };
     
-    if (editingInternship) {
-      // 更新现有实习
-      setInternships(internships.map(internship => 
-        internship === editingInternship ? newInternship : internship
-      ));
-    } else {
-      // 添加新实习
-      setInternships([...internships, newInternship]);
+    try {
+      const success = await saveInternship(user.userHash, newInternship);
+      
+      if (success) {
+        if (editingInternship) {
+          // 更新现有实习
+          setInternships(internships.map(internship => 
+            internship.id === editingInternship.id ? newInternship : internship
+          ));
+        } else {
+          // 重新加载实习记录以获取新的ID
+          const updatedInternships = await getUserInternships(user.userHash);
+          setInternships(updatedInternships);
+        }
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving internship:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
     
     setShowInternshipForm(false);
@@ -319,9 +411,10 @@ export default function Profile() {
   };
   
   // 处理删除确认
-  const handleDeleteConfirm = (type: "award" | "internship", index: number) => {
+  const handleDeleteConfirm = (type: "award" | "internship", index: number, id?: string) => {
     setDeleteItemType(type);
     setDeleteItemIndex(index);
+    setDeleteItemId(id || null);
     setShowDeleteConfirm(true);
   };
   
@@ -333,41 +426,71 @@ export default function Profile() {
   };
   
   // 执行删除操作
-  const confirmDelete = () => {
-    if (deleteItemType === "award" && deleteItemIndex !== null) {
-      setAwards(awards.filter((_, index) => index !== deleteItemIndex));
-    } else if (deleteItemType === "internship" && deleteItemIndex !== null) {
-      setInternships(internships.filter((_, index) => index !== deleteItemIndex));
-    } else if (deleteItemType === "score" && deleteScoreType) {
-      if (deleteScoreType === "toefl") {
-        setToeflScore({
-          total: 0,
-          reading: 0,
-          listening: 0,
-          speaking: 0,
-          writing: 0
-        });
-      } else if (deleteScoreType === "ielts") {
-        setIeltsScore({
-          total: 0,
-          listening: 0,
-          reading: 0,
-          writing: 0,
-          speaking: 0
-        });
-      } else if (deleteScoreType === "gre") {
-        setGreScore({
-          total: 0,
-          math: 0,
-          verbal: 0,
-          writing: 0
-        });
+  const confirmDelete = async () => {
+    if (!user?.userHash) return;
+    
+    setSaveStatus('saving');
+    
+    try {
+      let success = false;
+      
+      if (deleteItemType === "award" && deleteItemId) {
+        success = await deleteAward(user.userHash, deleteItemId);
+        if (success) {
+          setAwards(awards.filter(award => award.id !== deleteItemId));
+        }
+      } else if (deleteItemType === "internship" && deleteItemId) {
+        success = await deleteInternship(user.userHash, deleteItemId);
+        if (success) {
+          setInternships(internships.filter(internship => internship.id !== deleteItemId));
+        }
+      } else if (deleteItemType === "score" && deleteScoreType) {
+        success = await deleteLanguageScore(user.userHash, deleteScoreType);
+        if (success) {
+          if (deleteScoreType === "toefl") {
+            setToeflScore({
+              total: 0,
+              reading: 0,
+              listening: 0,
+              speaking: 0,
+              writing: 0
+            });
+          } else if (deleteScoreType === "ielts") {
+            setIeltsScore({
+              total: 0,
+              listening: 0,
+              reading: 0,
+              writing: 0,
+              speaking: 0
+            });
+          } else if (deleteScoreType === "gre") {
+            setGreScore({
+              total: 0,
+              math: 0,
+              verbal: 0,
+              writing: 0
+            });
+          }
+        }
       }
+      
+      if (success) {
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
     
     setShowDeleteConfirm(false);
     setDeleteItemType(null);
     setDeleteItemIndex(null);
+    setDeleteItemId(null);
     setDeleteScoreType(null);
   };
   
@@ -376,14 +499,19 @@ export default function Profile() {
     setShowDeleteConfirm(false);
     setDeleteItemType(null);
     setDeleteItemIndex(null);
+    setDeleteItemId(null);
     setDeleteScoreType(null);
   };
   
-  const handleScoreSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleScoreSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (!user?.userHash) return;
     
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
+    
+    setSaveStatus('saving');
     
     // 安全解析数值函数
     const parseNumericValue = (value: FormDataEntryValue | null): number => {
@@ -396,12 +524,22 @@ export default function Profile() {
     };
     
     const total = parseNumericValue(formData.get("total"));
+    let languageScore: LanguageScore;
     
     if (selectedScoreType === "toefl") {
       const reading = parseNumericValue(formData.get("reading"));
       const listening = parseNumericValue(formData.get("listening"));
       const speaking = parseNumericValue(formData.get("speaking"));
       const writing = parseNumericValue(formData.get("writing"));
+      
+      languageScore = {
+        scoreType: 'toefl',
+        totalScore: total,
+        readingScore: reading,
+        listeningScore: listening,
+        speakingScore: speaking,
+        writingScore: writing
+      };
       
       setToeflScore({
         total,
@@ -416,6 +554,15 @@ export default function Profile() {
       const writing = parseNumericValue(formData.get("writing"));
       const speaking = parseNumericValue(formData.get("speaking"));
       
+      languageScore = {
+        scoreType: 'ielts',
+        totalScore: total,
+        listeningScore: listening,
+        readingScore: reading,
+        writingScore: writing,
+        speakingScore: speaking
+      };
+      
       setIeltsScore({
         total,
         listening,
@@ -428,12 +575,40 @@ export default function Profile() {
       const verbal = parseNumericValue(formData.get("verbal"));
       const writing = parseNumericValue(formData.get("writing"));
       
+      languageScore = {
+        scoreType: 'gre',
+        totalScore: total,
+        mathScore: math,
+        verbalScore: verbal,
+        writingScore: writing
+      };
+      
       setGreScore({
         total,
         math,
         verbal,
         writing
       });
+    } else {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return;
+    }
+    
+    try {
+      const success = await saveLanguageScore(user.userHash, languageScore);
+      
+      if (success) {
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving language score:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
     
     setShowScoreForm(false);
@@ -441,8 +616,60 @@ export default function Profile() {
     setEditMode(false);
   };
 
+  // 状态提示组件
+  const StatusAlert = () => {
+    if (saveStatus === 'idle') return null;
+    
+    return (
+      <div className="fixed top-4 right-4 z-50">
+        {saveStatus === 'saving' && (
+          <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-lg shadow-lg">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>保存中...</span>
+          </div>
+        )}
+        {saveStatus === 'success' && (
+          <div className="flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-lg shadow-lg">
+            <CheckCircle className="h-4 w-4" />
+            <span>保存成功！</span>
+          </div>
+        )}
+        {saveStatus === 'error' && (
+          <div className="flex items-center gap-2 bg-red-100 text-red-800 px-4 py-2 rounded-lg shadow-lg">
+            <AlertCircle className="h-4 w-4" />
+            <span>保存失败，请重试</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>加载中...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user?.isLoggedIn) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">请先登录查看个人资料</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 relative">
+      <StatusAlert />
       {showScoreForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 mx-4">
@@ -859,7 +1086,7 @@ export default function Profile() {
                           <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditAward(award)}>
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("award", index)}>
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("award", index, award.id)}>
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
@@ -909,7 +1136,7 @@ export default function Profile() {
                         <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditInternship(internship)}>
                           <Edit className="h-3 w-3" />
                         </Button>
-                        <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("internship", index)}>
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("internship", index, internship.id)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
