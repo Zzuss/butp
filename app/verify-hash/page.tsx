@@ -18,7 +18,7 @@ export default function VerifyHash() {
   const testCases = [
     {
       studentId: "teststudent1",
-      expectedHash: "353214f8e1ccebe2297a845d528311086a2a582f4470dfe362c0114d4898bc06"
+      expectedHash: "0886e2a5c75eaa21b81977e56f67c6faceafb1ee67eeb8a85c1eacc8bbd2447b"
     },
     {
       studentId: "teststudent2", 

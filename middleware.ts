@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { SessionData, sessionOptions, isSessionExpired, updateSessionActivity } from '@/lib/session';
+import { supabase } from '@/lib/supabase';
 
 // 需要保护的路由路径
 const PROTECTED_PATHS = [
@@ -11,6 +12,16 @@ const PROTECTED_PATHS = [
   '/charts',
   '/role-models',
   // 可以根据需要添加更多受保护的路由
+];
+
+// 不需要隐私条款检查的路由路径
+const PRIVACY_EXEMPT_PATHS = [
+  '/privacy-agreement',
+  '/login',
+  '/',
+  '/api/auth',
+  '/api/mock',
+  '/auth-status',
 ];
 
 // 不需要保护的路由路径
@@ -40,6 +51,9 @@ export async function middleware(request: NextRequest) {
     console.log('🔓 Middleware: public path detected, allowing access');
     return NextResponse.next();
   }
+
+  // 检查是否需要隐私条款同意
+  const needsPrivacyCheck = !PRIVACY_EXEMPT_PATHS.some(path => pathname.startsWith(path));
 
   // 检查是否是受保护的路径
   const isProtectedPath = PROTECTED_PATHS.some(path => pathname.startsWith(path));
@@ -109,6 +123,42 @@ export async function middleware(request: NextRequest) {
           console.log('✅ Middleware: session valid, no changes needed');
         }
         
+        // 检查隐私条款同意状态
+        if (needsPrivacyCheck && session.isLoggedIn && session.userHash) {
+          try {
+            console.log('🔒 Middleware: checking privacy agreement for path:', pathname);
+            
+            // 查询用户是否已同意隐私条款
+            const { data: privacyData, error: privacyError } = await supabase
+              .from('privacy_policy')
+              .select('SNH')
+              .eq('SNH', session.userHash)
+              .single();
+
+            if (privacyError && privacyError.code !== 'PGRST116') {
+              console.error('❌ Middleware: privacy agreement check failed:', privacyError);
+              // 硬编码绕过：如果查询失败，允许访问（避免阻塞用户）
+              console.log('⚠️  Middleware: 数据库查询失败，使用硬编码绕过，允许访问');
+              return response;
+            }
+
+            // 如果没有找到记录，说明未同意隐私条款
+            if (!privacyData) {
+              console.log('📋 Middleware: user has not agreed to privacy policy, redirecting to privacy agreement page');
+              const privacyUrl = new URL('/privacy-agreement', request.url);
+              privacyUrl.searchParams.set('returnUrl', pathname);
+              return NextResponse.redirect(privacyUrl);
+            }
+
+            console.log('✅ Middleware: privacy agreement check passed');
+          } catch (error) {
+            console.error('❌ Middleware: privacy agreement check error:', error);
+            // 硬编码绕过：如果检查失败，允许访问（避免阻塞用户）
+            console.log('⚠️  Middleware: 隐私条款检查失败，使用硬编码绕过，允许访问');
+            return response;
+          }
+        }
+        
         return response;
       }
       
@@ -157,4 +207,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-} 
+}

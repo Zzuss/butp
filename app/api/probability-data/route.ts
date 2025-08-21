@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// 硬编码 Supabase 配置（仅用于按钮百分比接口）
+const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
+
 // 在每次请求时创建新的客户端，避免连接问题
 function createSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  return createClient(supabaseUrl, supabaseAnonKey)
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // 检查环境变量
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.error('Missing Supabase environment variables')
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
-    }
-
     const { studentId } = await request.json()
 
     if (!studentId) {

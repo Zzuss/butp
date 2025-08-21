@@ -12,7 +12,7 @@ function createSupabaseClient() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentHash } = await request.json()
+    const { studentHash, major } = await request.json()
 
     if (!studentHash) {
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 })
@@ -26,9 +26,23 @@ export async function POST(request: NextRequest) {
 
     const supabase = createSupabaseClient()
 
-    // 从cohort_predictions表查询数据
+    // 专业到表名映射（与 original 一致）
+    const majorToTable: Record<string, string> = {
+      '智能科学与技术': 'Cohort2023_Predictions_ai',
+      '电子信息工程': 'Cohort2023_Predictions_ee',
+      '电信工程及管理': 'Cohort2023_Predictions_tewm',
+      '物联网工程': 'Cohort2023_Predictions_iot'
+    };
+
+    if (!major || !(major in majorToTable)) {
+      return NextResponse.json({ error: 'Invalid or unsupported major' }, { status: 400 })
+    }
+
+    const tableName = majorToTable[major];
+
+    // 按专业对应表查询目标分数
     const { data, error } = await supabase
-      .from('cohort_predictions')
+      .from(tableName)
       .select('target1_min_required_score, target2_min_required_score')
       .eq('SNH', trimmedHash)
       .limit(1);
