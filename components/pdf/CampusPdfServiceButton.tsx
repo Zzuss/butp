@@ -375,17 +375,22 @@ export default function CampusPdfServiceButton({
           }
 
           setStatusMessage('正在生成PDF...')
+          const debugPreview = ((): string | null => {
+            if ((pdfRequestBody as any).html) return (pdfRequestBody as any).html as string
+            return null
+          })()
           console.log('📤 发送PDF生成请求:', {
             url: campusService,
             bodySize: JSON.stringify(pdfRequestBody).length,
-            htmlSize: pageHTML.length,
+            hasHtml: Boolean((pdfRequestBody as any).html),
+            hasUrl: Boolean((pdfRequestBody as any).url),
             viewport: viewport,
             filename: 'campus_export.pdf'
           })
-          
-          // 调试：输出部分HTML内容
-          console.log('📄 HTML内容预览 (前500字符):', pageHTML.substring(0, 500))
-          console.log('📄 HTML内容预览 (后500字符):', pageHTML.substring(pageHTML.length - 500))
+          if (debugPreview) {
+            console.log('📄 HTML内容预览 (前500字符):', debugPreview.substring(0, 500))
+            console.log('📄 HTML内容预览 (后500字符):', debugPreview.substring(debugPreview.length - 500))
+          }
           
           const controller = new AbortController()
           const id = setTimeout(() => controller.abort(), 30000) // 30秒超时
@@ -448,16 +453,15 @@ export default function CampusPdfServiceButton({
           const errorMsg = err instanceof Error ? err.message : String(err)
           
           if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-            setStatusMessage('⚠️ 无法连接校内服务（请检查校园网/VPN连接），自动使用客户端导出...')
+            setStatusMessage('⚠️ 无法连接PDF服务，尝试使用客户端导出（已修复OKLCH）...')
           } else {
-            setStatusMessage(`校内服务连接失败: ${errorMsg}，使用客户端导出...`)
+            setStatusMessage(`PDF服务连接失败，尝试使用客户端导出（已修复OKLCH）...`)
           }
-          
-          // 不要return，继续执行客户端导出
+          // 不中断，继续走客户端兜底导出
         }
       }
 
-      // 2) 如果校内服务不可用，直接使用客户端生成
+      // 2) 客户端生成（已加入OKLCH兼容修复）
       setStatusMessage('使用客户端生成PDF...')
       
       // 使用改进的客户端PDF生成逻辑（类似ClientPdfButton）
@@ -592,7 +596,89 @@ export default function CampusPdfServiceButton({
         })
       }
       
+      // 深度修复：在克隆前先处理当前文档常见类名/变量
       fixModernColors(clonedContent)
+      
+      // 在克隆文档中执行的深度清理函数（style标签/内联样式）
+      const deepSanitizeOklch = (doc: Document) => {
+        try {
+          // 1) 替换所有<style>内容中的现代颜色函数
+          const styleTags = Array.from(doc.querySelectorAll('style'))
+          styleTags.forEach(tag => {
+            if (tag.textContent && /oklch\(|lch\(|lab\(/i.test(tag.textContent)) {
+              tag.textContent = tag.textContent
+                .replace(/oklch\([^)]*\)/gi, '#6c757d')
+                .replace(/lch\([^)]*\)/gi, '#6c757d')
+                .replace(/lab\([^)]*\)/gi, '#6c757d')
+            }
+          })
+          
+          // 2) 替换所有元素的inline style中的现代颜色函数
+          const allEls = doc.querySelectorAll('*')
+          allEls.forEach(el => {
+            const he = el as HTMLElement
+            if (he.getAttribute && he.getAttribute('style')) {
+              const s = he.getAttribute('style') || ''
+              if (/oklch\(|lch\(|lab\(/i.test(s)) {
+                he.setAttribute('style', s
+                  .replace(/oklch\([^)]*\)/gi, '#6c757d')
+                  .replace(/lch\([^)]*\)/gi, '#6c757d')
+                  .replace(/lab\([^)]*\)/gi, '#6c757d'))
+              }
+            }
+          })
+          
+          // 3) 注入一层强制覆盖的安全调色板
+          const override = doc.createElement('style')
+          override.textContent = `
+            .text-blue-600 { color: #2563eb !important; }
+            .text-blue-500 { color: #3b82f6 !important; }
+            .bg-blue-600 { background-color: #2563eb !important; }
+            .bg-blue-500 { background-color: #3b82f6 !important; }
+            .text-slate-900 { color: #0f172a !important; }
+            .text-slate-800 { color: #1e293b !important; }
+            .text-slate-700 { color: #334155 !important; }
+            .text-slate-600 { color: #475569 !important; }
+            .bg-slate-50 { background-color: #f8fafc !important; }
+            .bg-slate-100 { background-color: #f1f5f9 !important; }
+          `
+          doc.head.appendChild(override)
+        } catch {}
+      }
+
+      // 基于计算样式与SVG属性的兜底清理（将计算得到的OKLCH颜色转为安全色并写入inline）
+      const applyComputedFallbacks = (root: HTMLElement) => {
+        const colorProps = [
+          'color','background','backgroundColor','borderColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor',
+          'outlineColor','textShadow','boxShadow','fill','stroke'
+        ]
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT)
+        const elements: Element[] = []
+        let n = walker.nextNode()
+        while (n) { elements.push(n as Element); n = walker.nextNode() }
+
+        elements.forEach(el => {
+          const he = el as HTMLElement
+          // 1) 计算样式字段
+          const cs = window.getComputedStyle(he)
+          colorProps.forEach(p => {
+            const v = cs.getPropertyValue(p as any)
+            if (v && /(oklch\(|lch\(|lab\()/i.test(v)) {
+              const fallback = p.includes('background') ? '#ffffff' : (p.includes('shadow') ? 'none' : '#6c757d')
+              he.style.setProperty(p as any, fallback, 'important')
+            }
+          })
+          // 2) SVG常见属性
+          if ((el as any).namespaceURI && (el as any).namespaceURI.includes('svg')) {
+            ['fill','stroke','stop-color'].forEach(attr => {
+              const val = (el as Element).getAttribute(attr)
+              if (val && /(oklch\(|lch\(|lab\()/i.test(val)) {
+                (el as Element).setAttribute(attr, attr === 'fill' ? '#6c757d' : '#0f172a')
+              }
+            })
+          }
+        })
+      }
       tempContainer.appendChild(clonedContent)
       document.body.appendChild(tempContainer)
       
@@ -630,35 +716,40 @@ export default function CampusPdfServiceButton({
         import('html2canvas'),
         import('jspdf')
       ])
-      
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        foreignObjectRendering: false, // 避免复杂渲染导致的颜色问题
-        imageTimeout: 15000,
 
-        logging: false, // 减少控制台输出
-        onclone: (clonedDoc) => {
-          // 在克隆文档中也应用颜色修复
-          const clonedBody = clonedDoc.body
-          if (clonedBody) {
-            // 只添加针对性的oklch修复
-            const extraStyle = clonedDoc.createElement('style')
-            extraStyle.textContent = `
-              /* 仅修复html2canvas不支持的现代颜色函数 */
-              .text-blue-600 { color: #2563eb !important; }
-              .text-blue-500 { color: #3b82f6 !important; }
-              .bg-blue-600 { background-color: #2563eb !important; }
-              .bg-blue-500 { background-color: #3b82f6 !important; }
-              /* 确保基础颜色正常 */
-              body { background-color: white; }
-            `
-            clonedDoc.head.appendChild(extraStyle)
+      // 封装一次绘制，失败时重试更强清理
+      const renderCanvas = async (strict: boolean) => {
+        return await html2canvas(tempContainer, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          foreignObjectRendering: false,
+          imageTimeout: 15000,
+          logging: false,
+          onclone: (clonedDoc) => {
+            // 基础修复
+            const extra = clonedDoc.createElement('style')
+            extra.textContent = 'body{background:#fff !important}'
+            clonedDoc.head.appendChild(extra)
+            // 严格模式：深度移除OKLCH
+            if (strict) {
+              deepSanitizeOklch(clonedDoc)
+              applyComputedFallbacks(clonedDoc.body as unknown as HTMLElement)
+            }
           }
-        }
-      })
+        })
+      }
+
+      let canvas
+      try {
+        // 先尝试宽松模式（更快），随后严格模式兜底
+        applyComputedFallbacks(tempContainer)
+        canvas = await renderCanvas(false)
+      } catch (e) {
+        console.warn('html2canvas 初次渲染失败，启用严格清理后重试...', e)
+        canvas = await renderCanvas(true)
+      }
       
       // 清理临时元素
       document.body.removeChild(tempContainer)

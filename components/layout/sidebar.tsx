@@ -27,8 +27,6 @@ import { useLanguage } from "@/contexts/language-context"
 import { trackUserAction } from "@/lib/analytics"
 import { CompletePDFExport } from '@/components/pdf/CompletePDFExport'
 import PreserveLayoutPdfButton from '@/components/pdf/PreserveLayoutPdfButton'
-import ClientPdfButton from '@/components/pdf/ClientPdfButton'
-import CampusPdfServiceButton from '@/components/pdf/CampusPdfServiceButton'
 
 const sidebarItems = [
   {
@@ -62,8 +60,6 @@ const sidebarItems = [
     icon: Info,
   },
 ]
-
-
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -178,7 +174,6 @@ export function AppSidebar() {
               </SidebarItem>
             </Link>
           ))}
-
         </nav>
       </SidebarContent>
       
@@ -187,15 +182,8 @@ export function AppSidebar() {
             {!isCollapsed ? (
               <>
           {/* PDF导出按钮 */}
-          {/* 提高按钮层级并确保可点击，避免被页面其他浮层遮挡 */}
-          <div className="mb-3 relative z-60 pointer-events-auto">
-            <div className="space-y-2">
-              <PreserveLayoutPdfButton defaultViewport={1366} />
-              <div className="border-t pt-2 space-y-2">
-                <CampusPdfServiceButton />
-                <ClientPdfButton defaultViewport={1366} />
-              </div>
-            </div>
+          <div className="mb-3">
+            <PreserveLayoutPdfButton defaultViewport={1366} />
           </div>
           
           {/* 语言切换按钮 */}

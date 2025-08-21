@@ -40,10 +40,7 @@ export default function PreserveLayoutPdfButton({
 
       if (!resp.ok) {
         const txt = await resp.text().catch(() => '')
-        const errorMsg = resp.status === 500 && txt.includes('Puppeteer not available') 
-          ? '服务器端PDF生成不可用，请使用下方的"导出（客户端）"功能'
-          : `导出失败: ${resp.status} ${txt}`
-        throw new Error(errorMsg)
+        throw new Error(`导出失败: ${resp.status} ${txt}`)
       }
 
       const blob = await resp.blob()
