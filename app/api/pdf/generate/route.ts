@@ -12,13 +12,15 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent')
     })
     
-    // 构建转发到校内PDF服务的请求
-    const campusServiceUrl = 'http://10.3.58.3:8000/generate-pdf'
+    // 构建转发到校内PDF服务的请求，优先使用环境变量
+    // 支持两种写法：完整 API 路径（包含 /generate-pdf），或仅主机（例如 https://139.159.233.180）
+    const rawCampus = process.env.CAMPUS_PDF_SERVICE_URL || 'http://10.3.58.3:8000'
+    const campusServiceUrl = rawCampus.endsWith('/generate-pdf') ? rawCampus : new URL('/generate-pdf', rawCampus).toString()
     
     // 转发请求头（包括认证信息）
     const forwardHeaders: HeadersInit = {
       'Content-Type': 'application/json',
-      'x-pdf-key': 'campus-pdf-2024-1755617095',
+      'x-pdf-key': process.env.CAMPUS_PDF_API_KEY || 'campus-pdf-2024-1755617095',
       'User-Agent': request.headers.get('user-agent') || 'BuTP-PDF-Proxy/1.0'
     }
     

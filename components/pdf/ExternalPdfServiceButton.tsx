@@ -4,29 +4,23 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 
 export default function CampusPdfServiceButton({
-  campusServiceUrl = 'http://10.3.58.3:8000/generate-pdf'
+  campusServiceUrl = '/api/pdf/generate'
 }: { campusServiceUrl?: string }) {
   const [isLoading, setIsLoading] = useState(false)
   const [viewport, setViewport] = useState<number>(1366)
   const [filename, setFilename] = useState<string>('')
   const [statusMessage, setStatusMessage] = useState<string>('')
 
-  // 检测校园VPN连接
+  // 检测校园VPN连接（通过后端代理，避免浏览器直接访问内网）
   const checkCampusVPNConnection = async (): Promise<boolean> => {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 2000) // 2秒超时
-      
-      const response = await fetch('http://10.3.58.3:8000/health', {
-        method: 'GET',
-        signal: controller.signal,
-        mode: 'no-cors' // 避免CORS问题
-      })
-      
+      const timeoutId = setTimeout(() => controller.abort(), 2500)
+      const resp = await fetch('/api/pdf/health', { method: 'GET', signal: controller.signal })
       clearTimeout(timeoutId)
-      return true // 如果能连通，说明在校园网或VPN环境
+      return resp.ok
     } catch (error) {
-      return false // 无法连通，说明在外网
+      return false
     }
   }
 
@@ -82,17 +76,13 @@ export default function CampusPdfServiceButton({
           const controller = new AbortController()
           const id = setTimeout(() => controller.abort(), 30000) // 30秒超时
           
+          // 通过后端代理发起请求，后端会把 Cookie 和 API Key 一并转发到实际服务
           const resp = await fetch(campusService, {
             method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json', 
-              'x-pdf-key': 'campus-pdf-2024',
-              // 转发用户的认证信息到校内服务
-              'Cookie': document.cookie
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(pdfRequestBody),
             signal: controller.signal,
-            credentials: 'include' // 包含认证信息
+            credentials: 'include'
           })
           
           clearTimeout(id)
