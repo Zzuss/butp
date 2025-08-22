@@ -347,3 +347,108 @@ export function convertToGreScore(languageScore: LanguageScore): GreScore {
   };
 }
 
+// 其他信息接口
+export interface OtherInfo {
+  id?: string;
+  category: string; // 类别，如"MBTI"、"兴趣爱好"、"个人特质"等
+  content: string; // 内容，如"INTJ"、"阅读、旅行"等
+  colorIndex: number;
+}
+
+// 其他信息 CRUD 操作
+export async function getUserOtherInfo(userHash: string): Promise<OtherInfo[]> {
+  try {
+    const { data, error } = await supabase
+      .from('user_other_info')
+      .select('*')
+      .eq('user_hash', userHash)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching other info:', error);
+      return [];
+    }
+
+    return data?.map(info => ({
+      id: info.id,
+      category: info.category,
+      content: info.content,
+      colorIndex: info.color_index
+    })) || [];
+  } catch (error) {
+    console.error('Error fetching other info:', error);
+    return [];
+  }
+}
+
+export async function saveOtherInfo(userHash: string, otherInfo: OtherInfo): Promise<boolean> {
+  try {
+    const infoData = {
+      user_hash: userHash,
+      category: otherInfo.category,
+      content: otherInfo.content,
+      color_index: otherInfo.colorIndex
+    };
+
+    if (otherInfo.id) {
+      // 更新现有记录
+      const { error } = await supabase
+        .from('user_other_info')
+        .update(infoData)
+        .eq('id', otherInfo.id)
+        .eq('user_hash', userHash);
+
+      if (error) {
+        console.error('Error updating other info:', error);
+        return false;
+      }
+    } else {
+      // 创建新记录
+      const { error } = await supabase
+        .from('user_other_info')
+        .insert(infoData);
+
+      if (error) {
+        console.error('Error creating other info:', error);
+        return false;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error saving other info:', error);
+    return false;
+  }
+}
+
+export async function deleteOtherInfo(userHash: string, infoId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('user_other_info')
+      .delete()
+      .eq('id', infoId)
+      .eq('user_hash', userHash);
+
+    if (error) {
+      console.error('Error deleting other info:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting other info:', error);
+    return false;
+  }
+}
+
+// 预定义的其他信息类别
+export const OTHER_INFO_CATEGORIES = [
+  'MBTI',
+  '兴趣爱好',
+  '个人特质',
+  '技能专长',
+  '职业规划',
+  '价值观',
+  '其他'
+] as const;
+

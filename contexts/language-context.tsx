@@ -112,6 +112,21 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.common.confirm.delete.gre': '您确定要删除GRE成绩吗？',
     'profile.common.confirm.delete.note': '此操作无法撤销。',
     
+    // 其他信息部分
+    'profile.other.title': '其他信息',
+    'profile.other.description': '记录您的MBTI、兴趣爱好、技能专长等个人特质信息',
+    'profile.other.add': '添加信息',
+    'profile.other.empty': '暂无其他信息，点击上方按钮添加',
+    'profile.other.form.title': '添加其他信息',
+    'profile.other.form.edit': '编辑其他信息',
+    'profile.other.form.category': '类别',
+    'profile.other.form.category.placeholder': '请选择类别',
+    'profile.other.form.title.field': '标题',
+    'profile.other.form.title.placeholder': '如：MBTI类型、编程技能等',
+    'profile.other.form.content': '内容',
+    'profile.other.form.content.placeholder': '如：INTJ | Python、Java、React | 阅读、旅行、摄影',
+    'profile.common.confirm.delete.other': '您确定要删除这条其他信息吗？',
+    
     // 侧边栏
     'sidebar.dashboard': '数据总览',
     
@@ -443,6 +458,21 @@ const translations: Record<Language, Record<string, string>> = {
     'profile.common.confirm.delete.ielts': 'Are you sure you want to delete the IELTS score?',
     'profile.common.confirm.delete.gre': 'Are you sure you want to delete the GRE score?',
     'profile.common.confirm.delete.note': 'This action cannot be undone.',
+    
+    // Other information section
+    'profile.other.title': 'Other Information',
+    'profile.other.description': 'Record your MBTI, hobbies, skills and other personal characteristics',
+    'profile.other.add': 'Add Info',
+    'profile.other.empty': 'No other information available, click the button above to add',
+    'profile.other.form.title': 'Add Other Information',
+    'profile.other.form.edit': 'Edit Other Information',
+    'profile.other.form.category': 'Category',
+    'profile.other.form.category.placeholder': 'Please select category',
+    'profile.other.form.title.field': 'Title',
+    'profile.other.form.title.placeholder': 'e.g.: MBTI Type, Programming Skills',
+    'profile.other.form.content': 'Content',
+    'profile.other.form.content.placeholder': 'e.g.: INTJ | Python, Java, React | Reading, Traveling, Photography',
+    'profile.common.confirm.delete.other': 'Are you sure you want to delete this other information?',
     
     // 侧边栏
     'sidebar.dashboard': 'Dash Board',

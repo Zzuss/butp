@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Award, Briefcase, Languages, Plus, Edit, Trash2, X, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Award, Briefcase, Languages, Info, Plus, Edit, Trash2, X, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import { useState, FormEvent, useRef, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/contexts/AuthContext"
@@ -11,18 +11,23 @@ import {
   getUserLanguageScores, 
   getUserAwards, 
   getUserInternships,
+  getUserOtherInfo,
   saveLanguageScore,
   saveAward,
   saveInternship,
+  saveOtherInfo,
   deleteLanguageScore,
   deleteAward,
   deleteInternship,
+  deleteOtherInfo,
   convertToToeflScore,
   convertToIeltsScore,
   convertToGreScore,
+  OTHER_INFO_CATEGORIES,
   type Award as DbAward,
   type Internship as DbInternship,
-  type LanguageScore
+  type LanguageScore,
+  type OtherInfo
 } from "@/lib/profile-data"
 
 
@@ -70,6 +75,14 @@ interface Internship {
   colorIndex: number;
 }
 
+// 定义其他信息接口
+interface OtherInfoLocal {
+  id?: string;
+  category: string;
+  content: string;
+  colorIndex: number;
+}
+
 export default function Profile() {
   const { t } = useLanguage()
   const { user, loading: authLoading } = useAuth()
@@ -83,12 +96,14 @@ export default function Profile() {
   // 添加获奖记录和实习经历的表单状态
   const [showAwardForm, setShowAwardForm] = useState(false);
   const [showInternshipForm, setShowInternshipForm] = useState(false);
+  const [showOtherInfoForm, setShowOtherInfoForm] = useState(false);
   const [editingAward, setEditingAward] = useState<Award | null>(null);
   const [editingInternship, setEditingInternship] = useState<Internship | null>(null);
+  const [editingOtherInfo, setEditingOtherInfo] = useState<OtherInfoLocal | null>(null);
   
   // 删除确认窗口状态
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteItemType, setDeleteItemType] = useState<"award" | "internship" | "score" | null>(null);
+  const [deleteItemType, setDeleteItemType] = useState<"award" | "internship" | "score" | "other" | null>(null);
   const [deleteItemIndex, setDeleteItemIndex] = useState<number | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [deleteScoreType, setDeleteScoreType] = useState<string | null>(null);
@@ -134,7 +149,7 @@ export default function Profile() {
   // 获奖记录和实习经历的状态
   const [awards, setAwards] = useState<Award[]>([
     {
-      title: "三好学生",
+      title: "校级奖学金",
       organization: "2023-2024学年",
       level: "校级",
       date: "2024年6月",
@@ -158,10 +173,10 @@ export default function Profile() {
   
   const [internships, setInternships] = useState<Internship[]>([
     {
-      title: "教学助理实习生",
-      company: "新东方教育科技集团",
+      title: "XXX职位",
+      company: "公司名称",
       period: "2024年7月 - 2024年8月",
-      description: "协助数学老师进行课程准备和学生辅导，参与教学活动设计",
+      description: "职位描述",
       colorIndex: 3
     },
     {
@@ -173,10 +188,14 @@ export default function Profile() {
     }
   ]);
   
+  // 其他信息状态
+  const [otherInfoList, setOtherInfoList] = useState<OtherInfoLocal[]>([]);
+  
   // 表单引用
   const formRef = useRef<HTMLFormElement>(null);
   const awardFormRef = useRef<HTMLFormElement>(null);
   const internshipFormRef = useRef<HTMLFormElement>(null);
+  const otherInfoFormRef = useRef<HTMLFormElement>(null);
 
   // 加载学生信息和用户个人资料数据
   useEffect(() => {
@@ -193,11 +212,12 @@ export default function Profile() {
       setIsLoading(true);
       try {
         // 并行加载所有数据
-        const [info, languageScores, userAwards, userInternships] = await Promise.all([
+        const [info, languageScores, userAwards, userInternships, userOtherInfo] = await Promise.all([
           getStudentInfo(user.userHash),
           getUserLanguageScores(user.userHash),
           getUserAwards(user.userHash),
-          getUserInternships(user.userHash)
+          getUserInternships(user.userHash),
+          getUserOtherInfo(user.userHash)
         ]);
         
         setStudentInfo(info);
@@ -213,9 +233,10 @@ export default function Profile() {
           }
         });
         
-        // 更新获奖记录和实习经历
+        // 更新获奖记录、实习经历和其他信息
         setAwards(userAwards);
         setInternships(userInternships);
+        setOtherInfoList(userOtherInfo);
         
       } catch (error) {
         console.error('Error loading data:', error);
@@ -374,6 +395,69 @@ export default function Profile() {
     setShowInternshipForm(false);
     setEditingInternship(null);
   };
+
+  // 添加其他信息处理函数
+  const handleAddOtherInfo = () => {
+    setEditingOtherInfo(null);
+    setShowOtherInfoForm(true);
+  };
+  
+  const handleEditOtherInfo = (info: OtherInfoLocal) => {
+    setEditingOtherInfo(info);
+    setShowOtherInfoForm(true);
+  };
+  
+  const handleCancelOtherInfo = () => {
+    setShowOtherInfoForm(false);
+    setEditingOtherInfo(null);
+  };
+  
+  const handleOtherInfoSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    if (!user?.userHash) return;
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    setSaveStatus('saving');
+    
+    const newOtherInfo: OtherInfoLocal = {
+      id: editingOtherInfo?.id,
+      category: formData.get("category") as string,
+      content: formData.get("content") as string,
+      colorIndex: editingOtherInfo ? editingOtherInfo.colorIndex : getRandomColorIndex(otherInfoList.map(item => item.colorIndex))
+    };
+    
+    try {
+      const success = await saveOtherInfo(user.userHash, newOtherInfo);
+      
+      if (success) {
+        if (editingOtherInfo) {
+          // 更新现有信息
+          setOtherInfoList(otherInfoList.map(info => 
+            info.id === editingOtherInfo.id ? newOtherInfo : info
+          ));
+        } else {
+          // 重新加载其他信息以获取新的ID
+          const updatedOtherInfo = await getUserOtherInfo(user.userHash);
+          setOtherInfoList(updatedOtherInfo);
+        }
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving other info:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+    
+    setShowOtherInfoForm(false);
+    setEditingOtherInfo(null);
+  };
   
   // 获取随机颜色索引，确保不与已有颜色相邻
   const getRandomColorIndex = (existingIndices: number[]): number => {
@@ -411,7 +495,7 @@ export default function Profile() {
   };
   
   // 处理删除确认
-  const handleDeleteConfirm = (type: "award" | "internship", index: number, id?: string) => {
+  const handleDeleteConfirm = (type: "award" | "internship" | "other", index: number, id?: string) => {
     setDeleteItemType(type);
     setDeleteItemIndex(index);
     setDeleteItemId(id || null);
@@ -443,6 +527,11 @@ export default function Profile() {
         success = await deleteInternship(user.userHash, deleteItemId);
         if (success) {
           setInternships(internships.filter(internship => internship.id !== deleteItemId));
+        }
+      } else if (deleteItemType === "other" && deleteItemId) {
+        success = await deleteOtherInfo(user.userHash, deleteItemId);
+        if (success) {
+          setOtherInfoList(otherInfoList.filter(info => info.id !== deleteItemId));
         }
       } else if (deleteItemType === "score" && deleteScoreType) {
         success = await deleteLanguageScore(user.userHash, deleteScoreType);
@@ -1011,6 +1100,55 @@ export default function Profile() {
         </div>
       )}
       
+      {/* 其他信息表单 */}
+      {showOtherInfoForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{editingOtherInfo ? t('profile.other.form.edit') : t('profile.other.form.title')}</h3>
+              <Button variant="ghost" size="icon" onClick={handleCancelOtherInfo} className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <form ref={otherInfoFormRef} onSubmit={handleOtherInfoSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">{t('profile.other.form.category')}</label>
+                  <select 
+                    name="category"
+                    required 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingOtherInfo?.category || ""}
+                  >
+                    <option value="">{t('profile.other.form.category.placeholder')}</option>
+                    {OTHER_INFO_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">{t('profile.other.form.content')}</label>
+                  <textarea 
+                    name="content"
+                    required 
+                    rows={4}
+                    placeholder={t('profile.other.form.content.placeholder')}
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingOtherInfo?.content || ""}
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={handleCancelOtherInfo}>{t('profile.common.cancel')}</Button>
+                  <Button type="submit">{t('profile.common.save')}</Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
       {/* 删除确认窗口 */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1023,6 +1161,7 @@ export default function Profile() {
               <p className="text-muted-foreground mt-2">
                 {deleteItemType === "award" ? t('profile.common.confirm.delete.award') : 
                  deleteItemType === "internship" ? t('profile.common.confirm.delete.work') :
+                 deleteItemType === "other" ? t('profile.common.confirm.delete.other') :
                  deleteItemType === "score" && deleteScoreType === "toefl" ? t('profile.common.confirm.delete.toefl') :
                  deleteItemType === "score" && deleteScoreType === "ielts" ? t('profile.common.confirm.delete.ielts') :
                  deleteItemType === "score" && deleteScoreType === "gre" ? t('profile.common.confirm.delete.gre') : 
@@ -1253,6 +1392,57 @@ export default function Profile() {
                     </div>
                   )}
                 </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Info className="h-5 w-5" />
+                {t('profile.other.title')}
+              </div>
+              <Button size="sm" className="flex items-center gap-2" onClick={handleAddOtherInfo}>
+                <Plus className="h-4 w-4" />
+                {t('profile.other.add')}
+              </Button>
+            </CardTitle>
+            <CardDescription>{t('profile.other.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {otherInfoList.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {t('profile.other.empty')}
+                </div>
+              ) : (
+                <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${otherInfoList.length > 6 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
+                  {otherInfoList.map((info, index) => (
+                    <div key={index} className="p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className={`w-10 h-10 ${colorPairs[info.colorIndex].bg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                            <Info className={`h-5 w-5 ${colorPairs[info.colorIndex].text}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-muted-foreground mb-1">{info.category}</div>
+                            <p className="text-sm text-gray-700 break-words">{info.content}</p>
+                          </div>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1 flex-shrink-0 ml-2">
+                          <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleEditOtherInfo(info)}>
+                            <Edit className="h-2 w-2" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => handleDeleteConfirm("other", index, info.id)}>
+                            <Trash2 className="h-2 w-2" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </CardContent>
