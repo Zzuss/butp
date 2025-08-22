@@ -106,10 +106,10 @@ function PossibilityCard({ activeTab }: { activeTab: string }) {
   )
 }
 
-// 按公司和学校分类的虚拟角色模型数据
-const companyModels = {
-  "腾讯": {
-    "大模型": [
+// 按岗位和专业分类的虚拟角色模型数据
+const positionModels = {
+  "大模型": {
+    "腾讯": [
       {
         id: 1,
         name: "腾讯大模型工程师画像",
@@ -131,8 +131,10 @@ const companyModels = {
         rating: 4.9,
         consultations: 120
       }
-    ],
-    "算法": [
+    ]
+  },
+  "算法": {
+    "腾讯": [
       {
         id: 2,
         name: "腾讯算法工程师画像",
@@ -155,147 +157,7 @@ const companyModels = {
         consultations: 100
       }
     ],
-    "后端": [
-      {
-        id: 3,
-        name: "腾讯后端开发画像",
-        position: "后端开发工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.7+/4.0",
-          courses: ["数据结构与算法", "操作系统", "计算机网络", "数据库"]
-        },
-        competitions: ["ACM程序设计大赛"],
-        internships: ["腾讯后端开发实习"],
-        englishScores: {
-          toefl: "100+",
-          ielts: "6.5+"
-        },
-        skills: ["Java/Python", "微服务架构", "高并发系统设计"],
-        tags: ["后端", "高并发", "微服务"],
-        description: "腾讯后端开发需熟悉主流后端技术栈，有高并发系统开发经验。",
-        rating: 4.8,
-        consultations: 98
-      }
-    ],
-    "前端": [
-      {
-        id: 4,
-        name: "腾讯前端开发画像",
-        position: "前端开发工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.6+/4.0",
-          courses: ["Web开发", "数据结构", "计算机网络"]
-        },
-        competitions: ["腾讯前端大赛"],
-        internships: ["腾讯前端实习"],
-        englishScores: {
-          toefl: "95+",
-          ielts: "6.0+"
-        },
-        skills: ["React/Vue", "前端工程化", "性能优化"],
-        tags: ["前端", "网页开发", "工程化"],
-        description: "腾讯前端开发需熟悉主流前端框架，有大型项目开发经验。",
-        rating: 4.7,
-        consultations: 85
-      }
-    ],
-    "测试": [
-      {
-        id: 5,
-        name: "腾讯测试工程师画像",
-        position: "测试工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.5+/4.0",
-          courses: ["软件测试", "自动化测试", "编程基础"]
-        },
-        competitions: ["软件测试大赛"],
-        internships: ["腾讯测试实习"],
-        englishScores: {
-          toefl: "90+",
-          ielts: "6.0+"
-        },
-        skills: ["自动化测试", "脚本开发", "Bug分析"],
-        tags: ["测试", "自动化"],
-        description: "腾讯测试工程师需熟悉自动化测试工具，具备脚本开发能力。",
-        rating: 4.6,
-        consultations: 60
-      }
-    ],
-    "产品经理": [
-      {
-        id: 6,
-        name: "腾讯产品经理画像",
-        position: "产品经理",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.6+/4.0",
-          courses: ["产品管理", "用户体验", "市场分析"]
-        },
-        competitions: ["互联网+创新创业大赛"],
-        internships: ["腾讯产品实习"],
-        englishScores: {
-          toefl: "95+",
-          ielts: "6.5+"
-        },
-        skills: ["需求分析", "项目管理", "沟通能力"],
-        tags: ["产品", "管理"],
-        description: "腾讯产品经理需具备良好的沟通能力和项目管理能力，关注用户体验。",
-        rating: 4.7,
-        consultations: 70
-      }
-    ],
-    "运维": [
-      {
-        id: 7,
-        name: "腾讯运维工程师画像",
-        position: "运维工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.5+/4.0",
-          courses: ["操作系统", "网络安全", "自动化运维"]
-        },
-        competitions: ["运维技能大赛"],
-        internships: ["腾讯运维实习"],
-        englishScores: {
-          toefl: "90+",
-          ielts: "6.0+"
-        },
-        skills: ["自动化运维", "脚本开发", "系统监控"],
-        tags: ["运维", "自动化"],
-        description: "腾讯运维工程师需熟悉自动化运维工具，具备系统监控和故障排查能力。",
-        rating: 4.6,
-        consultations: 55
-      }
-    ],
-    "数据分析": [
-      {
-        id: 8,
-        name: "腾讯数据分析师画像",
-        position: "数据分析师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.7+/4.0",
-          courses: ["数据分析", "统计学", "数据库"]
-        },
-        competitions: ["数据分析大赛"],
-        internships: ["腾讯数据分析实习"],
-        englishScores: {
-          toefl: "100+",
-          ielts: "6.5+"
-        },
-        skills: ["数据分析", "SQL", "数据可视化"],
-        tags: ["数据分析", "统计"],
-        description: "腾讯数据分析师需具备扎实的数据分析和可视化能力，熟悉SQL。",
-        rating: 4.7,
-        consultations: 65
-      }
-    ]
-  },
-  "阿里巴巴": {
-    "算法": [
+    "阿里巴巴": [
       {
         id: 3,
         name: "阿里巴巴算法工程师画像",
@@ -318,32 +180,7 @@ const companyModels = {
         consultations: 110
       }
     ],
-    "前端": [
-      {
-        id: 4,
-        name: "阿里巴巴前端开发画像",
-        position: "前端开发工程师",
-        location: "杭州/北京",
-        academics: {
-          gpa: "3.6+/4.0",
-          courses: ["Web开发", "数据结构", "计算机网络"]
-        },
-        competitions: ["阿里云前端大赛"],
-        internships: ["阿里巴巴前端实习", "大型互联网公司前端实习"],
-        englishScores: {
-          toefl: "95+",
-          ielts: "6.0+"
-        },
-        skills: ["React/Vue", "前端工程化", "性能优化"],
-        tags: ["前端", "网页开发", "工程化"],
-        description: "阿里前端开发需熟悉主流前端框架，有大型项目开发经验，注重性能优化。",
-        rating: 4.7,
-        consultations: 85
-      }
-    ]
-  },
-  "字节跳动": {
-    "算法": [
+    "字节跳动": [
       {
         id: 5,
         name: "字节跳动算法工程师画像",
@@ -365,8 +202,81 @@ const companyModels = {
         rating: 4.9,
         consultations: 90
       }
+    ]
+  },
+  "后端": {
+    "腾讯": [
+      {
+        id: 3,
+        name: "腾讯后端开发画像",
+        position: "后端开发工程师",
+        location: "深圳/北京",
+        academics: {
+          gpa: "3.7+/4.0",
+          courses: ["数据结构与算法", "操作系统", "计算机网络", "数据库"]
+        },
+        competitions: ["ACM程序设计大赛"],
+        internships: ["腾讯后端开发实习"],
+        englishScores: {
+          toefl: "100+",
+          ielts: "6.5+"
+        },
+        skills: ["Java/Python", "微服务架构", "高并发系统设计"],
+        tags: ["后端", "高并发", "微服务"],
+        description: "腾讯后端开发需熟悉主流后端技术栈，有高并发系统开发经验。",
+        rating: 4.8,
+        consultations: 98
+      }
+    ]
+  },
+  "前端": {
+    "腾讯": [
+      {
+        id: 4,
+        name: "腾讯前端开发画像",
+        position: "前端开发工程师",
+        location: "深圳/北京",
+        academics: {
+          gpa: "3.6+/4.0",
+          courses: ["Web开发", "数据结构", "计算机网络"]
+        },
+        competitions: ["腾讯前端大赛"],
+        internships: ["腾讯前端实习"],
+        englishScores: {
+          toefl: "95+",
+          ielts: "6.0+"
+        },
+        skills: ["React/Vue", "前端工程化", "性能优化"],
+        tags: ["前端", "网页开发", "工程化"],
+        description: "腾讯前端开发需熟悉主流前端框架，有大型项目开发经验。",
+        rating: 4.7,
+        consultations: 85
+      }
     ],
-    "前端": [
+    "阿里巴巴": [
+      {
+        id: 4,
+        name: "阿里巴巴前端开发画像",
+        position: "前端开发工程师",
+        location: "杭州/北京",
+        academics: {
+          gpa: "3.6+/4.0",
+          courses: ["Web开发", "数据结构", "计算机网络"]
+        },
+        competitions: ["阿里云前端大赛"],
+        internships: ["阿里巴巴前端实习", "大型互联网公司前端实习"],
+        englishScores: {
+          toefl: "95+",
+          ielts: "6.0+"
+        },
+        skills: ["React/Vue", "前端工程化", "性能优化"],
+        tags: ["前端", "网页开发", "工程化"],
+        description: "阿里前端开发需熟悉主流前端框架，有大型项目开发经验，注重性能优化。",
+        rating: 4.7,
+        consultations: 85
+      }
+    ],
+    "字节跳动": [
       {
         id: 6,
         name: "字节跳动前端开发画像",
@@ -389,12 +299,112 @@ const companyModels = {
         consultations: 70
       }
     ]
+  },
+  "测试": {
+    "腾讯": [
+      {
+        id: 5,
+        name: "腾讯测试工程师画像",
+        position: "测试工程师",
+        location: "深圳/北京",
+        academics: {
+          gpa: "3.5+/4.0",
+          courses: ["软件测试", "自动化测试", "编程基础"]
+        },
+        competitions: ["软件测试大赛"],
+        internships: ["腾讯测试实习"],
+        englishScores: {
+          toefl: "90+",
+          ielts: "6.0+"
+        },
+        skills: ["自动化测试", "脚本开发", "Bug分析"],
+        tags: ["测试", "自动化"],
+        description: "腾讯测试工程师需熟悉自动化测试工具，具备脚本开发能力。",
+        rating: 4.6,
+        consultations: 60
+      }
+    ]
+  },
+  "产品经理": {
+    "腾讯": [
+      {
+        id: 6,
+        name: "腾讯产品经理画像",
+        position: "产品经理",
+        location: "深圳/北京",
+        academics: {
+          gpa: "3.6+/4.0",
+          courses: ["产品管理", "用户体验", "市场分析"]
+        },
+        competitions: ["互联网+创新创业大赛"],
+        internships: ["腾讯产品实习"],
+        englishScores: {
+          toefl: "95+",
+          ielts: "6.5+"
+        },
+        skills: ["需求分析", "项目管理", "沟通能力"],
+        tags: ["产品", "管理"],
+        description: "腾讯产品经理需具备良好的沟通能力和项目管理能力，关注用户体验。",
+        rating: 4.7,
+        consultations: 70
+      }
+    ]
+  },
+  "运维": {
+    "腾讯": [
+      {
+        id: 7,
+        name: "腾讯运维工程师画像",
+        position: "运维工程师",
+        location: "深圳/北京",
+        academics: {
+          gpa: "3.5+/4.0",
+          courses: ["操作系统", "网络安全", "自动化运维"]
+        },
+        competitions: ["运维技能大赛"],
+        internships: ["腾讯运维实习"],
+        englishScores: {
+          toefl: "90+",
+          ielts: "6.0+"
+        },
+        skills: ["自动化运维", "脚本开发", "系统监控"],
+        tags: ["运维", "自动化"],
+        description: "腾讯运维工程师需熟悉自动化运维工具，具备系统监控和故障排查能力。",
+        rating: 4.6,
+        consultations: 55
+      }
+    ]
+  },
+  "数据分析": {
+    "腾讯": [
+      {
+        id: 8,
+        name: "腾讯数据分析师画像",
+        position: "数据分析师",
+        location: "深圳/北京",
+        academics: {
+          gpa: "3.7+/4.0",
+          courses: ["数据分析", "统计学", "数据库"]
+        },
+        competitions: ["数据分析大赛"],
+        internships: ["腾讯数据分析实习"],
+        englishScores: {
+          toefl: "100+",
+          ielts: "6.5+"
+        },
+        skills: ["数据分析", "SQL", "数据可视化"],
+        tags: ["数据分析", "统计"],
+        description: "腾讯数据分析师需具备扎实的数据分析和可视化能力，熟悉SQL。",
+        rating: 4.7,
+        consultations: 65
+      }
+    ]
   }
 }
 
-const schoolModels = {
-  "清华大学": {
-    "电子信息工程": [
+const majorModels = {
+  "电子信息工程": {
+    "清华大学": [
       {
         id: 4,
         name: "清华大学电子信息工程研究生画像",
@@ -417,8 +427,10 @@ const schoolModels = {
         rating: 4.8,
         consultations: 120
       }
-    ],
-    "计算机科学与技术": [
+    ]
+  },
+  "计算机科学与技术": {
+    "清华大学": [
       {
         id: 5,
         name: "清华大学计算机科学与技术研究生画像",
@@ -442,57 +454,7 @@ const schoolModels = {
         consultations: 150
       }
     ],
-    "自动化": [
-      {
-        id: 6,
-        name: "清华大学自动化研究生画像",
-        graduateMajor: "自动化",
-        location: "北京",
-        academics: {
-          gpa: "3.8+/4.0",
-          courses: ["自动控制原理", "信号处理", "机器人学"]
-        },
-        competitions: ["全国大学生机器人大赛"],
-        research: ["参与自动化相关科研项目"],
-        englishScores: {
-          toefl: "110+",
-          ielts: "7.0+",
-          gre: "325+"
-        },
-        skills: ["控制算法", "机器人", "系统建模"],
-        tags: ["自动化", "机器人", "控制"],
-        description: "清华自动化研究生需具备扎实的控制理论基础和机器人开发能力，积极参与相关竞赛和科研。",
-        rating: 4.7,
-        consultations: 90
-      }
-    ]
-  },
-  "北京大学": {
-    "理论物理": [
-      {
-        id: 7,
-        name: "北京大学理论物理研究生画像",
-        graduateMajor: "理论物理",
-        location: "北京",
-        academics: {
-          gpa: "3.9+/4.0",
-          courses: ["理论物理", "量子力学", "高等数学", "计算物理"]
-        },
-        competitions: ["全国大学生物理竞赛", "美国大学生数学建模竞赛"],
-        research: ["参与前沿科研项目", "在核心期刊发表论文"],
-        englishScores: {
-          toefl: "115+",
-          ielts: "7.5+",
-          gre: "330+"
-        },
-        skills: ["理论研究", "数据分析", "科学计算", "批判性思维"],
-        tags: ["科研", "物理", "数学"],
-        description: "北大理论物理研究生在基础学科领域有扎实功底，积极参与科研，GPA高，英语能力强。",
-        rating: 4.9,
-        consultations: 100
-      }
-    ],
-    "计算机科学与技术": [
+    "北京大学": [
       {
         id: 8,
         name: "北京大学计算机科学与技术研究生画像",
@@ -516,83 +478,7 @@ const schoolModels = {
         consultations: 120
       }
     ],
-    "生物科学": [
-      {
-        id: 9,
-        name: "北京大学生物科学研究生画像",
-        graduateMajor: "生物科学",
-        location: "北京",
-        academics: {
-          gpa: "3.85+/4.0",
-          courses: ["分子生物学", "遗传学", "生物化学"]
-        },
-        competitions: ["全国大学生生命科学竞赛"],
-        research: ["参与生物相关科研项目"],
-        englishScores: {
-          toefl: "110+",
-          ielts: "7.0+",
-          gre: "325+"
-        },
-        skills: ["实验设计", "数据分析", "学术写作"],
-        tags: ["生物", "科研", "实验"],
-        description: "北大生物科学研究生需具备扎实的实验和数据分析能力，积极参与科研。",
-        rating: 4.7,
-        consultations: 80
-      }
-    ]
-  },
-  "哈佛大学": {
-    "分子生物学": [
-      {
-        id: 10,
-        name: "哈佛大学分子生物学留学生画像",
-        graduateMajor: "分子生物学",
-        location: "波士顿",
-        academics: {
-          gpa: "3.95+/4.0",
-          courses: ["高级生物学", "有机化学", "分子遗传学", "科研方法论"]
-        },
-        competitions: ["国际生物学奥林匹克", "全国英语竞赛"],
-        research: ["国际顶级期刊发表论文", "参与国际合作研究项目"],
-        englishScores: {
-          toefl: "115+",
-          ielts: "8.0+",
-          gre: "335+",
-          sat: "1550+"
-        },
-        skills: ["科研创新", "学术写作", "批判性思维", "跨文化交流"],
-        tags: ["留学", "科研", "生物"],
-        description: "哈佛分子生物学留学生学术成绩极为优秀，科研能力突出，具备国际视野。",
-        rating: 5.0,
-        consultations: 100
-      }
-    ],
-    "公共政策": [
-      {
-        id: 11,
-        name: "哈佛大学公共政策留学生画像",
-        graduateMajor: "公共政策",
-        location: "波士顿",
-        academics: {
-          gpa: "3.9+/4.0",
-          courses: ["政策分析", "经济学", "社会学"]
-        },
-        competitions: ["国际公共政策竞赛"],
-        research: ["参与国际合作项目"],
-        englishScores: {
-          toefl: "113+",
-          ielts: "8.0+",
-          gre: "332+",
-          sat: "1530+"
-        },
-        skills: ["政策分析", "跨文化沟通", "学术写作"],
-        tags: ["留学", "政策", "社会科学"],
-        description: "哈佛公共政策留学生需具备良好的政策分析和跨文化沟通能力，积极参与国际项目。",
-        rating: 4.9,
-        consultations: 80
-      }
-    ],
-    "计算机科学": [
+    "哈佛大学": [
       {
         id: 12,
         name: "哈佛大学计算机科学留学生画像",
@@ -617,12 +503,144 @@ const schoolModels = {
         consultations: 90
       }
     ]
+  },
+  "自动化": {
+    "清华大学": [
+      {
+        id: 6,
+        name: "清华大学自动化研究生画像",
+        graduateMajor: "自动化",
+        location: "北京",
+        academics: {
+          gpa: "3.8+/4.0",
+          courses: ["自动控制原理", "信号处理", "机器人学"]
+        },
+        competitions: ["全国大学生机器人大赛"],
+        research: ["参与自动化相关科研项目"],
+        englishScores: {
+          toefl: "110+",
+          ielts: "7.0+",
+          gre: "325+"
+        },
+        skills: ["控制算法", "机器人", "系统建模"],
+        tags: ["自动化", "机器人", "控制"],
+        description: "清华自动化研究生需具备扎实的控制理论基础和机器人开发能力，积极参与相关竞赛和科研。",
+        rating: 4.7,
+        consultations: 90
+      }
+    ]
+  },
+  "理论物理": {
+    "北京大学": [
+      {
+        id: 7,
+        name: "北京大学理论物理研究生画像",
+        graduateMajor: "理论物理",
+        location: "北京",
+        academics: {
+          gpa: "3.9+/4.0",
+          courses: ["理论物理", "量子力学", "高等数学", "计算物理"]
+        },
+        competitions: ["全国大学生物理竞赛", "美国大学生数学建模竞赛"],
+        research: ["参与前沿科研项目", "在核心期刊发表论文"],
+        englishScores: {
+          toefl: "115+",
+          ielts: "7.5+",
+          gre: "330+"
+        },
+        skills: ["理论研究", "数据分析", "科学计算", "批判性思维"],
+        tags: ["科研", "物理", "数学"],
+        description: "北大理论物理研究生在基础学科领域有扎实功底，积极参与科研，GPA高，英语能力强。",
+        rating: 4.9,
+        consultations: 100
+      }
+    ]
+  },
+  "生物科学": {
+    "北京大学": [
+      {
+        id: 9,
+        name: "北京大学生物科学研究生画像",
+        graduateMajor: "生物科学",
+        location: "北京",
+        academics: {
+          gpa: "3.85+/4.0",
+          courses: ["分子生物学", "遗传学", "生物化学"]
+        },
+        competitions: ["全国大学生生命科学竞赛"],
+        research: ["参与生物相关科研项目"],
+        englishScores: {
+          toefl: "110+",
+          ielts: "7.0+",
+          gre: "325+"
+        },
+        skills: ["实验设计", "数据分析", "学术写作"],
+        tags: ["生物", "科研", "实验"],
+        description: "北大生物科学研究生需具备扎实的实验和数据分析能力，积极参与科研。",
+        rating: 4.7,
+        consultations: 80
+      }
+    ]
+  },
+  "分子生物学": {
+    "哈佛大学": [
+      {
+        id: 10,
+        name: "哈佛大学分子生物学留学生画像",
+        graduateMajor: "分子生物学",
+        location: "波士顿",
+        academics: {
+          gpa: "3.95+/4.0",
+          courses: ["高级生物学", "有机化学", "分子遗传学", "科研方法论"]
+        },
+        competitions: ["国际生物学奥林匹克", "全国英语竞赛"],
+        research: ["国际顶级期刊发表论文", "参与国际合作研究项目"],
+        englishScores: {
+          toefl: "115+",
+          ielts: "8.0+",
+          gre: "335+",
+          sat: "1550+"
+        },
+        skills: ["科研创新", "学术写作", "批判性思维", "跨文化交流"],
+        tags: ["留学", "科研", "生物"],
+        description: "哈佛分子生物学留学生学术成绩极为优秀，科研能力突出，具备国际视野。",
+        rating: 5.0,
+        consultations: 100
+      }
+    ]
+  },
+  "公共政策": {
+    "哈佛大学": [
+      {
+        id: 11,
+        name: "哈佛大学公共政策留学生画像",
+        graduateMajor: "公共政策",
+        location: "波士顿",
+        academics: {
+          gpa: "3.9+/4.0",
+          courses: ["政策分析", "经济学", "社会学"]
+        },
+        competitions: ["国际公共政策竞赛"],
+        research: ["参与国际合作项目"],
+        englishScores: {
+          toefl: "113+",
+          ielts: "8.0+",
+          gre: "332+",
+          sat: "1530+"
+        },
+        skills: ["政策分析", "跨文化沟通", "学术写作"],
+        tags: ["留学", "政策", "社会科学"],
+        description: "哈佛公共政策留学生需具备良好的政策分析和跨文化沟通能力，积极参与国际项目。",
+        rating: 4.9,
+        consultations: 80
+      }
+    ]
   }
 }
 
-const internshipModels = {
-  "腾讯": {
-    "技术类": [
+const categoryModels = {
+  "技术类": {
+    "腾讯": [
       {
         id: 1,
         name: "腾讯技术实习生画像",
@@ -642,7 +660,49 @@ const internshipModels = {
         applications: 1200
       }
     ],
-    "产品类": [
+    "阿里巴巴": [
+      {
+        id: 3,
+        name: "阿里巴巴技术实习生画像",
+        position: "技术实习生",
+        duration: "3-6个月",
+        location: "杭州/北京",
+        academics: {
+          gpa: "3.5+/4.0",
+          courses: ["Java开发", "数据库", "分布式系统"]
+        },
+        skills: ["Java/Python", "数据库操作", "系统设计"],
+        requirements: ["计算机相关专业", "熟悉主流开发语言", "有项目经验"],
+        benefits: ["技术成长", "业务理解", "职业发展"],
+        tags: ["技术", "实习", "大数据"],
+        description: "阿里巴巴技术实习生将接触大规模分布式系统，学习电商业务的技术实现。",
+        rating: 4.8,
+        applications: 1500
+      }
+    ],
+    "字节跳动": [
+      {
+        id: 5,
+        name: "字节跳动技术实习生画像",
+        position: "技术实习生",
+        duration: "3-6个月",
+        location: "北京/上海",
+        academics: {
+          gpa: "3.6+/4.0",
+          courses: ["算法设计", "机器学习", "移动开发"]
+        },
+        skills: ["算法优化", "机器学习", "移动开发"],
+        requirements: ["计算机相关专业", "算法基础扎实", "对人工智能感兴趣"],
+        benefits: ["前沿技术", "算法实践", "快速成长"],
+        tags: ["技术", "实习", "人工智能"],
+        description: "字节跳动技术实习生将参与推荐算法和人工智能技术的开发，接触前沿技术。",
+        rating: 4.9,
+        applications: 1000
+      }
+    ]
+  },
+  "产品类": {
+    "腾讯": [
       {
         id: 2,
         name: "腾讯产品实习生画像",
@@ -663,28 +723,8 @@ const internshipModels = {
       }
     ]
   },
-  "阿里巴巴": {
-    "技术类": [
-      {
-        id: 3,
-        name: "阿里巴巴技术实习生画像",
-        position: "技术实习生",
-        duration: "3-6个月",
-        location: "杭州/北京",
-        academics: {
-          gpa: "3.5+/4.0",
-          courses: ["Java开发", "数据库", "分布式系统"]
-        },
-        skills: ["Java/Python", "数据库操作", "系统设计"],
-        requirements: ["计算机相关专业", "熟悉主流开发语言", "有项目经验"],
-        benefits: ["技术成长", "业务理解", "职业发展"],
-        tags: ["技术", "实习", "大数据"],
-        description: "阿里巴巴技术实习生将接触大规模分布式系统，学习电商业务的技术实现。",
-        rating: 4.8,
-        applications: 1500
-      }
-    ],
-    "运营类": [
+  "运营类": {
+    "阿里巴巴": [
       {
         id: 4,
         name: "阿里巴巴运营实习生画像",
@@ -705,28 +745,8 @@ const internshipModels = {
       }
     ]
   },
-  "字节跳动": {
-    "技术类": [
-      {
-        id: 5,
-        name: "字节跳动技术实习生画像",
-        position: "技术实习生",
-        duration: "3-6个月",
-        location: "北京/上海",
-        academics: {
-          gpa: "3.6+/4.0",
-          courses: ["算法设计", "机器学习", "移动开发"]
-        },
-        skills: ["算法优化", "机器学习", "移动开发"],
-        requirements: ["计算机相关专业", "算法基础扎实", "对人工智能感兴趣"],
-        benefits: ["前沿技术", "算法实践", "快速成长"],
-        tags: ["技术", "实习", "人工智能"],
-        description: "字节跳动技术实习生将参与推荐算法和人工智能技术的开发，接触前沿技术。",
-        rating: 4.9,
-        applications: 1000
-      }
-    ],
-    "内容类": [
+  "内容类": {
+    "字节跳动": [
       {
         id: 6,
         name: "字节跳动内容实习生画像",
@@ -1048,21 +1068,21 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
   )
 }
 
-// 公司行组件
-function CompanyRow({ company, positions, onViewDetails }: { company: string, positions: Record<string, CompanyModel[]>, onViewDetails: (model: CompanyModel) => void }) {
+// 岗位行组件
+function PositionRow({ position, companies, onViewDetails }: { position: string, companies: Record<string, CompanyModel[]>, onViewDetails: (model: CompanyModel) => void }) {
   return (
     <div className="mb-12">
               <div className="flex items-center gap-2 mb-4">
-                <Building className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">{company}</h2>
+                <Briefcase className="h-5 w-5 text-primary" />
+                <h2 className="text-2xl font-semibold">{position}</h2>
               </div>
               <ScrollableContainer>
-                {Object.entries(positions).map(([position, models]) => (
+                {Object.entries(companies).map(([company, models]) => (
                   models.map((model) => (
-            <div key={`${company}-${position}-${model.id}`} className="mr-4 min-w-[350px]">
+            <div key={`${position}-${company}-${model.id}`} className="mr-4 min-w-[350px]">
               <div className="mb-2 flex items-center gap-2 md:ml-0">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-base font-medium">{position}</span>
+                        <Building className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-base font-medium">{company}</span>
                       </div>
                       <CompanyCard model={model} onViewDetails={() => onViewDetails(model)} />
                     </div>
@@ -1073,21 +1093,21 @@ function CompanyRow({ company, positions, onViewDetails }: { company: string, po
   );
 }
 
-// 学校行组件
-function SchoolRow({ school, majors, onViewDetails }: { school: string, majors: Record<string, SchoolModel[]>, onViewDetails: (model: SchoolModel) => void }) {
+// 专业行组件
+function MajorRow({ major, schools, onViewDetails }: { major: string, schools: Record<string, SchoolModel[]>, onViewDetails: (model: SchoolModel) => void }) {
   return (
     <div className="mb-12">
               <div className="flex items-center gap-2 mb-4">
-                <School className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">{school}</h2>
+                <BookOpen className="h-5 w-5 text-primary" />
+                <h2 className="text-2xl font-semibold">{major}</h2>
               </div>
               <ScrollableContainer>
-                {Object.entries(majors).map(([major, models]) => (
+                {Object.entries(schools).map(([school, models]) => (
                   models.map((model) => (
-            <div key={`${school}-${major}-${model.id}`} className="mr-4 min-w-[350px]">
+            <div key={`${major}-${school}-${model.id}`} className="mr-4 min-w-[350px]">
               <div className="mb-2 flex items-center gap-2 md:ml-0">
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-base font-medium">{major}</span>
+                        <School className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-base font-medium">{school}</span>
                       </div>
                       <SchoolCard model={model} onViewDetails={() => onViewDetails(model)} />
                     </div>
@@ -1098,21 +1118,21 @@ function SchoolRow({ school, majors, onViewDetails }: { school: string, majors: 
   );
 }
 
-// 实习行组件
-function InternshipRow({ company, categories, onViewDetails }: { company: string, categories: Record<string, InternshipModel[]>, onViewDetails: (model: InternshipModel) => void }) {
+// 类别行组件
+function CategoryRow({ category, companies, onViewDetails }: { category: string, companies: Record<string, InternshipModel[]>, onViewDetails: (model: InternshipModel) => void }) {
   return (
     <div className="mb-12">
       <div className="flex items-center gap-2 mb-4">
-        <Building className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-semibold">{company}</h2>
+        <Layers className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-semibold">{category}</h2>
       </div>
       <ScrollableContainer>
-        {Object.entries(categories).map(([category, models]) => (
+        {Object.entries(companies).map(([company, models]) => (
           models.map((model) => (
-            <div key={`${company}-${category}-${model.id}`} className="mr-4 min-w-[350px]">
+            <div key={`${category}-${company}-${model.id}`} className="mr-4 min-w-[350px]">
               <div className="mb-2 flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-                <span className="text-base font-medium">{category}</span>
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <span className="text-base font-medium">{company}</span>
               </div>
               <InternshipCard model={model} onViewDetails={() => onViewDetails(model)} />
             </div>
@@ -1142,31 +1162,31 @@ export default function RoleModels() {
     return `/role-models/detail?${searchParams.toString()}`
   }
 
-  // 公司详情导航
-  const navigateToCompanyDetail = (company: string, position: string, model: CompanyModel) => {
+  // 岗位详情导航
+  const navigateToPositionDetail = (position: string, company: string, model: CompanyModel) => {
     const url = createDetailUrl('company', {
-      company: encodeURIComponent(company),
       position: encodeURIComponent(position),
-      id: model.id.toString()
-    })
-    router.push(url)
-  }
-
-  // 学校详情导航
-  const navigateToSchoolDetail = (school: string, major: string, model: SchoolModel) => {
-    const url = createDetailUrl('school', {
-      school: encodeURIComponent(school),
-      major: encodeURIComponent(major),
-      id: model.id.toString()
-    })
-    router.push(url)
-  }
-
-  // 实习详情导航
-  const navigateToInternshipDetail = (company: string, category: string, model: InternshipModel) => {
-    const url = createDetailUrl('internship', {
       company: encodeURIComponent(company),
+      id: model.id.toString()
+    })
+    router.push(url)
+  }
+
+  // 专业详情导航
+  const navigateToMajorDetail = (major: string, school: string, model: SchoolModel) => {
+    const url = createDetailUrl('school', {
+      major: encodeURIComponent(major),
+      school: encodeURIComponent(school),
+      id: model.id.toString()
+    })
+    router.push(url)
+  }
+
+  // 类别详情导航
+  const navigateToCategoryDetail = (category: string, company: string, model: InternshipModel) => {
+    const url = createDetailUrl('internship', {
       category: encodeURIComponent(category),
+      company: encodeURIComponent(company),
       id: model.id.toString()
     })
     router.push(url)
@@ -1205,16 +1225,16 @@ export default function RoleModels() {
         </TabsList>
         
         <TabsContent value="companies">
-          {Object.entries(companyModels).map(([company, positions]) => (
-            <CompanyRow 
-              key={company} 
-              company={company} 
-              positions={positions} 
+          {Object.entries(positionModels).map(([position, companies]) => (
+            <PositionRow 
+              key={position} 
+              position={position} 
+              companies={companies} 
               onViewDetails={(model) => {
-                // 查找当前模型对应的职位
-                for (const [position, models] of Object.entries(positions)) {
+                // 查找当前模型对应的公司
+                for (const [company, models] of Object.entries(companies)) {
                   if (models.some(m => m.id === model.id)) {
-                    navigateToCompanyDetail(company, position, model)
+                    navigateToPositionDetail(position, company, model)
                     return
                   }
                 }
@@ -1224,16 +1244,16 @@ export default function RoleModels() {
         </TabsContent>
         
         <TabsContent value="schools">
-          {Object.entries(schoolModels).map(([school, majors]) => (
-            <SchoolRow 
-              key={school} 
-              school={school} 
-              majors={majors} 
+          {Object.entries(majorModels).map(([major, schools]) => (
+            <MajorRow 
+              key={major} 
+              major={major} 
+              schools={schools} 
               onViewDetails={(model) => {
-                // 查找当前模型对应的专业
-                for (const [major, models] of Object.entries(majors)) {
+                // 查找当前模型对应的学校
+                for (const [school, models] of Object.entries(schools)) {
                   if (models.some(m => m.id === model.id)) {
-                    navigateToSchoolDetail(school, major, model)
+                    navigateToMajorDetail(major, school, model)
                     return
                   }
                 }
@@ -1243,16 +1263,16 @@ export default function RoleModels() {
         </TabsContent>
         
         <TabsContent value="internships">
-          {Object.entries(internshipModels).map(([company, categories]) => (
-            <InternshipRow 
-              key={company} 
-              company={company} 
-              categories={categories} 
+          {Object.entries(categoryModels).map(([category, companies]) => (
+            <CategoryRow 
+              key={category} 
+              category={category} 
+              companies={companies} 
               onViewDetails={(model) => {
-                // 查找当前模型对应的类别
-                for (const [category, models] of Object.entries(categories)) {
+                // 查找当前模型对应的公司
+                for (const [company, models] of Object.entries(companies)) {
                   if (models.some(m => m.id === model.id)) {
-                    navigateToInternshipDetail(company, category, model)
+                    navigateToCategoryDetail(category, company, model)
                     return
                   }
                 }
