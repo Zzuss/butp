@@ -9,6 +9,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/contexts/AuthContext"
 import { getUserProbabilityData } from "@/lib/dashboard-data"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 
 
@@ -802,7 +803,7 @@ interface InternshipModel {
   applications: number
 }
 
-function InternshipCard({ model }: { model: InternshipModel }) {
+function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onViewDetails: () => void }) {
   const { t } = useLanguage()
   
   return (
@@ -864,7 +865,7 @@ function InternshipCard({ model }: { model: InternshipModel }) {
 
         <div className="flex items-center justify-between pt-2 mt-auto">
           <span className="text-xs text-muted-foreground">{model.applications} {t('rolemodels.internship.applications')}</span>
-          <Button size="sm">
+          <Button size="sm" onClick={onViewDetails}>
             {t('rolemodels.internship.details')}
           </Button>
         </div>
@@ -873,7 +874,7 @@ function InternshipCard({ model }: { model: InternshipModel }) {
   )
 }
 
-function CompanyCard({ model }: { model: CompanyModel }) {
+function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDetails: () => void }) {
   const { t } = useLanguage()
   
   return (
@@ -939,7 +940,7 @@ function CompanyCard({ model }: { model: CompanyModel }) {
         </p>
 
         <div className="flex items-center justify-between pt-2 mt-auto">
-          <Button size="sm">
+          <Button size="sm" onClick={onViewDetails}>
             {t('rolemodels.common.details')}
           </Button>
         </div>
@@ -972,7 +973,7 @@ interface SchoolModel {
   consultations: number
 }
 
-function SchoolCard({ model }: { model: SchoolModel }) {
+function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetails: () => void }) {
   const { t } = useLanguage()
   
   return (
@@ -1038,7 +1039,7 @@ function SchoolCard({ model }: { model: SchoolModel }) {
         </p>
 
         <div className="flex items-center justify-between pt-2 mt-auto">
-          <Button size="sm">
+          <Button size="sm" onClick={onViewDetails}>
             {t('rolemodels.common.details')}
           </Button>
         </div>
@@ -1048,7 +1049,7 @@ function SchoolCard({ model }: { model: SchoolModel }) {
 }
 
 // 公司行组件
-function CompanyRow({ company, positions }: { company: string, positions: Record<string, CompanyModel[]> }) {
+function CompanyRow({ company, positions, onViewDetails }: { company: string, positions: Record<string, CompanyModel[]>, onViewDetails: (model: CompanyModel) => void }) {
   return (
     <div className="mb-12">
               <div className="flex items-center gap-2 mb-4">
@@ -1063,7 +1064,7 @@ function CompanyRow({ company, positions }: { company: string, positions: Record
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
                         <span className="text-base font-medium">{position}</span>
                       </div>
-                      <CompanyCard model={model} />
+                      <CompanyCard model={model} onViewDetails={() => onViewDetails(model)} />
                     </div>
                   ))
                 ))}
@@ -1073,7 +1074,7 @@ function CompanyRow({ company, positions }: { company: string, positions: Record
 }
 
 // 学校行组件
-function SchoolRow({ school, majors }: { school: string, majors: Record<string, SchoolModel[]> }) {
+function SchoolRow({ school, majors, onViewDetails }: { school: string, majors: Record<string, SchoolModel[]>, onViewDetails: (model: SchoolModel) => void }) {
   return (
     <div className="mb-12">
               <div className="flex items-center gap-2 mb-4">
@@ -1088,7 +1089,7 @@ function SchoolRow({ school, majors }: { school: string, majors: Record<string, 
                         <BookOpen className="h-4 w-4 text-muted-foreground" />
                         <span className="text-base font-medium">{major}</span>
                       </div>
-                      <SchoolCard model={model} />
+                      <SchoolCard model={model} onViewDetails={() => onViewDetails(model)} />
                     </div>
                   ))
                 ))}
@@ -1098,7 +1099,7 @@ function SchoolRow({ school, majors }: { school: string, majors: Record<string, 
 }
 
 // 实习行组件
-function InternshipRow({ company, categories }: { company: string, categories: Record<string, InternshipModel[]> }) {
+function InternshipRow({ company, categories, onViewDetails }: { company: string, categories: Record<string, InternshipModel[]>, onViewDetails: (model: InternshipModel) => void }) {
   return (
     <div className="mb-12">
       <div className="flex items-center gap-2 mb-4">
@@ -1113,7 +1114,7 @@ function InternshipRow({ company, categories }: { company: string, categories: R
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
                 <span className="text-base font-medium">{category}</span>
               </div>
-              <InternshipCard model={model} />
+              <InternshipCard model={model} onViewDetails={() => onViewDetails(model)} />
             </div>
           ))
         ))}
@@ -1122,9 +1123,54 @@ function InternshipRow({ company, categories }: { company: string, categories: R
   );
 }
 
+
+
+
+
+
+
+
+
 export default function RoleModels() {
   const { t } = useLanguage()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("companies")
+  
+  // 创建URL参数的辅助函数
+  const createDetailUrl = (type: 'company' | 'school' | 'internship', params: any) => {
+    const searchParams = new URLSearchParams({ type, ...params })
+    return `/role-models/detail?${searchParams.toString()}`
+  }
+
+  // 公司详情导航
+  const navigateToCompanyDetail = (company: string, position: string, model: CompanyModel) => {
+    const url = createDetailUrl('company', {
+      company: encodeURIComponent(company),
+      position: encodeURIComponent(position),
+      id: model.id.toString()
+    })
+    router.push(url)
+  }
+
+  // 学校详情导航
+  const navigateToSchoolDetail = (school: string, major: string, model: SchoolModel) => {
+    const url = createDetailUrl('school', {
+      school: encodeURIComponent(school),
+      major: encodeURIComponent(major),
+      id: model.id.toString()
+    })
+    router.push(url)
+  }
+
+  // 实习详情导航
+  const navigateToInternshipDetail = (company: string, category: string, model: InternshipModel) => {
+    const url = createDetailUrl('internship', {
+      company: encodeURIComponent(company),
+      category: encodeURIComponent(category),
+      id: model.id.toString()
+    })
+    router.push(url)
+  }
   
   return (
     <div className="p-6">
@@ -1160,19 +1206,58 @@ export default function RoleModels() {
         
         <TabsContent value="companies">
           {Object.entries(companyModels).map(([company, positions]) => (
-            <CompanyRow key={company} company={company} positions={positions} />
+            <CompanyRow 
+              key={company} 
+              company={company} 
+              positions={positions} 
+              onViewDetails={(model) => {
+                // 查找当前模型对应的职位
+                for (const [position, models] of Object.entries(positions)) {
+                  if (models.some(m => m.id === model.id)) {
+                    navigateToCompanyDetail(company, position, model)
+                    return
+                  }
+                }
+              }}
+            />
           ))}
         </TabsContent>
         
         <TabsContent value="schools">
           {Object.entries(schoolModels).map(([school, majors]) => (
-            <SchoolRow key={school} school={school} majors={majors} />
+            <SchoolRow 
+              key={school} 
+              school={school} 
+              majors={majors} 
+              onViewDetails={(model) => {
+                // 查找当前模型对应的专业
+                for (const [major, models] of Object.entries(majors)) {
+                  if (models.some(m => m.id === model.id)) {
+                    navigateToSchoolDetail(school, major, model)
+                    return
+                  }
+                }
+              }}
+            />
           ))}
         </TabsContent>
         
         <TabsContent value="internships">
           {Object.entries(internshipModels).map(([company, categories]) => (
-            <InternshipRow key={company} company={company} categories={categories} />
+            <InternshipRow 
+              key={company} 
+              company={company} 
+              categories={categories} 
+              onViewDetails={(model) => {
+                // 查找当前模型对应的类别
+                for (const [category, models] of Object.entries(categories)) {
+                  if (models.some(m => m.id === model.id)) {
+                    navigateToInternshipDetail(company, category, model)
+                    return
+                  }
+                }
+              }}
+            />
           ))}
         </TabsContent>
       </Tabs>

@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/contexts/language-context";
 import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
 import { PageViewTracker } from "@/components/analytics/PageViewTracker";
 import GlobalPdfButton from '@/components/layout/GlobalPdfButton'
+import { SidebarProvider } from "@/contexts/sidebar-context";
 
 export const metadata: Metadata = {
   title: "学生管理系统",
@@ -28,17 +29,19 @@ export default function RootLayout({
       <body className="antialiased">
         <LanguageProvider>
           <AuthProvider>
-            <div className="flex h-screen flex-col md:flex-row">
-              <AppSidebar />
-              <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-4">
-                {children}
-              </main>
+            <SidebarProvider>
+              <div className="flex h-screen flex-col md:flex-row">
+                <AppSidebar />
+                <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-4">
+                  {children}
+                </main>
 
-              {/* 全局固定导出按钮（右下角） */}
-              <div className="fixed right-6 bottom-6 z-50">
-                <GlobalPdfButton />
+                {/* 全局固定导出按钮（右下角） */}
+                <div className="fixed right-6 bottom-6 z-50">
+                  <GlobalPdfButton />
+                </div>
               </div>
-            </div>
+            </SidebarProvider>
             <PageViewTracker />
           </AuthProvider>
         </LanguageProvider>

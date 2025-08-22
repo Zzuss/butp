@@ -1,0 +1,109 @@
+[33mcommit 433185ff5ffe69dcc6067badeec53a9fa52ef9a0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Merge: 87fbb02 db9db85
+Author: BuTP Developer <developer@butp.tech>
+Date:   Thu Aug 21 17:40:49 2025 +0800
+
+    优化关于butp界面，邮箱
+
+ API_PROXY_SOLUTION.md                              |  133 [32m++[m
+ Dockerfile.puppeteer                               |   42 [32m+[m
+ MIXED_CONTENT_SOLUTION.md                          |  144 [32m+++[m
+ PDF_PROXY_ARCHITECTURE.md                          |  118 [32m++[m
+ PDF_SERVICE_FIX_SUMMARY.md                         |  133 [32m++[m
+ PRIVACY_AGREEMENT_IMPLEMENTATION_GUIDE.md          |  199 [32m+++[m
+ PROFILE_ENHANCEMENT_GUIDE.md                       |  190 [32m+++[m
+ RADAR_CHART_UPDATE_SUMMARY.md                      |    2 [32m+[m[31m-[m
+ SLIDER_IMPLEMENTATION_SUMMARY.md                   |   96 [32m++[m
+ app/analysis/page.tsx                              |  314 [32m+++[m[31m--[m
+ app/api/all-course-data/route.ts                   |   12 [32m+[m[31m-[m
+ app/api/auth/privacy-agreement/route.ts            |  192 [32m+++[m
+ app/api/download-curriculum/route.ts               |   31 [32m+[m
+ app/api/generate-pdf-proxy/route.ts                |   61 [32m+[m
+ app/api/generate-pdf/route.ts                      |  266 [32m++++[m
+ app/api/pdf/generate/route.ts                      |  108 [32m++[m
+ app/api/pdf/health/route.ts                        |   40 [32m+[m
+ app/api/probability-data/route.ts                  |   15 [32m+[m[31m-[m
+ app/api/student-course-scores/route.ts             |  182 [32m+[m[31m--[m
+ app/api/target-scores/route.ts                     |   20 [32m+[m[31m-[m
+ app/api/verify-student/route.ts                    |    5 [32m+[m[31m-[m
+ app/dashboard/page.tsx                             |   14 [32m+[m
+ app/find-student/page.tsx                          |    2 [32m+[m[31m-[m
+ app/layout.tsx                                     |   21 [32m+[m[31m-[m
+ app/login/page.tsx                                 |   50 [32m+[m[31m-[m
+ app/privacy-agreement/page.tsx                     |  233 [32m++++[m
+ app/profile/page.tsx                               |  341 [32m++++[m[31m-[m
+ app/role-models/detail/page.tsx                    | 1331 [32m++++++++++++++++++++[m
+ app/role-models/page.tsx                           |  117 [32m+[m[31m-[m
+ app/test-known-hash/page.tsx                       |    2 [32m+[m[31m-[m
+ app/verify-hash/page.tsx                           |    2 [32m+[m[31m-[m
+ campus-pdf-service/DEPLOYMENT_GUIDE.md             |  203 [32m+++[m
+ campus-pdf-service/Dockerfile                      |   70 [32m+[m
+ campus-pdf-service/Dockerfile.simple               |   46 [32m+[m
+ campus-pdf-service/deploy.sh                       |   84 [32m++[m
+ campus-pdf-service/docker-compose.yml              |   52 [32m+[m
+ campus-pdf-service/enable-https.sh                 |  310 [32m+++++[m
+ campus-pdf-service/fix-chinese-fonts.sh            |  189 [32m+++[m
+ campus-pdf-service/fix-multipage-service.sh        |   82 [32m++[m
+ campus-pdf-service/fix-network.sh                  |   62 [32m+[m
+ campus-pdf-service/install-chrome.sh               |   53 [32m+[m
+ campus-pdf-service/install-deps.sh                 |   22 [32m+[m
+ campus-pdf-service/install-fresh.sh                |   61 [32m+[m
+ campus-pdf-service/manual-deploy.sh                |  161 [32m+++[m
+ campus-pdf-service/nginx.conf                      |   66 [32m+[m
+ campus-pdf-service/package.json                    |   26 [32m+[m
+ campus-pdf-service/quick-deploy.sh                 |  147 [32m+++[m
+ campus-pdf-service/quick-fix.sh                    |   62 [32m+[m
+ campus-pdf-service/restart-service.sh              |   65 [32m+[m
+ campus-pdf-service/server-simple-multipage.js      |  218 [32m++++[m
+ campus-pdf-service/server-simple.js                |  149 [32m+++[m
+ campus-pdf-service/server.js                       |  357 [32m++++++[m
+ campus-pdf-service/start-simple.sh                 |   88 [32m++[m
+ campus-pdf-service/stop-build.sh                   |   21 [32m+[m
+ campus-pdf-service/test-html-pdf.sh                |  129 [32m++[m
+ campus-pdf-service/test-long-content.sh            |  154 [32m+++[m
+ campus-pdf-service/test-network.sh                 |   30 [32m+[m
+ campus-pdf-service/test-service.sh                 |  132 [32m++[m
+ campus-pdf-service/test-simple.sh                  |  101 [32m++[m
+ campus-pdf-service/update-multipage.sh             |   49 [32m+[m
+ check-hash-tables.js                               |   49 [32m+[m[31m-[m
+ check-privacy-policy.js                            |  135 [32m++[m
+ check-table.js                                     |  112 [32m++[m
+ components/layout/GlobalPdfButton.tsx              |   21 [32m+[m
+ components/layout/SidebarLayout.tsx                |   47 [32m+[m
+ components/layout/sidebar.tsx                      |   28 [32m+[m[31m-[m
+ components/pdf/AnalyzeHtmlContent.tsx              |  296 [32m+++++[m
+ components/pdf/AuthenticatedUrlExportButton.tsx    |  205 [32m+++[m
+ components/pdf/CampusPdfServiceButton.tsx          |  706 [32m+++++++++++[m
+ components/pdf/ClientPdfButton.tsx                 |  241 [32m++++[m
+ components/pdf/CompletePDFExport.tsx               |  347 [32m+++[m[31m--[m
+ components/pdf/ExternalPdfServiceButton.tsx        |  217 [32m++++[m
+ components/pdf/PreserveLayoutPdfButton.tsx         |  150 [32m+++[m
+ components/pdf/ProxyHealthCheck.tsx                |  150 [32m+++[m
+ components/pdf/QuickExternalTestButton.tsx         |  115 [32m++[m
+ components/ui/label.tsx                            |   26 [32m+[m
+ components/ui/slider.tsx                           |  102 [32m++[m
+ contexts/language-context.tsx                      |   70 [32m+[m[31m-[m
+ contexts/sidebar-context.tsx                       |   44 [32m+[m
+ create-privacy-table-simple.sql                    |   44 [32m+[m
+ create-privacy-table.sql                           |   66 [32m+[m
+ deploy-campus-pdf.zip.md                           |   52 [32m+[m
+ lib/profile-data.ts                                |  349 [32m+++++[m
+ lib/student-data.ts                                |   35 [32m+[m[31m-[m
+ lib/word-reader.ts                                 |  145 [32m+++[m
+ list-tables.js                                     |  111 [32m++[m
+ middleware.ts                                      |   52 [32m+[m[31m-[m
+ package-lock.json                                  |  794 [32m+++++++++++[m[31m-[m
+ package.json                                       |    3 [32m+[m
+ .../Education_Plan_PDF/Education_Plan_PDF_2023.pdf |  Bin [31m0[m -> [32m1991246[m bytes
+ ...250\346\235\241\346\254\276_clean_Aug2025.docx" |  Bin [31m0[m -> [32m31471[m bytes
+ ...\250\346\235\241\346\254\276_clean_Aug2025.pdf" |  Bin [31m0[m -> [32m704139[m bytes
+ templates/analysis/page-template.tsx               |    6 [32m+[m[31m-[m
+ templates/route_2.ts                               |    6 [32m+[m[31m-[m
+ test-course-translation.js                         |   10 [32m+[m
+ test-db-connection.js                              |  161 [32m++[m[31m-[m
+ test-merged-data.js                                |    8 [32m+[m[31m-[m
+ test-middleware-syntax.js                          |   46 [32m+[m
+ test-privacy-agreement.js                          |  125 [32m++[m
+ umami-mysql                                        |    1 [32m+[m
+ vercel.json                                        |   37 [32m+[m[31m-[m
+ 101 files changed, 12167 insertions(+), 550 deletions(-)

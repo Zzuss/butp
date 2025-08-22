@@ -24,6 +24,7 @@ import { Sidebar, SidebarHeader, SidebarContent, SidebarItem } from "@/component
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
+import { useSidebar } from "@/contexts/sidebar-context"
 import { trackUserAction } from "@/lib/analytics"
 import { CompletePDFExport } from '@/components/pdf/CompletePDFExport'
 import PreserveLayoutPdfButton from '@/components/pdf/PreserveLayoutPdfButton'
@@ -65,6 +66,7 @@ export function AppSidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const { t, language, setLanguage } = useLanguage()
+  const { isSidebarVisible } = useSidebar()
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -106,6 +108,11 @@ export function AppSidebar() {
       setIsCollapsed(savedState === 'true')
     }
   }, [])
+
+  // 如果sidebar不可见，则不渲染
+  if (!isSidebarVisible) {
+    return null
+  }
 
   // 切换侧边栏折叠状态
   const toggleCollapse = () => {

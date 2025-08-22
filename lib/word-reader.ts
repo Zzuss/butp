@@ -3,7 +3,8 @@
  * 用于从Word文档中提取文本内容
  */
 
-import mammoth from 'mammoth'
+// 暂时注释掉mammoth导入，避免构建错误
+// import mammoth from 'mammoth'
 
 export interface WordDocumentContent {
   title: string
@@ -18,6 +19,12 @@ export interface WordDocumentContent {
  */
 export async function readWordDocument(url: string): Promise<WordDocumentContent> {
   try {
+    // 暂时禁用Word文档读取功能，直接返回默认内容
+    console.warn('Word文档读取功能暂时禁用，使用默认内容')
+    return getDefaultPrivacyContent()
+    
+    // 以下是原始代码，暂时注释掉
+    /*
     // 获取Word文档
     const response = await fetch(url)
     if (!response.ok) {
@@ -64,6 +71,7 @@ export async function readWordDocument(url: string): Promise<WordDocumentContent
       content: text,
       lastUpdated
     }
+    */
     
   } catch (error) {
     console.error('读取Word文档失败:', error)

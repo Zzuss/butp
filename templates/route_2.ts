@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = createSupabaseClient()
 
-    // 1. 获取来源1的数据（cohort_predictions表）
+    // 1. 获取来源1的数据（专业预测表）
     const { data: source1Data, error: source1Error } = await supabase
-      .from('cohort_predictions')
+      .from('Cohort2023_Predictions_ee')
       .select(`
         SNH,
         major,
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
         const mappedCategory = originalCategory ? source1CategoryToFeatureMapping[originalCategory] || '基础学科' : '基础学科';
         
         source1Courses.push({
-          source: 'cohort_predictions',
+          source: '专业预测表',
           courseName: course.courseName,
           courseId: courseId || null,
           score: currentScore,

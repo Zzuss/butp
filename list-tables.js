@@ -22,7 +22,10 @@ async function listTables() {
     const knownTables = [
       'academic_results',
       'courses', 
-      'cohort_predictions',
+      'Cohort2023_Predictions_ai',
+  'Cohort2023_Predictions_ee',
+  'Cohort2023_Predictions_tewm',
+  'Cohort2023_Predictions_iot',
       'privacy_agreement',
       'privacy_agreements', // 可能的复数形式
       'privacy_policy',
