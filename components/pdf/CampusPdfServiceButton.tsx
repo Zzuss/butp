@@ -378,6 +378,10 @@ export default function CampusPdfServiceButton({
           const controller = new AbortController()
           const id = setTimeout(() => controller.abort(), 30000) // 30秒超时
           
+          // 根据目标 URL 决定是否携带浏览器 Cookie：
+          // - 当目标是应用自身的代理（以 /api/ 开头）时，需要携带凭据以转发登录 cookie
+          // - 否则（直接调用外部服务）不携带
+          const isLocalProxy = campusService.startsWith('/api')
           const resp = await fetch(campusService, {
             method: 'POST',
             headers: { 
@@ -389,8 +393,8 @@ export default function CampusPdfServiceButton({
             },
             body: JSON.stringify(pdfRequestBody),
             signal: controller.signal,
-            mode: 'cors', // 明确指定CORS模式
-            credentials: 'omit' // 暂时不发送cookie避免复杂的CORS问题
+            mode: isLocalProxy ? 'same-origin' : 'cors',
+            credentials: isLocalProxy ? 'same-origin' : 'omit'
           })
           
           console.log('📥 收到PDF服务响应:', {

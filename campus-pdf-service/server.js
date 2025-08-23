@@ -187,8 +187,23 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
           timeout: 60000
         });
 
-        // 等待应用内 JS 完成渲染（可调整或等待特定选择器）
-        await page.waitForTimeout(1000);
+        // 等待应用内 JS 完成渲染（等待主内容选择器）
+        try {
+          await page.waitForSelector('main', { timeout: 60000 });
+        } catch (e) {
+          // 如果 main 不存在则回退到固定等待
+          await page.waitForTimeout(1500);
+        }
+        // 注入更强的桌面布局覆盖样式，尽量逼近本地渲染
+        await page.addStyleTag({
+          content: `
+            html,body { width: ${viewportWidth || 1366}px !important; max-width: none !important; }
+            /* 常见侧边栏/浮动元素隐藏（按需调整） */
+            .sidebar, nav, button, .fixed, .no-print, [class*=\"sidebar\"] { display: none !important; }
+            .container, main, .main-content { width: ${viewportWidth || 1366}px !important; max-width: none !important; margin: 0 auto !important; }
+            img { max-width: 100% !important; }
+          `
+        });
       } catch (error) {
         console.error('页面加载失败:', error.message);
         throw new Error(`无法加载页面 ${url}: ${error.message}`);
