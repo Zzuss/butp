@@ -6,6 +6,8 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 
 const app = express();
+// 信任代理（nginx 会设置 X-Forwarded-* 头），以便 express-rate-limit 能正确识别客户端IP
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 8000;
 const PDF_SERVICE_KEY = process.env.PDF_SERVICE_KEY || 'campus-pdf-2024';
 
@@ -108,10 +110,18 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
       viewportWidth,
       clientIP: req.ip 
     });
+    // 调试：打印收到的请求头，确认 x-pdf-key 是否到达本服务
+    try {
+      console.log('📥 接收到的请求头:', JSON.stringify(req.headers, Object.keys(req.headers).sort(), 2));
+    } catch (e) {
+      console.log('📥 无法序列化请求头', e && e.message);
+    }
 
     // 启动Puppeteer
     browser = await puppeteer.launch({
       headless: true,
+      // 若环境中指定了 PUPPETEER_EXECUTABLE_PATH，则使用该可执行文件（系统 Chromium）
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -162,60 +172,62 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
       }
     }
 
-    // 加载内容
-    if (html) {
-      await page.setContent(html, { 
-        waitUntil: 'networkidle0',
-        timeout: 60000 
-      });
-    } else if (url) {
+    // 加载内容：优先用 URL 渲染（更接近用户浏览器），如果传入 html 则使用 html
+    if (url) {
       console.log(`尝试访问URL: ${url}`);
-      
       try {
-        // 先测试网络连通性（使用Node.js内置模块）
-        const https = require('https');
-        const http = require('http');
-        
-        const testConnection = () => {
-          return new Promise((resolve) => {
-            const urlObj = new URL(url);
-            const client = urlObj.protocol === 'https:' ? https : http;
-            
-            const req = client.request({
-              hostname: urlObj.hostname,
-              port: urlObj.port,
-              path: '/',
-              method: 'HEAD',
-              timeout: 10000
-            }, (res) => {
-              resolve(true);
-            });
-            
-            req.on('error', () => resolve(false));
-            req.on('timeout', () => resolve(false));
-            req.end();
-          });
-        };
-        
-        const canConnect = await testConnection();
-        if (!canConnect) {
-          console.warn('网络连通性测试失败');
-          // 注意：即使连通性测试失败，仍然尝试用Puppeteer加载页面
-        }
-        
-        // 尝试访问页面
-        await page.goto(url, { 
-          waitUntil: 'domcontentloaded', // 改为更宽松的等待条件
-          timeout: 60000 // 增加超时时间
+        // 跳过简单的连通性测试，直接用 Puppeteer 加载以保证和浏览器一致的渲染
+        await page.setUserAgent(request.headers.get('user-agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
+        await page.setViewport({ width: viewportWidth || 1366, height: 900, deviceScaleFactor: 2 });
+        await page.setBypassCSP(true);
+        await page.emulateMediaType('screen');
+
+        await page.goto(url, {
+          waitUntil: 'networkidle0',
+          timeout: 60000
         });
-        
-        // 等待页面渲染
-        await page.waitForTimeout(3000);
-        
+
+        // 等待应用内 JS 完成渲染（可调整或等待特定选择器）
+        await page.waitForTimeout(1000);
       } catch (error) {
         console.error('页面加载失败:', error.message);
         throw new Error(`无法加载页面 ${url}: ${error.message}`);
       }
+    } else if (html) {
+      // 如果传入完整HTML（客户端渲染后的），将其作为内容加载，并确保 base 已存在
+      const baseInjectedHtml = (function() {
+        try {
+          if (!/<base\b/i.test(html)) {
+            const origin = request.headers.get('origin') || '';
+            const base = origin ? `<base href="${origin}">` : '';
+            if (/<head[^>]*>/i.test(html)) return html.replace(/<head([^>]*)>/i, `<head$1>${base}`);
+            return `<head>${base}</head>` + html;
+          }
+        } catch (e) {
+          // ignore
+        }
+        return html;
+      })();
+
+      await page.setUserAgent(request.headers.get('user-agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
+      await page.setViewport({ width: viewportWidth || 1366, height: 900, deviceScaleFactor: 2 });
+      await page.setBypassCSP(true);
+      await page.emulateMediaType('screen');
+
+      await page.setContent(baseInjectedHtml, {
+        waitUntil: 'networkidle0',
+        timeout: 60000
+      });
+
+      // 注入额外样式以逼近桌面布局
+      await page.addStyleTag({
+        content: `
+          html,body { width: ${viewportWidth || 1366}px !important; max-width: none !important; }
+          .sidebar, nav, button, .fixed, .no-print, [class*="sidebar"] { display: none !important; }
+        `
+      });
+
+      await page.waitForTimeout(800);
     } else {
       return res.status(400).json({ error: '需要提供 url 或 html 参数' });
     }

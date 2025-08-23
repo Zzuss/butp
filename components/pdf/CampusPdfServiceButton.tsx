@@ -74,15 +74,19 @@ export default function CampusPdfServiceButton({
       
       const canUseCampusService = (isLocalDev || isIntranet || isCampusVPN)
       
-      // 使用API代理模式，避免Mixed Content问题
-      const campusService = campusServiceUrl || '/api/pdf/generate'
+      // 使用API代理模式，避免Mixed Content和CORS问题
+      // 在浏览器端优先使用应用的后端代理（/api/pdf/generate），这样可以由后端添加私密 API Key
+      // 如果在非浏览器环境或明确传入 campusServiceUrl，则回退到环境变量或外部服务地址
+      const campusService = campusServiceUrl || (typeof window !== 'undefined' ? '/api/pdf/generate' : (process.env.NEXT_PUBLIC_CAMPUS_PDF_SERVICE_URL || 'http://139.159.233.180/generate-pdf'))
       
       console.log('🔒 校内服务URL:', campusService)
 
       const body: any = { viewportWidth: viewport }
 
       // If local dev, send HTML; otherwise prefer URL
-      const useHtml = hostname === 'localhost' || hostname === '127.0.0.1' || window.location.protocol === 'file:'
+      // 在生产域名（例如 butp.tech）上强制使用 URL 渲染，以便服务器端完整加载页面资源
+      const isProductionDomain = hostname.includes('butp.tech')
+      const useHtml = (hostname === 'localhost' || hostname === '127.0.0.1' || window.location.protocol === 'file:') && !isProductionDomain
       if (useHtml) {
         let html = document.documentElement.outerHTML || '<html></html>'
         if (!/<base\b/i.test(html)) {

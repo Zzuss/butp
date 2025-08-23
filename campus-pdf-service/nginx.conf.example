@@ -1,0 +1,35 @@
+server {
+    listen 80;
+    server_name 139.159.233.180; # 或域名
+
+    # 将 / 转发到内部服务
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+
+    # 健康检查直接代理
+    location /health {
+        proxy_pass http://127.0.0.1:8000/health;
+        proxy_set_header Host $host;
+    }
+}
+
+# HTTPS 配置建议使用 certbot 自动生成证书并启用下面的监听
+# server {
+#     listen 443 ssl;
+#     server_name your.domain.com;
+#     ssl_certificate /etc/letsencrypt/live/your.domain.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/your.domain.com/privkey.pem;
+#     include /etc/letsencrypt/options-ssl-nginx.conf;
+#     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+#     location / { proxy_pass http://127.0.0.1:8000; }
+# }
+
+

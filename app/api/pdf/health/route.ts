@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 export async function GET() {
   try {
     // 检查校内PDF服务状态，优先使用环境变量
-    const campusHealthUrl = process.env.CAMPUS_PDF_SERVICE_HEALTH_URL || (process.env.CAMPUS_PDF_SERVICE_URL ? new URL('/health', process.env.CAMPUS_PDF_SERVICE_URL).toString() : 'http://10.3.58.3:8000/health')
+    const campusHealthUrl = process.env.CAMPUS_PDF_SERVICE_HEALTH_URL || (process.env.CAMPUS_PDF_SERVICE_URL ? new URL('/health', process.env.CAMPUS_PDF_SERVICE_URL).toString() : 'http://139.159.233.180/health')
     // 检查校内PDF服务状态
     const healthResponse = await fetch(campusHealthUrl, {
       method: 'GET',

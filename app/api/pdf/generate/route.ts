@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     
     // 构建转发到校内PDF服务的请求，优先使用环境变量
     // 支持两种写法：完整 API 路径（包含 /generate-pdf），或仅主机（例如 https://139.159.233.180）
-    const rawCampus = process.env.CAMPUS_PDF_SERVICE_URL || 'http://10.3.58.3:8000'
+    const rawCampus = process.env.CAMPUS_PDF_SERVICE_URL || 'http://139.159.233.180'
     const campusServiceUrl = rawCampus.endsWith('/generate-pdf') ? rawCampus : new URL('/generate-pdf', rawCampus).toString()
     
     // 转发请求头（包括认证信息）
@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
       'x-pdf-key': process.env.CAMPUS_PDF_API_KEY || 'campus-pdf-2024-1755617095',
       'User-Agent': request.headers.get('user-agent') || 'BuTP-PDF-Proxy/1.0'
     }
+    // 打印转发头，便于排查代理是否正确传递了 API Key（调试用）
+    console.log('🔑 将要转发的请求头:', JSON.stringify(forwardHeaders))
     
     // 转发Cookie（如果有）
     const cookies = request.headers.get('cookie')
@@ -44,7 +46,8 @@ export async function POST(request: NextRequest) {
     console.log('📥 校内PDF服务响应:', {
       status: campusResponse.status,
       statusText: campusResponse.statusText,
-      contentType: campusResponse.headers.get('content-type')
+      contentType: campusResponse.headers.get('content-type'),
+      headers: Object.fromEntries(campusResponse.headers.entries())
     })
     
     if (!campusResponse.ok) {
