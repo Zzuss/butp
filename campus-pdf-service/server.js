@@ -177,7 +177,7 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
       console.log(`尝试访问URL: ${url}`);
       try {
         // 跳过简单的连通性测试，直接用 Puppeteer 加载以保证和浏览器一致的渲染
-        await page.setUserAgent(request.headers.get('user-agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
+        await page.setUserAgent(req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
         await page.setViewport({ width: viewportWidth || 1366, height: 900, deviceScaleFactor: 2 });
         await page.setBypassCSP(true);
         await page.emulateMediaType('screen');
@@ -213,7 +213,7 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
       const baseInjectedHtml = (function() {
         try {
           if (!/<base\b/i.test(html)) {
-            const origin = request.headers.get('origin') || '';
+            const origin = req.headers['origin'] || '';
             const base = origin ? `<base href="${origin}">` : '';
             if (/<head[^>]*>/i.test(html)) return html.replace(/<head([^>]*)>/i, `<head$1>${base}`);
             return `<head>${base}</head>` + html;
@@ -224,7 +224,7 @@ app.post('/generate-pdf', verifyApiKey, async (req, res) => {
         return html;
       })();
 
-      await page.setUserAgent(request.headers.get('user-agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
+      await page.setUserAgent(req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
       await page.setViewport({ width: viewportWidth || 1366, height: 900, deviceScaleFactor: 2 });
       await page.setBypassCSP(true);
       await page.emulateMediaType('screen');
