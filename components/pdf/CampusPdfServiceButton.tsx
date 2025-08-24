@@ -74,15 +74,19 @@ export default function CampusPdfServiceButton({
       
       const canUseCampusService = (isLocalDev || isIntranet || isCampusVPN)
       
-      // 使用API代理模式，避免Mixed Content问题
-      const campusService = campusServiceUrl || '/api/pdf/generate'
+      // 使用API代理模式，避免Mixed Content和CORS问题
+      // 在浏览器端优先使用应用的后端代理（/api/pdf/generate），这样可以由后端添加私密 API Key
+      // 如果在非浏览器环境或明确传入 campusServiceUrl，则回退到环境变量或外部服务地址
+      const campusService = campusServiceUrl || (typeof window !== 'undefined' ? '/api/pdf/generate' : (process.env.NEXT_PUBLIC_CAMPUS_PDF_SERVICE_URL || 'http://139.159.233.180/generate-pdf'))
       
       console.log('🔒 校内服务URL:', campusService)
 
       const body: any = { viewportWidth: viewport }
 
       // If local dev, send HTML; otherwise prefer URL
-      const useHtml = hostname === 'localhost' || hostname === '127.0.0.1' || window.location.protocol === 'file:'
+      // 在生产域名（例如 butp.tech）上强制使用 URL 渲染，以便服务器端完整加载页面资源
+      const isProductionDomain = hostname.includes('butp.tech')
+      const useHtml = (hostname === 'localhost' || hostname === '127.0.0.1' || window.location.protocol === 'file:') && !isProductionDomain
       if (useHtml) {
         let html = document.documentElement.outerHTML || '<html></html>'
         if (!/<base\b/i.test(html)) {
@@ -374,6 +378,10 @@ export default function CampusPdfServiceButton({
           const controller = new AbortController()
           const id = setTimeout(() => controller.abort(), 30000) // 30秒超时
           
+          // 根据目标 URL 决定是否携带浏览器 Cookie：
+          // - 当目标是应用自身的代理（以 /api/ 开头）时，需要携带凭据以转发登录 cookie
+          // - 否则（直接调用外部服务）不携带
+          const isLocalProxy = campusService.startsWith('/api')
           const resp = await fetch(campusService, {
             method: 'POST',
             headers: { 
@@ -385,8 +393,8 @@ export default function CampusPdfServiceButton({
             },
             body: JSON.stringify(pdfRequestBody),
             signal: controller.signal,
-            mode: 'cors', // 明确指定CORS模式
-            credentials: 'omit' // 暂时不发送cookie避免复杂的CORS问题
+            mode: isLocalProxy ? 'same-origin' : 'cors',
+            credentials: isLocalProxy ? 'same-origin' : 'omit'
           })
           
           console.log('📥 收到PDF服务响应:', {

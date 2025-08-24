@@ -39,7 +39,7 @@ export default function PrivacyAgreementPage() {
     }
   }, [user])
 
-  // 从Word文档加载隐私条款内容
+  // 加载隐私条款内容
   const loadPrivacyContent = async () => {
     try {
       setLoadingContent(true)

@@ -31,39 +31,28 @@ const teachers = [
 
 const students = [
   {
-    name: "Y同学",
-    email: "student.y@butp.edu",
+    name: "潘明辉", 
     note: "前端开发工程师，负责界面设计与实现"
   },
   {
-    name: "P同学",
-    email: "student.p@butp.edu", 
+    name: "黄昌澄",
     note: "后端开发工程师，负责数据库设计"
   },
   {
-    name: "F同学",
-    email: "student.f@butp.edu",
+    name: "范智健",
     note: "全栈开发工程师，负责系统集成"
   },
   {
-    name: "H同学",
-    email: "student.h@butp.edu",
+    name: "朱思远",
     note: "UI/UX设计师，负责用户界面设计"
   },
   {
-    name: "Z同学", 
-    email: "student.z@butp.edu",
+    name: "苑博淳", 
     note: "测试工程师，负责质量保证"
   },
   {
-    name: "Y同学",
-    email: "student.y2@butp.edu",
+    name: "吕梓豪",
     note: "产品经理，负责需求分析"
-  },
-  {
-    name: "L同学",
-    email: "student.l@butp.edu",
-    note: "运维工程师，负责部署与维护"
   }
 ];
 
@@ -156,10 +145,6 @@ export default function AboutPage() {
                 </CardHeader>
                 <CardContent className="p-5">
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-blue-700">
-                      <Mail className="h-4 w-4" />
-                      <span className="text-sm">{student.email}</span>
-                    </div>
                     <div className="text-gray-600">
                       <p className="text-sm leading-relaxed">{student.note}</p>
                     </div>
@@ -196,6 +181,26 @@ export default function AboutPage() {
           <VotingPoll />
         </div>
 
+        {/* 联系邮箱 */}
+        <div className="mt-16 text-center">
+          <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-white">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Mail className="h-6 w-6 text-blue-600" />
+                <h3 className="text-2xl font-bold text-blue-900">联系我们</h3>
+              </div>
+              <p className="text-blue-700 text-lg">
+                如有任何问题或建议，欢迎通过以下邮箱联系我们：
+              </p>
+              <div className="mt-4">
+                <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 px-4 py-2 text-lg font-medium">
+                  developer@butp.tech
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* 底部感谢 */}
         <div className="mt-16 text-center">
           <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-white">
@@ -205,6 +210,14 @@ export default function AboutPage() {
                 感谢每一位老师的悉心指导和每一位同学的辛勤付出，
                 共同打造了这个优秀的系统！
               </p>
+              <div className="mt-6">
+                <button 
+                  onClick={() => window.open('/privacy-policy', '_blank')}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline transition-colors duration-200"
+                >
+                  隐私政策与用户数据使用条款
+                </button>
+              </div>
             </CardContent>
           </Card>
         </div>

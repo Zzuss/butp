@@ -14,11 +14,16 @@ export interface UserVote {
   user_id: string
   option_id: number
   created_at: string
+  version: string
 }
 
 // 本地存储键名
 const VOTING_OPTIONS_KEY = 'butp_voting_options'
 const USER_VOTE_PREFIX = 'butp_user_vote_'
+const VOTING_VERSION_KEY = 'butp_voting_version'
+
+// 当前投票版本号
+const CURRENT_VOTING_VERSION = '1.0'
 
 // 获取所有投票选项（按票数排序）
 export async function getVotingOptions(): Promise<VotingOption[]> {
@@ -63,7 +68,15 @@ export async function getUserVote(userId: string): Promise<UserVote | null> {
   try {
     const localUserVote = localStorage.getItem(`${USER_VOTE_PREFIX}${userId}`)
     if (localUserVote) {
-      return JSON.parse(localUserVote)
+      const userVote = JSON.parse(localUserVote)
+      
+      // 检查版本号，如果版本不匹配则清除旧投票记录
+      if (userVote.version !== CURRENT_VOTING_VERSION) {
+        localStorage.removeItem(`${USER_VOTE_PREFIX}${userId}`)
+        return null
+      }
+      
+      return userVote
     }
     return null
   } catch (error) {
@@ -100,7 +113,8 @@ export async function voteForOption(userId: string, optionId: number): Promise<b
       id: Date.now(),
       user_id: userId,
       option_id: optionId,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      version: CURRENT_VOTING_VERSION
     }
     localStorage.setItem(`${USER_VOTE_PREFIX}${userId}`, JSON.stringify(userVoteRecord))
     
@@ -143,9 +157,34 @@ export async function revokeVote(userId: string): Promise<boolean> {
   }
 }
 
+// 更新投票版本号（清除所有用户投票记录）
+export function updateVotingVersion(newVersion: string): void {
+  try {
+    // 清除所有用户投票记录
+    const keys = Object.keys(localStorage)
+    keys.forEach(key => {
+      if (key.startsWith(USER_VOTE_PREFIX)) {
+        localStorage.removeItem(key)
+      }
+    })
+    
+    // 保存新版本号
+    localStorage.setItem(VOTING_VERSION_KEY, newVersion)
+    
+    console.log(`投票版本已更新到 ${newVersion}，所有用户投票记录已清除`)
+  } catch (error) {
+    console.error('更新投票版本失败:', error)
+  }
+}
+
+// 获取当前投票版本号
+export function getCurrentVotingVersion(): string {
+  return CURRENT_VOTING_VERSION
+}
+
 // 初始化投票选项（如果数据库中没有的话）
 export const initialVotingOptions = [
-  { option_key: 'A', option_text: '移动端应用开发' },
+  { option_key: 'A', option_text: '是否把修改成绩改成滑条式输入' },
   { option_key: 'B', option_text: '人工智能与机器学习功能' },
   { option_key: 'C', option_text: '社交学习与讨论功能' },
   { option_key: 'D', option_text: '职业规划与就业指导' },
