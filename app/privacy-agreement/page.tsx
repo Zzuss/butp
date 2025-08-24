@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2, XCircle, FileText, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
-import { readWordDocument, getDefaultPrivacyContent } from "@/lib/word-reader"
+import { readWordDocument } from "@/lib/word-reader"
 
 interface PrivacyContent {
   title: string
@@ -45,16 +45,9 @@ export default function PrivacyAgreementPage() {
       setLoadingContent(true)
       setError("")
       
-      // 尝试从Word文档读取内容
-      try {
-        const wordContent = await readWordDocument('/隐私政策与用户数据使用条款_clean_Aug2025.docx')
-        setPrivacyContent(wordContent)
-      } catch (wordError) {
-        console.warn('无法读取Word文档，使用默认内容:', wordError)
-        // 如果无法读取Word文档，使用默认内容
-        const defaultContent = getDefaultPrivacyContent()
-        setPrivacyContent(defaultContent)
-      }
+      // 从Word文档读取内容，失败时直接报错
+      const wordContent = await readWordDocument('/隐私政策与用户数据使用条款_clean_Aug2025.docx')
+      setPrivacyContent(wordContent)
       
     } catch (error) {
       console.error('加载隐私条款失败:', error)
