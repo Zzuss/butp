@@ -1611,7 +1611,7 @@ export default function Analysis() {
                                         }
                                         return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      min={0}
+                                      min={60}
                                       max={100}
                                       step={1}
                                       onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
@@ -1965,7 +1965,7 @@ export default function Analysis() {
                                         }
                                         return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      min={0}
+                                      min={60}
                                       max={100}
                                       step={1}
                                       onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
