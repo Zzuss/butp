@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getFieldsByTable, validateTableFields } from '@/config/table-schemas'
 
-// 硬编码 Supabase 配置（用于 API 路由）
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM';
+// 使用环境变量配置 Supabase（用于 API 路由）
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sdtarodxdvkeeiaouddo.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM';
 
 // 在每次请求时创建新的客户端，避免连接问题
 function createSupabaseClient() {
-  return createClient(supabaseUrl, supabaseAnonKey)
+  // 添加环境变量检查和回退机制
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.warn('⚠️  Supabase环境变量未配置，使用硬编码配置作为回退');
+  }
+  
+  try {
+    return createClient(supabaseUrl, supabaseAnonKey)
+  } catch (error) {
+    console.error('❌ 创建Supabase客户端失败:', error);
+    throw new Error('Failed to create Supabase client');
+  }
 }
+
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,84 +39,37 @@ export async function POST(request: NextRequest) {
 
     const supabase = createSupabaseClient()
 
-          // 1. 获取来源1的数据（专业预测表）
-      const { data: source1Data, error: source1Error } = await supabase
-        .from('Cohort2023_Predictions_ee')
-      .select(`
-        SNH,
-        major,
-        year,
-        "思想道德与法治",
-        "中国近现代史纲要",
-        "马克思主义基本原理",
-        "毛泽东思想和中国特色社会主义理论体系概论",
-        "形势与政策1",
-        "形势与政策2",
-        "形势与政策3",
-        "形势与政策4",
-        "形势与政策5",
-        "习近平新时代中国特色社会主义思想概论",
-        "体育基础",
-        "军事理论",
-        "大学生心理健康",
-        "安全教育",
-        "综合英语（上）",
-        "综合英语（下）",
-        "进阶听说（上）",
-        "进阶听说（下）",
-        "线性代数",
-        "高等数学A(上)",
-        "高等数学A(下)",
-        "大学物理D（上）",
-        "大学物理D（下）",
-        "工程数学",
-        "概率论与随机过程",
-        "程序设计基础",
-        "数据设计",
-        "Java高级语言程序设计",
-        "软件工程",
-        "电子信息工程专业导论",
-        "电子系统基础",
-        "电子电路基础",
-        "信号与系统",
-        "数字电路设计",
-        "数字信号处理",
-        "计算机网络",
-        "人工智能导论",
-        "产品开发与管理",
-        "电磁场与电磁波",
-        "通信原理I",
-        "多媒体基础",
-        "数字音频基础",
-        "信息论",
-        "机器学习",
-        "高级变换",
-        "图形与视频处理",
-        "交互式媒体设计",
-        "3D图形程序设计",
-        "深度学习与计算视觉",
-        "军训",
-        "思想道德与法治（实践环节）",
-        "毛泽东思想和中国特色社会主义理论体系概论实",
-        "物理实验C",
-        "电路实验",
-        "学术交流技能1",
-        "学术交流技能2",
-        "Design & Build实训（电子）",
-        "通信原理实验",
-        "电子工艺实习",
-        "电子信息工程专业实习",
-        "个人发展计划1",
-        "个人发展计划2",
-        "个人发展计划3",
-        "毕业设计"
-      `)
+    // 1. 获取来源1的数据（专业预测表）
+    // 动态选择字段，避免字段不存在的错误
+    const tableName = 'Cohort2023_Predictions_ee';
+    const fields = getFieldsByTable(tableName);
+    
+    console.log(`🔍 查询表 ${tableName}，使用字段:`, fields.slice(0, 5), '...');
+    
+    // 验证字段是否实际存在于表中
+    const validFields = await validateTableFields(supabase, tableName, fields);
+    console.log(`✅ 验证后的有效字段数量: ${validFields.length}`);
+    
+    const { data: source1Data, error: source1Error } = await supabase
+      .from(tableName)
+      .select(validFields.join(', '))
       .eq('SNH', trimmedHash)
       .limit(1);
 
     if (source1Error) {
-      console.error('Source 1 error:', source1Error)
-      return NextResponse.json({ error: 'Failed to fetch source 1 data' }, { status: 500 })
+      console.error('❌ Source 1 error:', source1Error)
+      console.error('❌ 数据库连接详情:', {
+        url: supabaseUrl,
+        hasAnonKey: !!supabaseAnonKey,
+        errorCode: source1Error.code,
+        errorMessage: source1Error.message,
+        errorDetails: source1Error.details
+      })
+      return NextResponse.json({ 
+        error: 'Failed to fetch source 1 data',
+        details: source1Error.message,
+        code: source1Error.code
+      }, { status: 500 })
     }
 
     // 2. 获取来源2的数据（使用前端传递的缓存数据或调用来源2 API）
@@ -155,8 +121,19 @@ export async function POST(request: NextRequest) {
           .order('Semester_Offered', { ascending: true });
 
         if (source2Error) {
-          console.error('Source 2 error:', source2Error)
-          return NextResponse.json({ error: 'Failed to fetch source 2 data' }, { status: 500 })
+          console.error('❌ Source 2 error:', source2Error)
+          console.error('❌ 数据库连接详情:', {
+            url: supabaseUrl,
+            hasAnonKey: !!supabaseAnonKey,
+            errorCode: source2Error.code,
+            errorMessage: source2Error.message,
+            errorDetails: source2Error.details
+          })
+          return NextResponse.json({ 
+            error: 'Failed to fetch source 2 data',
+            details: source2Error.message,
+            code: source2Error.code
+          }, { status: 500 })
         }
         source2Data = dbSource2Data;
       }
@@ -169,8 +146,19 @@ export async function POST(request: NextRequest) {
       .not('course_id', 'is', null);
 
     if (coursesError) {
-      console.error('Courses error:', coursesError)
-      return NextResponse.json({ error: 'Failed to fetch courses data' }, { status: 500 })
+      console.error('❌ Courses error:', coursesError)
+      console.error('❌ 数据库连接详情:', {
+        url: supabaseUrl,
+        hasAnonKey: !!supabaseAnonKey,
+        errorCode: coursesError.code,
+        errorMessage: coursesError.message,
+        errorDetails: coursesError.details
+      })
+      return NextResponse.json({ 
+        error: 'Failed to fetch courses data',
+        details: coursesError.message,
+        code: coursesError.code
+      }, { status: 500 })
     }
 
     // 创建课程编号到课程信息的映射

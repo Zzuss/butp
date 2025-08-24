@@ -404,6 +404,7 @@ export default function Analysis() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ all-course-data API调用成功:', data);
         
         // 3. 重新计算特征值 - 使用新的总表数据
         const featureResponse = await fetch('/api/calculate-features', {
@@ -416,6 +417,7 @@ export default function Analysis() {
 
         if (featureResponse.ok) {
           const featureData = await featureResponse.json();
+          console.log('✅ 特征值计算成功:', featureData);
           setCalculatedFeatures(featureData.data.featureValues);
           
           // 4. 调用预测API - 使用计算出的特征值进行预测
@@ -440,6 +442,8 @@ export default function Analysis() {
             }
           });
           
+          console.log('📊 英文特征值:', englishFeatureValues);
+          
           const predictionResponse = await fetch('/api/predict-possibility', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -453,25 +457,45 @@ export default function Analysis() {
             if (predictionData.success && predictionData.data) {
               // 解析预测结果：第一个是国内读研，第二个是海外读研，第三个忽略
               const probabilities = predictionData.data.probabilities;
-              console.log('预测概率:', probabilities);
-              console.log('预测类别:', predictionData.data.predictedClass);
+              console.log('✅ 预测成功 - 预测概率:', probabilities);
+              console.log('✅ 预测成功 - 预测类别:', predictionData.data.predictedClass);
               setPredictionResult({
                 domesticPercentage: Math.round(probabilities[0] * 100), // 国内读研百分比
                 overseasPercentage: Math.round(probabilities[1] * 100)  // 海外读研百分比
               });
+            } else {
+              console.error('❌ 预测API返回数据格式错误:', predictionData);
+              setPredictionResult(null);
             }
           } else {
-            console.error('Failed to predict possibility');
+            const errorText = await predictionResponse.text();
+            console.error('❌ 预测API调用失败:', predictionResponse.status, errorText);
             setPredictionResult(null);
           }
         } else {
-          console.error('Failed to calculate features');
+          const errorText = await featureResponse.text();
+          console.error('❌ 特征值计算API调用失败:', featureResponse.status, errorText);
         }
       } else {
-        console.error('Failed to load all course data');
+        const errorText = await response.text();
+        console.error('❌ all-course-data API调用失败:', response.status, errorText);
+        console.error('❌ 请求数据:', {
+          studentHash: user.userHash,
+          modifiedScoresCount: updatedScores.length,
+          source2ScoresCount: source2Scores.length
+        });
       }
     } catch (error) {
-      console.error('Error calculating features:', error);
+      console.error('❌ handleConfirmModification执行过程中发生错误:', error);
+      if (error instanceof Error) {
+        console.error('❌ 错误详情:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      } else {
+        console.error('❌ 未知错误类型:', error);
+      }
     } finally {
       setLoadingFeatures(false);
     }
@@ -1611,7 +1635,7 @@ export default function Analysis() {
                                         }
                                         return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      min={0}
+                                      min={60}
                                       max={100}
                                       step={1}
                                       onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
@@ -1965,7 +1989,7 @@ export default function Analysis() {
                                         }
                                         return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      min={0}
+                                      min={60}
                                       max={100}
                                       step={1}
                                       onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
