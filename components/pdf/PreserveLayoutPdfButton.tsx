@@ -228,8 +228,8 @@ export default function PreserveLayoutPdfButton({
       const { default: html2canvas } = await import('html2canvas')
       console.log('[pdf-export] html2canvas loaded')
 
-      // 使用较高的 scale 保证清晰度，并强制 html2canvas 使用整个文档的宽高进行渲染
-      const globalScale = Math.max(2, window.devicePixelRatio || 1)
+      // 使用合理的 scale 保证清晰度，避免生成过大的图片导致请求体过大
+      const globalScale = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
       const contentWidth = Math.max((contentElement as HTMLElement).scrollWidth, document.documentElement.scrollWidth || 0)
       const contentHeight = Math.max((contentElement as HTMLElement).scrollHeight, document.documentElement.scrollHeight || 0)
       console.log('[pdf-export] content dims', { contentWidth, contentHeight, globalScale })
@@ -274,7 +274,8 @@ export default function PreserveLayoutPdfButton({
       const pageHeightPx = pageHeight // already in canvas px
 
       // 改为分段克隆并对每页进行截图（避免一次性超大 canvas 导致丢失/截断）
-      const pageScale = Math.max(2, window.devicePixelRatio || 1)
+      // 单页截图 scale，限制最大值以控制每页图片体积
+      const pageScale = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
       // contentWidthCss / contentHeightCss 将在识别出 scrollContainer 后计算
 
       // helper: copy computed styles from source subtree to destination subtree
@@ -464,7 +465,9 @@ export default function PreserveLayoutPdfButton({
           scrollY: top
         })
         try {
-          const dataUrl = pageCanvas.toDataURL('image/png')
+          // 使用 JPEG 压缩以显著减小体积
+          const JPEG_QUALITY = 0.8
+          const dataUrl = pageCanvas.toDataURL('image/jpeg', JPEG_QUALITY)
           slices.push(dataUrl)
           console.log('[pdf-export] page slice', slices.length, 'top', top, 'canvas', pageCanvas.width, pageCanvas.height, 'dataUrlLen', dataUrl.length)
         } catch (e) {
@@ -486,10 +489,63 @@ export default function PreserveLayoutPdfButton({
 
       // 上传图片切片到后端合成
       console.log('[pdf-export] slices count before upload', slices.length, 'firstLens', slices.slice(0,3).map(s=>s?.length))
+
+      // 估算请求体大小，若超过阈值则尝试进一步压缩（逐步降低 JPEG 质量）
+      const estimateBytes = (dataUrl: string) => {
+        if (!dataUrl) return 0
+        const idx = dataUrl.indexOf(',')
+        const base64 = dataUrl.slice(idx + 1)
+        return Math.ceil((base64.length * 3) / 4)
+      }
+
+      const totalBytes = slices.reduce((sum, s) => sum + estimateBytes(s || ''), 0)
+      const MAX_BYTES = 5 * 1024 * 1024 // 5 MB conservative limit for serverless
+      console.log('[pdf-export] estimated payload bytes', totalBytes, 'max', MAX_BYTES)
+
+      if (totalBytes > MAX_BYTES) {
+        console.warn('[pdf-export] payload too large, attempting recompression...')
+        // 逐步降低质量并重编码
+        const recompress = async (dataUrl: string, quality: number) => {
+          return new Promise<string>((resolve) => {
+            try {
+              const img = new Image()
+              img.onload = () => {
+                try {
+                  const c = document.createElement('canvas')
+                  c.width = img.width
+                  c.height = img.height
+                  const ctx = c.getContext('2d')!
+                  ctx.drawImage(img, 0, 0)
+                  const out = c.toDataURL('image/jpeg', quality)
+                  resolve(out)
+                } catch (e) { resolve(dataUrl) }
+              }
+              img.onerror = () => resolve(dataUrl)
+              img.src = dataUrl
+            } catch (e) { resolve(dataUrl) }
+          })
+        }
+
+        let quality = 0.7
+        for (; quality >= 0.3; quality -= 0.2) {
+          const newSlices: string[] = []
+          for (const s of slices) {
+            if (!s) { newSlices.push(s); continue }
+            // eslint-disable-next-line no-await-in-loop
+            const out = await recompress(s, quality)
+            newSlices.push(out)
+          }
+          const newTotal = newSlices.reduce((sum, s) => sum + estimateBytes(s || ''), 0)
+          console.log('[pdf-export] recompressed at', quality, 'totalBytes', newTotal)
+          slices.splice(0, slices.length, ...newSlices)
+          if (newTotal <= MAX_BYTES) break
+        }
+      }
+
       const composeResp = await fetch('/api/pdf/compose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: slices, filename: filename || `export_${new Date().toISOString().slice(0,10)}.pdf` })
+        body: JSON.stringify({ images: slices, filename: filename || `export_${new Date().toISOString().slice(0,10)}.pdf`, pageSize: pageSize })
       })
 
       if (!composeResp.ok) {
@@ -558,6 +614,10 @@ export default function PreserveLayoutPdfButton({
   return (
     <>
       <div className="flex items-center gap-2">
+        <Button onClick={handleExport} disabled={isLoading} size="sm">
+          {isLoading ? '导出中...' : '导出 PDF'}
+        </Button>
+
         <select
           value={paperSizeKey}
           onChange={e => setPaperSizeKey(e.target.value)}
@@ -569,10 +629,6 @@ export default function PreserveLayoutPdfButton({
           <option value="A3">A3 (297 × 420 mm)</option>
           <option value="Letter">Letter (8.5 × 11 in)</option>
         </select>
-
-        <Button onClick={handleExport} disabled={isLoading} size="sm">
-          {isLoading ? '导出中...' : '导出（保留桌面布局）'}
-        </Button>
       </div>
 
       {/* Preview Modal */}
