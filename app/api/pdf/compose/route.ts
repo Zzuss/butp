@@ -14,9 +14,12 @@ export async function POST(req: Request) {
 
     const pdfDoc = await PDFDocument.create()
 
-    // A4 尺寸 (points)
-    const A4_WIDTH = 595.28
-    const A4_HEIGHT = 841.89
+    // 默认 A4 尺寸 (points)，但可由前端通过 body.pageSize 覆盖
+    const DEFAULT_A4_WIDTH = 595.28
+    const DEFAULT_A4_HEIGHT = 841.89
+    const pageSizeFromBody = body.pageSize || null
+    const A4_WIDTH = pageSizeFromBody && pageSizeFromBody.width ? Number(pageSizeFromBody.width) : DEFAULT_A4_WIDTH
+    const A4_HEIGHT = pageSizeFromBody && pageSizeFromBody.height ? Number(pageSizeFromBody.height) : DEFAULT_A4_HEIGHT
 
     for (const dataUrl of images) {
       // dataUrl 形如 data:image/png;base64,....
@@ -34,23 +37,32 @@ export async function POST(req: Request) {
       }
 
       const imgDims = { width: embeddedImage.width, height: embeddedImage.height }
+      console.log('[pdf-compose] embedded image dims (px):', imgDims)
+      console.log('[pdf-compose] A4 pts:', { A4_WIDTH, A4_HEIGHT })
 
-      // 将图片缩放到 A4 宽度，按比例计算高度
-      const scale = A4_WIDTH / imgDims.width
+      // 将每个切片缩放并拉伸为正好填满A4（不保持原始纵横比）
+      // 这样每个图片切片将完整占据一张A4页面
       const drawWidth = A4_WIDTH
-      const drawHeight = imgDims.height * scale
+      const drawHeight = A4_HEIGHT
 
-      const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT])
+      // 等比缩放到 A4 宽度（单位：points），然后按 A4 高度分页绘制，避免丢失内容
+      const scale = A4_WIDTH / imgDims.width
+      const scaledHeight = imgDims.height * scale
+      const pagesNeeded = Math.max(1, Math.ceil(scaledHeight / A4_HEIGHT))
+      console.log('[pdf-compose] scaledHeight (pts):', scaledHeight, 'pagesNeeded:', pagesNeeded)
 
-      // 垂直居中（自顶向下绘制）
-      const x = 0
-      const y = A4_HEIGHT - drawHeight
-      page.drawImage(embeddedImage, {
-        x,
-        y: y < 0 ? 0 : y,
-        width: drawWidth,
-        height: drawHeight > A4_HEIGHT ? A4_HEIGHT : drawHeight
-      })
+      for (let p = 0; p < pagesNeeded; p++) {
+        const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT])
+        // 计算每页绘制时的 y 偏移，使得每页显示图片的不同垂直切片
+        const yOffset = A4_HEIGHT - scaledHeight + p * A4_HEIGHT
+        console.log('[pdf-compose] draw page', p, 'yOffset', yOffset)
+        page.drawImage(embeddedImage, {
+          x: 0,
+          y: yOffset,
+          width: A4_WIDTH,
+          height: scaledHeight
+        })
+      }
     }
 
     const pdfBytes = await pdfDoc.save()

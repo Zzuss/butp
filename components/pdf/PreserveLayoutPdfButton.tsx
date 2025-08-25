@@ -11,7 +11,8 @@ export default function PreserveLayoutPdfButton({
   defaultViewport?: number
 }) {
   const [isLoading, setIsLoading] = useState(false)
-  const [viewport, setViewport] = useState<number>(defaultViewport)
+  const [viewport] = useState<number>(defaultViewport)
+  const [paperSizeKey, setPaperSizeKey] = useState<string>('A4')
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [filename, setFilename] = useState<string>('')
@@ -20,10 +21,20 @@ export default function PreserveLayoutPdfButton({
     try {
       setIsLoading(true)
       const url = getUrl()
+      console.log('[pdf-export] start', { url, viewport })
+
+      const paperSizes: Record<string, { width: number; height: number }> = {
+        A4: { width: 595.28, height: 841.89 },
+        A3: { width: 841.89, height: 1190.55 },
+        Letter: { width: 612, height: 792 }
+      }
+
+      const pageSize = paperSizes[paperSizeKey] || paperSizes.A4
 
       const body = {
         url,
         viewportWidth: viewport,
+        pageSize,
         pdfOptions: {
           width: `${viewport}px`,
           printBackground: true,
@@ -35,6 +46,7 @@ export default function PreserveLayoutPdfButton({
       // 捕获整个文档（而非仅可视区域），以确保包含所有内容
       const contentElement = document.documentElement || document.querySelector('main') || document.querySelector('#root') || document.body
       if (!contentElement) throw new Error('未找到要导出的内容')
+      try { console.log('[pdf-export] contentElement', contentElement.tagName, 'scrollWidth', (contentElement as HTMLElement).scrollWidth, 'scrollHeight', (contentElement as HTMLElement).scrollHeight) } catch (e) {}
 
       // 临时记录：用于在截图后恢复页面样式
       const tempStyleIds: string[] = []
@@ -104,7 +116,7 @@ export default function PreserveLayoutPdfButton({
       }
 
       // 在截图前运行修复
-      try { fixModernColors(contentElement as HTMLElement) } catch (e) { /* ignore */ }
+      try { fixModernColors(contentElement as HTMLElement); console.log('[pdf-export] fixModernColors applied') } catch (e) { console.warn('[pdf-export] fixModernColors error', e) }
 
       // 进一步防护：把关键颜色/填充样式从计算样式写入内联样式（将 oklch 等现代函数解析为浏览器计算后的 rgb）
       const inlineComputedColors = (root: HTMLElement) => {
@@ -147,7 +159,7 @@ export default function PreserveLayoutPdfButton({
         })
       }
 
-      try { inlineComputedColors(contentElement as HTMLElement) } catch (e) { /* ignore */ }
+      try { inlineComputedColors(contentElement as HTMLElement); console.log('[pdf-export] inlineComputedColors applied') } catch (e) { console.warn('[pdf-export] inlineComputedColors error', e) }
 
       // 再一步：尝试把可访问的样式表中的现代颜色函数替换为安全值，追加到页面末尾覆盖原规则
       const sanitizeStyleSheets = () => {
@@ -185,7 +197,7 @@ export default function PreserveLayoutPdfButton({
         }
       }
 
-      try { sanitizeStyleSheets() } catch (e) { /* ignore */ }
+      try { sanitizeStyleSheets(); console.log('[pdf-export] sanitizeStyleSheets applied') } catch (e) { console.warn('[pdf-export] sanitizeStyleSheets error', e) }
 
       // 结束后恢复被修改的内联样式/覆盖样式
       const restoreTempStyles = () => {
@@ -214,11 +226,13 @@ export default function PreserveLayoutPdfButton({
 
       // 动态导入 html2canvas
       const { default: html2canvas } = await import('html2canvas')
+      console.log('[pdf-export] html2canvas loaded')
 
       // 使用较高的 scale 保证清晰度，并强制 html2canvas 使用整个文档的宽高进行渲染
       const globalScale = Math.max(2, window.devicePixelRatio || 1)
       const contentWidth = Math.max((contentElement as HTMLElement).scrollWidth, document.documentElement.scrollWidth || 0)
       const contentHeight = Math.max((contentElement as HTMLElement).scrollHeight, document.documentElement.scrollHeight || 0)
+      console.log('[pdf-export] content dims', { contentWidth, contentHeight, globalScale })
 
       // 确保滚动到顶部，避免部分内容未渲染
       try { window.scrollTo(0, 0) } catch (e) {}
@@ -261,9 +275,7 @@ export default function PreserveLayoutPdfButton({
 
       // 改为分段克隆并对每页进行截图（避免一次性超大 canvas 导致丢失/截断）
       const pageScale = Math.max(2, window.devicePixelRatio || 1)
-      const contentWidthCss = Math.max((contentElement as HTMLElement).scrollWidth, document.documentElement.scrollWidth || 0)
-      const contentHeightCss = Math.max((contentElement as HTMLElement).scrollHeight, document.documentElement.scrollHeight || 0)
-      const pageHeightCss = Math.floor(contentWidthCss * A4_RATIO)
+      // contentWidthCss / contentHeightCss 将在识别出 scrollContainer 后计算
 
       // helper: copy computed styles from source subtree to destination subtree
       const copyComputedStylesRecursive = (srcRoot: HTMLElement, destRoot: HTMLElement) => {
@@ -288,18 +300,72 @@ export default function PreserveLayoutPdfButton({
         }
       }
 
-      // 确保页面完整渲染：滚动触发懒加载并等待资源
-      try {
-        // 1) 触发滚动到页面底部再回到顶部以加载懒加载内容
-        await new Promise(r => {
-          try { window.scrollTo(0, document.body.scrollHeight); } catch (e) {}
-          setTimeout(() => { try { window.scrollTo(0, 0); } catch (e) {} ; r(null) }, 300)
-        })
+      // 在导出前通知页面组件切换到导出模式（会禁用虚拟化并渲染全部项）
+      try { window.dispatchEvent(new Event('pdf-export-start')); console.log('[pdf-export] dispatched pdf-export-start') } catch (e) { console.warn('[pdf-export] dispatch start failed', e) }
 
-        // 2) 等待 webfont 与图片加载完毕
+      // 等待页面组件在 exportMode 下完成渲染：
+      // 1) 监听 'pdf-export-ready' 事件（由列表组件在渲染完成后触发）
+      // 2) 附加回退超时，避免永远等待
+      const waitForExportReady = (timeout = 3000) => new Promise<void>((resolve) => {
+        let resolved = false
+        const onReady = () => { if (resolved) return; resolved = true; cleanup(); resolve() }
+        const cleanup = () => {
+          window.removeEventListener('pdf-export-ready', onReady)
+        }
+        window.addEventListener('pdf-export-ready', onReady)
+        setTimeout(() => { if (resolved) return; resolved = true; cleanup(); resolve() }, timeout)
+      })
+
+      try {
+        // 等待组件通知或超时
+        console.log('[pdf-export] waiting for pdf-export-ready (max 3000ms)')
+        await waitForExportReady(3000)
+        console.log('[pdf-export] waitForExportReady done')
+      } catch (e) {
+        console.warn('[pdf-export] waitForExportReady error', e)
+      }
+
+      // 确保页面完整渲染：逐步滚动触发懒加载并等待资源（保留原有滚动逻辑）
+      try {
+        const totalH = document.body.scrollHeight || document.documentElement.scrollHeight || 0
+        const step = Math.max(300, Math.floor(totalH / 10))
+        for (let y = 0; y <= totalH; y += step) {
+          try { window.scrollTo(0, y) } catch (e) {}
+          // 等待一些时间让懒加载触发
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise(r => setTimeout(r, 200))
+        }
+
+        // 额外：查找任何内部可滚动容器并逐个触发滚动，以促使虚拟化列表渲染全部子元素
+        const scrollables = Array.from(document.querySelectorAll('*')).filter((el: Element) => {
+          try {
+            const s = getComputedStyle(el as Element)
+            return (s.overflowY === 'auto' || s.overflowY === 'scroll') && (el as HTMLElement).scrollHeight > (el as HTMLElement).clientHeight
+          } catch (e) { return false }
+        }) as HTMLElement[]
+
+        console.log('[pdf-export] found scrollable containers', scrollables.length)
+        for (const sc of scrollables) {
+          try {
+            const h = sc.scrollHeight
+            const stepInner = Math.max(200, Math.floor(h / 8))
+            for (let y = 0; y <= h; y += stepInner) {
+              sc.scrollTop = y
+              // eslint-disable-next-line no-await-in-loop
+              await new Promise(r => setTimeout(r, 120))
+            }
+            sc.scrollTop = 0
+          } catch (e) {}
+        }
+        // 回到顶部
+        try { window.scrollTo(0, 0) } catch (e) {}
+
+        // 等待 webfont 与图片加载完毕
         try { await (document as any).fonts.ready } catch (e) {}
         const imgs = Array.from(document.images || []) as HTMLImageElement[]
         await Promise.all(imgs.map(i => i.decode ? i.decode().catch(() => {}) : Promise.resolve()))
+        // 再短暂等待，确保渲染稳定
+        await new Promise(r => setTimeout(r, 250))
       } catch (e) {
         // ignore
       }
@@ -320,11 +386,71 @@ export default function PreserveLayoutPdfButton({
         } catch (e) {}
       })
 
-      for (let top = 0; top < contentHeightCss; top += pageHeightCss) {
-        try { window.scrollTo(0, top) } catch (e) {}
-        await new Promise(r => setTimeout(r, 400))
+      // Detect actual scroll container (some layouts use an inner scrollable container)
+      const findDeepestScrollContainer = (root: HTMLElement) => {
+        try {
+          const all = Array.from(root.querySelectorAll('*')) as HTMLElement[]
+          const candidates = all.filter(el => {
+            try {
+              return (el.scrollHeight > el.clientHeight) && getComputedStyle(el).overflowY.match(/auto|scroll/)
+            } catch (e) { return false }
+          })
+          if (candidates.length === 0) return null
+          // pick the one with largest scrollHeight
+          candidates.sort((a, b) => b.scrollHeight - a.scrollHeight)
+          return candidates[0]
+        } catch (e) { return null }
+      }
 
-        const pageCanvas = await html2canvas(document.documentElement as HTMLElement, {
+      let scrollContainer: HTMLElement | null = null
+      try {
+        // prefer explicit main or #root if they are scrollable
+        const prefer = [document.querySelector('main'), document.querySelector('#root')].find(n => n && (n as HTMLElement).scrollHeight > (n as HTMLElement).clientHeight) as HTMLElement | undefined
+        if (prefer) scrollContainer = prefer
+        else scrollContainer = findDeepestScrollContainer(document.body) || document.documentElement
+      } catch (e) {
+        scrollContainer = document.documentElement
+      }
+      console.log('[pdf-export] scrollContainer', scrollContainer?.tagName || 'unknown', 'scrollHeight', (scrollContainer as HTMLElement)?.scrollHeight, 'clientHeight', (scrollContainer as HTMLElement)?.clientHeight)
+
+      // Clone-only pagination: create a single offscreen clone of the scroll container and shift its marginTop per page
+      const cloneRoot = (scrollContainer as HTMLElement || contentElement as HTMLElement).cloneNode(true) as HTMLElement
+      copyComputedStylesRecursive(scrollContainer as HTMLElement, cloneRoot)
+      cloneRoot.style.boxSizing = 'border-box'
+      // 之后再设置宽高
+
+      const wrapper = document.createElement('div')
+      wrapper.style.position = 'absolute'
+      wrapper.style.left = '-9999px'
+      wrapper.style.top = '0'
+      // wrapper 的宽高随后设置为 pageWidth/pageHeight
+      wrapper.style.overflow = 'hidden'
+      wrapper.style.background = 'white'
+
+      wrapper.appendChild(cloneRoot)
+      document.body.appendChild(wrapper)
+
+      // 计算 contentWidthCss/contentHeightCss/pageHeightCss 基于选中的 scrollContainer
+      const contentWidthCss = Math.max(((scrollContainer as HTMLElement)?.scrollWidth) || (contentElement as HTMLElement).scrollWidth, document.documentElement.scrollWidth || 0)
+      const contentHeightCss = Math.max(((scrollContainer as HTMLElement)?.scrollHeight) || (contentElement as HTMLElement).scrollHeight, document.documentElement.scrollHeight || 0)
+      console.log('[pdf-export] contentWidthCss/contentHeightCss computed', contentWidthCss, contentHeightCss)
+      const pageHeightCss = Math.floor(contentWidthCss * A4_RATIO)
+
+      wrapper.style.width = contentWidthCss + 'px'
+      wrapper.style.height = pageHeightCss + 'px'
+
+      // 确保 cloneRoot 高度覆盖全部内容
+      cloneRoot.style.width = contentWidthCss + 'px'
+      cloneRoot.style.height = contentHeightCss + 'px'
+
+      for (let top = 0; top < contentHeightCss; top += pageHeightCss) {
+        cloneRoot.style.marginTop = `-${top}px`
+        // 等待 clone 中的图片加载和布局稳定
+        await new Promise(r => setTimeout(r, 400))
+        const imgsInWrapper = Array.from(wrapper.querySelectorAll('img')) as HTMLImageElement[]
+        await Promise.all(imgsInWrapper.map(i => i.decode ? i.decode().catch(() => {}) : Promise.resolve()))
+        console.log('[pdf-export] rendering page top', top, 'pageHeightCss', pageHeightCss)
+        const pageCanvas = await html2canvas(wrapper as HTMLElement, {
           scale: pageScale,
           useCORS: true,
           allowTaint: true,
@@ -337,9 +463,17 @@ export default function PreserveLayoutPdfButton({
           scrollX: 0,
           scrollY: top
         })
-
-        slices.push(pageCanvas.toDataURL('image/png'))
+        try {
+          const dataUrl = pageCanvas.toDataURL('image/png')
+          slices.push(dataUrl)
+          console.log('[pdf-export] page slice', slices.length, 'top', top, 'canvas', pageCanvas.width, pageCanvas.height, 'dataUrlLen', dataUrl.length)
+        } catch (e) {
+          console.warn('[pdf-export] page slice failed', e)
+          slices.push('')
+        }
       }
+
+      document.body.removeChild(wrapper)
 
       // 恢复 fixed 元素样式
       fixedBackup.forEach(b => { b.el.style.cssText = b.cssText })
@@ -347,7 +481,11 @@ export default function PreserveLayoutPdfButton({
       // 恢复之前临时修改的样式/属性
       try { restoreTempStyles() } catch (e) { console.warn('restoreTempStyles failed', e) }
 
+      // 通知页面组件恢复虚拟化渲染
+      try { window.dispatchEvent(new Event('pdf-export-end')) } catch (e) {}
+
       // 上传图片切片到后端合成
+      console.log('[pdf-export] slices count before upload', slices.length, 'firstLens', slices.slice(0,3).map(s=>s?.length))
       const composeResp = await fetch('/api/pdf/compose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -387,7 +525,7 @@ export default function PreserveLayoutPdfButton({
     URL.revokeObjectURL(u)
     // close preview then reload page to restore colors/styles
     try {
-      closePreview()
+    closePreview()
     } catch (e) {}
     try {
       if (typeof window !== 'undefined') {
@@ -421,17 +559,15 @@ export default function PreserveLayoutPdfButton({
     <>
       <div className="flex items-center gap-2">
         <select
-          value={viewport}
-          onChange={e => setViewport(Number(e.target.value))}
+          value={paperSizeKey}
+          onChange={e => setPaperSizeKey(e.target.value)}
           className="border px-2 py-1 text-sm bg-white"
-          aria-label="选择布局宽度"
-          style={{ minWidth: 92 }}
+          aria-label="选择纸张大小"
+          style={{ minWidth: 120 }}
         >
-          <option value={1920}>Desktop 1920</option>
-          <option value={1366}>Desktop 1366</option>
-          <option value={1280}>Desktop 1280</option>
-          <option value={1024}>Tablet 1024</option>
-          <option value={800}>Narrow 800</option>
+          <option value="A4">A4 (210 × 297 mm)</option>
+          <option value="A3">A3 (297 × 420 mm)</option>
+          <option value="Letter">Letter (8.5 × 11 in)</option>
         </select>
 
         <Button onClick={handleExport} disabled={isLoading} size="sm">
