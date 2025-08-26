@@ -18,6 +18,31 @@ export default function PreserveLayoutPdfButton({
   const [filename, setFilename] = useState<string>('')
 
   const handleExport = async () => {
+    // 临时记录集合与恢复函数需要在 try/catch 外部可见，以便在异常路径恢复样式
+    const tempStyleIds: string[] = []
+    const modifiedInlineList: Array<{ el: HTMLElement, original: string }> = []
+    const modifiedPropsList: Array<{ el: HTMLElement, prop: string, original: string }> = []
+    function restoreTempStyles() {
+      try {
+        tempStyleIds.forEach(id => {
+          const el = document.getElementById(id)
+          if (el) el.remove()
+        })
+        modifiedInlineList.forEach(item => {
+          try { item.el.style.cssText = item.original } catch (e) {}
+        })
+        modifiedPropsList.forEach(item => {
+          try {
+            if (item.original === null || item.original === undefined || item.original === '') {
+              item.el.style.removeProperty(item.prop)
+            } else {
+              item.el.style.setProperty(item.prop, item.original)
+            }
+          } catch (e) {}
+        })
+      } catch (e) {}
+    }
+
     try {
       setIsLoading(true)
       const url = getUrl()
@@ -102,10 +127,16 @@ export default function PreserveLayoutPdfButton({
               // 记录原始 inline cssText 以便恢复
               modifiedInlineList.push({ el: htmlEl, original: htmlEl.style.cssText })
               let s = htmlEl.style.cssText
-              s = s.replace(/oklch\([^)]*\)/gi, '#6c757d')
-              s = s.replace(/oklab\([^)]*\)/gi, '#6c757d')
-              s = s.replace(/lch\([^)]*\)/gi, '#6c757d')
-              s = s.replace(/lab\([^)]*\)/gi, '#6c757d')
+              // 如果元素包含 canvas 或 svg（图表），不要把它的背景或颜色改为透明/深色，以免遮挡或不可读
+              const hasChartDescendant = !!htmlEl.querySelector('canvas, svg')
+              if (!hasChartDescendant) {
+                // 对内联样式：将可能影响可见背景的现代颜色替换为透明
+                s = s.replace(/(background[^:;{]*:\s*)oklch\([^)]*\)/gi, '$1transparent')
+                s = s.replace(/(background[^:;{]*:\s*)oklab\([^)]*\)/gi, '$1transparent')
+                s = s.replace(/(background[^:;{]*:\s*)lch\([^)]*\)/gi, '$1transparent')
+                s = s.replace(/(background[^:;{]*:\s*)lab\([^)]*\)/gi, '$1transparent')
+              }
+              // 不对文本/边框等颜色强制替换为深色，其他颜色将由 inlineComputedColors 处理
               htmlEl.style.cssText = s
             }
           })
@@ -137,9 +168,37 @@ export default function PreserveLayoutPdfButton({
                 try {
                   const orig = (el as HTMLElement).style.getPropertyValue(p)
                   modifiedPropsList.push({ el: el as HTMLElement, prop: p, original: orig })
-                  // 如果 computed value 中包含现代颜色函数，使用安全回退色
+                  // 如果 computed value 中包含现代颜色函数，尝试解析为浏览器可识别的值或使用安全回退
                   if (/oklch\(|oklab\(|lch\(|lab\(/i.test(v)) {
-                    (el as HTMLElement).style.setProperty(p, '#6c757d', 'important')
+                    try {
+                      const cvs = document.createElement('canvas')
+                      const ctx = cvs.getContext('2d')
+                      if (ctx) {
+                        ctx.fillStyle = v
+                        const resolved = ctx.fillStyle
+                        if (resolved && resolved !== v) {
+                          (el as HTMLElement).style.setProperty(p, resolved, 'important')
+                        } else {
+                          if (p.includes('background') || p === 'fill' || p === 'stroke') {
+                            (el as HTMLElement).style.setProperty(p, 'transparent', 'important')
+                          } else {
+                            (el as HTMLElement).style.setProperty(p, '#111827', 'important')
+                          }
+                        }
+                      } else {
+                        if (p.includes('background') || p === 'fill' || p === 'stroke') {
+                          (el as HTMLElement).style.setProperty(p, 'transparent', 'important')
+                        } else {
+                          (el as HTMLElement).style.setProperty(p, '#111827', 'important')
+                        }
+                      }
+                    } catch (e) {
+                      if (p.includes('background') || p === 'fill' || p === 'stroke') {
+                        (el as HTMLElement).style.setProperty(p, 'transparent', 'important')
+                      } else {
+                        (el as HTMLElement).style.setProperty(p, '#111827', 'important')
+                      }
+                    }
                   } else {
                     (el as HTMLElement).style.setProperty(p, v, 'important')
                   }
@@ -170,13 +229,21 @@ export default function PreserveLayoutPdfButton({
               const rules = (sheet as CSSStyleSheet).cssRules || []
               Array.from(rules).forEach((r: any) => {
                 if (r.cssText && /oklch\(|oklab\(|lch\(|lab\(/i.test(r.cssText)) {
-                  // 将现代颜色函数替换为中性灰，并增加 !important
-                  let text = r.cssText.replace(/oklch\([^)]*\)/gi, '#6c757d')
-                  text = text.replace(/oklab\([^)]*\)/gi, '#6c757d')
-                  text = text.replace(/lch\([^)]*\)/gi, '#6c757d')
-                  text = text.replace(/lab\([^)]*\)/gi, '#6c757d')
-                  // 尝试在属性值后添加 !important（粗暴处理）
-                  text = text.replace(/(:\s*#[0-9a-fA-F]{3,6}\s*)(;|})/g, '$1!important$2')
+                  // 更保守地处理样式：对 background 系列属性使用 transparent 回退，
+                  // 其他颜色属性保留计算值或由 inlineComputedColors 处理，避免将图表背景或文字替换为不可读的灰色
+                  let text = r.cssText
+                  // 背景相关属性 -> transparent
+                  text = text.replace(/(background[^:;{]*:\s*)oklch\([^)]*\)/gi, '$1transparent')
+                  text = text.replace(/(background[^:;{]*:\s*)oklab\([^)]*\)/gi, '$1transparent')
+                  text = text.replace(/(background[^:;{]*:\s*)lch\([^)]*\)/gi, '$1transparent')
+                  text = text.replace(/(background[^:;{]*:\s*)lab\([^)]*\)/gi, '$1transparent')
+                  // 其他颜色函数替换为深色，避免视觉上变成浅灰遮罩
+                  text = text.replace(/oklch\([^)]*\)/gi, '#111827')
+                  text = text.replace(/oklab\([^)]*\)/gi, '#111827')
+                  text = text.replace(/lch\([^)]*\)/gi, '#111827')
+                  text = text.replace(/lab\([^)]*\)/gi, '#111827')
+                  // 为替换的十六进制颜色添加 !important，防止被原样式覆盖
+                  text = text.replace(/(:\s*#([0-9a-fA-F]{3,6}))(;|})/g, '$1!important$3')
                   sanitized += text + '\n'
                 }
               })
@@ -200,7 +267,7 @@ export default function PreserveLayoutPdfButton({
       try { sanitizeStyleSheets(); console.log('[pdf-export] sanitizeStyleSheets applied') } catch (e) { console.warn('[pdf-export] sanitizeStyleSheets error', e) }
 
       // 结束后恢复被修改的内联样式/覆盖样式
-      const restoreTempStyles = () => {
+      function restoreTempStyles() {
         try {
           // 恢复覆盖样式
           tempStyleIds.forEach(id => {
@@ -431,6 +498,153 @@ export default function PreserveLayoutPdfButton({
       wrapper.appendChild(cloneRoot)
       document.body.appendChild(wrapper)
 
+      // 复制原始 DOM 中的 canvas 像素内容到 clone 中对应的 canvas，
+      // cloneNode 不会拷贝 canvas 的 bitmap，所以需要手动拷贝以保证图表可见
+      try {
+        const srcRootEl = (scrollContainer as HTMLElement) || (contentElement as HTMLElement)
+        const srcCanvases = Array.from(srcRootEl.querySelectorAll('canvas')) as HTMLCanvasElement[]
+        const destCanvases = Array.from(cloneRoot.querySelectorAll('canvas')) as HTMLCanvasElement[]
+        const count = Math.min(srcCanvases.length, destCanvases.length)
+        for (let i = 0; i < count; i++) {
+          try {
+            const s = srcCanvases[i]
+            const d = destCanvases[i]
+            // 保持像素尺寸
+            d.width = s.width
+            d.height = s.height
+            // 复制显示尺寸样式
+            try { d.style.width = getComputedStyle(s).width } catch (e) {}
+            try { d.style.height = getComputedStyle(s).height } catch (e) {}
+            const dctx = d.getContext('2d')
+            if (dctx) {
+              dctx.clearRect(0, 0, d.width, d.height)
+              dctx.drawImage(s, 0, 0)
+            }
+          } catch (e) {}
+        }
+      } catch (e) {}
+
+      // 针对包含百分比/统计数值的小组件（如你贴的 HTML），优先保留/设置背景为白色并将内部文字颜色内联化，
+      // 避免被其他遮罩或样式修改造成文字不可见。
+      try {
+        const statCandidates = Array.from(cloneRoot.querySelectorAll('*')).filter(el => {
+          try {
+            const html = (el as HTMLElement).innerText || ''
+            if (/\d+%/.test(html)) return true
+            const cls = (el as HTMLElement).className || ''
+            if (/\btext-4xl\b|\bfont-bold\b|\btext-xl\b/.test(cls)) return true
+            return false
+          } catch (e) { return false }
+        }) as HTMLElement[]
+
+        for (const el of statCandidates) {
+          try {
+            // 找到最靠近的容器（向上到带有 padding 的元素）
+            let container: HTMLElement | null = el
+            for (let i = 0; i < 6 && container; i++) {
+              const c = container as HTMLElement
+              const cs = getComputedStyle(c)
+              if (parseFloat(cs.paddingTop || '0') > 0 || parseFloat(cs.paddingLeft || '0') > 0) break
+              container = c.parentElement
+            }
+            if (!container) container = el
+
+            // 将容器背景设为白色（仅修改 clone）并去掉 box-shadow
+            container.style.setProperty('background', '#ffffff', 'important')
+            container.style.setProperty('background-color', '#ffffff', 'important')
+            container.style.setProperty('box-shadow', 'none', 'important')
+
+            // 内联化文本颜色，确保蓝色等不会被替换为深灰
+            const textEls = Array.from(container.querySelectorAll('*')) as HTMLElement[]
+            textEls.push(container)
+            textEls.forEach(t => {
+              try {
+                const cs = getComputedStyle(t)
+                const color = cs.getPropertyValue('color')
+                if (color && color !== 'transparent' && color !== 'rgba(0, 0, 0, 0)') {
+                  t.style.setProperty('color', color, 'important')
+                }
+              } catch (e) {}
+            })
+          } catch (e) {}
+        }
+      } catch (e) {}
+
+      // 识别并中和 clone 中可能覆盖图表的深色遮罩/伪元素（仅修改 clone），避免遮挡图表文本
+      try {
+        const parseRgb = (v: string) => {
+          try {
+            v = v.trim()
+            const m = v.match(/rgba?\(([^)]+)\)/i)
+            if (m) {
+              const parts = m[1].split(',').map(s => s.trim())
+              const r = parseInt(parts[0], 10)
+              const g = parseInt(parts[1], 10)
+              const b = parseInt(parts[2], 10)
+              return [r, g, b]
+            }
+            const mh = v.match(/^#([0-9a-f]{3,8})$/i)
+            if (mh) {
+              let hex = mh[1]
+              if (hex.length === 3) hex = hex.split('').map(c => c + c).join('')
+              if (hex.length >= 6) {
+                const r = parseInt(hex.slice(0, 2), 16)
+                const g = parseInt(hex.slice(2, 4), 16)
+                const b = parseInt(hex.slice(4, 6), 16)
+                return [r, g, b]
+              }
+            }
+          } catch (e) {}
+          return null
+        }
+        const luminance = (r: number, g: number, b: number) => {
+          const srgb = [r/255, g/255, b/255].map(c => (c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4)))
+          return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2]
+        }
+
+        const candidates = Array.from(cloneRoot.querySelectorAll('*')) as HTMLElement[]
+        const overlays: HTMLElement[] = []
+        for (const el of candidates) {
+          try {
+            const cs = getComputedStyle(el)
+            const bg = cs.getPropertyValue('background-color') || cs.getPropertyValue('background')
+            if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') continue
+            const rgb = parseRgb(bg)
+            if (!rgb) continue
+            const lum = luminance(rgb[0], rgb[1], rgb[2])
+            const opacity = parseFloat(cs.getPropertyValue('opacity') || '1') || 1
+            const rect = el.getBoundingClientRect()
+            const area = rect.width * rect.height
+            const z = cs.getPropertyValue('z-index')
+            const hasChart = !!el.querySelector('canvas, svg')
+            // 深色、面积较大且不为图表本体的元素视为可能遮罩
+            if (lum < 0.12 && opacity > 0.5 && area > 400 && !hasChart) {
+              overlays.push(el)
+            }
+          } catch (e) {}
+        }
+
+        if (overlays.length > 0) {
+          const sid = 'pdf-clone-skip-bg'
+          const styleEl = document.createElement('style')
+          styleEl.id = sid
+          // 伪元素也可能造成遮挡，追加一个通用覆盖规则
+          styleEl.textContent = `[data-pdf-skip-bg] { background: transparent !important; background-color: transparent !important; box-shadow: none !important; }
+[data-pdf-skip-bg]::before, [data-pdf-skip-bg]::after { background: transparent !important; box-shadow: none !important; }
+`
+          document.head.appendChild(styleEl)
+          tempStyleIds.push(sid)
+          overlays.forEach(el => {
+            try {
+              el.setAttribute('data-pdf-skip-bg', '1')
+              el.style.setProperty('background', 'transparent', 'important')
+              el.style.setProperty('background-color', 'transparent', 'important')
+              el.style.setProperty('box-shadow', 'none', 'important')
+            } catch (e) {}
+          })
+        }
+      } catch (e) {}
+
       // 计算 contentWidthCss/contentHeightCss/pageHeightCss 基于选中的 scrollContainer
       const contentWidthCss = Math.max(((scrollContainer as HTMLElement)?.scrollWidth) || (contentElement as HTMLElement).scrollWidth, document.documentElement.scrollWidth || 0)
       const contentHeightCss = Math.max(((scrollContainer as HTMLElement)?.scrollHeight) || (contentElement as HTMLElement).scrollHeight, document.documentElement.scrollHeight || 0)
@@ -464,12 +678,59 @@ export default function PreserveLayoutPdfButton({
           scrollX: 0,
           scrollY: top
         })
+        // 基于 DOM 的裁切：定位 cloneRoot 内最可能的内容元素（避免像素误裁），并把那块从 pageCanvas 抽取出来
+        const domCropFromCanvas = (pageCanvas: HTMLCanvasElement, wrapperEl: HTMLElement, cloneRootEl: HTMLElement) => {
+          try {
+            // 找到候选内容元素：优先常见选择器，否则选取 cloneRoot 中最大的元素
+            const selectors = ['.report', '#report', '.dashboard', '.main-report', '.content', '#root', 'main']
+            let contentEl: HTMLElement | null = null
+            for (const s of selectors) {
+              const found = cloneRootEl.querySelector(s) as HTMLElement | null
+              if (found && typeof found.getBoundingClientRect === 'function' && found.offsetWidth > 50) { contentEl = found; break }
+            }
+            if (!contentEl) {
+              // 选择 cloneRoot 中可见面积最大的子元素
+              const children = Array.from(cloneRootEl.querySelectorAll('*')) as HTMLElement[]
+              let best: HTMLElement | null = null
+              let bestArea = 0
+              children.forEach(ch => {
+                try {
+                  const r = ch.getBoundingClientRect()
+                  const area = r.width * r.height
+                  if (area > bestArea) { bestArea = area; best = ch }
+                } catch (e) {}
+              })
+              contentEl = best || cloneRootEl
+            }
+
+            const wrapperRect = wrapperEl.getBoundingClientRect()
+            const contentRect = contentEl.getBoundingClientRect()
+
+            // 画布像素与 CSS px 的比例
+            const scaleCanvas = pageCanvas.width / wrapperRect.width
+
+            const sx = Math.max(0, Math.round((contentRect.left - wrapperRect.left) * scaleCanvas))
+            const sy = Math.max(0, Math.round((contentRect.top - wrapperRect.top) * scaleCanvas))
+            const sw = Math.max(1, Math.round(contentRect.width * scaleCanvas))
+            const sh = Math.max(1, Math.round(contentRect.height * scaleCanvas))
+
+            const out = document.createElement('canvas')
+            out.width = sw
+            out.height = sh
+            const octx = out.getContext('2d')!
+            octx.drawImage(pageCanvas, sx, sy, sw, sh, 0, 0, sw, sh)
+            return out
+          } catch (e) {
+            return pageCanvas
+          }
+        }
+
         try {
-          // 使用 JPEG 压缩以显著减小体积
+          const cropped = domCropFromCanvas(pageCanvas, wrapper, cloneRoot)
           const JPEG_QUALITY = 0.8
-          const dataUrl = pageCanvas.toDataURL('image/jpeg', JPEG_QUALITY)
+          const dataUrl = cropped.toDataURL('image/jpeg', JPEG_QUALITY)
           slices.push(dataUrl)
-          console.log('[pdf-export] page slice', slices.length, 'top', top, 'canvas', pageCanvas.width, pageCanvas.height, 'dataUrlLen', dataUrl.length)
+          console.log('[pdf-export] page slice', slices.length, 'top', top, 'canvas', pageCanvas.width, pageCanvas.height, 'cropped', cropped.width, cropped.height, 'dataUrlLen', dataUrl.length)
         } catch (e) {
           console.warn('[pdf-export] page slice failed', e)
           slices.push('')
