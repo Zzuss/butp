@@ -62,8 +62,20 @@ export async function POST(request: NextRequest) {
       node: process.version
     });
 
-    // 调用Python脚本进行预测
-    const result = await callXGBoostModel(featureValues);
+    // 改为调用 Python Serverless Function
+    const apiBase = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ''
+    const endpoint = `${apiBase}/api/predict`
+
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ featureValues })
+    })
+    if (!resp.ok) {
+      const text = await resp.text()
+      return NextResponse.json({ error: `Predict API failed: ${resp.status} ${text}` }, { status: 500 })
+    }
+    const result = await resp.json()
 
     return NextResponse.json({
       success: true,
@@ -77,65 +89,3 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
-
-async function callXGBoostModel(featureValues: FeatureValues): Promise<PredictionResult> {
-  // 这里我们需要调用Python脚本来加载模型并进行预测
-  // 由于Next.js API路由的限制，我们需要使用子进程来调用Python
-  
-  const { spawn } = require('child_process');
-  
-  return new Promise((resolve, reject) => {
-    // 创建临时文件来传递特征值
-    const tempDataPath = path.join(process.cwd(), 'temp_prediction_data.json');
-    const tempData = {
-      featureValues: featureValues
-    };
-    
-    fs.writeFileSync(tempDataPath, JSON.stringify(tempData));
-    
-    // 调用Python预测脚本
-    const pythonScript = path.join(process.cwd(), 'scripts', 'predict.py');
-    const pythonCmd = process.env.PYTHON_PATH || 'python';
-    const scriptExists = fs.existsSync(pythonScript);
-    console.log('predict-possibility: python call info', { pythonCmd, pythonScript, scriptExists });
-    const pythonProcess = spawn(pythonCmd, [pythonScript, tempDataPath]);
-    
-    let output = '';
-    let errorOutput = '';
-    
-    pythonProcess.stdout.on('data', (data: Buffer) => {
-      output += data.toString();
-    });
-    
-    pythonProcess.stderr.on('data', (data: Buffer) => {
-      errorOutput += data.toString();
-    });
-    
-    pythonProcess.on('close', (code: number) => {
-      // 清理临时文件
-      try {
-        fs.unlinkSync(tempDataPath);
-      } catch (e) {
-        console.warn('Failed to delete temp file:', e);
-      }
-      
-      if (code !== 0) {
-        console.error('Python script error:', errorOutput);
-        reject(new Error(`Python script failed with code ${code}: ${errorOutput}`));
-        return;
-      }
-      
-      try {
-        const result = JSON.parse(output);
-        resolve(result);
-      } catch (e) {
-        reject(new Error(`Failed to parse Python output: ${output}`));
-      }
-    });
-    
-    pythonProcess.on('error', (error: Error) => {
-      console.error('Failed to start Python process:', error.message);
-      reject(new Error(`Failed to start Python process: ${error.message}`));
-    });
-  });
-} 
