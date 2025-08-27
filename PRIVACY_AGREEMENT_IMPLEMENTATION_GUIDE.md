@@ -20,7 +20,7 @@ CREATE TABLE privacy_agreement (
 
 ### 2. 核心组件
 - **隐私条款页面**: `/app/privacy-agreement/page.tsx`
-- **API端点**: `/app/api/auth/privacy-agreement/route.ts`
+- **API端点**: `/api/auth/privacy-agreement/route.ts`
 - **中间件检查**: `middleware.ts`
 - **Word文档读取**: `lib/word-reader.ts`
 
@@ -41,19 +41,16 @@ CREATE TABLE privacy_agreement (
 -- 点击 "Run" 执行脚本
 ```
 
-### 步骤2：安装依赖
-```bash
-cd butp
-npm install mammoth
-```
+### 步骤2：确认依赖已安装
+`mammoth` 依赖已在 `package.json` 中，无需额外安装。
 
 ### 步骤3：上传Word文档
-将 `隐私政策与用户数据使用条款_clean_Aug2025.docx` 文件上传到 `public/` 文件夹。
+确保 `隐私政策与用户数据使用条款_clean_Aug2025.docx` 文件在 `public/` 文件夹中。
 
 ### 步骤4：测试功能
 运行测试脚本：
 ```bash
-node test-privacy-agreement.js
+node test-word-reader.js
 ```
 
 ## 🔧 配置说明
@@ -79,10 +76,10 @@ node test-privacy-agreement.js
 - 同意/不同意按钮
 - 加载状态和错误提示
 
-### 2. 多语言支持
-- 中文和英文界面
-- 使用语言上下文系统
-- 翻译键以 `privacy.*` 开头
+### 2. 语言支持
+- **仅支持中文界面**
+- 所有文案均为中文硬编码
+- 已移除多语言支持系统
 
 ### 3. 交互流程
 1. 用户登录成功后自动检查隐私条款状态
@@ -117,7 +114,7 @@ node test-privacy-agreement.js
 - 检查文件路径是否正确
 - 确认文件格式为.docx
 - 查看浏览器控制台错误信息
-- 使用默认内容作为备选方案
+- 检查 `mammoth` 依赖是否正确安装
 
 #### 问题：数据库连接失败
 **解决方案**：
@@ -132,7 +129,7 @@ node test-privacy-agreement.js
 - 查看服务器日志
 
 ### 2. 调试工具
-- 使用 `test-privacy-agreement.js` 测试脚本
+- 使用 `test-word-reader.js` 测试脚本
 - 检查浏览器开发者工具
 - 查看Supabase日志
 - 使用中间件调试信息
@@ -150,16 +147,16 @@ node test-privacy-agreement.js
 - 系统使用情况
 
 ### 3. 定期维护
-- 更新隐私条款内容
+- 更新隐私条款内容（修改Word文档）
 - 检查数据库性能
 - 更新安全策略
 
 ## 🔄 更新和扩展
 
 ### 1. 内容更新
-- 修改Word文档内容
-- 更新默认内容
-- 调整界面文案
+- **修改Word文档内容**（推荐方式）
+- 系统会自动读取最新的Word文档内容
+- 无需修改代码
 
 ### 2. 功能扩展
 - 添加更多同意选项
@@ -178,14 +175,15 @@ node test-privacy-agreement.js
 3. **数据备份**: 定期备份隐私条款同意记录
 4. **性能优化**: 避免频繁的数据库查询影响用户体验
 5. **错误处理**: 提供友好的错误提示和恢复机制
+6. **Word文档格式**: 确保Word文档格式正确，避免读取失败
 
 ## 🎉 完成检查清单
 
 - [ ] 数据库表创建完成
-- [ ] 依赖包安装完成
 - [ ] Word文档上传完成
+- [ ] Word读取功能测试通过
 - [ ] 功能测试通过
-- [ ] 多语言支持完成
+- [ ] 中文界面完成
 - [ ] 安全策略配置完成
 - [ ] 错误处理完善
 - [ ] 文档更新完成
@@ -194,6 +192,14 @@ node test-privacy-agreement.js
 
 如果遇到问题，请：
 1. 查看本文档的故障排除部分
-2. 运行测试脚本获取详细信息
+2. 运行 `test-word-reader.js` 测试脚本获取详细信息
 3. 检查浏览器控制台和服务器日志
 4. 联系开发团队获取帮助
+
+## 🔄 最近更新
+
+- **2025年**: 重新启用Word文档读取功能
+- **2025年**: 删除硬编码回退机制
+- **2025年**: 移除英文模式支持，仅保留中文界面
+- **2025年**: 优化错误处理，提供更友好的用户体验
+- **2025年**: 修改"我不同意"按钮，使其与sidebar中的logout按钮功能完全一致

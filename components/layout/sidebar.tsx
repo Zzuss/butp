@@ -189,8 +189,11 @@ export function AppSidebar() {
             {!isCollapsed ? (
               <>
           {/* PDF导出按钮 */}
-          <div className="mb-3">
-            <PreserveLayoutPdfButton defaultViewport={1366} />
+          {/* 提高按钮层级并确保可点击，避免被页面其他浮层遮挡 */}
+          <div className="mb-3 relative z-60 pointer-events-auto">
+            <div className="space-y-2">
+              <PreserveLayoutPdfButton defaultViewport={1366} />
+            </div>
           </div>
           
           {/* 语言切换按钮 */}
