@@ -926,29 +926,50 @@ export default function Analysis() {
   
   // 下载状态
   const [downloading, setDownloading] = useState(false);
+  const availablePlanYears = [2024, 2023, 2022, 2020];
+
+  const resolvePlanYear = () => {
+    // 优先使用 studentInfo.year 的前4位数字
+    const yearStr = (studentInfo?.year || '').toString();
+    const candidate = parseInt(yearStr.slice(0, 4), 10);
+    if (!isNaN(candidate) && availablePlanYears.includes(candidate)) return candidate;
+
+    // 若不在可用集合，选择不大于 candidate 的最近年份；否则使用最新年份
+    if (!isNaN(candidate)) {
+      const lowerOrEqual = availablePlanYears
+        .filter(y => y <= candidate)
+        .sort((a, b) => b - a)[0];
+      if (lowerOrEqual) return lowerOrEqual;
+    }
+    return availablePlanYears[0]; // 默认最新
+  };
   
-  // 下载培养方案处理函数
+  // 下载培养方案处理函数（按年级选择对应PDF）
   const handleDownloadCurriculum = async () => {
     try {
       setDownloading(true);
-      
-      const response = await fetch('/api/download-curriculum', {
-        method: 'GET',
-      });
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Education_Plan_PDF_2023.pdf';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        console.error('下载失败');
+      const planYear = resolvePlanYear();
+      const buildUrl = (y: number) => `/Education_Plan_PDF/Education_Plan_PDF_${y}.pdf`;
+      let url = buildUrl(planYear);
+
+      // 先检查对应年级是否存在
+      const head = await fetch(url, { method: 'HEAD' });
+      if (!head.ok) {
+        // 回退：按可用年份从新到旧尝试
+        for (const y of availablePlanYears) {
+          const fallbackUrl = buildUrl(y);
+          const chk = await fetch(fallbackUrl, { method: 'HEAD' });
+          if (chk.ok) { url = fallbackUrl; break; }
+        }
       }
+
+      // 触发下载或打开
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = url.split('/').pop() || `Education_Plan_PDF_${planYear}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (error) {
       console.error('下载失败:', error);
     } finally {
@@ -1561,7 +1582,9 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                        {!isEditMode && (
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                        )}
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
                             修改成绩
@@ -1571,16 +1594,16 @@ export default function Analysis() {
                     </thead>
                     <tbody>
                       {(() => {
-                        const originalScores = getOriginalScores();
-                        // 过滤掉没有成绩的课程
-                        const filteredScores = originalScores.filter((course: any) => 
+                        const modifiedScores = getModifiedScores();
+                        // 过滤掉没有成绩的课程（以 modified 为准）
+                        const filteredScores = modifiedScores.filter((course: any) => 
                           course.score !== null && course.score !== undefined
                         );
                         
                         if (filteredScores.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                              <td colSpan={6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
                                 {loadingOriginalScores ? t('analysis.target.score.loading') : t('analysis.course.scores.no.data')}
                               </td>
                             </tr>
@@ -1615,13 +1638,15 @@ export default function Analysis() {
                               <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
                                 {course.credit || '0.0'}
                               </td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                                {score !== null && score !== undefined ? (
-                                  <span className={`font-bold ${scoreColor}`}>{score}</span>
-                                ) : (
-                                  <span className="text-gray-400">暂无成绩</span>
-                                )}
-                              </td>
+                              {!isEditMode && (
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                  {score !== null && score !== undefined ? (
+                                    <span className={`font-bold ${scoreColor}`}>{score}</span>
+                                  ) : (
+                                    <span className="text-gray-400">暂无成绩</span>
+                                  )}
+                                </td>
+                              )}
                               {isEditMode && (
                                 <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
                                   {score !== null && score !== undefined ? (
@@ -1933,16 +1958,16 @@ export default function Analysis() {
                     </thead>
                     <tbody>
                       {(() => {
-                        const originalScores = getOriginalScores();
-                        // 过滤掉没有成绩的课程
-                        const filteredScores = originalScores.filter((course: any) => 
+                        const modifiedScores = getModifiedScores();
+                        // 过滤掉没有成绩的课程（以 modified 为准）
+                        const filteredScores = modifiedScores.filter((course: any) => 
                           course.score !== null && course.score !== undefined
                         );
                         
                         if (filteredScores.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                              <td colSpan={6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
                                 {loadingOriginalScores ? '加载中...' : '暂无有成绩的课程数据'}
                               </td>
                             </tr>
@@ -1969,13 +1994,15 @@ export default function Analysis() {
                               <td className="border border-gray-200 px-4 py-2 text-sm">{course.courseName}</td>
                               <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">{course.category || '-'}</td>
                               <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">{course.credit || '-'}</td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                                {course.score !== null ? (
-                                  <span className={`font-bold ${scoreColor}`}>{course.score}</span>
-                                ) : (
-                                  <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
-                                )}
-                              </td>
+                              {!isEditMode && (
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                  {course.score !== null ? (
+                                    <span className={`font-bold ${scoreColor}`}>{course.score}</span>
+                                  ) : (
+                                    <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
+                                  )}
+                                </td>
+                              )}
                               {isEditMode && (
                                 <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
                                   {score !== null && score !== undefined ? (
