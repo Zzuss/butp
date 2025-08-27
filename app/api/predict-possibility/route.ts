@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 // 定义特征值的类型
 interface FeatureValues {
   public: number;
@@ -24,6 +27,11 @@ interface PredictionResult {
 
 export async function POST(request: NextRequest) {
   try {
+    // 健康检查
+    if ((request as any).nextUrl && (request as any).nextUrl.searchParams.get('health') === '1') {
+      return NextResponse.json({ ok: true, runtime });
+    }
+
     const { featureValues } = await request.json();
 
     // 验证输入
@@ -47,6 +55,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 基本诊断日志
+    console.log('predict-possibility: received features', {
+      keys: Object.keys(featureValues || {}),
+      cwd: process.cwd(),
+      node: process.version
+    });
+
     // 调用Python脚本进行预测
     const result = await callXGBoostModel(featureValues);
 
@@ -56,7 +71,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error in predict-possibility:', error);
+    console.error('Error in predict-possibility:', error instanceof Error ? (error.stack || error.message) : error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
@@ -80,7 +95,10 @@ async function callXGBoostModel(featureValues: FeatureValues): Promise<Predictio
     
     // 调用Python预测脚本
     const pythonScript = path.join(process.cwd(), 'scripts', 'predict.py');
-    const pythonProcess = spawn('python', [pythonScript, tempDataPath]);
+    const pythonCmd = process.env.PYTHON_PATH || 'python';
+    const scriptExists = fs.existsSync(pythonScript);
+    console.log('predict-possibility: python call info', { pythonCmd, pythonScript, scriptExists });
+    const pythonProcess = spawn(pythonCmd, [pythonScript, tempDataPath]);
     
     let output = '';
     let errorOutput = '';
@@ -116,6 +134,7 @@ async function callXGBoostModel(featureValues: FeatureValues): Promise<Predictio
     });
     
     pythonProcess.on('error', (error: Error) => {
+      console.error('Failed to start Python process:', error.message);
       reject(new Error(`Failed to start Python process: ${error.message}`));
     });
   });
