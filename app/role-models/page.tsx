@@ -657,135 +657,167 @@ const majorModels = {
   }]
 }
 
-const categoryModels = {
-  "技术类": {
-    "腾讯": [
-      {
-        id: 1,
-        name: "腾讯技术实习生画像",
-        position: "技术实习生",
-        duration: "3-6个月",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.5+/4.0",
-          courses: ["数据结构", "算法设计", "操作系统"]
-        },
-        skills: ["编程基础", "学习能力", "沟通能力"],
-        requirements: ["计算机相关专业", "扎实的编程基础", "良好的团队合作精神"],
-        benefits: ["导师指导", "实际项目经验", "转正机会"],
-        tags: ["技术", "实习", "导师制"],
-        description: "腾讯技术实习生将参与真实项目开发，接受资深工程师指导，获得宝贵的实践经验。",
-        rating: 4.8,
-        applications: 1200
-      }
-    ],
-    "阿里巴巴": [
-      {
-        id: 3,
-        name: "阿里巴巴技术实习生画像",
-        position: "技术实习生",
-        duration: "3-6个月",
-        location: "杭州/北京",
-        academics: {
-          gpa: "3.5+/4.0",
-          courses: ["Java开发", "数据库", "分布式系统"]
-        },
-        skills: ["Java/Python", "数据库操作", "系统设计"],
-        requirements: ["计算机相关专业", "熟悉主流开发语言", "有项目经验"],
-        benefits: ["技术成长", "业务理解", "职业发展"],
-        tags: ["技术", "实习", "大数据"],
-        description: "阿里巴巴技术实习生将接触大规模分布式系统，学习电商业务的技术实现。",
-        rating: 4.8,
-        applications: 1500
-      }
-    ],
-    "字节跳动": [
-      {
-        id: 5,
-        name: "字节跳动技术实习生画像",
-        position: "技术实习生",
-        duration: "3-6个月",
-        location: "北京/上海",
-        academics: {
-          gpa: "3.6+/4.0",
-          courses: ["算法设计", "机器学习", "移动开发"]
-        },
-        skills: ["算法优化", "机器学习", "移动开发"],
-        requirements: ["计算机相关专业", "算法基础扎实", "对人工智能感兴趣"],
-        benefits: ["前沿技术", "算法实践", "快速成长"],
-        tags: ["技术", "实习", "人工智能"],
-        description: "字节跳动技术实习生将参与推荐算法和人工智能技术的开发，接触前沿技术。",
-        rating: 4.9,
-        applications: 1000
-      }
-    ]
-  },
-  "产品类": {
-    "腾讯": [
-      {
-        id: 2,
-        name: "腾讯产品实习生画像",
-        position: "产品实习生",
-        duration: "3-6个月",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.4+/4.0",
-          courses: ["市场营销", "用户体验", "数据分析"]
-        },
-        skills: ["需求分析", "用户研究", "产品设计"],
-        requirements: ["对互联网产品感兴趣", "良好的沟通能力", "数据敏感度"],
-        benefits: ["产品经验", "用户调研", "行业认知"],
-        tags: ["产品", "实习", "用户体验"],
-        description: "腾讯产品实习生将参与产品设计和用户研究，学习互联网产品的完整开发流程。",
-        rating: 4.7,
-        applications: 800
-      }
-    ]
-  },
-  "运营类": {
-    "阿里巴巴": [
-      {
-        id: 4,
-        name: "阿里巴巴运营实习生画像",
-        position: "运营实习生",
-        duration: "3-6个月",
-        location: "杭州/北京",
-        academics: {
-          gpa: "3.3+/4.0",
-          courses: ["市场营销", "电子商务", "数据分析"]
-        },
-        skills: ["数据分析", "内容运营", "用户运营"],
-        requirements: ["对电商行业感兴趣", "数据分析能力", "创意思维"],
-        benefits: ["运营经验", "数据驱动", "商业思维"],
-        tags: ["运营", "实习", "电商"],
-        description: "阿里巴巴运营实习生将学习电商平台运营策略，掌握数据驱动的运营方法。",
-        rating: 4.6,
-        applications: 600
-      }
-    ]
-  },
-  "内容类": {
-    "字节跳动": [
-      {
-        id: 6,
-        name: "字节跳动内容实习生画像",
-        position: "内容实习生",
-        duration: "3-6个月",
-        location: "北京/上海",
-        academics: {
-          gpa: "3.2+/4.0",
-          courses: ["新闻传播", "内容创作", "社交媒体"]
-        },
-        skills: ["内容创作", "社交媒体", "用户洞察"],
-        requirements: ["对内容创作感兴趣", "良好的文字功底", "创意思维"],
-        benefits: ["内容运营", "用户理解", "创意实践"],
-        tags: ["内容", "实习", "创意"],
-        description: "字节跳动内容实习生将参与内容策划和创作，学习短视频和社交媒体运营。",
-        rating: 4.7,
-        applications: 700
-      }
-    ]
-  }
+const internshipModels = {
+  "技术实习": [
+    {
+      id: 1,
+      name: "技术实习生画像(后端开发)",
+      position: "技术实习生",
+      duration: "3-6个月",
+      location: "北京/深圳/杭州/上海",
+      companies: ["腾讯", "阿里巴巴", "字节跳动", "百度", "美团", "京东", "网易", "华为", "小米", "滴滴"],
+      academics: {
+        gpa: "3.5+/4.0",
+        courses: ["数据结构", "算法设计", "操作系统", "计算机网络", "数据库"]
+      },
+      skills: ["编程基础", "算法能力", "系统设计", "团队协作", "学习能力"],
+      requirements: ["计算机相关专业", "扎实的编程基础", "良好的团队合作精神", "有项目经验优先"],
+      benefits: ["导师指导", "实际项目经验", "转正机会", "技术成长"],
+      tags: ["技术", "后端", "实习", "导师制"],
+      description: "后端技术实习生将参与服务端开发，学习大规模分布式系统架构，接受资深工程师指导，获得宝贵的工程实践经验。",
+      rating: 4.8,
+      applications: 1200
+    },
+    {
+      id: 11,
+      name: "技术实习生画像(前端开发)",
+      position: "技术实习生",
+      duration: "3-6个月",
+      location: "北京/深圳/杭州/上海",
+      companies: ["字节跳动", "腾讯", "阿里巴巴", "美团", "京东", "哔哩哔哩", "小红书", "快手", "网易", "滴滴"],
+      academics: {
+        gpa: "3.4+/4.0",
+        courses: ["Web开发", "数据结构", "软件工程", "人机交互", "UI/UX设计"]
+      },
+      skills: ["前端框架", "JavaScript", "UI/UX理解", "用户体验", "创新思维"],
+      requirements: ["熟悉前端技术栈", "有作品展示", "良好的审美能力", "对用户体验敏感"],
+      benefits: ["前端技术提升", "用户体验学习", "作品展示机会", "行业认知"],
+      tags: ["技术", "前端", "实习", "用户体验"],
+      description: "前端技术实习生将参与Web应用和移动端开发，学习用户体验设计，掌握现代前端技术栈和工程化实践。",
+      rating: 4.7,
+      applications: 950
+    },
+    {
+      id: 12,
+      name: "技术实习生画像(算法工程)",
+      position: "技术实习生",
+      duration: "3-6个月", 
+      location: "北京/深圳/杭州/上海",
+      companies: ["字节跳动", "腾讯", "阿里巴巴", "百度", "商汤科技", "旷视科技", "华为", "小米"],
+      academics: {
+        gpa: "3.6+/4.0",
+        courses: ["算法设计", "机器学习", "深度学习", "数据挖掘", "统计学"]
+      },
+      skills: ["算法优化", "机器学习", "数据分析", "数学建模", "编程实现"],
+      requirements: ["算法基础扎实", "对人工智能感兴趣", "有竞赛经验优先", "数学功底好"],
+      benefits: ["前沿技术接触", "算法实践", "竞赛指导", "快速成长"],
+      tags: ["技术", "算法", "AI", "实习"],
+      description: "算法技术实习生将参与推荐系统、机器学习项目开发，接触前沿AI技术，在导师指导下提升算法工程能力。",
+      rating: 4.9,
+      applications: 800
+    }
+  ],
+  "产品实习": [
+    {
+      id: 2,
+      name: "产品实习生画像(C端产品)",
+      position: "产品实习生",
+      duration: "3-6个月",
+      location: "北京/深圳/杭州/上海",
+      companies: ["腾讯", "字节跳动", "阿里巴巴", "百度", "小红书", "快手", "哔哩哔哩", "网易", "知乎", "豆瓣"],
+      academics: {
+        gpa: "3.4+/4.0",
+        courses: ["市场营销", "用户体验", "数据分析", "心理学", "商业模式"]
+      },
+      skills: ["需求分析", "用户研究", "产品设计", "数据分析", "沟通协调"],
+      requirements: ["对互联网产品感兴趣", "良好的沟通能力", "数据敏感度", "用户思维"],
+      benefits: ["产品经验", "用户调研", "行业认知", "商业思维"],
+      tags: ["产品", "C端", "用户体验", "实习"],
+      description: "C端产品实习生将参与消费者产品设计和用户研究，学习互联网产品的完整开发流程，培养产品感和商业思维。",
+      rating: 4.7,
+      applications: 800
+    },
+    {
+      id: 13,
+      name: "产品实习生画像(B端产品)",
+      position: "产品实习生", 
+      duration: "3-6个月",
+      location: "北京/深圳/杭州/上海",
+      companies: ["阿里巴巴", "腾讯", "华为", "京东", "美团", "滴滴", "字节跳动", "百度"],
+      academics: {
+        gpa: "3.5+/4.0",
+        courses: ["企业管理", "信息系统", "数据分析", "商业模式", "项目管理"]
+      },
+      skills: ["业务理解", "系统分析", "流程设计", "B端思维", "项目管理"],
+      requirements: ["理解企业业务流程", "逻辑思维强", "沟通能力好", "有责任心"],
+      benefits: ["B端产品经验", "企业业务理解", "系统性思维", "职业发展"],
+      tags: ["产品", "B端", "企业服务", "实习"],
+      description: "B端产品实习生将参与企业级产品设计，学习复杂业务系统的产品化，培养系统性思维和企业服务能力。",
+      rating: 4.6,
+      applications: 650
+    }
+  ],
+  "运营实习": [
+    {
+      id: 4,
+      name: "运营实习生画像(内容运营)",
+      position: "运营实习生",
+      duration: "3-6个月",
+      location: "北京/深圳/杭州/上海",
+      companies: ["字节跳动", "小红书", "哔哩哔哩", "快手", "阿里巴巴", "腾讯", "网易", "知乎", "豆瓣", "微博"],
+      academics: {
+        gpa: "3.3+/4.0",
+        courses: ["市场营销", "新闻传播", "数据分析", "心理学", "创意写作"]
+      },
+      skills: ["内容创作", "数据分析", "用户洞察", "创意策划", "社交媒体运营"],
+      requirements: ["对内容创作感兴趣", "文字功底好", "创意思维", "网感敏锐"],
+      benefits: ["内容运营经验", "创意实践", "用户理解", "行业认知"],
+      tags: ["运营", "内容", "创意", "实习"],
+      description: "内容运营实习生将参与内容策划、创作和推广，学习社交媒体运营，培养用户洞察和创意能力。",
+      rating: 4.6,
+      applications: 750
+    },
+    {
+      id: 14,
+      name: "运营实习生画像(数据运营)",
+      position: "运营实习生",
+      duration: "3-6个月",
+      location: "北京/深圳/杭州/上海",
+      companies: ["阿里巴巴", "腾讯", "字节跳动", "美团", "京东", "滴滴", "百度", "快手"],
+      academics: {
+        gpa: "3.4+/4.0",
+        courses: ["数据分析", "统计学", "市场营销", "商业分析", "Excel/SQL"]
+      },
+      skills: ["数据分析", "Excel/SQL", "业务理解", "逻辑思维", "报告撰写"],
+      requirements: ["数据敏感度强", "逻辑思维好", "学习能力强", "细心负责"],
+      benefits: ["数据分析能力", "业务理解", "工具使用", "职业发展"],
+      tags: ["运营", "数据", "分析", "实习"],
+      description: "数据运营实习生将学习业务数据分析，掌握数据驱动的运营方法，培养商业敏感度和分析能力。",
+      rating: 4.5,
+      applications: 600
+    }
+  ],
+  "设计实习": [
+    {
+      id: 6,
+      name: "设计实习生画像(UI/UX设计)",
+      position: "设计实习生",
+      duration: "3-6个月",
+      location: "北京/深圳/杭州/上海",
+      companies: ["腾讯", "阿里巴巴", "字节跳动", "网易", "小米", "OPPO", "vivo", "华为", "蔚来", "理想汽车"],
+      academics: {
+        gpa: "3.2+/4.0",
+        courses: ["视觉传达", "交互设计", "用户体验", "心理学", "美术基础"]
+      },
+      skills: ["Figma/Sketch", "Photoshop", "设计思维", "用户研究", "原型设计"],
+      requirements: ["有设计作品集", "审美能力强", "用户体验意识", "学习能力强"],
+      benefits: ["设计经验", "作品集完善", "导师指导", "行业认知"],
+      tags: ["设计", "UI/UX", "用户体验", "实习"],
+      description: "UI/UX设计实习生将参与产品界面和用户体验设计，学习设计规范和用户研究方法，完善个人作品集。",
+      rating: 4.7,
+      applications: 700
+    }
+  ]
 }
 
 function Badge({ children, variant = "secondary" }: { children: React.ReactNode, variant?: "secondary" | "outline" }) {
@@ -830,6 +862,7 @@ interface InternshipModel {
   position: string
   duration: string
   location: string
+  companies: string[]
   academics: {
     gpa: string
     courses: string[]
@@ -876,18 +909,23 @@ function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onVi
           </div>
           
           <div className="flex items-center gap-2 text-sm">
+            <Building className="h-4 w-4 text-muted-foreground" />
+            <span><strong>实习公司：</strong>{model.companies.slice(0, 3).join("、")}等</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <span>{t('rolemodels.internship.duration')}: {model.duration}</span>
+            <span>GPA: {model.academics.gpa} | 时长: {model.duration}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Award className="h-4 w-4 text-muted-foreground" />
-            <span>GPA: {model.academics.gpa}</span>
+            <span>{model.requirements.slice(0, 2).join("、")}等</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Layers className="h-4 w-4 text-muted-foreground" />
-            <span>{t('rolemodels.internship.benefits')}: {model.benefits.join(", ")}</span>
+            <span>{model.benefits.slice(0, 2).join("、")}等</span>
           </div>
         </div>
 
@@ -1132,25 +1170,19 @@ function MajorRow({ major, models, onViewDetails }: { major: string, models: Sch
   );
 }
 
-// 类别行组件
-function CategoryRow({ category, companies, onViewDetails }: { category: string, companies: Record<string, InternshipModel[]>, onViewDetails: (model: InternshipModel) => void }) {
+// 实习行组件
+function InternshipRow({ internshipType, models, onViewDetails }: { internshipType: string, models: InternshipModel[], onViewDetails: (model: InternshipModel) => void }) {
   return (
     <div className="mb-12">
       <div className="flex items-center gap-2 mb-4">
         <Layers className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-semibold">{category}</h2>
+        <h2 className="text-2xl font-semibold">{internshipType}</h2>
       </div>
       <ScrollableContainer>
-        {Object.entries(companies).map(([company, models]) => (
-          models.map((model) => (
-            <div key={`${category}-${company}-${model.id}`} className="mr-4 min-w-[350px]">
-              <div className="mb-2 flex items-center gap-2">
-                <Building className="h-4 w-4 text-muted-foreground" />
-                <span className="text-base font-medium">{company}</span>
-              </div>
-              <InternshipCard model={model} onViewDetails={() => onViewDetails(model)} />
-            </div>
-          ))
+        {models.map((model) => (
+          <div key={`${internshipType}-${model.id}`} className="mr-4 min-w-[350px]">
+            <InternshipCard model={model} onViewDetails={() => onViewDetails(model)} />
+          </div>
         ))}
       </ScrollableContainer>
     </div>
@@ -1265,19 +1297,13 @@ export default function RoleModels() {
         </TabsContent>
         
         <TabsContent value="internships">
-          {Object.entries(categoryModels).map(([category, companies]) => (
-            <CategoryRow 
-              key={category} 
-              category={category} 
-              companies={companies} 
+          {Object.entries(internshipModels).map(([internshipType, models]) => (
+            <InternshipRow 
+              key={internshipType} 
+              internshipType={internshipType} 
+              models={models as InternshipModel[]} 
               onViewDetails={(model) => {
-                // 查找当前模型对应的公司
-                for (const [company, models] of Object.entries(companies)) {
-                  if (models.some(m => m.id === model.id)) {
-                    navigateToCategoryDetail(category, company, model)
-                    return
-                  }
-                }
+                navigateToCategoryDetail(internshipType, model.companies[0], model)
               }}
             />
           ))}

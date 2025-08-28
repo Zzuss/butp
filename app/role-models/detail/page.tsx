@@ -42,62 +42,114 @@ function Badge({ children, variant = "secondary" }: { children: React.ReactNode,
 
 // 按岗位分组的丰富数据结构（与主页面保持一致）
 const positionModels = {
-  "大模型": {
-    "腾讯": [
-      {
-        id: 1,
-        name: "腾讯大模型工程师画像",
-        position: "大模型工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.8+/4.0",
-          courses: ["深度学习", "自然语言处理", "分布式系统", "机器学习"]
-        },
-        competitions: ["ACM程序设计大赛", "互联网+创新创业大赛"],
-        internships: ["腾讯人工智能实验室实习", "知名互联网公司人工智能实习"],
-        englishScores: {
-          toefl: "105+",
-          ielts: "7.0+"
-        },
-        skills: ["大模型训练", "分布式计算", "算法优化", "团队协作"],
-        tags: ["大模型", "人工智能", "深度学习"],
-        description: "腾讯大模型工程师需具备扎实的深度学习理论基础，熟悉大规模分布式训练，有相关竞赛和实习经验，课程成绩优秀。",
-        rating: 4.9,
-        consultations: 120,
-        salary: {
-          entry: "35-50万",
-          senior: "60-100万",
-          expert: "100-200万+"
-        },
-        projects: [
-          "参与腾讯混元大模型的训练和优化",
-          "负责模型推理服务的性能优化",
-          "开发多模态大模型应用",
-          "构建模型评估和监控系统"
-        ],
-        careerPath: [
-          "初级大模型工程师 (1-2年经验)",
-          "高级大模型工程师 (3-5年经验)",
-          "资深大模型专家 (5-8年经验)",
-          "首席科学家/技术总监 (8+年经验)"
-        ],
-        interviewPoints: [
-          "深度学习理论基础（Transformer架构、注意力机制）",
-          "大规模模型训练经验（分布式训练、模型并行）",
-          "编程能力（Python、PyTorch/TensorFlow）",
-          "系统设计能力（高并发推理服务设计）",
-          "项目经验分享（具体的模型优化案例）"
-        ],
-        learningResources: [
-          "《Attention Is All You Need》论文精读",
-          "Transformers官方文档和源码",
-          "DeepSpeed分布式训练框架",
-          "MLOps实践：模型部署与监控",
-          "最新的大模型论文跟踪"
-        ]
-      }
-    ]
-  },
+  "大模型工程师": [
+    {
+      id: 1,
+      name: "大模型工程师画像(研究型)",
+      position: "大模型工程师",
+      location: "北京/深圳/杭州/上海",
+      companies: ["腾讯", "字节跳动", "阿里巴巴", "百度", "华为", "商汤科技", "旷视科技"],
+      academics: {
+        gpa: "3.8+/4.0",
+        courses: ["深度学习", "自然语言处理", "分布式系统", "机器学习", "神经网络", "数据挖掘"]
+      },
+      competitions: ["ACM程序设计大赛", "互联网+创新创业大赛", "AI算法竞赛", "KAGGLE竞赛"],
+      internships: ["大厂AI实验室实习", "算法团队实习", "研究院实习"],
+      englishScores: {
+        toefl: "105+",
+        ielts: "7.0+"
+      },
+      skills: ["大模型训练", "分布式计算", "算法优化", "PyTorch/TensorFlow", "CUDA编程", "模型部署"],
+      tags: ["大模型", "人工智能", "深度学习", "NLP"],
+      description: "研究型大模型工程师专注于前沿算法研究，需具备扎实的深度学习理论基础，熟悉大规模分布式训练，有顶级竞赛和实习经验。",
+      rating: 4.9,
+      consultations: 120,
+      salary: {
+        entry: "35-50万",
+        senior: "60-100万",
+        expert: "100-200万+"
+      },
+      projects: [
+        "参与大模型的训练和优化",
+        "负责模型推理服务的性能优化",
+        "开发多模态大模型应用",
+        "构建模型评估和监控系统"
+      ],
+      careerPath: [
+        "初级大模型工程师 (1-2年经验)",
+        "高级大模型工程师 (3-5年经验)",
+        "资深大模型专家 (5-8年经验)",
+        "首席科学家/技术总监 (8+年经验)"
+      ],
+      interviewPoints: [
+        "深度学习理论基础（Transformer架构、注意力机制）",
+        "大规模模型训练经验（分布式训练、模型并行）",
+        "编程能力（Python、PyTorch/TensorFlow）",
+        "系统设计能力（高并发推理服务设计）",
+        "项目经验分享（具体的模型优化案例）"
+      ],
+      learningResources: [
+        "《Attention Is All You Need》论文精读",
+        "Transformers官方文档和源码",
+        "DeepSpeed分布式训练框架",
+        "MLOps实践：模型部署与监控",
+        "最新的大模型论文跟踪"
+      ]
+    },
+    {
+      id: 11,
+      name: "大模型工程师画像(应用型)",
+      position: "大模型工程师",
+      location: "北京/深圳/杭州/上海",
+      companies: ["字节跳动", "百度", "小米", "京东", "美团", "网易", "快手"],
+      academics: {
+        gpa: "3.7+/4.0",
+        courses: ["深度学习", "软件工程", "系统设计", "机器学习", "数据库", "云计算"]
+      },
+      competitions: ["AI应用竞赛", "黑客马拉松", "创新创业大赛"],
+      internships: ["大模型产品实习", "AI应用开发实习", "算法工程实习"],
+      englishScores: {
+        toefl: "100+",
+        ielts: "6.5+"
+      },
+      skills: ["模型微调", "API开发", "系统集成", "性能优化", "云平台部署", "产品化"],
+      tags: ["大模型", "应用开发", "产品化", "系统集成"],
+      description: "应用型大模型工程师专注于大模型的产品化和工程实现，需要较强的系统开发能力和产品思维。",
+      rating: 4.7,
+      consultations: 95,
+      salary: {
+        entry: "30-45万",
+        senior: "50-80万",
+        expert: "80-150万+"
+      },
+      projects: [
+        "大模型API服务开发",
+        "模型在业务场景的落地应用",
+        "构建模型服务监控体系",
+        "优化模型推理性能"
+      ],
+      careerPath: [
+        "初级应用工程师 (1-2年经验)",
+        "高级应用工程师 (3-5年经验)",
+        "技术架构师 (5-8年经验)",
+        "技术总监 (8+年经验)"
+      ],
+      interviewPoints: [
+        "大模型应用开发经验",
+        "系统架构设计能力",
+        "云平台和容器化技术",
+        "API设计和性能优化",
+        "产品思维和业务理解"
+      ],
+      learningResources: [
+        "大模型服务化最佳实践",
+        "Kubernetes和Docker",
+        "云原生架构设计",
+        "API网关和负载均衡",
+        "性能监控和调优"
+      ]
+    }
+  ],
   "算法": {
     "腾讯": [
       {
@@ -573,33 +625,122 @@ interface InternshipModel {
 
 // 查找数据的辅助函数
 function findPositionModel(position: string, company: string, id: number): CompanyModel | null {
-  const positionData = positionModels[position as keyof typeof positionModels]
+  const positionData = positionModels[position as keyof typeof positionModels] as CompanyModel[] | undefined
   if (!positionData) return null
   
-  const companyData = positionData[company as keyof typeof positionData] as CompanyModel[] | undefined
-  if (!companyData) return null
-  
-  return companyData.find((model: CompanyModel) => model.id === id) || null
+  return positionData.find((model: CompanyModel) => model.id === id) || null
 }
 
 function findMajorModel(major: string, school: string, id: number): SchoolModel | null {
-  const majorData = majorModels[major as keyof typeof majorModels]
+  const majorData = majorModels[major as keyof typeof majorModels] as SchoolModel[] | undefined
   if (!majorData) return null
   
-  const schoolData = majorData[school as keyof typeof majorData] as SchoolModel[] | undefined
-  if (!schoolData) return null
-  
-  return schoolData.find((model: SchoolModel) => model.id === id) || null
+  return majorData.find((model: SchoolModel) => model.id === id) || null
 }
 
 function findCategoryModel(category: string, company: string, id: number): InternshipModel | null {
-  const categoryData = categoryModels[category as keyof typeof categoryModels]
+  // 使用主页面的实习模型数据结构
+  const internshipModels = {
+    "技术实习": [
+      {
+        id: 1,
+        name: "技术实习生画像(后端开发)",
+        position: "技术实习生",
+        duration: "3-6个月",
+        location: "北京/深圳/杭州/上海",
+        companies: ["腾讯", "阿里巴巴", "字节跳动", "百度", "美团", "京东", "网易", "华为", "小米", "滴滴"],
+        academics: {
+          gpa: "3.5+/4.0",
+          courses: ["数据结构", "算法设计", "操作系统", "计算机网络", "数据库"]
+        },
+        skills: ["编程基础", "算法能力", "系统设计", "团队协作", "学习能力"],
+        requirements: ["计算机相关专业", "扎实的编程基础", "良好的团队合作精神", "有项目经验优先"],
+        benefits: ["导师指导", "实际项目经验", "转正机会", "技术成长"],
+        tags: ["技术", "后端", "实习", "导师制"],
+        description: "后端技术实习生将参与服务端开发，学习大规模分布式系统架构，接受资深工程师指导，获得宝贵的工程实践经验。",
+        rating: 4.8,
+        applications: 1200,
+        monthlyPay: "4000-8000元/月",
+        workTime: "周一至周五，弹性工作制",
+        projects: [
+          "参与后端服务开发",
+          "学习微服务架构",
+          "参与系统性能优化",
+          "接触大规模分布式系统"
+        ],
+        mentorship: [
+          "一对一技术导师指导",
+          "定期技术分享和培训",
+          "代码Review和技术讨论",
+          "职业发展规划建议"
+        ],
+        applicationTips: [
+          "掌握至少一门编程语言",
+          "有完整的项目经验",
+          "了解基础的数据结构和算法",
+          "展示学习能力和技术热情"
+        ],
+        skillsToLearn: [
+          "深入学习后端开发框架",
+          "理解分布式系统原理",
+          "掌握数据库设计和优化",
+          "学习云计算和容器技术"
+        ]
+      }
+    ],
+    "产品实习": [
+      {
+        id: 2,
+        name: "产品实习生画像(C端产品)",
+        position: "产品实习生",
+        duration: "3-6个月",
+        location: "北京/深圳/杭州/上海",
+        companies: ["腾讯", "字节跳动", "阿里巴巴", "百度", "小红书", "快手", "哔哩哔哩", "网易", "知乎", "豆瓣"],
+        academics: {
+          gpa: "3.4+/4.0",
+          courses: ["市场营销", "用户体验", "数据分析", "心理学", "商业模式"]
+        },
+        skills: ["需求分析", "用户研究", "产品设计", "数据分析", "沟通协调"],
+        requirements: ["对互联网产品感兴趣", "良好的沟通能力", "数据敏感度", "用户思维"],
+        benefits: ["产品经验", "用户调研", "行业认知", "商业思维"],
+        tags: ["产品", "C端", "用户体验", "实习"],
+        description: "C端产品实习生将参与消费者产品设计和用户研究，学习互联网产品的完整开发流程，培养产品感和商业思维。",
+        rating: 4.7,
+        applications: 800,
+        monthlyPay: "3500-7000元/月",
+        workTime: "周一至周五，标准工作制",
+        projects: [
+          "参与产品需求分析",
+          "协助用户调研和数据分析",
+          "参与产品功能设计",
+          "学习产品运营策略"
+        ],
+        mentorship: [
+          "产品经理一对一指导",
+          "参与产品评审会议",
+          "用户研究方法培训",
+          "商业思维培养"
+        ],
+        applicationTips: [
+          "展示对产品的理解和思考",
+          "有用户研究或数据分析经验",
+          "良好的逻辑思维和表达能力",
+          "对行业趋势有敏锐感知"
+        ],
+        skillsToLearn: [
+          "产品设计和原型工具",
+          "数据分析和用户研究方法",
+          "商业模式和市场分析",
+          "跨部门沟通协调能力"
+        ]
+      }
+    ]
+  }
+  
+  const categoryData = internshipModels[category as keyof typeof internshipModels] as InternshipModel[] | undefined
   if (!categoryData) return null
   
-  const companyData = categoryData[company as keyof typeof categoryData] as InternshipModel[] | undefined
-  if (!companyData) return null
-  
-  return companyData.find((model: InternshipModel) => model.id === id) || null
+  return categoryData.find((model: InternshipModel) => model.id === id) || null
 }
 
 // 公司详情内容组件
