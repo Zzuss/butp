@@ -1,4 +1,4 @@
-所有的库信息如下：有关的库为：
+
 xgboost==2.1.4  
 scikit-learn==1.5.2  
 numpy==1.26.4 
