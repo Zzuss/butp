@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/predict.py": {
-      "runtime": "python3.11",
+      "runtime": "python3.9",
       "includeFiles": "public/algorithms/**"
     },
     "app/api/generate-pdf/route.ts": {
