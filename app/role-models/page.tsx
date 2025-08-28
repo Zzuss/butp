@@ -11,6 +11,75 @@ import { getUserProbabilityData } from "@/lib/dashboard-data"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
+// 公司名称映射表
+const companyNameMap: Record<string, string> = {
+  '腾讯': 'companies.tencent',
+  '字节跳动': 'companies.bytedance', 
+  '阿里巴巴': 'companies.alibaba',
+  '百度': 'companies.baidu',
+  '华为': 'companies.huawei',
+  '商汤科技': 'companies.sensetime',
+  '旷视科技': 'companies.megvii',
+  '小米': 'companies.xiaomi',
+  '京东': 'companies.jd',
+  '美团': 'companies.meituan',
+  '网易': 'companies.netease',
+  '快手': 'companies.kuaishou',
+  '滴滴': 'companies.didi',
+  '小红书': 'companies.xiaohongshu',
+  '哔哩哔哩': 'companies.bilibili',
+  '知乎': 'companies.zhihu',
+  '豆瓣': 'companies.douban',
+  '拼多多': 'companies.pinduoduo',
+  'OPPO': 'companies.oppo',
+  'vivo': 'companies.vivo',
+  '蔚来': 'companies.nio',
+  '理想汽车': 'companies.ideal',
+  '微博': 'companies.weibo'
+}
+
+// 学校名称映射表
+const schoolNameMap: Record<string, string> = {
+  '清华大学': 'schools.tsinghua',
+  '北京大学': 'schools.peking',
+  '上海交通大学': 'schools.sjtu',
+  '浙江大学': 'schools.zju',
+  '华中科技大学': 'schools.hust',
+  '北京航空航天大学': 'schools.buaa',
+  '哈尔滨工业大学': 'schools.hit',
+  '复旦大学': 'schools.fudan',
+  '南京大学': 'schools.nju',
+  '中国科学技术大学': 'schools.ustc',
+  '西安交通大学': 'schools.xjtu',
+  '北京邮电大学': 'schools.bupt',
+  '电子科技大学': 'schools.uestc',
+  '西安电子科技大学': 'schools.xidian',
+  '东南大学': 'schools.seu',
+  '北京理工大学': 'schools.bit',
+  '大连理工大学': 'schools.dlut',
+  '中山大学': 'schools.sysu',
+  '华东师范大学': 'schools.ecnu'
+}
+
+// 翻译函数
+function translateCompanyName(companyName: string, t: (key: string) => string): string {
+  const translationKey = companyNameMap[companyName]
+  return translationKey ? t(translationKey) : companyName
+}
+
+function translateSchoolName(schoolName: string, t: (key: string) => string): string {
+  const translationKey = schoolNameMap[schoolName]
+  return translationKey ? t(translationKey) : schoolName
+}
+
+function translateCompanyList(companies: string[], t: (key: string) => string): string[] {
+  return companies.map(company => translateCompanyName(company, t))
+}
+
+function translateSchoolList(schools: string[], t: (key: string) => string): string[] {
+  return schools.map(school => translateSchoolName(school, t))
+}
+
 
 
 // 可能性卡片组件
@@ -910,7 +979,7 @@ function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onVi
           
           <div className="flex items-center gap-2 text-sm">
             <Building className="h-4 w-4 text-muted-foreground" />
-            <span><strong>实习公司：</strong>{model.companies.slice(0, 3).join("、")}等</span>
+            <span><strong>{t('rolemodels.internships.companies')}：</strong>{translateCompanyList(model.companies.slice(0, 3), t).join("、")}等</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
@@ -944,7 +1013,7 @@ function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onVi
         <div className="flex items-center justify-between pt-2 mt-auto">
           <span className="text-xs text-muted-foreground">{model.applications} {t('rolemodels.internship.applications')}</span>
           <Button size="sm" onClick={onViewDetails}>
-            {t('rolemodels.internship.details')}
+            {t('rolemodels.common.details')}
           </Button>
         </div>
       </CardContent>
@@ -986,7 +1055,7 @@ function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDeta
           
           <div className="flex items-center gap-2 text-sm">
             <Building className="h-4 w-4 text-muted-foreground" />
-            <span><strong>就业公司：</strong>{model.companies.slice(0, 3).join("、")}等</span>
+            <span><strong>{t('rolemodels.companies.employment')}：</strong>{translateCompanyList(model.companies.slice(0, 3), t).join("、")}等</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
@@ -1086,7 +1155,7 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
           
           <div className="flex items-center gap-2 text-sm">
             <School className="h-4 w-4 text-muted-foreground" />
-            <span><strong>录取学校：</strong>{model.schools.slice(0, 3).join("、")}等</span>
+            <span><strong>{t('rolemodels.schools.admission')}：</strong>{translateSchoolList(model.schools.slice(0, 3), t).join("、")}等</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
@@ -1243,7 +1312,7 @@ export default function RoleModels() {
       {/* 电脑端布局：标题和可能性卡片在同一行 */}
       <div className="mb-6 hidden md:flex justify-between items-start gap-6">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Role Models</h1>
+          <h1 className="text-3xl font-bold">{t('rolemodels.title')}</h1>
           <p className="text-muted-foreground">{t('rolemodels.description')}</p>
         </div>
         <div className="flex-shrink-0">
@@ -1254,9 +1323,8 @@ export default function RoleModels() {
       {/* 手机端布局：标题和可能性卡片分开显示 */}
       <div className="mb-6 md:hidden">
         <div className="mb-4">
-          <h1 className="text-3xl font-bold">Role Models</h1>
+          <h1 className="text-3xl font-bold">{t('rolemodels.title')}</h1>
           <p className="text-muted-foreground">{t('rolemodels.description')}</p>
-
         </div>
         <div className="flex justify-center">
           <PossibilityCard activeTab={activeTab} />

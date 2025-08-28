@@ -374,30 +374,30 @@ const positionModels = {
 
 // 按专业分组的丰富数据结构
 const majorModels = {
-  "计算机科学与技术": {
-    "清华大学": [
+  "计算机科学与技术": [
       {
         id: 101,
-        name: "清华大学计算机科学与技术研究生画像",
+        name: "计算机科学与技术研究生画像(算法方向)",
         graduateMajor: "计算机科学与技术",
-        location: "北京",
+        location: "北京/上海/深圳/杭州",
+        schools: ["清华大学", "北京大学", "中科院计算所", "上海交通大学", "浙江大学", "华中科技大学", "北京航空航天大学", "哈尔滨工业大学"],
         academics: {
           gpa: "3.85+/4.0",
-          courses: ["数据结构", "操作系统", "人工智能", "算法设计"]
+          courses: ["数据结构", "操作系统", "人工智能", "算法设计", "分布式系统", "机器学习"]
         },
-        competitions: ["ACM程序设计大赛", "全国大学生数学竞赛"],
-        research: ["发表高水平论文", "参与国家级科研项目"],
+        competitions: ["ACM程序设计大赛", "全国大学生数学竞赛", "CCF编程竞赛", "ICPC竞赛"],
+        research: ["发表高水平论文", "参与国家级科研项目", "开源项目贡献"],
         englishScores: {
           toefl: "112+",
           ielts: "7.5+",
           gre: "328+"
         },
-        skills: ["算法设计", "编程实现", "科研能力", "团队协作"],
-        tags: ["计算机", "算法", "科研"],
-        description: "清华计算机研究生需有扎实的算法和编程基础，积极参与竞赛和科研，具备较强的创新能力。",
+        skills: ["算法设计", "编程实现", "科研能力", "团队协作", "数学建模"],
+        tags: ["计算机", "算法", "科研", "人工智能"],
+        description: "计算机算法方向研究生需有扎实的算法和编程基础，积极参与竞赛和科研，具备较强的创新能力和数学功底。",
         rating: 4.9,
         consultations: 150,
-        tuitionFee: "8000元/年",
+        tuitionFee: "8000-12000元/年",
         scholarshipRate: "85%",
         projects: [
           "参与国家自然科学基金项目",
@@ -425,31 +425,30 @@ const majorModels = {
           "准备研究计划和个人陈述",
           "练习英语听说读写能力"
         ]
-      }
-    ],
-    "北京大学": [
+      },
       {
         id: 102,
-        name: "北京大学计算机科学与技术研究生画像",
+        name: "计算机科学与技术研究生画像(系统方向)",
         graduateMajor: "计算机科学与技术",
-        location: "北京",
+        location: "北京/上海/深圳",
+        schools: ["北京大学", "清华大学", "上海交通大学", "复旦大学", "南京大学", "中山大学", "西安交通大学"],
         academics: {
-          gpa: "3.85+/4.0",
-          courses: ["数据结构", "人工智能", "操作系统"]
+          gpa: "3.8+/4.0",
+          courses: ["数据结构", "操作系统", "计算机网络", "分布式系统", "数据库系统", "编译原理"]
         },
-        competitions: ["ACM程序设计大赛"],
-        research: ["参与高水平科研项目"],
+        competitions: ["ACM程序设计大赛", "全国大学生软件设计大赛", "蓝桥杯程序设计大赛"],
+        research: ["参与高水平科研项目", "系统架构设计", "性能优化研究"],
         englishScores: {
-          toefl: "112+",
-          ielts: "7.5+",
-          gre: "328+"
+          toefl: "110+",
+          ielts: "7.0+",
+          gre: "325+"
         },
-        skills: ["算法设计", "编程实现", "科研能力"],
-        tags: ["计算机", "算法", "科研"],
-        description: "北大计算机研究生需有扎实的算法和编程基础，积极参与竞赛和科研。",
+        skills: ["系统设计", "编程实现", "性能调优", "架构设计", "团队协作"],
+        tags: ["计算机", "系统", "架构", "后端"],
+        description: "计算机系统方向研究生专注于系统架构、性能优化和分布式系统设计，需要扎实的系统编程基础。",
         rating: 4.8,
         consultations: 120,
-        tuitionFee: "8000元/年",
+        tuitionFee: "8000-12000元/年",
         scholarshipRate: "80%",
         projects: [
           "参与国家重点研发计划",
@@ -479,7 +478,6 @@ const majorModels = {
         ]
       }
     ]
-  }
 }
 
 // 按类别分组的丰富数据结构
@@ -755,24 +753,24 @@ function CompanyDetailContent({ model }: { model: CompanyModel }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Briefcase className="h-5 w-5" />
-              基本信息
+              {t('rolemodels.detail.basic.info')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">工作地点：</span>
+              <span className="font-medium">{t('rolemodels.detail.location')}</span>
               <span>{model.location}</span>
             </div>
             <div className="flex items-center gap-2">
               <Star className="h-4 w-4 text-yellow-500" />
-              <span className="font-medium">评分：</span>
+              <span className="font-medium">{t('rolemodels.detail.rating')}</span>
               <span>{model.rating}/5.0</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">咨询次数：</span>
-              <span>{model.consultations}次</span>
+              <span className="font-medium">{t('rolemodels.detail.consultations')}</span>
+              <span>{model.consultations}{t('rolemodels.detail.consultations.times')}</span>
             </div>
           </CardContent>
         </Card>
@@ -807,21 +805,21 @@ function CompanyDetailContent({ model }: { model: CompanyModel }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
-              薪资范围
+              {t('rolemodels.detail.salary.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-green-50 rounded-lg">
-                <div className="font-medium text-green-800">初级工程师</div>
+                <div className="font-medium text-green-800">{t('rolemodels.detail.salary.entry')}</div>
                 <div className="text-2xl font-bold text-green-600">{model.salary.entry}</div>
               </div>
               <div className="p-4 bg-blue-50 rounded-lg">
-                <div className="font-medium text-blue-800">高级工程师</div>
+                <div className="font-medium text-blue-800">{t('rolemodels.detail.salary.senior')}</div>
                 <div className="text-2xl font-bold text-blue-600">{model.salary.senior}</div>
               </div>
               <div className="p-4 bg-purple-50 rounded-lg">
-                <div className="font-medium text-purple-800">专家级别</div>
+                <div className="font-medium text-purple-800">{t('rolemodels.detail.salary.expert')}</div>
                 <div className="text-2xl font-bold text-purple-600">{model.salary.expert}</div>
               </div>
             </div>
@@ -855,7 +853,7 @@ function CompanyDetailContent({ model }: { model: CompanyModel }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5" />
-              典型项目经验
+              {t('rolemodels.detail.projects.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -901,7 +899,7 @@ function CompanyDetailContent({ model }: { model: CompanyModel }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              面试要点
+              {t('rolemodels.detail.interview.points.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -925,7 +923,7 @@ function CompanyDetailContent({ model }: { model: CompanyModel }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5" />
-              推荐学习资源
+              {t('rolemodels.detail.learning.resources.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1028,29 +1026,29 @@ function SchoolDetailContent({ model }: { model: SchoolModel }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <School className="h-5 w-5" />
-              基本信息
+              {t('rolemodels.detail.basic.info')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
               <GraduationCap className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">专业：</span>
+              <span className="font-medium">{t('rolemodels.detail.major')}</span>
               <span>{model.graduateMajor}</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">地点：</span>
+              <span className="font-medium">{t('rolemodels.detail.location.school')}</span>
               <span>{model.location}</span>
             </div>
             <div className="flex items-center gap-2">
               <Star className="h-4 w-4 text-yellow-500" />
-              <span className="font-medium">评分：</span>
+              <span className="font-medium">{t('rolemodels.detail.rating')}</span>
               <span>{model.rating}/5.0</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">咨询次数：</span>
-              <span>{model.consultations}次</span>
+              <span className="font-medium">{t('rolemodels.detail.consultations')}</span>
+              <span>{model.consultations}{t('rolemodels.detail.consultations.times')}</span>
             </div>
           </CardContent>
         </Card>
@@ -1060,17 +1058,17 @@ function SchoolDetailContent({ model }: { model: SchoolModel }) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                费用信息
+                {t('rolemodels.detail.fees.title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="font-medium">学费：</span>
+                <span className="font-medium">{t('rolemodels.detail.tuition')}</span>
                 <span className="text-lg font-bold text-green-600">{model.tuitionFee}</span>
               </div>
               {model.scholarshipRate && (
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">奖学金覆盖率：</span>
+                  <span className="font-medium">{t('rolemodels.detail.scholarship')}</span>
                   <span className="text-lg font-bold text-blue-600">{model.scholarshipRate}</span>
                 </div>
               )}
@@ -1097,28 +1095,28 @@ function InternshipDetailContent({ model }: { model: InternshipModel }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Briefcase className="h-5 w-5" />
-              基本信息
+              {t('rolemodels.detail.basic.info')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
               <Briefcase className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">职位：</span>
+              <span className="font-medium">{t('rolemodels.detail.position')}</span>
               <span>{model.position}</span>
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">时长：</span>
+              <span className="font-medium">{t('rolemodels.detail.duration')}</span>
               <span>{model.duration}</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">地点：</span>
+              <span className="font-medium">{t('rolemodels.detail.location')}</span>
               <span>{model.location}</span>
             </div>
             <div className="flex items-center gap-2">
               <Star className="h-4 w-4 text-yellow-500" />
-              <span className="font-medium">评分：</span>
+              <span className="font-medium">{t('rolemodels.detail.rating')}</span>
               <span>{model.rating}/5.0</span>
             </div>
           </CardContent>
@@ -1129,17 +1127,17 @@ function InternshipDetailContent({ model }: { model: InternshipModel }) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                实习待遇
+                {t('rolemodels.detail.internship.benefits.title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="font-medium">月薪：</span>
+                <span className="font-medium">{t('rolemodels.detail.monthly.pay')}</span>
                 <span className="text-lg font-bold text-green-600">{model.monthlyPay}</span>
               </div>
               {model.workTime && (
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">工作时间：</span>
+                  <span className="font-medium">{t('rolemodels.detail.work.time')}</span>
                   <span>{model.workTime}</span>
                 </div>
               )}
@@ -1185,10 +1183,10 @@ function DetailPageContent() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">未找到相关信息</h1>
+          <h1 className="text-2xl font-bold mb-4">{t('rolemodels.detail.notfound')}</h1>
           <Button onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            返回
+            {t('rolemodels.detail.back')}
           </Button>
         </div>
       </div>
@@ -1205,13 +1203,13 @@ function DetailPageContent() {
           className="mb-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          返回职业模型
+          {t('rolemodels.detail.back.rolemodels')}
         </Button>
         <h1 className="text-3xl font-bold">{title}</h1>
         <p className="text-muted-foreground mt-2">
-          {type === 'company' && '岗位详细信息'}
-          {type === 'school' && '专业详细信息'}
-          {type === 'internship' && '实习机会详细信息'}
+          {type === 'company' && t('rolemodels.detail.company.subtitle')}
+          {type === 'school' && t('rolemodels.detail.school.subtitle')}
+          {type === 'internship' && t('rolemodels.detail.internship.subtitle')}
         </p>
       </div>
       
