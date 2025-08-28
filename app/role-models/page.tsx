@@ -106,536 +106,430 @@ function PossibilityCard({ activeTab }: { activeTab: string }) {
   )
 }
 
-// 按岗位和专业分类的虚拟角色模型数据
+// 按岗位分类的角色模型数据
 const positionModels = {
-  "大模型": {
-    "腾讯": [
-      {
-        id: 1,
-        name: "腾讯大模型工程师画像",
-        position: "大模型工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.8+/4.0",
-          courses: ["深度学习", "自然语言处理", "分布式系统", "机器学习"]
-        },
-        competitions: ["ACM程序设计大赛", "互联网+创新创业大赛"],
-        internships: ["腾讯人工智能实验室实习", "知名互联网公司人工智能实习"],
-        englishScores: {
-          toefl: "105+",
-          ielts: "7.0+"
-        },
-        skills: ["大模型训练", "分布式计算", "算法优化", "团队协作"],
-        tags: ["大模型", "人工智能", "深度学习"],
-        description: "腾讯大模型工程师需具备扎实的深度学习理论基础，熟悉大规模分布式训练，有相关竞赛和实习经验，课程成绩优秀。",
-        rating: 4.9,
-        consultations: 120
-      }
-    ]
+  "大模型工程师": {
+    id: 1,
+    name: "大模型工程师画像",
+    position: "大模型工程师",
+    location: "北京/深圳/杭州/上海",
+    companies: ["腾讯", "字节跳动", "阿里巴巴", "百度", "华为", "商汤科技", "旷视科技", "字节跳动"],
+    academics: {
+      gpa: "3.8+/4.0",
+      courses: ["深度学习", "自然语言处理", "分布式系统", "机器学习", "神经网络", "数据挖掘"]
+    },
+    competitions: ["ACM程序设计大赛", "互联网+创新创业大赛", "AI算法竞赛", "KAGGLE竞赛"],
+    internships: ["大厂AI实验室实习", "算法团队实习", "研究院实习"],
+    englishScores: {
+      toefl: "105+",
+      ielts: "7.0+"
+    },
+    skills: ["大模型训练", "分布式计算", "算法优化", "PyTorch/TensorFlow", "CUDA编程", "模型部署"],
+    tags: ["大模型", "人工智能", "深度学习", "NLP"],
+    description: "大模型工程师需具备扎实的深度学习理论基础，熟悉大规模分布式训练，有相关竞赛和实习经验，课程成绩优秀。负责设计、训练和优化大规模语言模型。",
+    rating: 4.9,
+    consultations: 120
   },
-  "算法": {
-    "腾讯": [
-      {
-        id: 2,
-        name: "腾讯算法工程师画像",
-        position: "算法工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.8+/4.0",
-          courses: ["机器学习", "数据挖掘", "算法设计"]
-        },
-        competitions: ["ACM程序设计大赛"],
-        internships: ["腾讯算法实习"],
-        englishScores: {
-          toefl: "105+",
-          ielts: "7.0+"
-        },
-        skills: ["算法设计", "数据分析", "Python/Java"],
-        tags: ["算法", "数据挖掘"],
-        description: "腾讯算法工程师需有扎实的算法理论基础，参与过算法竞赛，具备数据分析能力。",
-        rating: 4.8,
-        consultations: 100
-      }
-    ],
-    "阿里巴巴": [
-      {
-        id: 3,
-        name: "阿里巴巴算法工程师画像",
-        position: "算法工程师",
-        location: "杭州/北京",
-        academics: {
-          gpa: "3.8+/4.0",
-          courses: ["机器学习", "数据挖掘", "大数据处理", "算法设计"]
-        },
-        competitions: ["天池大数据竞赛", "阿里云创新大赛"],
-        internships: ["阿里巴巴算法实习", "数据分析相关实习"],
-        englishScores: {
-          toefl: "105+",
-          ielts: "7.0+"
-        },
-        skills: ["机器学习", "数据挖掘", "Python/Java"],
-        tags: ["算法", "大数据", "机器学习"],
-        description: "阿里算法工程师需有扎实的算法理论基础，参与过天池等数据竞赛，具备大数据处理能力。",
-        rating: 4.9,
-        consultations: 110
-      }
-    ],
-    "字节跳动": [
-      {
-        id: 5,
-        name: "字节跳动算法工程师画像",
-        position: "算法工程师",
-        location: "北京/上海",
-        academics: {
-          gpa: "3.9+/4.0",
-          courses: ["人工智能", "计算机视觉", "推荐系统"]
-        },
-        competitions: ["全国大学生数学建模竞赛", "字节跳动青训营"],
-        internships: ["字节跳动算法实习", "人工智能研究实验室实习"],
-        englishScores: {
-          toefl: "110+",
-          ielts: "7.5+"
-        },
-        skills: ["深度学习", "推荐系统", "Python/C++"],
-        tags: ["人工智能", "算法", "推荐系统"],
-        description: "字节算法工程师需有人工智能算法项目经验，熟悉推荐系统，参与过青训营等活动。",
-        rating: 4.9,
-        consultations: 90
-      }
-    ]
+  "算法工程师": {
+    id: 2,
+    name: "算法工程师画像",
+    position: "算法工程师",
+    location: "北京/深圳/杭州/上海",
+    companies: ["腾讯", "阿里巴巴", "字节跳动", "百度", "美团", "京东", "网易", "滴滴", "快手", "小红书"],
+    academics: {
+      gpa: "3.8+/4.0",
+      courses: ["机器学习", "数据挖掘", "算法设计", "统计学", "推荐系统", "计算机视觉"]
+    },
+    competitions: ["ACM程序设计大赛", "天池大数据竞赛", "KAGGLE竞赛", "数学建模竞赛"],
+    internships: ["互联网公司算法实习", "推荐算法实习", "数据挖掘实习"],
+    englishScores: {
+      toefl: "105+",
+      ielts: "7.0+"
+    },
+    skills: ["机器学习", "数据挖掘", "Python/Java", "推荐算法", "深度学习", "A/B测试"],
+    tags: ["算法", "大数据", "机器学习", "推荐系统"],
+    description: "算法工程师需有扎实的算法理论基础，参与过算法竞赛，具备数据分析和机器学习能力。负责设计和优化推荐、搜索、广告等核心算法。",
+    rating: 4.8,
+    consultations: 100
   },
-  "后端": {
-    "腾讯": [
-      {
-        id: 3,
-        name: "腾讯后端开发画像",
-        position: "后端开发工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.7+/4.0",
-          courses: ["数据结构与算法", "操作系统", "计算机网络", "数据库"]
-        },
-        competitions: ["ACM程序设计大赛"],
-        internships: ["腾讯后端开发实习"],
-        englishScores: {
-          toefl: "100+",
-          ielts: "6.5+"
-        },
-        skills: ["Java/Python", "微服务架构", "高并发系统设计"],
-        tags: ["后端", "高并发", "微服务"],
-        description: "腾讯后端开发需熟悉主流后端技术栈，有高并发系统开发经验。",
-        rating: 4.8,
-        consultations: 98
-      }
-    ]
+  
+  "前端工程师": {
+    id: 3,
+    name: "前端工程师画像",
+    position: "前端工程师",
+    location: "北京/深圳/杭州/上海/广州",
+    companies: ["腾讯", "阿里巴巴", "字节跳动", "百度", "美团", "京东", "网易", "携程", "哔哩哔哩", "小米"],
+    academics: {
+      gpa: "3.6+/4.0",
+      courses: ["Web开发", "数据结构", "计算机网络", "软件工程", "人机交互", "UI/UX设计"]
+    },
+    competitions: ["前端开发大赛", "Web设计竞赛", "创新创业大赛"],
+    internships: ["前端开发实习", "UI/UX实习", "全栈开发实习"],
+    englishScores: {
+      toefl: "95+",
+      ielts: "6.5+"
+    },
+    skills: ["React/Vue/Angular", "JavaScript/TypeScript", "HTML/CSS", "前端工程化", "性能优化", "移动端开发"],
+    tags: ["前端", "JavaScript", "React", "Vue", "Web开发"],
+    description: "前端工程师需熟悉主流前端框架，有大型项目开发经验，注重用户体验和性能优化。负责Web应用的界面开发和交互实现。",
+    rating: 4.7,
+    consultations: 85
   },
-  "前端": {
-    "腾讯": [
-      {
-        id: 4,
-        name: "腾讯前端开发画像",
-        position: "前端开发工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.6+/4.0",
-          courses: ["Web开发", "数据结构", "计算机网络"]
-        },
-        competitions: ["腾讯前端大赛"],
-        internships: ["腾讯前端实习"],
-        englishScores: {
-          toefl: "95+",
-          ielts: "6.0+"
-        },
-        skills: ["React/Vue", "前端工程化", "性能优化"],
-        tags: ["前端", "网页开发", "工程化"],
-        description: "腾讯前端开发需熟悉主流前端框架，有大型项目开发经验。",
-        rating: 4.7,
-        consultations: 85
-      }
-    ],
-    "阿里巴巴": [
-      {
-        id: 4,
-        name: "阿里巴巴前端开发画像",
-        position: "前端开发工程师",
-        location: "杭州/北京",
-        academics: {
-          gpa: "3.6+/4.0",
-          courses: ["Web开发", "数据结构", "计算机网络"]
-        },
-        competitions: ["阿里云前端大赛"],
-        internships: ["阿里巴巴前端实习", "大型互联网公司前端实习"],
-        englishScores: {
-          toefl: "95+",
-          ielts: "6.0+"
-        },
-        skills: ["React/Vue", "前端工程化", "性能优化"],
-        tags: ["前端", "网页开发", "工程化"],
-        description: "阿里前端开发需熟悉主流前端框架，有大型项目开发经验，注重性能优化。",
-        rating: 4.7,
-        consultations: 85
-      }
-    ],
-    "字节跳动": [
-      {
-        id: 6,
-        name: "字节跳动前端开发画像",
-        position: "前端开发工程师",
-        location: "北京/上海",
-        academics: {
-          gpa: "3.7+/4.0",
-          courses: ["Web开发", "前端工程化", "数据结构"]
-        },
-        competitions: ["字节跳动前端大赛"],
-        internships: ["字节跳动前端实习", "大型互联网公司前端实习"],
-        englishScores: {
-          toefl: "100+",
-          ielts: "6.5+"
-        },
-        skills: ["React/Vue", "前端性能优化", "工程化工具链"],
-        tags: ["前端", "网页开发", "工程化"],
-        description: "字节前端开发需熟悉前端主流技术栈，有大型项目开发和优化经验。",
-        rating: 4.8,
-        consultations: 70
-      }
-    ]
+  
+  "后端工程师": {
+    id: 4,
+    name: "后端工程师画像",
+    position: "后端工程师",
+    location: "北京/深圳/杭州/上海/成都",
+    companies: ["腾讯", "阿里巴巴", "字节跳动", "百度", "美团", "京东", "网易", "滴滴", "快手", "拼多多"],
+    academics: {
+      gpa: "3.7+/4.0",
+      courses: ["数据结构与算法", "操作系统", "计算机网络", "数据库", "分布式系统", "软件架构"]
+    },
+    competitions: ["ACM程序设计大赛", "软件设计大赛", "云计算竞赛"],
+    internships: ["后端开发实习", "系统架构实习", "云计算实习"],
+    englishScores: {
+      toefl: "100+",
+      ielts: "6.5+"
+    },
+    skills: ["Java/Python/Go", "Spring/Django", "MySQL/Redis", "微服务架构", "高并发系统设计", "云计算"],
+    tags: ["后端", "Java", "微服务", "分布式", "高并发"],
+    description: "后端工程师需熟悉主流后端技术栈，有高并发系统开发经验。负责服务端逻辑开发、系统架构设计和性能优化。",
+    rating: 4.8,
+    consultations: 98
   },
-  "测试": {
-    "腾讯": [
-      {
-        id: 5,
-        name: "腾讯测试工程师画像",
-        position: "测试工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.5+/4.0",
-          courses: ["软件测试", "自动化测试", "编程基础"]
-        },
-        competitions: ["软件测试大赛"],
-        internships: ["腾讯测试实习"],
-        englishScores: {
-          toefl: "90+",
-          ielts: "6.0+"
-        },
-        skills: ["自动化测试", "脚本开发", "Bug分析"],
-        tags: ["测试", "自动化"],
-        description: "腾讯测试工程师需熟悉自动化测试工具，具备脚本开发能力。",
-        rating: 4.6,
-        consultations: 60
-      }
-    ]
+  
+  "全栈工程师": {
+    id: 5,
+    name: "全栈工程师画像",
+    position: "全栈工程师",
+    location: "北京/深圳/杭州/上海",
+    companies: ["字节跳动", "小红书", "快手", "B站", "知乎", "豆瓣", "36氪", "虎扑", "Boss直聘", "猿辅导"],
+    academics: {
+      gpa: "3.7+/4.0",
+      courses: ["Web开发", "数据结构", "数据库", "软件工程", "项目管理", "产品设计"]
+    },
+    competitions: ["全栈开发大赛", "Hackathon", "创新创业大赛"],
+    internships: ["全栈开发实习", "创业公司实习", "产品开发实习"],
+    englishScores: {
+      toefl: "100+",
+      ielts: "6.5+"
+    },
+    skills: ["前后端技术栈", "数据库设计", "API设计", "DevOps", "产品思维", "项目管理"],
+    tags: ["全栈", "前端", "后端", "产品", "创业"],
+    description: "全栈工程师需具备前后端开发能力，能够独立完成产品开发。适合初创公司和需要快速迭代的项目。",
+    rating: 4.6,
+    consultations: 75
   },
+  
+  "移动端工程师": {
+    id: 6,
+    name: "移动端工程师画像",
+    position: "移动端工程师",
+    location: "北京/深圳/杭州/上海",
+    companies: ["腾讯", "字节跳动", "阿里巴巴", "百度", "美团", "滴滴", "快手", "小红书", "哔哩哔哩", "抖音"],
+    academics: {
+      gpa: "3.6+/4.0",
+      courses: ["移动开发", "数据结构", "操作系统", "计算机网络", "软件工程"]
+    },
+    competitions: ["移动应用开发大赛", "创新创业大赛", "黑客马拉松"],
+    internships: ["移动端开发实习", "iOS/Android实习", "跨平台开发实习"],
+    englishScores: {
+      toefl: "95+",
+      ielts: "6.5+"
+    },
+    skills: ["iOS/Android", "React Native/Flutter", "Swift/Kotlin", "移动端性能优化", "跨平台开发"],
+    tags: ["移动端", "iOS", "Android", "Flutter", "React Native"],
+    description: "移动端工程师专注于移动应用开发，需熟悉原生或跨平台开发技术，注重用户体验和性能优化。",
+    rating: 4.7,
+    consultations: 88
+  },
+  
+  "DevOps工程师": {
+    id: 7,
+    name: "DevOps工程师画像",
+    position: "DevOps工程师",
+    location: "北京/深圳/杭州/上海",
+    companies: ["腾讯", "阿里巴巴", "字节跳动", "华为", "美团", "京东", "网易", "滴滴", "蚂蚁金服", "小米"],
+    academics: {
+      gpa: "3.5+/4.0",
+      courses: ["操作系统", "计算机网络", "云计算", "容器技术", "自动化运维", "监控系统"]
+    },
+    competitions: ["云计算大赛", "运维技能竞赛", "自动化竞赛"],
+    internships: ["运维开发实习", "云计算实习", "自动化运维实习"],
+    englishScores: {
+      toefl: "90+",
+      ielts: "6.0+"
+    },
+    skills: ["Docker/Kubernetes", "CI/CD", "云平台", "监控告警", "自动化脚本", "Linux系统"],
+    tags: ["DevOps", "云计算", "容器", "自动化", "运维"],
+    description: "DevOps工程师负责开发和运维的协作，构建自动化部署和监控体系，提升系统稳定性和开发效率。",
+    rating: 4.6,
+    consultations: 65
+  },
+  
+  "数据工程师": {
+    id: 8,
+    name: "数据工程师画像",
+    position: "数据工程师",
+    location: "北京/深圳/杭州/上海",
+    companies: ["阿里巴巴", "腾讯", "字节跳动", "百度", "美团", "京东", "滴滴", "快手", "蚂蚁金服", "小红书"],
+    academics: {
+      gpa: "3.7+/4.0",
+      courses: ["大数据技术", "数据库", "数据挖掘", "统计学", "机器学习", "数据仓库"]
+    },
+    competitions: ["大数据竞赛", "数据分析大赛", "AI算法竞赛"],
+    internships: ["大数据开发实习", "数据平台实习", "数据分析实习"],
+    englishScores: {
+      toefl: "100+",
+      ielts: "6.5+"
+    },
+    skills: ["Hadoop/Spark", "SQL/NoSQL", "Python/Scala", "数据建模", "ETL开发", "实时计算"],
+    tags: ["大数据", "数据工程", "Spark", "Hadoop", "ETL"],
+    description: "数据工程师负责大数据平台建设，数据采集、存储、处理和分析，为业务决策提供数据支撑。",
+    rating: 4.7,
+    consultations: 78
+  },
+  
   "产品经理": {
-    "腾讯": [
-      {
-        id: 6,
-        name: "腾讯产品经理画像",
-        position: "产品经理",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.6+/4.0",
-          courses: ["产品管理", "用户体验", "市场分析"]
-        },
-        competitions: ["互联网+创新创业大赛"],
-        internships: ["腾讯产品实习"],
-        englishScores: {
-          toefl: "95+",
-          ielts: "6.5+"
-        },
-        skills: ["需求分析", "项目管理", "沟通能力"],
-        tags: ["产品", "管理"],
-        description: "腾讯产品经理需具备良好的沟通能力和项目管理能力，关注用户体验。",
-        rating: 4.7,
-        consultations: 70
-      }
-    ]
+    id: 9,
+    name: "产品经理画像",
+    position: "产品经理",
+    location: "北京/深圳/杭州/上海",
+    companies: ["腾讯", "阿里巴巴", "字节跳动", "百度", "美团", "京东", "网易", "滴滴", "小红书", "知乎"],
+    academics: {
+      gpa: "3.6+/4.0",
+      courses: ["产品管理", "用户体验", "市场营销", "数据分析", "商业模式", "项目管理"]
+    },
+    competitions: ["产品设计大赛", "创新创业大赛", "商业计划大赛"],
+    internships: ["产品经理实习", "用户研究实习", "商业分析实习"],
+    englishScores: {
+      toefl: "95+",
+      ielts: "6.5+"
+    },
+    skills: ["需求分析", "用户研究", "产品设计", "数据分析", "项目管理", "商业洞察"],
+    tags: ["产品", "用户体验", "需求分析", "项目管理"],
+    description: "产品经理负责产品规划、设计和管理，需要良好的沟通能力和商业敏感度，关注用户需求和市场趋势。",
+    rating: 4.7,
+    consultations: 92
   },
-  "运维": {
-    "腾讯": [
-      {
-        id: 7,
-        name: "腾讯运维工程师画像",
-        position: "运维工程师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.5+/4.0",
-          courses: ["操作系统", "网络安全", "自动化运维"]
-        },
-        competitions: ["运维技能大赛"],
-        internships: ["腾讯运维实习"],
-        englishScores: {
-          toefl: "90+",
-          ielts: "6.0+"
-        },
-        skills: ["自动化运维", "脚本开发", "系统监控"],
-        tags: ["运维", "自动化"],
-        description: "腾讯运维工程师需熟悉自动化运维工具，具备系统监控和故障排查能力。",
-        rating: 4.6,
-        consultations: 55
-      }
-    ]
+  
+  "UI/UX设计师": {
+    id: 10,
+    name: "UI/UX设计师画像",
+    position: "UI/UX设计师",
+    location: "北京/深圳/杭州/上海/广州",
+    companies: ["腾讯", "阿里巴巴", "字节跳动", "百度", "网易", "小米", "OPPO", "vivo", "华为", "蔚来"],
+    academics: {
+      gpa: "3.5+/4.0",
+      courses: ["视觉传达", "交互设计", "用户体验", "心理学", "人机交互", "设计思维"]
+    },
+    competitions: ["设计大赛", "UI设计竞赛", "创意设计挑战赛"],
+    internships: ["UI设计实习", "用户体验实习", "视觉设计实习"],
+    englishScores: {
+      toefl: "90+",
+      ielts: "6.0+"
+    },
+    skills: ["Figma/Sketch", "Photoshop/Illustrator", "原型设计", "用户研究", "设计系统", "交互设计"],
+    tags: ["UI设计", "UX设计", "交互设计", "视觉设计", "用户体验"],
+    description: "UI/UX设计师负责产品界面和用户体验设计，需要良好的设计能力和用户洞察力，关注设计美学和易用性。",
+    rating: 4.6,
+    consultations: 68
   },
-  "数据分析": {
-    "腾讯": [
-      {
-        id: 8,
-        name: "腾讯数据分析师画像",
-        position: "数据分析师",
-        location: "深圳/北京",
-        academics: {
-          gpa: "3.7+/4.0",
-          courses: ["数据分析", "统计学", "数据库"]
-        },
-        competitions: ["数据分析大赛"],
-        internships: ["腾讯数据分析实习"],
-        englishScores: {
-          toefl: "100+",
-          ielts: "6.5+"
-        },
-        skills: ["数据分析", "SQL", "数据可视化"],
-        tags: ["数据分析", "统计"],
-        description: "腾讯数据分析师需具备扎实的数据分析和可视化能力，熟悉SQL。",
-        rating: 4.7,
-        consultations: 65
-      }
-    ]
-  }
 }
 
 const majorModels = {
-  "电子信息工程": {
-    "清华大学": [
-      {
-        id: 4,
-        name: "清华大学电子信息工程研究生画像",
-        graduateMajor: "电子信息工程",
-        location: "北京",
-        academics: {
-          gpa: "3.8+/4.0",
-          courses: ["信号与系统", "数字电路", "通信原理", "嵌入式系统"]
-        },
-        competitions: ["全国大学生电子设计竞赛", "挑战杯学术竞赛"],
-        research: ["发表SCI/EI检索论文", "参与国家级科研项目"],
-        englishScores: {
-          toefl: "110+",
-          ielts: "7.5+",
-          gre: "325+"
-        },
-        skills: ["电路设计", "嵌入式开发", "科研能力", "学术写作"],
-        tags: ["电子", "嵌入式", "科研"],
-        description: "清华电子信息工程研究生通常本科成绩优异，积极参与电子设计竞赛和科研项目，具备扎实的电路与嵌入式开发能力。",
-        rating: 4.8,
-        consultations: 120
-      }
-    ]
-  },
   "计算机科学与技术": {
-    "清华大学": [
-      {
-        id: 5,
-        name: "清华大学计算机科学与技术研究生画像",
-        graduateMajor: "计算机科学与技术",
-        location: "北京",
-        academics: {
-          gpa: "3.85+/4.0",
-          courses: ["数据结构", "操作系统", "人工智能", "算法设计"]
-        },
-        competitions: ["ACM程序设计大赛", "全国大学生数学竞赛"],
-        research: ["发表高水平论文", "参与国家级科研项目"],
-        englishScores: {
-          toefl: "112+",
-          ielts: "7.5+",
-          gre: "328+"
-        },
-        skills: ["算法设计", "编程实现", "科研能力", "团队协作"],
-        tags: ["计算机", "算法", "科研"],
-        description: "清华计算机研究生需有扎实的算法和编程基础，积极参与竞赛和科研，具备较强的创新能力。",
-        rating: 4.9,
-        consultations: 150
-      }
-    ],
-    "北京大学": [
-      {
-        id: 8,
-        name: "北京大学计算机科学与技术研究生画像",
-        graduateMajor: "计算机科学与技术",
-        location: "北京",
-        academics: {
-          gpa: "3.85+/4.0",
-          courses: ["数据结构", "人工智能", "操作系统"]
-        },
-        competitions: ["ACM程序设计大赛"],
-        research: ["参与高水平科研项目"],
-        englishScores: {
-          toefl: "112+",
-          ielts: "7.5+",
-          gre: "328+"
-        },
-        skills: ["算法设计", "编程实现", "科研能力"],
-        tags: ["计算机", "算法", "科研"],
-        description: "北大计算机研究生需有扎实的算法和编程基础，积极参与竞赛和科研。",
-        rating: 4.8,
-        consultations: 120
-      }
-    ],
-    "哈佛大学": [
-      {
-        id: 12,
-        name: "哈佛大学计算机科学留学生画像",
-        graduateMajor: "计算机科学",
-        location: "波士顿",
-        academics: {
-          gpa: "3.95+/4.0",
-          courses: ["人工智能", "算法分析", "分布式系统"]
-        },
-        competitions: ["国际编程竞赛"],
-        research: ["参与高水平科研项目"],
-        englishScores: {
-          toefl: "115+",
-          ielts: "8.0+",
-          gre: "335+",
-          sat: "1550+"
-        },
-        skills: ["算法设计", "科研创新", "编程实现"],
-        tags: ["计算机", "科研", "人工智能"],
-        description: "哈佛计算机科学留学生需有扎实的算法和编程基础，积极参与国际竞赛和科研。",
-        rating: 4.9,
-        consultations: 90
-      }
-    ]
+    id: 1,
+    name: "计算机科学与技术研究生画像",
+    graduateMajor: "计算机科学与技术",
+    location: "北京/上海/深圳/杭州",
+    schools: ["清华大学", "北京大学", "中科院计算所", "上海交通大学", "浙江大学", "华中科技大学", "北京航空航天大学", "哈尔滨工业大学"],
+    academics: {
+      gpa: "3.85+/4.0",
+      courses: ["数据结构", "操作系统", "人工智能", "算法设计", "分布式系统", "机器学习"]
+    },
+    competitions: ["ACM程序设计大赛", "全国大学生数学竞赛", "CCF编程竞赛", "ICPC竞赛"],
+    research: ["发表高水平论文", "参与国家级科研项目", "开源项目贡献"],
+    englishScores: {
+      toefl: "112+",
+      ielts: "7.5+",
+      gre: "328+"
+    },
+    skills: ["算法设计", "编程实现", "科研能力", "团队协作", "系统设计", "学术写作"],
+    tags: ["计算机", "算法", "科研", "人工智能"],
+    description: "计算机科学与技术研究生需有扎实的算法和编程基础，积极参与竞赛和科研，具备较强的创新能力和系统思维。",
+    rating: 4.9,
+    consultations: 150
   },
-  "自动化": {
-    "清华大学": [
-      {
-        id: 6,
-        name: "清华大学自动化研究生画像",
-        graduateMajor: "自动化",
-        location: "北京",
-        academics: {
-          gpa: "3.8+/4.0",
-          courses: ["自动控制原理", "信号处理", "机器人学"]
-        },
-        competitions: ["全国大学生机器人大赛"],
-        research: ["参与自动化相关科研项目"],
-        englishScores: {
-          toefl: "110+",
-          ielts: "7.0+",
-          gre: "325+"
-        },
-        skills: ["控制算法", "机器人", "系统建模"],
-        tags: ["自动化", "机器人", "控制"],
-        description: "清华自动化研究生需具备扎实的控制理论基础和机器人开发能力，积极参与相关竞赛和科研。",
-        rating: 4.7,
-        consultations: 90
-      }
-    ]
+  
+  "电子信息工程": {
+    id: 2,
+    name: "电子信息工程研究生画像",
+    graduateMajor: "电子信息工程",
+    location: "北京/西安/成都/深圳",
+    schools: ["清华大学", "北京邮电大学", "电子科技大学", "西安电子科技大学", "华中科技大学", "北京理工大学", "哈尔滨工业大学", "东南大学"],
+    academics: {
+      gpa: "3.8+/4.0",
+      courses: ["信号与系统", "数字电路", "通信原理", "嵌入式系统", "射频电路", "FPGA设计"]
+    },
+    competitions: ["全国大学生电子设计竞赛", "挑战杯学术竞赛", "集成电路设计大赛", "智能车竞赛"],
+    research: ["发表SCI/EI检索论文", "参与国家级科研项目", "申请发明专利"],
+    englishScores: {
+      toefl: "110+",
+      ielts: "7.5+",
+      gre: "325+"
+    },
+    skills: ["电路设计", "嵌入式开发", "FPGA编程", "PCB设计", "信号处理", "硬件调试"],
+    tags: ["电子", "嵌入式", "通信", "集成电路"],
+    description: "电子信息工程研究生需具备扎实的电路与信号处理基础，积极参与电子设计竞赛和科研项目，有较强的硬件开发能力。",
+    rating: 4.8,
+    consultations: 120
   },
-  "理论物理": {
-    "北京大学": [
-      {
-        id: 7,
-        name: "北京大学理论物理研究生画像",
-        graduateMajor: "理论物理",
-        location: "北京",
-        academics: {
-          gpa: "3.9+/4.0",
-          courses: ["理论物理", "量子力学", "高等数学", "计算物理"]
-        },
-        competitions: ["全国大学生物理竞赛", "美国大学生数学建模竞赛"],
-        research: ["参与前沿科研项目", "在核心期刊发表论文"],
-        englishScores: {
-          toefl: "115+",
-          ielts: "7.5+",
-          gre: "330+"
-        },
-        skills: ["理论研究", "数据分析", "科学计算", "批判性思维"],
-        tags: ["科研", "物理", "数学"],
-        description: "北大理论物理研究生在基础学科领域有扎实功底，积极参与科研，GPA高，英语能力强。",
-        rating: 4.9,
-        consultations: 100
-      }
-    ]
+  
+  "通信工程": {
+    id: 3,
+    name: "通信工程研究生画像",
+    graduateMajor: "通信工程",
+    location: "北京/深圳/西安/成都",
+    schools: ["北京邮电大学", "电子科技大学", "西安电子科技大学", "清华大学", "北京理工大学", "华中科技大学", "东南大学", "大连理工大学"],
+    academics: {
+      gpa: "3.8+/4.0",
+      courses: ["通信原理", "信号处理", "无线通信", "网络协议", "天线理论", "移动通信"]
+    },
+    competitions: ["全国大学生电子设计竞赛", "通信技术竞赛", "无线电测向竞赛"],
+    research: ["5G/6G技术研究", "无线通信算法", "网络优化研究"],
+    englishScores: {
+      toefl: "108+",
+      ielts: "7.0+",
+      gre: "320+"
+    },
+    skills: ["通信协议", "信号处理", "网络规划", "RF设计", "MATLAB仿真", "基站调试"],
+    tags: ["通信", "5G", "无线", "网络"],
+    description: "通信工程研究生专注于通信系统和网络技术研究，需要扎实的通信理论基础和实践能力，关注5G/6G等前沿技术。",
+    rating: 4.7,
+    consultations: 95
   },
-  "生物科学": {
-    "北京大学": [
-      {
-        id: 9,
-        name: "北京大学生物科学研究生画像",
-        graduateMajor: "生物科学",
-        location: "北京",
-        academics: {
-          gpa: "3.85+/4.0",
-          courses: ["分子生物学", "遗传学", "生物化学"]
-        },
-        competitions: ["全国大学生生命科学竞赛"],
-        research: ["参与生物相关科研项目"],
-        englishScores: {
-          toefl: "110+",
-          ielts: "7.0+",
-          gre: "325+"
-        },
-        skills: ["实验设计", "数据分析", "学术写作"],
-        tags: ["生物", "科研", "实验"],
-        description: "北大生物科学研究生需具备扎实的实验和数据分析能力，积极参与科研。",
-        rating: 4.7,
-        consultations: 80
-      }
-    ]
+  
+  "软件工程": {
+    id: 4,
+    name: "软件工程研究生画像",
+    graduateMajor: "软件工程",
+    location: "北京/上海/深圳/杭州/南京",
+    schools: ["北京航空航天大学", "华东师范大学", "大连理工大学", "中山大学", "华中科技大学", "西北大学", "复旦大学", "南京大学"],
+    academics: {
+      gpa: "3.7+/4.0",
+      courses: ["软件架构", "项目管理", "数据库系统", "Web开发", "移动开发", "软件测试"]
+    },
+    competitions: ["软件设计大赛", "创新创业大赛", "开源软件竞赛", "Hackathon"],
+    research: ["软件工程方法", "敏捷开发", "DevOps实践", "软件质量"],
+    englishScores: {
+      toefl: "105+",
+      ielts: "7.0+",
+      gre: "320+"
+    },
+    skills: ["软件架构设计", "项目管理", "团队协作", "敏捷开发", "代码质量", "测试自动化"],
+    tags: ["软件工程", "项目管理", "架构设计", "敏捷开发"],
+    description: "软件工程研究生注重软件开发的工程化方法，具备良好的项目管理和团队协作能力，熟悉软件开发全生命周期。",
+    rating: 4.6,
+    consultations: 88
   },
-  "分子生物学": {
-    "哈佛大学": [
-      {
-        id: 10,
-        name: "哈佛大学分子生物学留学生画像",
-        graduateMajor: "分子生物学",
-        location: "波士顿",
-        academics: {
-          gpa: "3.95+/4.0",
-          courses: ["高级生物学", "有机化学", "分子遗传学", "科研方法论"]
-        },
-        competitions: ["国际生物学奥林匹克", "全国英语竞赛"],
-        research: ["国际顶级期刊发表论文", "参与国际合作研究项目"],
-        englishScores: {
-          toefl: "115+",
-          ielts: "8.0+",
-          gre: "335+",
-          sat: "1550+"
-        },
-        skills: ["科研创新", "学术写作", "批判性思维", "跨文化交流"],
-        tags: ["留学", "科研", "生物"],
-        description: "哈佛分子生物学留学生学术成绩极为优秀，科研能力突出，具备国际视野。",
-        rating: 5.0,
-        consultations: 100
-      }
-    ]
+  
+  "人工智能": {
+    id: 5,
+    name: "人工智能研究生画像",
+    graduateMajor: "人工智能",
+    location: "北京/上海/深圳/杭州",
+    schools: ["清华大学", "北京大学", "中科院自动化所", "上海交通大学", "浙江大学", "南京大学", "中国科学技术大学", "西安交通大学"],
+    academics: {
+      gpa: "3.9+/4.0",
+      courses: ["机器学习", "深度学习", "计算机视觉", "自然语言处理", "强化学习", "神经网络"]
+    },
+    competitions: ["AI算法竞赛", "KAGGLE竞赛", "机器人大赛", "智能驾驶竞赛"],
+    research: ["顶级会议论文", "AI算法创新", "产学研合作项目"],
+    englishScores: {
+      toefl: "115+",
+      ielts: "8.0+",
+      gre: "330+"
+    },
+    skills: ["深度学习", "算法设计", "模型优化", "科研创新", "Python/PyTorch", "数据分析"],
+    tags: ["人工智能", "深度学习", "机器学习", "算法"],
+    description: "人工智能研究生是当前最热门的专业方向，需要扎实的数学和编程基础，强烈的科研兴趣和创新能力。",
+    rating: 5.0,
+    consultations: 180
   },
-  "公共政策": {
-    "哈佛大学": [
-      {
-        id: 11,
-        name: "哈佛大学公共政策留学生画像",
-        graduateMajor: "公共政策",
-        location: "波士顿",
-        academics: {
-          gpa: "3.9+/4.0",
-          courses: ["政策分析", "经济学", "社会学"]
-        },
-        competitions: ["国际公共政策竞赛"],
-        research: ["参与国际合作项目"],
-        englishScores: {
-          toefl: "113+",
-          ielts: "8.0+",
-          gre: "332+",
-          sat: "1530+"
-        },
-        skills: ["政策分析", "跨文化沟通", "学术写作"],
-        tags: ["留学", "政策", "社会科学"],
-        description: "哈佛公共政策留学生需具备良好的政策分析和跨文化沟通能力，积极参与国际项目。",
-        rating: 4.9,
-        consultations: 80
-      }
-    ]
-  }
+  
+  "数据科学与大数据技术": {
+    id: 6,
+    name: "数据科学与大数据技术研究生画像",
+    graduateMajor: "数据科学与大数据技术",
+    location: "北京/上海/深圳/杭州",
+    schools: ["清华大学", "北京大学", "复旦大学", "上海交通大学", "中南大学", "华中科技大学", "西安交通大学", "中山大学"],
+    academics: {
+      gpa: "3.8+/4.0",
+      courses: ["大数据技术", "数据挖掘", "统计学", "机器学习", "数据可视化", "云计算"]
+    },
+    competitions: ["大数据竞赛", "数据分析大赛", "统计建模竞赛"],
+    research: ["大数据算法", "数据挖掘应用", "商业智能"],
+    englishScores: {
+      toefl: "108+",
+      ielts: "7.5+",
+      gre: "325+"
+    },
+    skills: ["大数据处理", "数据分析", "机器学习", "数据可视化", "Hadoop/Spark", "SQL/NoSQL"],
+    tags: ["大数据", "数据科学", "数据挖掘", "统计"],
+    description: "数据科学与大数据技术研究生专注于海量数据的处理和分析，需要扎实的统计学和编程基础。",
+    rating: 4.8,
+    consultations: 125
+  },
+  
+  "网络空间安全": {
+    id: 7,
+    name: "网络空间安全研究生画像",
+    graduateMajor: "网络空间安全",
+    location: "北京/上海/西安/成都",
+    schools: ["清华大学", "北京邮电大学", "西安电子科技大学", "华中科技大学", "北京理工大学", "哈尔滨工业大学", "电子科技大学", "东南大学"],
+    academics: {
+      gpa: "3.7+/4.0",
+      courses: ["密码学", "网络安全", "系统安全", "Web安全", "区块链技术", "渗透测试"]
+    },
+    competitions: ["CTF竞赛", "网络安全大赛", "密码技术竞赛"],
+    research: ["网络安全技术", "密码算法", "区块链应用"],
+    englishScores: {
+      toefl: "105+",
+      ielts: "7.0+",
+      gre: "320+"
+    },
+    skills: ["渗透测试", "漏洞分析", "密码学", "安全评估", "逆向工程", "安全编程"],
+    tags: ["网络安全", "密码学", "渗透测试", "区块链"],
+    description: "网络空间安全研究生专注于信息安全技术研究，需要扎实的密码学和网络技术基础，具备安全思维。",
+    rating: 4.7,
+    consultations: 95
+  },
+  
+  "物联网工程": {
+    id: 8,
+    name: "物联网工程研究生画像",
+    graduateMajor: "物联网工程",
+    location: "北京/上海/深圳/无锡",
+    schools: ["清华大学", "北京邮电大学", "华中科技大学", "西北大学", "大连理工大学", "江南大学", "中南大学", "重庆邮电大学"],
+    academics: {
+      gpa: "3.7+/4.0",
+      courses: ["传感器技术", "无线通信", "嵌入式系统", "云计算", "边缘计算", "数据分析"]
+    },
+    competitions: ["物联网应用竞赛", "智能硬件大赛", "创新创业大赛"],
+    research: ["物联网架构", "边缘计算", "智能感知"],
+    englishScores: {
+      toefl: "100+",
+      ielts: "6.5+",
+      gre: "315+"
+    },
+    skills: ["嵌入式开发", "传感器集成", "无线通信", "云平台开发", "数据处理", "系统集成"],
+    tags: ["物联网", "嵌入式", "传感器", "边缘计算"],
+    description: "物联网工程研究生专注于万物互联技术，需要掌握从硬件到软件的全栈技术，具备系统集成能力。",
+    rating: 4.5,
+    consultations: 78
+  },
 }
 
 const categoryModels = {
@@ -787,6 +681,7 @@ interface CompanyModel {
   name: string
   position: string
   location: string
+  companies: string[]
   academics: {
     gpa: string
     courses: string[]
@@ -927,19 +822,19 @@ function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDeta
           </div>
           
           <div className="flex items-center gap-2 text-sm">
+            <Building className="h-4 w-4 text-muted-foreground" />
+            <span><strong>就业公司：</strong>{model.companies.slice(0, 3).join("、")}等</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
             <span>GPA: {model.academics.gpa}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Award className="h-4 w-4 text-muted-foreground" />
-            <span>{model.competitions.join(", ")}</span>
+            <span>{model.competitions.slice(0, 2).join("、")}等</span>
           </div>
-          
-          <div className="flex items-center gap-2 text-sm">
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-            <span>{model.internships.join(", ")}</span>
-        </div>
 
           <div className="flex items-center gap-2 text-sm">
             <Globe className="h-4 w-4 text-muted-foreground" />
@@ -974,6 +869,7 @@ interface SchoolModel {
   name: string
   graduateMajor: string
   location: string
+  schools: string[]
   academics: {
     gpa: string
     courses: string[]
@@ -1026,18 +922,23 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
           </div>
           
           <div className="flex items-center gap-2 text-sm">
+            <School className="h-4 w-4 text-muted-foreground" />
+            <span><strong>录取学校：</strong>{model.schools.slice(0, 3).join("、")}等</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
             <span>GPA: {model.academics.gpa}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Award className="h-4 w-4 text-muted-foreground" />
-            <span>{model.competitions.join(", ")}</span>
+            <span>{model.competitions.slice(0, 2).join("、")}等</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Layers className="h-4 w-4 text-muted-foreground" />
-            <span>{model.research.join(", ")}</span>
+            <span>{model.research.slice(0, 2).join("、")}等</span>
         </div>
 
           <div className="flex items-center gap-2 text-sm">
@@ -1069,52 +970,36 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
 }
 
 // 岗位行组件
-function PositionRow({ position, companies, onViewDetails }: { position: string, companies: Record<string, CompanyModel[]>, onViewDetails: (model: CompanyModel) => void }) {
+function PositionRow({ position, model, onViewDetails }: { position: string, model: CompanyModel, onViewDetails: (model: CompanyModel) => void }) {
   return (
     <div className="mb-12">
-              <div className="flex items-center gap-2 mb-4">
-                <Briefcase className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">{position}</h2>
-              </div>
-              <ScrollableContainer>
-                {Object.entries(companies).map(([company, models]) => (
-                  models.map((model) => (
-            <div key={`${position}-${company}-${model.id}`} className="mr-4 min-w-[350px]">
-              <div className="mb-2 flex items-center gap-2 md:ml-0">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-base font-medium">{company}</span>
-                      </div>
-                      <CompanyCard model={model} onViewDetails={() => onViewDetails(model)} />
-                    </div>
-                  ))
-                ))}
-              </ScrollableContainer>
-            </div>
+      <div className="flex items-center gap-2 mb-4">
+        <Briefcase className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-semibold">{position}</h2>
+      </div>
+      <div className="flex justify-center">
+        <div className="max-w-[400px] w-full">
+          <CompanyCard model={model} onViewDetails={() => onViewDetails(model)} />
+        </div>
+      </div>
+    </div>
   );
 }
 
 // 专业行组件
-function MajorRow({ major, schools, onViewDetails }: { major: string, schools: Record<string, SchoolModel[]>, onViewDetails: (model: SchoolModel) => void }) {
+function MajorRow({ major, model, onViewDetails }: { major: string, model: SchoolModel, onViewDetails: (model: SchoolModel) => void }) {
   return (
     <div className="mb-12">
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">{major}</h2>
-              </div>
-              <ScrollableContainer>
-                {Object.entries(schools).map(([school, models]) => (
-                  models.map((model) => (
-            <div key={`${major}-${school}-${model.id}`} className="mr-4 min-w-[350px]">
-              <div className="mb-2 flex items-center gap-2 md:ml-0">
-                        <School className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-base font-medium">{school}</span>
-                      </div>
-                      <SchoolCard model={model} onViewDetails={() => onViewDetails(model)} />
-                    </div>
-                  ))
-                ))}
-              </ScrollableContainer>
-            </div>
+      <div className="flex items-center gap-2 mb-4">
+        <BookOpen className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-semibold">{major}</h2>
+      </div>
+      <div className="flex justify-center">
+        <div className="max-w-[400px] w-full">
+          <SchoolCard model={model} onViewDetails={() => onViewDetails(model)} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1225,38 +1110,26 @@ export default function RoleModels() {
         </TabsList>
         
         <TabsContent value="companies">
-          {Object.entries(positionModels).map(([position, companies]) => (
+          {Object.entries(positionModels).map(([position, model]) => (
             <PositionRow 
               key={position} 
               position={position} 
-              companies={companies} 
+              model={model as CompanyModel} 
               onViewDetails={(model) => {
-                // 查找当前模型对应的公司
-                for (const [company, models] of Object.entries(companies)) {
-                  if (models.some(m => m.id === model.id)) {
-                    navigateToPositionDetail(position, company, model)
-                    return
-                  }
-                }
+                navigateToPositionDetail(position, model.companies[0], model)
               }}
             />
           ))}
         </TabsContent>
         
         <TabsContent value="schools">
-          {Object.entries(majorModels).map(([major, schools]) => (
+          {Object.entries(majorModels).map(([major, model]) => (
             <MajorRow 
               key={major} 
               major={major} 
-              schools={schools} 
+              model={model as SchoolModel} 
               onViewDetails={(model) => {
-                // 查找当前模型对应的学校
-                for (const [school, models] of Object.entries(schools)) {
-                  if (models.some(m => m.id === model.id)) {
-                    navigateToMajorDetail(major, school, model)
-                    return
-                  }
-                }
+                navigateToMajorDetail(major, model.schools[0], model)
               }}
             />
           ))}
