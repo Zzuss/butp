@@ -80,6 +80,55 @@ function translateSchoolList(schools: string[], t: (key: string) => string): str
   return schools.map(school => translateSchoolName(school, t))
 }
 
+// 岗位名称翻译函数
+function translatePositionName(position: string, t: (key: string) => string): string {
+  const positionMap: Record<string, string> = {
+    '大模型工程师': 'positions.ai.engineer',
+    '算法工程师': 'positions.algorithm.engineer',
+    '前端工程师': 'positions.frontend.engineer',
+    '后端工程师': 'positions.backend.engineer',
+    '全栈工程师': 'positions.fullstack.engineer',
+    '移动端工程师': 'positions.mobile.engineer',
+    'DevOps工程师': 'positions.devops.engineer',
+    '数据工程师': 'positions.data.engineer',
+    '产品经理': 'positions.product.manager',
+    'UI/UX设计师': 'positions.ui.ux.designer'
+  }
+  
+  const translationKey = positionMap[position]
+  return translationKey ? t(translationKey) : position
+}
+
+// 专业名称翻译函数
+function translateMajorName(major: string, t: (key: string) => string): string {
+  const majorMap: Record<string, string> = {
+    '计算机科学与技术': 'majors.computer.science',
+    '电子信息工程': 'majors.electronic.engineering',
+    '通信工程': 'majors.communication.engineering',
+    '软件工程': 'majors.software.engineering',
+    '人工智能': 'majors.artificial.intelligence',
+    '数据科学与大数据技术': 'majors.data.science',
+    '网络空间安全': 'majors.cybersecurity',
+    '物联网工程': 'majors.iot.engineering'
+  }
+  
+  const translationKey = majorMap[major]
+  return translationKey ? t(translationKey) : major
+}
+
+// 实习类型翻译函数
+function translateInternshipType(type: string, t: (key: string) => string): string {
+  const typeMap: Record<string, string> = {
+    '技术实习': 'internships.tech',
+    '产品实习': 'internships.product',
+    '运营实习': 'internships.operation',
+    '设计实习': 'internships.design'
+  }
+  
+  const translationKey = typeMap[type]
+  return translationKey ? t(translationKey) : type
+}
+
 
 
 // 可能性卡片组件
@@ -979,22 +1028,22 @@ function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onVi
           
           <div className="flex items-center gap-2 text-sm">
             <Building className="h-4 w-4 text-muted-foreground" />
-            <span><strong>{t('rolemodels.internships.companies')}：</strong>{translateCompanyList(model.companies.slice(0, 3), t).join("、")}等</span>
+            <span><strong>{t('rolemodels.internships.companies')}：</strong>{translateCompanyList(model.companies.slice(0, 3), t).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <span>GPA: {model.academics.gpa} | 时长: {model.duration}</span>
+            <span>{t('rolemodels.ui.gpa')}{model.academics.gpa} | {t('rolemodels.ui.duration')}{model.duration}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Award className="h-4 w-4 text-muted-foreground" />
-            <span>{model.requirements.slice(0, 2).join("、")}等</span>
+            <span>{model.requirements.slice(0, 2).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Layers className="h-4 w-4 text-muted-foreground" />
-            <span>{model.benefits.slice(0, 2).join("、")}等</span>
+            <span>{model.benefits.slice(0, 2).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
           </div>
         </div>
 
@@ -1055,22 +1104,22 @@ function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDeta
           
           <div className="flex items-center gap-2 text-sm">
             <Building className="h-4 w-4 text-muted-foreground" />
-            <span><strong>{t('rolemodels.companies.employment')}：</strong>{translateCompanyList(model.companies.slice(0, 3), t).join("、")}等</span>
+            <span><strong>{t('rolemodels.companies.employment')}：</strong>{translateCompanyList(model.companies.slice(0, 3), t).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <span>GPA: {model.academics.gpa}</span>
+            <span>{t('rolemodels.ui.gpa')}{model.academics.gpa}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Award className="h-4 w-4 text-muted-foreground" />
-            <span>{model.competitions.slice(0, 2).join("、")}等</span>
+            <span>{model.competitions.slice(0, 2).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm">
             <Globe className="h-4 w-4 text-muted-foreground" />
-            <span>托福: {model.englishScores.toefl} | 雅思: {model.englishScores.ielts}</span>
+            <span>{t('rolemodels.ui.toefl')}{model.englishScores.toefl} | {t('rolemodels.ui.ielts')}{model.englishScores.ielts}</span>
           </div>
         </div>
 
@@ -1155,27 +1204,27 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
           
           <div className="flex items-center gap-2 text-sm">
             <School className="h-4 w-4 text-muted-foreground" />
-            <span><strong>{t('rolemodels.schools.admission')}：</strong>{translateSchoolList(model.schools.slice(0, 3), t).join("、")}等</span>
+            <span><strong>{t('rolemodels.schools.admission')}：</strong>{translateSchoolList(model.schools.slice(0, 3), t).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <span>GPA: {model.academics.gpa}</span>
+            <span>{t('rolemodels.ui.gpa')}{model.academics.gpa}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Award className="h-4 w-4 text-muted-foreground" />
-            <span>{model.competitions.slice(0, 2).join("、")}等</span>
+            <span>{model.competitions.slice(0, 2).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Layers className="h-4 w-4 text-muted-foreground" />
-            <span>{model.research.slice(0, 2).join("、")}等</span>
+            <span>{model.research.slice(0, 2).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
         </div>
 
           <div className="flex items-center gap-2 text-sm">
             <Globe className="h-4 w-4 text-muted-foreground" />
-            <span>托福: {model.englishScores.toefl} | 雅思: {model.englishScores.ielts}</span>
+            <span>{t('rolemodels.ui.toefl')}{model.englishScores.toefl} | {t('rolemodels.ui.ielts')}{model.englishScores.ielts}</span>
           </div>
         </div>
 
@@ -1203,11 +1252,13 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
 
 // 岗位行组件
 function PositionRow({ position, models, onViewDetails }: { position: string, models: CompanyModel[], onViewDetails: (model: CompanyModel) => void }) {
+  const { t } = useLanguage()
+  
   return (
     <div className="mb-12">
       <div className="flex items-center gap-2 mb-4">
         <Briefcase className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-semibold">{position}</h2>
+        <h2 className="text-2xl font-semibold">{translatePositionName(position, t)}</h2>
       </div>
       <ScrollableContainer>
         {models.map((model) => (
@@ -1222,11 +1273,13 @@ function PositionRow({ position, models, onViewDetails }: { position: string, mo
 
 // 专业行组件
 function MajorRow({ major, models, onViewDetails }: { major: string, models: SchoolModel[], onViewDetails: (model: SchoolModel) => void }) {
+  const { t } = useLanguage()
+  
   return (
     <div className="mb-12">
       <div className="flex items-center gap-2 mb-4">
         <BookOpen className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-semibold">{major}</h2>
+        <h2 className="text-2xl font-semibold">{translateMajorName(major, t)}</h2>
       </div>
       <ScrollableContainer>
         {models.map((model) => (
@@ -1241,11 +1294,13 @@ function MajorRow({ major, models, onViewDetails }: { major: string, models: Sch
 
 // 实习行组件
 function InternshipRow({ internshipType, models, onViewDetails }: { internshipType: string, models: InternshipModel[], onViewDetails: (model: InternshipModel) => void }) {
+  const { t } = useLanguage()
+  
   return (
     <div className="mb-12">
       <div className="flex items-center gap-2 mb-4">
         <Layers className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-semibold">{internshipType}</h2>
+        <h2 className="text-2xl font-semibold">{translateInternshipType(internshipType, t)}</h2>
       </div>
       <ScrollableContainer>
         {models.map((model) => (
