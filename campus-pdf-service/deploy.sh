@@ -1,4 +1,28 @@
 #!/bin/bash
+set -e
+
+# 简单的部署脚本：构建并运行 Docker 容器，暴露 8000 端口
+IMAGE_NAME=campus-pdf-service:latest
+CONTAINER_NAME=campus-pdf-service
+
+echo "构建镜像..."
+docker build -t $IMAGE_NAME .
+
+echo "停止并移除旧容器（如果存在）..."
+docker rm -f $CONTAINER_NAME 2>/dev/null || true
+
+echo "运行新容器..."
+docker run -d --name $CONTAINER_NAME -p 8000:8000 --restart unless-stopped $IMAGE_NAME
+
+echo "配置防火墙（开放 8000 端口）..."
+# 仅在使用 ufw 的系统上运行
+if command -v ufw >/dev/null 2>&1; then
+  ufw allow 8000/tcp
+fi
+
+echo "部署完成。请根据需要配置 nginx 并启用 HTTPS。"
+
+#!/bin/bash
 
 # 校内PDF服务部署脚本
 set -e

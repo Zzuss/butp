@@ -404,6 +404,7 @@ export default function Analysis() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ all-course-data API调用成功:', data);
         
         // 3. 重新计算特征值 - 使用新的总表数据
         const featureResponse = await fetch('/api/calculate-features', {
@@ -416,6 +417,7 @@ export default function Analysis() {
 
         if (featureResponse.ok) {
           const featureData = await featureResponse.json();
+          console.log('✅ 特征值计算成功:', featureData);
           setCalculatedFeatures(featureData.data.featureValues);
           
           // 4. 调用预测API - 使用计算出的特征值进行预测
@@ -440,6 +442,8 @@ export default function Analysis() {
             }
           });
           
+          console.log('📊 英文特征值:', englishFeatureValues);
+          
           const predictionResponse = await fetch('/api/predict-possibility', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -453,25 +457,45 @@ export default function Analysis() {
             if (predictionData.success && predictionData.data) {
               // 解析预测结果：第一个是国内读研，第二个是海外读研，第三个忽略
               const probabilities = predictionData.data.probabilities;
-              console.log('预测概率:', probabilities);
-              console.log('预测类别:', predictionData.data.predictedClass);
+              console.log('✅ 预测成功 - 预测概率:', probabilities);
+              console.log('✅ 预测成功 - 预测类别:', predictionData.data.predictedClass);
               setPredictionResult({
                 domesticPercentage: Math.round(probabilities[0] * 100), // 国内读研百分比
                 overseasPercentage: Math.round(probabilities[1] * 100)  // 海外读研百分比
               });
+            } else {
+              console.error('❌ 预测API返回数据格式错误:', predictionData);
+              setPredictionResult(null);
             }
           } else {
-            console.error('Failed to predict possibility');
+            const errorText = await predictionResponse.text();
+            console.error('❌ 预测API调用失败:', predictionResponse.status, errorText);
             setPredictionResult(null);
           }
         } else {
-          console.error('Failed to calculate features');
+          const errorText = await featureResponse.text();
+          console.error('❌ 特征值计算API调用失败:', featureResponse.status, errorText);
         }
       } else {
-        console.error('Failed to load all course data');
+        const errorText = await response.text();
+        console.error('❌ all-course-data API调用失败:', response.status, errorText);
+        console.error('❌ 请求数据:', {
+          studentHash: user.userHash,
+          modifiedScoresCount: updatedScores.length,
+          source2ScoresCount: source2Scores.length
+        });
       }
     } catch (error) {
-      console.error('Error calculating features:', error);
+      console.error('❌ handleConfirmModification执行过程中发生错误:', error);
+      if (error instanceof Error) {
+        console.error('❌ 错误详情:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      } else {
+        console.error('❌ 未知错误类型:', error);
+      }
     } finally {
       setLoadingFeatures(false);
     }
@@ -902,29 +926,50 @@ export default function Analysis() {
   
   // 下载状态
   const [downloading, setDownloading] = useState(false);
+  const availablePlanYears = [2024, 2023, 2022, 2020];
+
+  const resolvePlanYear = () => {
+    // 优先使用 studentInfo.year 的前4位数字
+    const yearStr = (studentInfo?.year || '').toString();
+    const candidate = parseInt(yearStr.slice(0, 4), 10);
+    if (!isNaN(candidate) && availablePlanYears.includes(candidate)) return candidate;
+
+    // 若不在可用集合，选择不大于 candidate 的最近年份；否则使用最新年份
+    if (!isNaN(candidate)) {
+      const lowerOrEqual = availablePlanYears
+        .filter(y => y <= candidate)
+        .sort((a, b) => b - a)[0];
+      if (lowerOrEqual) return lowerOrEqual;
+    }
+    return availablePlanYears[0]; // 默认最新
+  };
   
-  // 下载培养方案处理函数
+  // 下载培养方案处理函数（按年级选择对应PDF）
   const handleDownloadCurriculum = async () => {
     try {
       setDownloading(true);
-      
-      const response = await fetch('/api/download-curriculum', {
-        method: 'GET',
-      });
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Education_Plan_PDF_2023.pdf';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        console.error('下载失败');
+      const planYear = resolvePlanYear();
+      const buildUrl = (y: number) => `/Education_Plan_PDF/Education_Plan_PDF_${y}.pdf`;
+      let url = buildUrl(planYear);
+
+      // 先检查对应年级是否存在
+      const head = await fetch(url, { method: 'HEAD' });
+      if (!head.ok) {
+        // 回退：按可用年份从新到旧尝试
+        for (const y of availablePlanYears) {
+          const fallbackUrl = buildUrl(y);
+          const chk = await fetch(fallbackUrl, { method: 'HEAD' });
+          if (chk.ok) { url = fallbackUrl; break; }
+        }
       }
+
+      // 触发下载或打开
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = url.split('/').pop() || `Education_Plan_PDF_${planYear}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (error) {
       console.error('下载失败:', error);
     } finally {
@@ -1537,7 +1582,9 @@ export default function Analysis() {
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                        {!isEditMode && (
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                        )}
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
                             修改成绩
@@ -1547,16 +1594,16 @@ export default function Analysis() {
                     </thead>
                     <tbody>
                       {(() => {
-                        const originalScores = getOriginalScores();
-                        // 过滤掉没有成绩的课程
-                        const filteredScores = originalScores.filter((course: any) => 
+                        const modifiedScores = getModifiedScores();
+                        // 过滤掉没有成绩的课程（以 modified 为准）
+                        const filteredScores = modifiedScores.filter((course: any) => 
                           course.score !== null && course.score !== undefined
                         );
                         
                         if (filteredScores.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                              <td colSpan={6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
                                 {loadingOriginalScores ? t('analysis.target.score.loading') : t('analysis.course.scores.no.data')}
                               </td>
                             </tr>
@@ -1591,13 +1638,15 @@ export default function Analysis() {
                               <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
                                 {course.credit || '0.0'}
                               </td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                                {score !== null && score !== undefined ? (
-                                  <span className={`font-bold ${scoreColor}`}>{score}</span>
-                                ) : (
-                                  <span className="text-gray-400">暂无成绩</span>
-                                )}
-                              </td>
+                              {!isEditMode && (
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                  {score !== null && score !== undefined ? (
+                                    <span className={`font-bold ${scoreColor}`}>{score}</span>
+                                  ) : (
+                                    <span className="text-gray-400">暂无成绩</span>
+                                  )}
+                                </td>
+                              )}
                               {isEditMode && (
                                 <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
                                   {score !== null && score !== undefined ? (
@@ -1611,7 +1660,7 @@ export default function Analysis() {
                                         }
                                         return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      min={0}
+                                      min={60}
                                       max={100}
                                       step={1}
                                       onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
@@ -1909,16 +1958,16 @@ export default function Analysis() {
                     </thead>
                     <tbody>
                       {(() => {
-                        const originalScores = getOriginalScores();
-                        // 过滤掉没有成绩的课程
-                        const filteredScores = originalScores.filter((course: any) => 
+                        const modifiedScores = getModifiedScores();
+                        // 过滤掉没有成绩的课程（以 modified 为准）
+                        const filteredScores = modifiedScores.filter((course: any) => 
                           course.score !== null && course.score !== undefined
                         );
                         
                         if (filteredScores.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                              <td colSpan={6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
                                 {loadingOriginalScores ? '加载中...' : '暂无有成绩的课程数据'}
                               </td>
                             </tr>
@@ -1945,13 +1994,15 @@ export default function Analysis() {
                               <td className="border border-gray-200 px-4 py-2 text-sm">{course.courseName}</td>
                               <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">{course.category || '-'}</td>
                               <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">{course.credit || '-'}</td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                                {course.score !== null ? (
-                                  <span className={`font-bold ${scoreColor}`}>{course.score}</span>
-                                ) : (
-                                  <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
-                                )}
-                              </td>
+                              {!isEditMode && (
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                  {course.score !== null ? (
+                                    <span className={`font-bold ${scoreColor}`}>{course.score}</span>
+                                  ) : (
+                                    <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
+                                  )}
+                                </td>
+                              )}
                               {isEditMode && (
                                 <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
                                   {score !== null && score !== undefined ? (
@@ -1965,7 +2016,7 @@ export default function Analysis() {
                                         }
                                         return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
-                                      min={0}
+                                      min={60}
                                       max={100}
                                       step={1}
                                       onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}

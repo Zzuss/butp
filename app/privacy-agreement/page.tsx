@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2, XCircle, FileText, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
-import { useLanguage } from "@/contexts/language-context"
-import { getDefaultPrivacyContent } from "@/lib/word-reader"
+import { readWordDocument } from "@/lib/word-reader"
+import { trackUserAction } from "@/lib/analytics"
 
 interface PrivacyContent {
   title: string
@@ -17,8 +17,7 @@ interface PrivacyContent {
 
 export default function PrivacyAgreementPage() {
   const router = useRouter()
-  const { user, loading } = useAuth()
-  const { t } = useLanguage()
+  const { user, loading, logout } = useAuth()
   const [privacyContent, setPrivacyContent] = useState<PrivacyContent | null>(null)
   const [loadingContent, setLoadingContent] = useState(true)
   const [agreeing, setAgreeing] = useState(false)
@@ -45,19 +44,19 @@ export default function PrivacyAgreementPage() {
       setLoadingContent(true)
       setError("")
       
-      // 暂时只使用默认内容，避免Word文档读取问题
-      const defaultContent = getDefaultPrivacyContent()
-      setPrivacyContent(defaultContent)
+      // 从Word文档读取内容
+      const wordContent = await readWordDocument('/隐私政策与用户数据使用条款_clean_Aug2025.docx')
+      setPrivacyContent(wordContent)
       
     } catch (error) {
       console.error('加载隐私条款失败:', error)
-      setError(t('privacy.error.loading'))
+      setError('加载隐私条款失败，请刷新页面重试')
     } finally {
       setLoadingContent(false)
     }
   }
 
-  // 同意隐私条款（硬编码方式）
+  // 同意隐私条款
   const handleAgree = async () => {
     if (!user) {
       setError('用户未登录')
@@ -68,7 +67,6 @@ export default function PrivacyAgreementPage() {
       setAgreeing(true)
       setError("")
 
-      // 硬编码：直接调用API并处理响应
       const response = await fetch('/api/auth/privacy-agreement', {
         method: 'POST',
         headers: {
@@ -88,27 +86,26 @@ export default function PrivacyAgreementPage() {
         router.push('/dashboard')
       } else {
         console.error('❌ 隐私条款同意失败:', data.error)
-        // 即使API失败，也允许用户继续（硬编码绕过）
-        console.log('⚠️  API调用失败，但允许用户继续使用系统')
-        router.push('/dashboard')
+        setError('同意失败，请重试')
       }
     } catch (error) {
       console.error('同意隐私条款失败:', error)
-      // 即使网络错误，也允许用户继续（硬编码绕过）
-      console.log('⚠️  网络错误，但允许用户继续使用系统')
-      router.push('/dashboard')
+      setError('网络错误，请重试')
     } finally {
       setAgreeing(false)
     }
   }
 
-  // 不同意隐私条款
+  // 不同意隐私条款 - 与sidebar中的logout按钮完全一致
   const handleDisagree = () => {
-    // 不同意则退出登录
-    if (confirm(t('privacy.confirm.disagree'))) {
-      // 这里可以调用登出API
-      router.push('/login')
-    }
+    // 追踪登出事件（与sidebar中的logout按钮完全一致）
+    trackUserAction('logout', { 
+      userId: user?.userId,
+      userHash: user?.userHash?.substring(0, 12)
+    })
+    
+    // 调用相同的logout函数（与sidebar中的logout按钮完全一致）
+    logout()
   }
 
   // 如果正在加载用户信息，显示加载状态
@@ -117,7 +114,7 @@ export default function PrivacyAgreementPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">{t('privacy.loading')}</p>
+          <p className="text-gray-600">正在加载隐私条款内容...</p>
         </div>
       </div>
     )
@@ -135,10 +132,10 @@ export default function PrivacyAgreementPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             <FileText className="inline-block h-8 w-8 mr-3 text-blue-600" />
-            {t('privacy.title')}
+            隐私条款同意
           </h1>
           <p className="text-gray-600">
-            {t('privacy.description')}
+            请仔细阅读以下隐私政策与用户数据使用条款，同意后方可使用系统服务
           </p>
         </div>
 
@@ -158,14 +155,14 @@ export default function PrivacyAgreementPage() {
               {privacyContent?.title || '隐私政策与用户数据使用条款'}
             </CardTitle>
             <p className="text-sm text-gray-500">
-              {t('privacy.last.updated', { date: privacyContent?.lastUpdated || '2025年8月' })}
+              最后更新时间：{privacyContent?.lastUpdated || '2025年8月'}
             </p>
           </CardHeader>
           <CardContent>
             {loadingContent ? (
               <div className="text-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-                <p className="text-gray-600">{t('privacy.loading')}</p>
+                <p className="text-gray-600">正在加载隐私条款内容...</p>
               </div>
             ) : privacyContent ? (
               <div className="prose prose-sm max-w-none">
@@ -192,12 +189,12 @@ export default function PrivacyAgreementPage() {
             {agreeing ? (
               <div className="flex items-center gap-2">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                {t('privacy.button.processing')}
+                处理中...
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5" />
-                {t('privacy.button.agree')}
+                我同意隐私条款
               </div>
             )}
           </Button>
@@ -210,15 +207,15 @@ export default function PrivacyAgreementPage() {
           >
             <div className="flex items-center gap-2">
               <XCircle className="h-5 w-5" />
-              {t('privacy.button.disagree')}
+              我不同意
             </div>
           </Button>
         </div>
 
         {/* 提示信息 */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>{t('privacy.hint.agree')}</p>
-          <p>{t('privacy.hint.disagree')}</p>
+          <p>点击"我同意"表示您已阅读并同意上述隐私条款</p>
+          <p>如果您不同意，将无法使用系统服务</p>
         </div>
       </div>
     </div>
