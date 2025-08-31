@@ -14,17 +14,14 @@ const VERSION = "1.0"
 const teachers = [
   {
     name: "A老师",
-    email: "teacher.c@butp.edu",
     note: "项目指导老师，负责整体架构设计"
   },
   {
     name: "B老师", 
-    email: "teacher.j@butp.edu",
     note: "技术顾问，负责前端开发指导"
   },
   {
     name: "C老师",
-    email: "teacher.l@butp.edu", 
     note: "产品顾问，负责用户体验设计"
   }
 ];
@@ -65,7 +62,7 @@ export default function AboutPage() {
         {/* 页面标题 */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-blue-900 mb-4">关于 BuTP</h1>
-          <p className="text-xl text-blue-700 mb-2">Build Your Toolbox Project</p>
+          <p className="text-xl text-blue-700 mb-2">Build Your Toolbox Platform</p>
           <p className="text-blue-600 mb-4">构建属于你的工具箱</p>
           
           {/* 版本号显示 */}
@@ -87,7 +84,7 @@ export default function AboutPage() {
           </CardHeader>
           <CardContent className="p-6">
             <p className="text-gray-700 text-lg leading-relaxed">
-              BuTP（Build Your Toolbox Project）是一个现代化的学生培养系统，
+              BuTP（Build Your Toolbox Platform）是一个现代化的学生培养系统，
               旨在帮助学生更好地管理学习进度、分析学习数据、制定学习计划。
               系统采用 Next.js + React + Supabase 技术栈构建，
               提供直观友好的用户界面和丰富的功能模块。
@@ -113,10 +110,6 @@ export default function AboutPage() {
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-blue-700">
-                      <Mail className="h-4 w-4" />
-                      <span className="text-sm">{teacher.email}</span>
-                    </div>
                     <div className="text-gray-600">
                       <p className="text-sm leading-relaxed">{teacher.note}</p>
                     </div>
@@ -159,7 +152,7 @@ export default function AboutPage() {
         <div className="mt-16">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-blue-900 mb-4">
-              📊 BuTP 网站真实访问统计
+              BuTP 网站真实访问统计
             </h2>
             <p className="text-blue-700 text-lg">
               基于 Umami Analytics 的真实访问数据
