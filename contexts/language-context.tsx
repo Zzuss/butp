@@ -322,8 +322,8 @@ const translations: Record<Language, Record<string, string>> = {
     'radar.modal.title': '测试字段',
     // 新增缺失的翻译键
     'analysis.login.required': '请登录查看学业分析',
-    'analysis.overseas.target': '为达到{score}%海外读研的目标，推荐的各科目成绩如下：',
-    'analysis.domestic.target': '为达到{score}%国内读研的目标，推荐的各科目成绩如下：',
+    'analysis.overseas.target': '为达到{score}海外读研的目标，推荐的各科目成绩如下：',
+    'analysis.domestic.target': '为达到{score}国内读研的目标，推荐的各科目成绩如下：',
     'analysis.view.all.courses': '查看所有课程数据',
     'analysis.prediction.result': '当前去向的新可能性为{current}%，另一去向的新可能性为{other}%',
     'analysis.prediction.not.started': '还未开始计算新百分比',
@@ -1138,8 +1138,8 @@ const translations: Record<Language, Record<string, string>> = {
     'radar.modal.title': 'test content',
     // 新增缺失的翻译键
     'analysis.login.required': 'Please log in to view academic analysis',
-    'analysis.overseas.target': 'To achieve the {score}% overseas study goal, the recommended course scores are as follows:',
-    'analysis.domestic.target': 'To achieve the {score}% domestic study goal, the recommended course scores are as follows:',
+    'analysis.overseas.target': 'To achieve the {score} overseas study goal, the recommended course scores are as follows:',
+    'analysis.domestic.target': 'To achieve the {score} domestic study goal, the recommended course scores are as follows:',
     'analysis.view.all.courses': 'View All Course Data',
     'analysis.prediction.result': 'Current path new possibility: {current}%, other path new possibility: {other}%',
     'analysis.prediction.not.started': 'New percentage calculation not started yet',

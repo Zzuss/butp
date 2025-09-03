@@ -1190,7 +1190,7 @@ export default function Profile() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="text-base md:text-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Award className="h-5 w-5" />
                 {t('profile.awards.title')}
@@ -1240,7 +1240,7 @@ export default function Profile() {
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="text-base md:text-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5" />
                 {t('profile.work.title')}
@@ -1291,7 +1291,7 @@ export default function Profile() {
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="text-base md:text-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Languages className="h-5 w-5" />
                 {t('profile.language.title')}
@@ -1399,7 +1399,7 @@ export default function Profile() {
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="text-base md:text-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Info className="h-5 w-5" />
                 {t('profile.other.title')}

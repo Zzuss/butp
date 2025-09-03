@@ -1479,7 +1479,7 @@ export default function Analysis() {
                 {/* 手机端布局 - 上下排列 */}
                 <div className="flex flex-col space-y-4 md:hidden">
                   <div>
-                    <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingTargetScores ? t('analysis.target.score.loading') : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : t('analysis.target.score.no.data') })}</CardTitle>
+                    <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_2 !== null ? `${(probabilityData.proba_2 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
                     <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                   </div>
                   <div className="flex flex-col space-y-3">
@@ -1526,7 +1526,7 @@ export default function Analysis() {
                 {/* PC端布局 - 保持原有的左右排列 */}
                 <div className="hidden md:flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingTargetScores ? t('analysis.target.score.loading') : targetScores && targetScores.target2_score !== null ? `${targetScores.target2_score}` : t('analysis.target.score.no.data') })}</CardTitle>
+                    <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_2 !== null ? `${(probabilityData.proba_2 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
                     <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                   </div>
                   <div className="flex-1 flex justify-center items-center gap-4">
@@ -1661,7 +1661,7 @@ export default function Analysis() {
                                         return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
                                       min={60}
-                                      max={100}
+                                      max={90}
                                       step={1}
                                       onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
                                       className="w-full"
@@ -1845,7 +1845,7 @@ export default function Analysis() {
                 {/* 手机端布局 - 上下排列 */}
                 <div className="flex flex-col space-y-4 md:hidden">
                   <div>
-                    <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingTargetScores ? t('analysis.target.score.loading') : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : t('analysis.target.score.no.data') })}</CardTitle>
+                    <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_1 !== null ? `${(probabilityData.proba_1 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
                     <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                   </div>
                   <div className="flex flex-col space-y-3">
@@ -1892,7 +1892,7 @@ export default function Analysis() {
                 {/* PC端布局 - 保持原有的左右排列 */}
                 <div className="hidden md:flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingTargetScores ? t('analysis.target.score.loading') : targetScores && targetScores.target1_score !== null ? `${targetScores.target1_score}` : t('analysis.target.score.no.data') })}</CardTitle>
+                    <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_1 !== null ? `${(probabilityData.proba_1 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
                     <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                   </div>
                   <div className="flex-1 flex justify-center items-center gap-4">
@@ -2017,7 +2017,7 @@ export default function Analysis() {
                                         return Number(score); // 如果没有修改，显示原始成绩
                                       })()}
                                       min={60}
-                                      max={100}
+                                      max={90}
                                       step={1}
                                       onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
                                       className="w-full"
