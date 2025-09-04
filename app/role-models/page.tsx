@@ -129,6 +129,345 @@ function translateInternshipType(type: string, t: (key: string) => string): stri
   return translationKey ? t(translationKey) : type
 }
 
+// 卡片名称翻译函数
+function translateCardName(name: string, t: (key: string) => string): string {
+  const cardNameMap: Record<string, string> = {
+    '大模型工程师画像(研究型)': 'cards.ai.research',
+    '大模型工程师画像(应用型)': 'cards.ai.application',
+    '算法工程师画像(推荐系统)': 'cards.algorithm.recommendation',
+    '算法工程师画像(计算机视觉)': 'cards.algorithm.cv',
+    '前端工程师画像(React生态)': 'cards.frontend.react',
+    '前端工程师画像(Vue生态)': 'cards.frontend.vue',
+    '后端工程师画像(Java生态)': 'cards.backend.java',
+    '后端工程师画像(Go云原生)': 'cards.backend.go',
+    '全栈工程师画像(创业型)': 'cards.fullstack.startup',
+    '移动端工程师画像(iOS原生)': 'cards.mobile.ios',
+    'DevOps工程师画像': 'cards.devops',
+    '数据工程师画像': 'cards.data.engineer',
+    '产品经理画像': 'cards.product.manager',
+    'UI/UX设计师画像': 'cards.ui.ux.designer',
+    '计算机科学与技术研究生画像(算法方向)': 'cards.cs.algorithm',
+    '计算机科学与技术研究生画像(系统方向)': 'cards.cs.system',
+    '电子信息工程研究生画像': 'cards.ee',
+    '通信工程研究生画像': 'cards.communication',
+    '软件工程研究生画像': 'cards.software',
+    '人工智能研究生画像': 'cards.ai.graduate',
+    '数据科学与大数据技术研究生画像': 'cards.data.science',
+    '网络空间安全研究生画像': 'cards.cybersecurity',
+    '物联网工程研究生画像': 'cards.iot',
+    '技术实习生画像(后端开发)': 'cards.tech.backend',
+    '技术实习生画像(前端开发)': 'cards.tech.frontend',
+    '技术实习生画像(算法工程)': 'cards.tech.algorithm',
+    '产品实习生画像(C端产品)': 'cards.product.c',
+    '产品实习生画像(B端产品)': 'cards.product.b',
+    '运营实习生画像(内容运营)': 'cards.operation.content',
+    '运营实习生画像(数据运营)': 'cards.operation.data',
+    '设计实习生画像(UI/UX设计)': 'cards.design.uiux'
+  }
+  
+  const translationKey = cardNameMap[name]
+  return translationKey ? t(translationKey) : name
+}
+
+// 描述翻译函数
+function translateDescription(description: string, t: (key: string) => string): string {
+  const descriptionMap: Record<string, string> = {
+    '研究型大模型工程师专注于前沿算法研究，需具备扎实的深度学习理论基础，熟悉大规模分布式训练，有顶级竞赛和实习经验。': 'desc.ai.research',
+    '应用型大模型工程师专注于大模型的产品化和工程实现，需要较强的系统开发能力和产品思维。': 'desc.ai.application',
+    '推荐算法工程师专注于个性化推荐系统，需有扎实的算法理论基础，参与过算法竞赛，具备数据分析和机器学习能力。': 'desc.algorithm.recommendation',
+    '计算机视觉算法工程师专注于图像和视频分析，需要扎实的数学基础和深度学习知识，有相关竞赛经验。': 'desc.algorithm.cv',
+    'React生态前端工程师专注于React技术栈，需熟悉React生态系统，有大型项目开发经验，注重用户体验和性能优化。': 'desc.frontend.react',
+    'Vue生态前端工程师专注于Vue技术栈，擅长中后台系统开发，熟悉Vue生态和组件库开发。': 'desc.frontend.vue',
+    'Java后端工程师专注于Java生态系统，熟悉Spring框架，有高并发系统开发经验。负责企业级应用开发和架构设计。': 'desc.backend.java',
+    'Go云原生后端工程师专注于高性能系统开发，熟悉云原生技术栈，有大规模分布式系统经验。': 'desc.backend.go',
+    '创业型全栈工程师需具备前后端开发能力，能够独立完成产品开发。适合初创公司和需要快速迭代的项目。': 'desc.fullstack.startup',
+    'iOS原生工程师专注于iOS平台应用开发，熟悉Swift和UIKit，注重用户体验和性能优化。': 'desc.mobile.ios',
+    'DevOps工程师负责开发和运维的协作，构建自动化部署和监控体系，提升系统稳定性和开发效率。': 'desc.devops',
+    '数据工程师负责大数据平台建设，数据采集、存储、处理和分析，为业务决策提供数据支撑。': 'desc.data.engineer',
+    '产品经理负责产品规划、设计和管理，需要良好的沟通能力和商业敏感度，关注用户需求和市场趋势。': 'desc.product.manager',
+    'UI/UX设计师负责产品界面和用户体验设计，需要良好的设计能力和用户洞察力，关注设计美学和易用性。': 'desc.ui.ux.designer'
+  }
+  
+  const translationKey = descriptionMap[description]
+  return translationKey ? t(translationKey) : description
+}
+
+// 城市名称翻译函数
+function translateLocation(location: string, t: (key: string) => string): string {
+  const cityMap: Record<string, string> = {
+    '北京': 'city.beijing',
+    '深圳': 'city.shenzhen',
+    '杭州': 'city.hangzhou',
+    '上海': 'city.shanghai',
+    '广州': 'city.guangzhou',
+    '成都': 'city.chengdu',
+    '南京': 'city.nanjing',
+    '西安': 'city.xian',
+    '无锡': 'city.wuxi'
+  }
+  
+  // 处理包含多个城市的位置字符串（如"北京/深圳/杭州/上海"）
+  const cities = location.split('/')
+  const translatedCities = cities.map(city => {
+    const trimmedCity = city.trim()
+    const translationKey = cityMap[trimmedCity]
+    return translationKey ? t(translationKey) : trimmedCity
+  })
+  
+  return translatedCities.join('/')
+}
+
+// 通用数组翻译函数
+function translateArray(items: string[], mappingType: 'courses' | 'skills' | 'competitions' | 'internships' | 'tags', t: (key: string) => string): string[] {
+  // 课程映射
+  const courseMap: Record<string, string> = {
+    '深度学习': 'courses.deeplearning',
+    '自然语言处理': 'courses.nlp',
+    '分布式系统': 'courses.distributed.systems',
+    '机器学习': 'courses.machine.learning',
+    '神经网络': 'courses.neural.networks',
+    '数据挖掘': 'courses.data.mining',
+    '算法设计': 'courses.algorithm.design',
+    '操作系统': 'courses.operating.system',
+    '计算机网络': 'courses.computer.networks',
+    '数据库': 'courses.database',
+    '软件工程': 'courses.software.engineering',
+    'Web开发': 'courses.web.development',
+    '移动开发': 'courses.mobile.development',
+    'UI/UX设计': 'courses.ui.ux.design',
+    '人机交互': 'courses.human.computer.interaction',
+    '统计学': 'courses.statistics',
+    '数据结构': 'courses.data.structures',
+    '计算机视觉': 'courses.computer.vision',
+    '模式识别': 'courses.pattern.recognition',
+    '数字图像处理': 'courses.digital.image.processing',
+    '推荐系统': 'courses.recommendation.system',
+    '系统设计': 'courses.system.architecture',
+    '云计算': 'courses.cloud.computing',
+    '项目管理': 'courses.project.management',
+    '软件测试': 'courses.software.testing',
+    '数据分析': 'courses.data.analysis',
+    '市场营销': 'courses.market.marketing',
+    '商业模式': 'courses.business.model',
+    '心理学': 'courses.psychology',
+    '用户体验': 'courses.user.experience',
+    '设计思维': 'courses.design.thinking'
+  }
+  
+  // 技能映射
+  const skillMap: Record<string, string> = {
+    '大模型训练': 'skills.ai.model.training',
+    '模型微调': 'skills.model.finetuning',
+    'API开发': 'skills.api.development',
+    '系统集成': 'skills.system.integration',
+    '性能优化': 'skills.performance.optimization',
+    '云平台部署': 'skills.cloud.deployment',
+    '产品化': 'skills.product.development',
+    '推荐算法': 'skills.recommendation.algorithm',
+    'A/B测试': 'skills.ab.testing',
+    'CNN': 'skills.cnn',
+    '目标检测': 'skills.object.detection',
+    '图像分割': 'skills.image.segmentation',
+    '人脸识别': 'skills.face.recognition',
+    'OpenCV': 'skills.opencv',
+    'React': 'skills.react',
+    'JavaScript': 'skills.javascript',
+    'TypeScript': 'skills.typescript',
+    'HTML/CSS': 'skills.html.css',
+    '前端工程化': 'skills.frontend.engineering',
+    '移动端开发': 'skills.mobile.development',
+    'Vue3': 'skills.vue3',
+    'Java': 'skills.java',
+    'Spring Boot': 'skills.spring.boot',
+    'MySQL/Redis': 'skills.mysql.redis',
+    '微服务架构': 'skills.microservices',
+    '高并发系统设计': 'skills.high.concurrency',
+    'Go语言': 'skills.go.language',
+    'Kubernetes': 'skills.kubernetes',
+    'Docker': 'skills.docker',
+    'gRPC': 'skills.grpc',
+    '云原生架构': 'skills.cloud.native',
+    '前后端技术栈': 'skills.full.stack',
+    '数据库设计': 'skills.database.design',
+    'API设计': 'skills.api.design',
+    '产品思维': 'skills.product.thinking',
+    'iOS开发': 'skills.ios.development',
+    'Swift': 'skills.swift',
+    'UIKit': 'skills.uikit',
+    'SwiftUI': 'skills.swiftui',
+    'CI/CD': 'skills.ci.cd',
+    'Linux系统': 'skills.linux.system',
+    'Hadoop/Spark': 'skills.hadoop.spark',
+    'SQL/NoSQL': 'skills.sql.nosql',
+    'Python/Scala': 'skills.python.scala',
+    '数据建模': 'skills.data.modeling',
+    'ETL开发': 'skills.etl.development',
+    '实时计算': 'skills.realtime.computing',
+    '需求分析': 'skills.requirement.analysis',
+    '用户研究': 'skills.user.research',
+    '产品设计': 'skills.product.design',
+    '项目管理': 'skills.project.management',
+    '商业洞察': 'skills.business.insight',
+    'Figma/Sketch': 'skills.figma.sketch',
+    '原型设计': 'skills.prototype.design',
+    '设计系统': 'skills.design.system',
+    '机器学习': 'skills.machine.learning',
+    '数据挖掘': 'skills.data.mining',
+    'Python/Java': 'skills.python.java',
+    '深度学习': 'skills.deep.learning',
+    '算法优化': 'skills.algorithm.optimization',
+    'PyTorch/TensorFlow': 'skills.pytorch.tensorflow',
+    'CUDA编程': 'skills.cuda.programming',
+    '模型部署': 'skills.model.deployment',
+    '分布式计算': 'skills.distributed.computing',
+    'PyTorch': 'skills.pytorch'
+  }
+  
+  // 竞赛映射
+  const competitionMap: Record<string, string> = {
+    'ACM程序设计大赛': 'competitions.acm',
+    'AI算法竞赛': 'competitions.ai.algorithm',
+    'KAGGLE竞赛': 'competitions.kaggle',
+    '互联网+创新创业大赛': 'competitions.internet.plus',
+    '数学建模竞赛': 'competitions.mathematical.modeling',
+    '天池大数据竞赛': 'competitions.tianchi.bigdata',
+    'CVPR竞赛': 'competitions.cvpr',
+    'ImageNet竞赛': 'competitions.imagenet',
+    '计算机视觉挑战赛': 'competitions.cv.challenge',
+    '前端开发大赛': 'competitions.frontend.dev',
+    'Web设计竞赛': 'competitions.web.design',
+    '黑客马拉松': 'competitions.hackathon',
+    '创新创业大赛': 'competitions.innovation.startup',
+    'AI应用竞赛': 'competitions.ai.application',
+    '开源贡献奖': 'competitions.opensource.contribution',
+    '系统设计大赛': 'competitions.system.design',
+    '云计算竞赛': 'competitions.cloud.computing',
+    '大数据竞赛': 'competitions.bigdata',
+    '数据分析大赛': 'competitions.data.analysis',
+    '产品设计大赛': 'competitions.product.design',
+    '商业计划大赛': 'competitions.business.plan',
+    'UI设计竞赛': 'competitions.ui.design',
+    '设计大赛': 'competitions.design'
+  }
+  
+  // 实习映射
+  const internshipMap: Record<string, string> = {
+    '大厂AI实验室实习': 'internship.ai.lab',
+    '算法团队实习': 'internship.algorithm.team',
+    '研究院实习': 'internship.research.institute',
+    '大模型产品实习': 'internship.ai.product',
+    'AI应用开发实习': 'internship.ai.development',
+    '算法工程实习': 'internship.algorithm.engineering',
+    '互联网公司算法实习': 'internship.internet.algorithm',
+    '推荐算法实习': 'internship.recommendation',
+    '数据挖掘实习': 'internship.data.mining',
+    '计算机视觉实习': 'internship.cv',
+    '图像算法实习': 'internship.image.algorithm',
+    'AI视觉产品实习': 'internship.ai.vision',
+    '前端开发实习': 'internship.frontend',
+    'UI/UX实习': 'internship.ui.ux',
+    '全栈开发实习': 'internship.fullstack',
+    '后端开发实习': 'internship.backend',
+    '系统架构实习': 'internship.system.architecture',
+    '云计算实习': 'internship.cloud.computing',
+    '创业公司实习': 'internship.startup',
+    '产品开发实习': 'internship.product.development',
+    '移动端开发实习': 'internship.mobile',
+    'iOS开发实习': 'internship.ios',
+    '运维开发实习': 'internship.devops',
+    '大数据开发实习': 'internship.bigdata',
+    '数据平台实习': 'internship.data.platform',
+    '数据分析实习': 'internship.data.analysis',
+    '产品经理实习': 'internship.product.manager',
+    '用户研究实习': 'internship.user.research',
+    '商业分析实习': 'internship.business.analysis',
+    'UI设计实习': 'internship.ui.design',
+    '用户体验实习': 'internship.ux',
+    '视觉设计实习': 'internship.visual.design'
+  }
+  
+  // 标签映射
+  const tagMap: Record<string, string> = {
+    '大模型': 'tags.bigmodel',
+    '人工智能': 'tags.ai',
+    '深度学习': 'tags.deeplearning',
+    'NLP': 'tags.nlp',
+    '应用开发': 'tags.application.development',
+    '产品化': 'tags.productization',
+    '系统集成': 'tags.system.integration',
+    '算法': 'tags.algorithm',
+    '推荐系统': 'tags.recommendation.system',
+    '机器学习': 'tags.machine.learning',
+    '大数据': 'tags.big.data',
+    '计算机视觉': 'tags.computer.vision',
+    '图像处理': 'tags.image.processing',
+    'AI': 'tags.ai',
+    '前端': 'tags.frontend',
+    'React': 'tags.react',
+    'JavaScript': 'tags.javascript',
+    'TypeScript': 'tags.typescript',
+    '用户体验': 'tags.user.experience',
+    'Vue': 'tags.vue',
+    '组件库': 'tags.component.library',
+    '后端': 'tags.backend',
+    'Java': 'tags.java',
+    'Spring': 'tags.spring',
+    '微服务': 'tags.microservices',
+    '分布式': 'tags.distributed',
+    'Go': 'tags.go',
+    '云原生': 'tags.cloud.native',
+    '全栈': 'tags.fullstack',
+    '创业': 'tags.startup',
+    '快速开发': 'tags.rapid.development',
+    '产品': 'tags.product',
+    '移动端': 'tags.mobile',
+    'iOS': 'tags.ios',
+    '原生开发': 'tags.native.development',
+    'DevOps': 'tags.devops',
+    '云计算': 'tags.cloud.computing',
+    '容器': 'tags.container',
+    '自动化': 'tags.automation',
+    '运维': 'tags.operations',
+    '数据工程': 'tags.data.engineering',
+    'Spark': 'tags.spark',
+    'Hadoop': 'tags.hadoop',
+    'ETL': 'tags.etl',
+    '项目管理': 'tags.project.management',
+    'UI设计': 'tags.ui.design',
+    'UX设计': 'tags.ux.design',
+    '交互设计': 'tags.interaction.design',
+    '视觉设计': 'tags.visual.design',
+    '设计': 'tags.design'
+  }
+  
+  let translationMap: Record<string, string>
+  
+  switch (mappingType) {
+    case 'courses':
+      translationMap = courseMap
+      break
+    case 'skills':
+      translationMap = skillMap
+      break
+    case 'competitions':
+      translationMap = competitionMap
+      break
+    case 'internships':
+      translationMap = internshipMap
+      break
+    case 'tags':
+      translationMap = tagMap
+      break
+    default:
+      translationMap = {}
+  }
+  
+  return items.map(item => {
+    const translationKey = translationMap[item]
+    return translationKey ? t(translationKey) : item
+  })
+}
+
 
 
 // 可能性卡片组件
@@ -1006,7 +1345,7 @@ function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onVi
               <Briefcase className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">{model.name}</CardTitle>
+              <CardTitle className="text-lg">{translateCardName(model.name, t)}</CardTitle>
               <CardDescription className="flex items-center gap-1">
                 <Briefcase className="h-3 w-3" />
                 {model.position}
@@ -1023,7 +1362,7 @@ function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onVi
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{model.location}</span>
+            <span className="font-medium">{translateLocation(model.location, t)}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
@@ -1048,15 +1387,15 @@ function InternshipCard({ model, onViewDetails }: { model: InternshipModel, onVi
         </div>
 
         <div className="flex flex-wrap gap-1">
-          {model.tags.map((tag: string) => (
-            <Badge key={tag} variant="outline">
+          {translateArray(model.tags, 'tags', t).map((tag: string, index: number) => (
+            <Badge key={model.tags[index]} variant="outline">
               {tag}
             </Badge>
           ))}
         </div>
 
         <p className="text-sm text-muted-foreground flex-1 overflow-auto">
-          {model.description}
+          {translateDescription(model.description, t)}
         </p>
 
         <div className="flex items-center justify-between pt-2 mt-auto">
@@ -1082,10 +1421,10 @@ function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDeta
               <Building className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">{model.name}</CardTitle>
+              <CardTitle className="text-lg">{translateCardName(model.name, t)}</CardTitle>
               <CardDescription className="flex items-center gap-1">
                 <Briefcase className="h-3 w-3" />
-                {model.position}
+                {translatePositionName(model.position, t)}
               </CardDescription>
             </div>
           </div>
@@ -1099,7 +1438,7 @@ function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDeta
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{model.location}</span>
+            <span className="font-medium">{translateLocation(model.location, t)}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
@@ -1114,7 +1453,7 @@ function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDeta
           
           <div className="flex items-center gap-2 text-sm">
             <Award className="h-4 w-4 text-muted-foreground" />
-            <span>{model.competitions.slice(0, 2).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
+            <span>{translateArray(model.competitions.slice(0, 2), 'competitions', t).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm">
@@ -1124,15 +1463,15 @@ function CompanyCard({ model, onViewDetails }: { model: CompanyModel, onViewDeta
         </div>
 
         <div className="flex flex-wrap gap-1">
-          {model.tags.map((tag: string) => (
-            <Badge key={tag} variant="outline">
+          {translateArray(model.tags, 'tags', t).map((tag: string, index: number) => (
+            <Badge key={model.tags[index]} variant="outline">
               {tag}
             </Badge>
           ))}
         </div>
 
         <p className="text-sm text-muted-foreground flex-1 overflow-auto">
-          {model.description}
+          {translateDescription(model.description, t)}
         </p>
 
         <div className="flex items-center justify-between pt-2 mt-auto">
@@ -1182,10 +1521,10 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
               <School className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">{model.name}</CardTitle>
+              <CardTitle className="text-lg">{translateCardName(model.name, t)}</CardTitle>
               <CardDescription className="flex items-center gap-1">
                 <GraduationCap className="h-3 w-3" />
-                {model.graduateMajor}
+                {translateMajorName(model.graduateMajor, t)}
               </CardDescription>
             </div>
           </div>
@@ -1199,7 +1538,7 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{model.location}</span>
+            <span className="font-medium">{translateLocation(model.location, t)}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
@@ -1229,15 +1568,15 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
         </div>
 
         <div className="flex flex-wrap gap-1">
-          {model.tags.map((tag: string) => (
-            <Badge key={tag} variant="outline">
+          {translateArray(model.tags, 'tags', t).map((tag: string, index: number) => (
+            <Badge key={model.tags[index]} variant="outline">
               {tag}
             </Badge>
           ))}
         </div>
 
         <p className="text-sm text-muted-foreground flex-1 overflow-auto">
-          {model.description}
+          {translateDescription(model.description, t)}
         </p>
 
         <div className="flex items-center justify-between pt-2 mt-auto">
@@ -1370,9 +1709,9 @@ export default function RoleModels() {
           <h1 className="text-3xl font-bold">{t('rolemodels.title')}</h1>
           <p className="text-muted-foreground">{t('rolemodels.description')}</p>
         </div>
-        <div className="flex-shrink-0">
+        {/* <div className="flex-shrink-0">
           <PossibilityCard activeTab={activeTab} />
-        </div>
+        </div> */}
       </div>
       
       {/* 手机端布局：标题和可能性卡片分开显示 */}
@@ -1381,9 +1720,9 @@ export default function RoleModels() {
           <h1 className="text-3xl font-bold">{t('rolemodels.title')}</h1>
           <p className="text-muted-foreground">{t('rolemodels.description')}</p>
         </div>
-        <div className="flex justify-center">
+        {/* <div className="flex justify-center">
           <PossibilityCard activeTab={activeTab} />
-        </div>
+        </div> */}
       </div>
 
       <Tabs defaultValue="companies" className="w-full" onValueChange={setActiveTab}>
