@@ -5,17 +5,9 @@ import { isValidStudentHashInDatabase } from '@/lib/student-data';
 
 export async function POST(request: NextRequest) {
   try {
-    // 检查是否为本地开发环境
-    const isLocalhost = request.nextUrl.hostname === 'localhost' || 
-                       request.nextUrl.hostname === '127.0.0.1' ||
-                       process.env.NODE_ENV === 'development';
-    
-    if (!isLocalhost) {
-      return NextResponse.json(
-        { error: 'Dev login only available in localhost development mode' },
-        { status: 403 }
-      );
-    }
+    // 支持本地开发环境和生产环境的示例用户登录功能
+    // 本地开发：完整的测试功能
+    // 生产环境：示例用户一键登录功能
 
     const { userHash } = await request.json();
 

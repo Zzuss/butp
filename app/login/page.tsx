@@ -26,11 +26,12 @@ export default function LoginPage() {
   const [casAuthInfo, setCasAuthInfo] = useState<CasAuthInfo | null>(null)
   const [isDevMode, setIsDevMode] = useState(false)
 
-  // 检查是否为开发环境和处理URL错误参数
+  // 检查是否为开发环境
   useEffect(() => {
     const isDev = process.env.NODE_ENV === 'development' || 
                   window.location.hostname === 'localhost' || 
                   window.location.hostname === '127.0.0.1'
+    
     setIsDevMode(isDev)
     
     // 🆕 处理URL错误参数
@@ -153,6 +154,76 @@ export default function LoginPage() {
       setLoading(false)
     }
   }
+
+  // 示例用户一键登录
+  const handleDemoUserLogin = async () => {
+    const demoUserHash = "0886e2a5c75eaa21b81977e56f67c6faceafb1ee67eeb8a85c1eacc8bbd2447b";
+    
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch('/api/auth/dev-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userHash: demoUserHash }),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // 追踪登录成功事件
+        trackUserAction('login_success', { 
+          method: 'demo_user',
+          userId: data.user?.userId 
+        });
+        
+        await refreshUser();
+        
+        // 检查隐私条款同意状态
+        try {
+          const privacyResponse = await fetch('/api/auth/privacy-agreement', {
+            credentials: 'include'
+          });
+          
+          if (privacyResponse.ok) {
+            const privacyData = await privacyResponse.json();
+            if (privacyData.hasAgreed) {
+              router.push('/dashboard');
+            } else {
+              router.push('/privacy-agreement');
+            }
+          } else {
+            // 如果检查失败，默认跳转到隐私条款页面
+            router.push('/privacy-agreement');
+          }
+        } catch (error) {
+          console.error('检查隐私条款状态失败:', error);
+          // 如果检查失败，默认跳转到隐私条款页面
+          router.push('/privacy-agreement');
+        }
+      } else {
+        // 追踪登录失败事件
+        trackUserAction('login_failed', { 
+          method: 'demo_user',
+          error: data.error 
+        });
+        setError(data.error || '示例用户登录失败');
+      }
+    } catch (error) {
+      // 追踪登录错误事件
+      trackUserAction('login_error', { 
+        method: 'demo_user',
+        error: 'network_error'
+      });
+      setError('示例用户登录失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 开发模式直接哈希登录
   const handleDevHashLogin = async () => {
@@ -428,15 +499,16 @@ export default function LoginPage() {
               </div>
             </div>
           ) : (
-            /* 生产模式：CAS认证 + 哈希值验证 */
+            /* 生产模式：CAS认证 + 示例用户登录 */
             <>
               {!casAuthInfo ? (
-                /* 第一步：CAS认证 */
+                /* 登录选项 */
                 <div className="space-y-4">
                   <div className="text-center text-gray-600">
-                    <p className="mb-4">使用学号统一身份认证登录</p>
+                    <p className="mb-4">选择登录方式</p>
                   </div>
                   
+                  {/* CAS 统一身份认证登录 */}
                   <Button
                     onClick={handleCasLogin}
                     disabled={loading}
@@ -454,6 +526,41 @@ export default function LoginPage() {
                       </div>
                     )}
                   </Button>
+
+                  {/* 示例用户登录按钮 */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-gradient-to-br from-blue-50 to-indigo-100 px-2 text-gray-500">或</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleDemoUserLogin}
+                    disabled={loading}
+                    variant="outline"
+                    className="w-full border-green-300 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-400"
+                  >
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        登录中...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        示例用户登录（电子信息工程专业学生）
+                      </div>
+                    )}
+                  </Button>
+
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500">
+                      示例用户无需认证，可直接体验系统功能
+                    </p>
+                  </div>
                 </div>
               ) : (
                 /* 第二步：显示CAS信息 + 哈希值登录 */
