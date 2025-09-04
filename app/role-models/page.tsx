@@ -1559,7 +1559,7 @@ function SchoolCard({ model, onViewDetails }: { model: SchoolModel, onViewDetail
           <div className="flex items-center gap-2 text-sm">
             <Layers className="h-4 w-4 text-muted-foreground" />
             <span>{model.research.slice(0, 2).join(t('rolemodels.ui.separator'))}{t('rolemodels.ui.etc')}</span>
-        </div>
+          </div>
 
           <div className="flex items-center gap-2 text-sm">
             <Globe className="h-4 w-4 text-muted-foreground" />
