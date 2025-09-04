@@ -73,11 +73,6 @@ export default function PreserveLayoutPdfButton({
       if (!contentElement) throw new Error('未找到要导出的内容')
       try { console.log('[pdf-export] contentElement', contentElement.tagName, 'scrollWidth', (contentElement as HTMLElement).scrollWidth, 'scrollHeight', (contentElement as HTMLElement).scrollHeight) } catch (e) {}
 
-      // 临时记录：用于在截图后恢复页面样式
-      const tempStyleIds: string[] = []
-      const modifiedInlineList: Array<{ el: HTMLElement, original: string }> = []
-      const modifiedPropsList: Array<{ el: HTMLElement, prop: string, original: string }> = []
-
       // 在截图前修复浏览器/样式中不被 html2canvas 支持的现代颜色函数（如 oklch/lch/lab）
       const fixModernColors = (root: HTMLElement) => {
         try {

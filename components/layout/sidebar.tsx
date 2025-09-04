@@ -62,8 +62,6 @@ const sidebarItems = [
   },
 ]
 
-
-
 export function AppSidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
@@ -183,7 +181,6 @@ export function AppSidebar() {
               </SidebarItem>
             </Link>
           ))}
-
         </nav>
       </SidebarContent>
       

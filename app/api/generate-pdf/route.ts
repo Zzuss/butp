@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 
-// 使用适合 serverless 环境的 Puppeteer 配置
+// 注意：此 route 假定在有 Node 环境的 Next.js 服务器上运行（非 Edge）。
+// 在 serverless 平台或 Vercel 的 Edge runtime 上可能无法启动 Chromium。
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const { url, html, cookies = [], pdfOptions = {}, viewportWidth } = body as {
@@ -11,69 +13,27 @@ export async function POST(req: NextRequest) {
     viewportWidth?: number
   }
 
-  // 根据环境选择合适的 Puppeteer 配置
+  // 延迟加载 puppeteer，避免在不需要时将其打包/加载
   let puppeteer: any
-  let chromium: any
-  
-  const isProduction = process.env.NODE_ENV === 'production'
-  const isVercel = process.env.VERCEL === '1'
-  
   try {
-    if (isProduction || isVercel) {
-      // 生产环境：使用 puppeteer-core + @sparticuz/chromium
-      puppeteer = await import('puppeteer-core')
-      chromium = await import('@sparticuz/chromium')
-    } else {
-      // 开发环境：使用完整的 puppeteer
-      puppeteer = await import('puppeteer')
-    }
+    puppeteer = await import('puppeteer')
   } catch (err) {
     console.error('puppeteer import failed', err)
-    return new Response(JSON.stringify({ 
-      error: 'Puppeteer not available on server',
-      details: 'PDF生成服务暂时不可用，请使用客户端导出功能'
-    }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'Puppeteer not available on server' }), { status: 500 })
   }
 
   let browser: any = null
   try {
-    // 根据环境配置 Puppeteer 启动参数
-    let launchOptions: any
-    
-    if (isProduction || isVercel) {
-      // 生产环境配置
-      launchOptions = {
-        args: [
-          ...chromium.args,
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu'
-        ],
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true
-      }
-    } else {
-      // 开发环境配置
-      launchOptions = {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        headless: true
-      }
-    }
-    
-    browser = await puppeteer.launch(launchOptions)
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: true
+    })
 
     const page = await browser.newPage()
 
-    // 设置视窗大小
-    const finalViewportWidth = viewportWidth && typeof viewportWidth === 'number' ? viewportWidth : 1366
-    await page.setViewport({ width: finalViewportWidth, height: 900 })
+    if (viewportWidth && typeof viewportWidth === 'number') {
+      await page.setViewport({ width: viewportWidth, height: 900 })
+    }
 
     // 如果请求携带认证头（例如前端把 cookie header 传过来），可设置额外 header
     const authHeader = req.headers.get('authorization')

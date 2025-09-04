@@ -17,6 +17,12 @@ export async function POST(request: NextRequest) {
     const rawCampus = process.env.CAMPUS_PDF_SERVICE_URL || 'http://139.159.233.180'
     const campusServiceUrl = rawCampus.endsWith('/generate-pdf') ? rawCampus : new URL('/generate-pdf', rawCampus).toString()
     
+    console.log('🏢 当前环境:', {
+      isProduction: process.env.NODE_ENV === 'production',
+      hostname: process.env.VERCEL_URL || 'localhost',
+      pdfServiceUrl: campusServiceUrl
+    })
+    
     // 转发请求头（包括认证信息）
     const forwardHeaders: HeadersInit = {
       'Content-Type': 'application/json',

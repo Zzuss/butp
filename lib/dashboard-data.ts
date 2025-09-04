@@ -130,7 +130,7 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
       course_name: result.Course_Name || '未知课程',
       course_id: result.Course_ID || '未知编号',
       grade: result.Grade || '无成绩',
-      credit: result.Credit || '0',
+      credit: typeof result.Credit === 'number' ? result.Credit : parseFloat(result.Credit || '0') || 0,
       semester: result.Semester_Offered || '未知学期',
       course_type: result.Course_Type || '未知类型',
       course_attribute: result.Course_Attribute || '未知属性',

@@ -40,16 +40,14 @@ export function convertGradeToScore(grade: string | null): number | null {
 
 // 北邮GPA计算方法
 export function calculateBUPTGPA(score: number): number {
-  if (score >= 90) return 4.0
-  if (score >= 85) return 3.7
-  if (score >= 82) return 3.3
-  if (score >= 78) return 3.0
-  if (score >= 75) return 2.7
-  if (score >= 72) return 2.3
-  if (score >= 68) return 2.0
-  if (score >= 64) return 1.5
-  if (score >= 60) return 1.0
-  return 0.0
+  // 按图片和备注给出的连续公式：
+  // 绩点 = 4 - 3 * (100 - X)^2 / 1600, 其中 60≦X≦100；X<60 时绩点为 0
+  if (score < 60) return 0.0
+  if (score > 100) score = 100
+  const delta = 100 - score
+  const gpa = 4 - 3 * (delta * delta) / 1600
+  // 保留合理小数位，防止浮点误差
+  return Math.max(0, Math.min(4, Number(gpa.toFixed(4))))
 }
 
 // 处理课程成绩数据
@@ -113,7 +111,7 @@ export function calculateGPA(courses: Array<{grade: string | number, credit: num
     
     return {
       numericScore,
-      credit: course.credit
+      credit: typeof course.credit === 'number' ? course.credit : Number(course.credit)
     };
   }).filter(course => course.numericScore !== null);
   
