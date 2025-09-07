@@ -109,8 +109,8 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
     const { data: results, error } = await supabase
       .from('academic_results')
       .select('*')
-      .eq('SNH', studentHash.trim())
-      .order('Semester_Offered', { ascending: true });
+      .eq('"SNH"', studentHash.trim())
+      .order('"Semester_Offered"', { ascending: true });
 
     if (error) {
       console.error('查询学生成绩时出错:', error);
@@ -382,10 +382,10 @@ export async function getTopPercentageGPAThreshold(percentage: number): Promise<
     // 获取所有学生的GPA数据
     const { data: results, error } = await supabase
       .from('academic_results')
-      .select('SNH, Grade, Credit')
-      .not('Grade', 'is', null)
-      .not('Grade', 'eq', '')
-      .not('SNH', 'is', null)
+      .select('"SNH", "Grade", "Credit"')
+      .not('"Grade"', 'is', null)
+      .not('"Grade"', 'eq', '')
+      .not('"SNH"', 'is', null)
 
     if (error) {
       console.error('Error fetching GPA threshold data:', error)
@@ -529,8 +529,8 @@ export async function getStudentInfo(studentHash: string): Promise<{ year: strin
     
     const { data: results, error } = await supabase
       .from('academic_results')
-      .select('Semester_Offered, Current_Major')
-      .eq('SNH', studentHash)
+      .select('"Semester_Offered", "Current_Major"')
+      .eq('"SNH"', studentHash)
       .limit(1);
 
     if (error) {
@@ -619,8 +619,8 @@ export async function getUserProbabilityData(studentId: string): Promise<{
     
     const { data, error } = await supabase
       .from('cohort_probability')
-      .select('proba_1, proba_2, proba_3, year')
-      .eq('SNH', studentHash)
+      .select('"proba_1", "proba_2", "proba_3", "year"')
+      .eq('"SNH"', studentHash)
       .single();
 
     if (error) {

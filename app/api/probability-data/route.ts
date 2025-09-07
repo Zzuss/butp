@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
     const supabase = createSupabaseClient()
     const { data, error } = await supabase
       .from('cohort_probability')
-      .select('proba_1, proba_2, year')
-      .eq('SNH', studentId)
+      .select('"proba_1", "proba_2", "year"')
+      .eq('"SNH"', studentId)
       .single()
 
     if (error) {
