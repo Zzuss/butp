@@ -47,6 +47,15 @@ export default function LoginPage() {
         case 'verify_failed':
           errorMessage = '票据验证失败，请重新登录'
           break
+        case 'no_mapping':
+          errorMessage = messageParam || '您的学号未在系统中注册，请联系管理员添加权限'
+          break
+        case 'invalid_mapping':
+          errorMessage = messageParam || '您的学号映射信息无效，请联系管理员'
+          break
+        case 'mapping_error':
+          errorMessage = messageParam || '查询学号映射时发生错误，请重试或联系管理员'
+          break
         default:
           errorMessage = messageParam || '登录过程中发生错误，请重试'
       }
