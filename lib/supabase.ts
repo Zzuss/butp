@@ -48,3 +48,13 @@ export interface AcademicResult {
   Exam_Type: string | null
   Assessment_Method: string | null
 }
+
+export interface CohortProbability {
+  SNH: string | null
+  major: string | null
+  current_pred: number | null
+  proba_1: number | null  // 国内升学
+  proba_2: number | null  // 境外升学
+  proba_3: number | null  // 就业
+  year: number | null
+}

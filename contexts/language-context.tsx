@@ -41,6 +41,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.rolemodels': '职业分析',
     'sidebar.charts': '图表测试',
     'sidebar.analysis': '学业分析',
+    'sidebar.educationplan': '培养方案管理',
     
     // Profile页面
     'profile.title': '我的信息',
@@ -997,6 +998,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.rolemodels': 'Career Analysis',
     'sidebar.charts': 'Charts Test',
     'sidebar.analysis': 'Academic Analysis',
+    'sidebar.educationplan': 'Education Plan Management',
     
     // Profile页面
     'profile.title': 'My Profile',

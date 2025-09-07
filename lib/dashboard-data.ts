@@ -607,6 +607,7 @@ export async function getUserProbabilityData(studentId: string): Promise<{
   proba_1: number;
   proba_2: number;
   proba_3: number;
+  year?: number;
 } | null> {
   try {
     // 如果输入的是64位哈希值，直接使用；否则进行哈希处理
@@ -618,7 +619,7 @@ export async function getUserProbabilityData(studentId: string): Promise<{
     
     const { data, error } = await supabase
       .from('cohort_probability')
-      .select('proba_1, proba_2, proba_3')
+      .select('proba_1, proba_2, proba_3, year')
       .eq('SNH', studentHash)
       .single();
 
@@ -641,7 +642,8 @@ export async function getUserProbabilityData(studentId: string): Promise<{
     return {
       proba_1: data.proba_1,
       proba_2: data.proba_2,
-      proba_3: data.proba_3
+      proba_3: data.proba_3,
+      year: data.year
     };
   } catch (error) {
     console.error('Error in getUserProbabilityData:', error);

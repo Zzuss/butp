@@ -70,6 +70,7 @@ export default function Analysis() {
   const [probabilityData, setProbabilityData] = useState<{
     proba_1: number | null;
     proba_2: number | null;
+    year?: number | null;
   } | null>(null);
   const [loadingProbability, setLoadingProbability] = useState(false);
   
@@ -564,7 +565,8 @@ export default function Analysis() {
         const data = await response.json();
         setProbabilityData({
           proba_1: typeof data.proba_1 === 'number' ? data.proba_1 : null,
-          proba_2: typeof data.proba_2 === 'number' ? data.proba_2 : null
+          proba_2: typeof data.proba_2 === 'number' ? data.proba_2 : null,
+          year: typeof data.year === 'number' ? data.year : null
         });
       } else {
         setProbabilityData(null);
