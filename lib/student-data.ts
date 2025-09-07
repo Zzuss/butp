@@ -382,31 +382,80 @@ export async function getStudentInfoById(studentId: string): Promise<{ id: strin
 }
 
 /**
- * 验证CAS认证的学号是否在数据库中存在
+ * 通过学号从映射表中查找对应的哈希值
+ * @param studentNumber 学号
+ * @returns 哈希值或null
+ */
+export async function getHashByStudentNumber(studentNumber: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('student_number_hash_mapping')
+      .select('student_hash')
+      .eq('student_number', studentNumber)
+      .limit(1);
+
+    if (error) {
+      console.error('Error querying student number mapping:', error);
+      return null;
+    }
+
+    if (data && data.length > 0) {
+      return data[0].student_hash;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Database query failed:', error);
+    return null;
+  }
+}
+
+/**
+ * 验证CAS认证的学号是否在数据库中存在（优先使用映射表）
  * @param studentId CAS返回的原始学号
  * @returns 验证结果和哈希值
  */
 export async function validateCasStudentId(studentId: string): Promise<{ isValid: boolean; hash: string; studentInfo?: { id: string; name: string; major: string; year?: string } | null }> {
-  const hash = hashStudentId(studentId);
+  console.log('Validating CAS student ID:', { originalId: studentId });
   
-  console.log('Validating CAS student ID:', {
-    originalId: studentId,
-    generatedHash: hash
-  });
+  // 首先尝试从映射表中查找哈希值
+  const mappedHash = await getHashByStudentNumber(studentId);
   
-  const isValid = await isValidStudentHashInDatabase(hash);
+  if (mappedHash) {
+    console.log('Found hash in mapping table:', { hash: mappedHash });
+    
+    // 验证映射的哈希值是否在数据库中存在
+    const isValid = await isValidStudentHashInDatabase(mappedHash);
+    
+    if (isValid) {
+      const studentInfo = await getStudentInfoByHash(mappedHash);
+      return {
+        isValid: true,
+        hash: mappedHash,
+        studentInfo: studentInfo
+      };
+    }
+  }
+  
+  // 如果映射表中没有找到，回退到原有的哈希化方式
+  console.log('No mapping found, falling back to generated hash');
+  const generatedHash = hashStudentId(studentId);
+  
+  console.log('Generated hash:', { generatedHash });
+  
+  const isValid = await isValidStudentHashInDatabase(generatedHash);
   
   if (isValid) {
-    const studentInfo = await getStudentInfoByHash(hash);
+    const studentInfo = await getStudentInfoByHash(generatedHash);
     return {
       isValid: true,
-      hash: hash,
+      hash: generatedHash,
       studentInfo: studentInfo
     };
   }
   
   return {
     isValid: false,
-    hash: hash
+    hash: mappedHash || generatedHash
   };
 }
