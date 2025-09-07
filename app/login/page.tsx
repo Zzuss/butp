@@ -5,16 +5,10 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertCircle, CheckCircle2, User, Hash, Copy, Code } from "lucide-react"
+import { AlertCircle, User, Hash, Copy, Code } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { trackUserAction } from "@/lib/analytics"
 
-// CAS认证信息接口
-interface CasAuthInfo {
-  userId: string;
-  name: string;
-  userHash: string;
-}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,7 +17,6 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [hashValue, setHashValue] = useState("")
   const [hashValidating, setHashValidating] = useState(false)
-  const [casAuthInfo, setCasAuthInfo] = useState<CasAuthInfo | null>(null)
   const [isDevMode, setIsDevMode] = useState(false)
 
   // 检查是否为开发环境
@@ -116,13 +109,13 @@ export default function LoginPage() {
         const data = await response.json()
         
         if (data.isCasAuthenticated && data.userId && data.name && data.userHash) {
-          setCasAuthInfo({
-            userId: data.userId,
-            name: data.name,
-            userHash: data.userHash
-          })
           if (data.isLoggedIn) {
+            // CAS认证且已登录，直接跳转到dashboard
             router.push('/dashboard')
+            return
+          } else {
+            // CAS认证成功但未完成登录，说明学号映射有问题，显示错误
+            setError('学号映射验证失败，请联系管理员检查您的学号权限')
             return
           }
         }
@@ -337,82 +330,6 @@ export default function LoginPage() {
     }
   }
 
-  // 哈希登录（CAS认证后）
-  const handleHashLogin = async () => {
-    if (!casAuthInfo) {
-      setError('请先完成CAS认证')
-      return
-    }
-
-    const isValid = await validateHash()
-    if (!isValid) return
-
-    setLoading(true)
-    try {
-      const response = await fetch('/api/auth/cas/complete-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          userHash: hashValue.trim(),
-          preserveCasInfo: true 
-        }),
-        credentials: 'include'
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        // 追踪登录成功事件
-        trackUserAction('login_success', { 
-          method: 'cas_hash',
-          userId: data.user?.userId 
-        })
-        
-        await refreshUser()
-        
-        // 检查隐私条款同意状态
-        try {
-          const privacyResponse = await fetch('/api/auth/privacy-agreement', {
-            credentials: 'include'
-          })
-          
-          if (privacyResponse.ok) {
-            const privacyData = await privacyResponse.json()
-            if (privacyData.hasAgreed) {
-              router.push('/dashboard')
-            } else {
-              router.push('/privacy-agreement')
-            }
-          } else {
-            // 如果检查失败，默认跳转到隐私条款页面
-            router.push('/privacy-agreement')
-          }
-        } catch (error) {
-          console.error('检查隐私条款状态失败:', error)
-          // 如果检查失败，默认跳转到隐私条款页面
-          router.push('/privacy-agreement')
-        }
-      } else {
-        // 追踪登录失败事件
-        trackUserAction('login_failed', { 
-          method: 'cas_hash',
-          error: data.error 
-        })
-        setError(data.error || '登录失败')
-      }
-    } catch (error) {
-      // 追踪登录错误事件
-      trackUserAction('login_error', { 
-        method: 'cas_hash',
-        error: 'network_error'
-      })
-      setError('登录失败，请重试')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -500,146 +417,65 @@ export default function LoginPage() {
             </div>
           ) : (
             /* 生产模式：CAS认证 + 示例用户登录 */
-            <>
-              {!casAuthInfo ? (
-                /* 登录选项 */
-                <div className="space-y-4">
-                  <div className="text-center text-gray-600">
-                    <p className="mb-4">选择登录方式</p>
+            <div className="space-y-4">
+              <div className="text-center text-gray-600">
+                <p className="mb-4">选择登录方式</p>
+              </div>
+              
+              {/* CAS 统一身份认证登录 */}
+              <Button
+                onClick={handleCasLogin}
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    跳转中...
                   </div>
-                  
-                  {/* CAS 统一身份认证登录 */}
-                  <Button
-                    onClick={handleCasLogin}
-                    disabled={loading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {loading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        跳转中...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        使用学号统一身份认证登录
-                      </div>
-                    )}
-                  </Button>
-
-                  {/* 示例用户登录按钮 */}
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-300" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-gradient-to-br from-blue-50 to-indigo-100 px-2 text-gray-500">或</span>
-                    </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    使用学号统一身份认证登录
                   </div>
+                )}
+              </Button>
 
-                  <Button
-                    onClick={handleDemoUserLogin}
-                    disabled={loading}
-                    variant="outline"
-                    className="w-full border-green-300 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-400"
-                  >
-                    {loading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                        登录中...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        示例用户登录（电子信息工程专业学生）
-                      </div>
-                    )}
-                  </Button>
-
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500">
-                      示例用户无需认证，可直接体验系统功能
-                    </p>
-                  </div>
+              {/* 示例用户登录按钮 */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-300" />
                 </div>
-              ) : (
-                /* 第二步：显示CAS信息 + 哈希值登录 */
-                <div className="space-y-4">
-                  {/* CAS认证成功信息 */}
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-green-700 mb-2">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span className="font-medium">CAS认证成功</span>
-                    </div>
-                    <div className="text-sm text-green-600">
-                      <p><strong>姓名：</strong>{casAuthInfo.name}</p>
-                      <p><strong>学号：</strong>{casAuthInfo.userId}</p>
-                    </div>
-                  </div>
-
-                  {/* 哈希值登录 */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-medium text-gray-800 mb-3">输入学号哈希值完成登录</h3>
-                    
-                    {/* 测试哈希值提示 */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                      <h4 className="font-medium text-blue-800 mb-2">测试用学号哈希值：</h4>
-                      <div className="space-y-2">
-                        {testHashes.map((hash, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <code className="flex-1 text-xs bg-white p-2 rounded border font-mono">
-                              {hash.substring(0, 20)}...
-                            </code>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => copyToClipboard(hash)}
-                              className="px-2 py-1"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Input
-                        type="text"
-                        placeholder="请输入64位学号哈希值"
-                        value={hashValue}
-                        onChange={(e) => setHashValue(e.target.value)}
-                        className="font-mono text-sm"
-                        disabled={loading || hashValidating}
-                      />
-                      
-                      <Button
-                        onClick={handleHashLogin}
-                        disabled={loading || hashValidating || !hashValue.trim()}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {hashValidating ? (
-                          <div className="flex items-center gap-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            验证中...
-                          </div>
-                        ) : loading ? (
-                          <div className="flex items-center gap-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            登录中...
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Hash className="h-4 w-4" />
-                            登录
-                          </div>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-gradient-to-br from-blue-50 to-indigo-100 px-2 text-gray-500">或</span>
                 </div>
-              )}
-            </>
+              </div>
+
+              <Button
+                onClick={handleDemoUserLogin}
+                disabled={loading}
+                variant="outline"
+                className="w-full border-green-300 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-400"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                    登录中...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    示例用户登录（电子信息工程专业学生）
+                  </div>
+                )}
+              </Button>
+
+              <div className="text-center">
+                <p className="text-xs text-gray-500">
+                  示例用户无需认证，可直接体验系统功能
+                </p>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
