@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { validateCasTicket } from '@/lib/cas';
 import { SessionData, sessionOptions } from '@/lib/session';
+import { getHashByStudentNumber, isValidStudentHashInDatabase } from '@/lib/student-data';
 import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
@@ -29,24 +30,49 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=ticket_expired&message=登录票据已过期，请重新登录', request.url));
     }
 
-    console.log('CAS callback: ticket validation successful, creating session');
+    console.log('CAS callback: ticket validation successful, checking student mapping');
 
-    // 🆕 直接在这里创建会话，避免额外跳转
-    // 生成学号哈希值
-    const hash = crypto.createHash('sha256').update(casUser.userId).digest('hex');
-    console.log('CAS callback: generated hash for student:', hash);
+    // 🆕 必须从学号哈希映射表中查找对应的哈希值
+    let userHash: string | null = null;
+    
+    try {
+      userHash = await getHashByStudentNumber(casUser.userId);
+      console.log('CAS callback: mapping table lookup result:', { 
+        studentNumber: casUser.userId, 
+        foundHash: userHash ? 'yes' : 'no' 
+      });
+      
+      if (userHash) {
+        // 验证找到的哈希值是否在数据库中有效
+        const isValidInDatabase = await isValidStudentHashInDatabase(userHash);
+        if (!isValidInDatabase) {
+          console.error('CAS callback: hash found in mapping table but not valid in database');
+          return NextResponse.redirect(new URL('/login?error=invalid_mapping&message=您的学号映射信息无效，请联系管理员', request.url));
+        }
+        console.log('CAS callback: found valid hash in mapping table, proceeding with auto-login');
+      } else {
+        // 没有找到映射，拒绝登录
+        console.error('CAS callback: no mapping found for student number:', casUser.userId);
+        return NextResponse.redirect(new URL('/login?error=no_mapping&message=您的学号未在系统中注册，请联系管理员添加权限', request.url));
+      }
+    } catch (error) {
+      console.error('CAS callback: error looking up hash from mapping table:', error);
+      return NextResponse.redirect(new URL('/login?error=mapping_error&message=查询学号映射时发生错误，请重试或联系管理员', request.url));
+    }
 
-    // 创建响应对象用于设置 session
-    const response = NextResponse.redirect(new URL('/login', request.url));
+    console.log('CAS callback: mapping validation successful, proceeding with login');
+
+    // 直接登录到dashboard
+    const response = NextResponse.redirect(new URL('/dashboard', request.url));
     
     // 获取session并设置数据
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
     const now = Date.now();
     session.userId = casUser.userId; // 原始学号
-    session.userHash = hash; // 学号哈希值
+    session.userHash = userHash; // 从映射表获取的哈希值
     session.name = casUser.name || `学生${casUser.userId}`; // CAS返回的真实姓名
     session.isCasAuthenticated = true;
-    session.isLoggedIn = false; // 最终登录在login页面完成
+    session.isLoggedIn = true; // 直接设置为已登录
     session.loginTime = now;
     session.lastActiveTime = now; // 设置最后活跃时间
     
@@ -69,7 +95,7 @@ export async function GET(request: NextRequest) {
       path: '/'
     });
     
-    console.log('CAS callback: redirecting to login page for final authentication');
+    console.log('CAS callback: auto-login successful, redirecting to dashboard');
     return response;
       
   } catch (error) {
