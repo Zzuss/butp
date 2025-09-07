@@ -17,6 +17,13 @@ export interface UserVote {
   version: string
 }
 
+// 用户投票历史接口（支持多票）
+export interface UserVoteHistory {
+  user_id: string
+  votes: UserVote[]
+  version: string
+}
+
 // 本地存储键名
 const VOTING_OPTIONS_KEY = 'butp_voting_options'
 const USER_VOTE_PREFIX = 'butp_user_vote_'
@@ -63,20 +70,20 @@ export async function getVotingOptions(): Promise<VotingOption[]> {
   }
 }
 
-// 获取用户已投票的选项
-export async function getUserVote(userId: string): Promise<UserVote | null> {
+// 获取用户已投票的选项（支持多票）
+export async function getUserVote(userId: string): Promise<UserVoteHistory | null> {
   try {
     const localUserVote = localStorage.getItem(`${USER_VOTE_PREFIX}${userId}`)
     if (localUserVote) {
-      const userVote = JSON.parse(localUserVote)
+      const userVoteHistory = JSON.parse(localUserVote)
       
       // 检查版本号，如果版本不匹配则清除旧投票记录
-      if (userVote.version !== CURRENT_VOTING_VERSION) {
+      if (userVoteHistory.version !== CURRENT_VOTING_VERSION) {
         localStorage.removeItem(`${USER_VOTE_PREFIX}${userId}`)
         return null
       }
       
-      return userVote
+      return userVoteHistory
     }
     return null
   } catch (error) {
@@ -85,17 +92,23 @@ export async function getUserVote(userId: string): Promise<UserVote | null> {
   }
 }
 
-// 用户投票
+// 用户投票（支持最多3票）
 export async function voteForOption(userId: string, optionId: number): Promise<boolean> {
   try {
     // 获取当前投票选项
     const options = await getVotingOptions()
     
-    // 检查用户是否已经投票
-    const existingVote = await getUserVote(userId)
-    if (existingVote) {
-      // 如果已经投票，先撤销之前的投票
-      await revokeVote(userId)
+    // 获取用户当前投票历史
+    const existingVoteHistory = await getUserVote(userId)
+    
+    // 检查是否已经投过这个选项
+    if (existingVoteHistory && existingVoteHistory.votes.some(vote => vote.option_id === optionId)) {
+      return false // 已经投过这个选项
+    }
+    
+    // 检查是否已达到最大投票数（3票）
+    if (existingVoteHistory && existingVoteHistory.votes.length >= 3) {
+      return false // 已达到最大投票数
     }
     
     // 更新选项票数
@@ -108,15 +121,23 @@ export async function voteForOption(userId: string, optionId: number): Promise<b
     // 保存更新后的选项
     localStorage.setItem(VOTING_OPTIONS_KEY, JSON.stringify(updatedOptions))
     
-    // 保存用户投票记录
-    const userVoteRecord = {
+    // 创建新的投票记录
+    const newVoteRecord = {
       id: Date.now(),
       user_id: userId,
       option_id: optionId,
       created_at: new Date().toISOString(),
       version: CURRENT_VOTING_VERSION
     }
-    localStorage.setItem(`${USER_VOTE_PREFIX}${userId}`, JSON.stringify(userVoteRecord))
+    
+    // 更新用户投票历史
+    const updatedVoteHistory = {
+      user_id: userId,
+      votes: existingVoteHistory ? [...existingVoteHistory.votes, newVoteRecord] : [newVoteRecord],
+      version: CURRENT_VOTING_VERSION
+    }
+    
+    localStorage.setItem(`${USER_VOTE_PREFIX}${userId}`, JSON.stringify(updatedVoteHistory))
     
     return true
   } catch (error) {
@@ -125,30 +146,61 @@ export async function voteForOption(userId: string, optionId: number): Promise<b
   }
 }
 
-// 撤销投票
-export async function revokeVote(userId: string): Promise<boolean> {
+// 撤销投票（支持撤销特定选项）
+export async function revokeVote(userId: string, optionId?: number): Promise<boolean> {
   try {
-    // 获取用户当前投票
-    const userVote = await getUserVote(userId)
-    if (!userVote) {
+    // 获取用户当前投票历史
+    const userVoteHistory = await getUserVote(userId)
+    if (!userVoteHistory || userVoteHistory.votes.length === 0) {
       return false
     }
     
     // 获取当前投票选项
     const options = await getVotingOptions()
     
+    let votesToRemove: UserVote[]
+    
+    if (optionId) {
+      // 撤销特定选项的投票
+      votesToRemove = userVoteHistory.votes.filter(vote => vote.option_id === optionId)
+      if (votesToRemove.length === 0) {
+        return false // 没有找到要撤销的投票
+      }
+    } else {
+      // 撤销所有投票
+      votesToRemove = userVoteHistory.votes
+    }
+    
     // 更新选项票数
-    const updatedOptions = options.map(opt => 
-      opt.id === userVote.option_id 
-        ? { ...opt, vote_count: Math.max(0, opt.vote_count - 1), updated_at: new Date().toISOString() }
+    const updatedOptions = options.map(opt => {
+      const votesForThisOption = votesToRemove.filter(vote => vote.option_id === opt.id)
+      return votesForThisOption.length > 0
+        ? { ...opt, vote_count: Math.max(0, opt.vote_count - votesForThisOption.length), updated_at: new Date().toISOString() }
         : opt
-    )
+    })
     
     // 保存更新后的选项
     localStorage.setItem(VOTING_OPTIONS_KEY, JSON.stringify(updatedOptions))
     
-    // 删除用户投票记录
-    localStorage.removeItem(`${USER_VOTE_PREFIX}${userId}`)
+    // 更新用户投票历史
+    if (optionId) {
+      // 只移除特定选项的投票
+      const updatedVotes = userVoteHistory.votes.filter(vote => vote.option_id !== optionId)
+      if (updatedVotes.length === 0) {
+        // 如果没有剩余投票，删除整个记录
+        localStorage.removeItem(`${USER_VOTE_PREFIX}${userId}`)
+      } else {
+        // 更新投票历史
+        const updatedVoteHistory = {
+          ...userVoteHistory,
+          votes: updatedVotes
+        }
+        localStorage.setItem(`${USER_VOTE_PREFIX}${userId}`, JSON.stringify(updatedVoteHistory))
+      }
+    } else {
+      // 删除所有投票记录
+      localStorage.removeItem(`${USER_VOTE_PREFIX}${userId}`)
+    }
     
     return true
   } catch (error) {

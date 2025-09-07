@@ -8,7 +8,8 @@ import { Vote, TrendingUp, Users, CheckCircle, XCircle } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { 
   VotingOption, 
-  UserVote, 
+  UserVote,
+  UserVoteHistory,
   getVotingOptions, 
   getUserVote, 
   voteForOption, 
@@ -18,7 +19,7 @@ import {
 export default function VotingPoll() {
   const { user } = useAuth()
   const [options, setOptions] = useState<VotingOption[]>([])
-  const [userVote, setUserVote] = useState<UserVote | null>(null)
+  const [userVoteHistory, setUserVoteHistory] = useState<UserVoteHistory | null>(null)
   const [loading, setLoading] = useState(true)
   const [voting, setVoting] = useState(false)
   const [totalVotes, setTotalVotes] = useState(0)
@@ -28,13 +29,13 @@ export default function VotingPoll() {
     try {
       setLoading(true)
       
-      const [optionsData, userVoteData] = await Promise.all([
+      const [optionsData, userVoteHistoryData] = await Promise.all([
         getVotingOptions(),
         user?.isLoggedIn ? getUserVote(user.userId) : Promise.resolve(null)
       ])
       
       setOptions(optionsData)
-      setUserVote(userVoteData)
+      setUserVoteHistory(userVoteHistoryData)
       setTotalVotes(optionsData.reduce((sum, opt) => sum + opt.vote_count, 0))
     } catch (error) {
       console.error('获取投票数据失败:', error)
@@ -64,13 +65,13 @@ export default function VotingPoll() {
     }
   }
 
-  // 撤销投票处理
-  const handleRevokeVote = async () => {
+  // 撤销投票处理（支持撤销特定选项）
+  const handleRevokeVote = async (optionId?: number) => {
     if (!user?.isLoggedIn || voting) return
     
     try {
       setVoting(true)
-      const success = await revokeVote(user.userId)
+      const success = await revokeVote(user.userId, optionId)
       if (success) {
         await fetchVotingData()
       }
@@ -123,7 +124,7 @@ export default function VotingPoll() {
         <div className="mt-2">
           <h4 className="font-semibold text-white mb-1">投票规则</h4>
           <ul className="text-xs text-white/90 space-y-1">
-            <li>• 每个账户在每个版本中只能投一票</li>
+            <li>• 每一个版本最多投三票</li>
             <li>• 可以随时撤销投票并重新选择</li>
             <li>• 票数实时更新，按票数从高到低排序</li>
             <li>• 如果有任何其他想添加的功能，请通过下方邮箱联系我们</li>
@@ -134,7 +135,7 @@ export default function VotingPoll() {
         <div className="space-y-4">
           {options.map((option, index) => {
             const percentage = getPercentage(option.vote_count)
-            const isUserVoted = userVote?.option_id === option.id
+            const isUserVoted = userVoteHistory?.votes.some(vote => vote.option_id === option.id) || false
             const rank = index + 1
             
             return (
@@ -204,7 +205,7 @@ export default function VotingPoll() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={handleRevokeVote}
+                          onClick={() => handleRevokeVote(option.id)}
                           disabled={voting}
                           className="border-red-300 text-red-700 hover:bg-red-50"
                         >
@@ -215,7 +216,7 @@ export default function VotingPoll() {
                         <Button
                           size="sm"
                           onClick={() => handleVote(option.id)}
-                          disabled={voting || userVote !== null}
+                          disabled={voting || (userVoteHistory?.votes.length || 0) >= 3}
                           className="bg-blue-600 hover:bg-blue-700"
                         >
                           <Vote className="h-4 w-4 mr-1" />
