@@ -71,8 +71,8 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
           try {
             const { data, error } = await supabase
               .from(table)
-              .select(field)
-              .eq(field, hash)
+              .select(`"${field}"`)  // 使用双引号包围字段名以处理大小写敏感问题
+              .eq(`"${field}"`, hash)
               .limit(1);
             
             if (error) {
@@ -120,8 +120,8 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
         try {
           const { data, error } = await supabase
             .from(table)
-            .select('Course_Name, Grade, Semester_Offered, Course_Attribute, Course_ID, Credit')
-            .eq('SNH', studentHash);
+            .select('"Course_Name", "Grade", "Semester_Offered", "Course_Attribute", "Course_ID", "Credit"')  // 使用双引号包围字段名
+            .eq('"SNH"', studentHash);
           
           if (!error && data) {
             allData = allData.concat(data);
@@ -155,8 +155,8 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
     try {
       const { data, error } = await supabase
         .from('academic_results')
-        .select('Course_Name, Grade, Semester_Offered, Course_Attribute, Course_ID, Credit')
-        .eq('SNH', studentHash);
+        .select('"Course_Name", "Grade", "Semester_Offered", "Course_Attribute", "Course_ID", "Credit"')  // 使用双引号包围字段名
+        .eq('"SNH"', studentHash);
 
       if (error) {
         console.error('Error fetching source2 scores:', error);
@@ -337,8 +337,8 @@ export async function getStudentInfoByHash(hash: string): Promise<{ id: string; 
   try {
     const { data, error } = await supabase
       .from('academic_results')
-      .select('SNH, Current_Major')
-      .eq('SNH', hash)
+      .select('"SNH", "Current_Major"')  // 使用双引号包围字段名
+      .eq('"SNH"', hash)
       .limit(1);
     
     if (error) {
@@ -390,8 +390,8 @@ export async function getHashByStudentNumber(studentNumber: string): Promise<str
   try {
     const { data, error } = await supabase
       .from('student_number_hash_mapping')
-      .select('student_hash')
-      .eq('student_number', studentNumber)
+      .select('"student_hash"')  // 使用双引号包围字段名
+      .eq('"student_number"', studentNumber)
       .limit(1);
 
     if (error) {

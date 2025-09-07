@@ -45,13 +45,13 @@ export async function POST(request: NextRequest) {
     for (const table of tables) {
       try {
         const selectFields = table.majorColumn 
-          ? `${table.snhColumn}, ${table.majorColumn}`
-          : table.snhColumn;
+          ? `"${table.snhColumn}", "${table.majorColumn}"`
+          : `"${table.snhColumn}"`;
 
         const { data, error } = await supabase
           .from(table.name)
           .select(selectFields)
-          .eq(table.snhColumn, trimmedHash)
+          .eq(`"${table.snhColumn}"`, trimmedHash)
           .limit(1);
 
         if (error) {
