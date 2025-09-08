@@ -89,14 +89,14 @@ export async function GET(request: NextRequest) {
     await session.save();
     console.log('CAS callback: session saved successfully');
 
-    // 修复: session保存后创建重定向响应
+    // 修复: session保存后创建重定向响应并正确复制cookie
     const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url));
     
-    // 复制session cookie到重定向响应
-    const sessionCookies = response.headers.get('set-cookie');
-    if (sessionCookies) {
-      redirectResponse.headers.set('set-cookie', sessionCookies);
-    }
+    // 正确复制所有set-cookie头到重定向响应
+    const cookieHeaders = response.headers.getSetCookie();
+    cookieHeaders.forEach(cookie => {
+      redirectResponse.headers.append('set-cookie', cookie);
+    });
 
     // 清除可能存在的返回URL cookie
     redirectResponse.cookies.set('cas-return-url', '', {
