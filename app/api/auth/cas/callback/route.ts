@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
 
     console.log('CAS callback: mapping validation successful, proceeding with login');
 
-    // 直接登录到dashboard
-    const response = NextResponse.redirect(new URL('/dashboard', request.url));
+    // 修复: 先创建response用于session设置  
+    const response = new NextResponse();
     
     // 获取session并设置数据
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
@@ -89,14 +89,23 @@ export async function GET(request: NextRequest) {
     await session.save();
     console.log('CAS callback: session saved successfully');
 
+    // 修复: session保存后创建重定向响应
+    const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url));
+    
+    // 复制session cookie到重定向响应
+    const sessionCookies = response.headers.get('set-cookie');
+    if (sessionCookies) {
+      redirectResponse.headers.set('set-cookie', sessionCookies);
+    }
+
     // 清除可能存在的返回URL cookie
-    response.cookies.set('cas-return-url', '', {
+    redirectResponse.cookies.set('cas-return-url', '', {
       expires: new Date(0),
       path: '/'
     });
     
     console.log('CAS callback: auto-login successful, redirecting to dashboard');
-    return response;
+    return redirectResponse;
       
   } catch (error) {
     console.error('Error in CAS callback:', error);
