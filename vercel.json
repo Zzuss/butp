@@ -1,7 +1,12 @@
 {
-  
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
     "PUPPETEER_EXECUTABLE_PATH": "/opt/google/chrome/chrome"
+  },
+  "functions": {
+    "app/api/education-plan/upload/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
   }
 }

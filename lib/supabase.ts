@@ -81,17 +81,25 @@ export const getEducationPlanUrl = (fileName: string) => {
 // 上传文件到 Supabase Storage
 export const uploadEducationPlan = async (file: File, fileName: string) => {
   try {
+    console.log(`📤 开始上传文件到 Supabase: ${fileName}, 大小: ${file.size} bytes`)
+    
     const { data, error } = await supabase.storage
       .from(EDUCATION_PLAN_BUCKET)
       .upload(fileName, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
+        contentType: 'application/pdf'
       })
     
-    if (error) throw error
+    if (error) {
+      console.error('❌ Supabase 上传错误:', error)
+      throw new Error(`Supabase 上传失败: ${error.message}`)
+    }
+    
+    console.log('✅ 上传成功，数据:', data)
     return data
   } catch (error) {
-    console.error('Upload error:', error)
+    console.error('💥 上传函数执行失败:', error)
     throw error
   }
 }
@@ -113,6 +121,8 @@ export const deleteEducationPlan = async (fileName: string) => {
 // 获取所有文件列表
 export const listEducationPlans = async () => {
   try {
+    console.log('📋 获取文件列表从 Supabase Storage...')
+    
     const { data, error } = await supabase.storage
       .from(EDUCATION_PLAN_BUCKET)
       .list('', {
@@ -120,7 +130,12 @@ export const listEducationPlans = async () => {
         offset: 0
       })
     
-    if (error) throw error
+    if (error) {
+      console.error('❌ 获取文件列表失败:', error)
+      throw new Error(`获取文件列表失败: ${error.message}`)
+    }
+    
+    console.log(`✅ 获取到 ${data?.length || 0} 个文件`)
     
     return data?.map(file => {
       // 从文件名提取年份
@@ -136,7 +151,7 @@ export const listEducationPlans = async () => {
       }
     }) || []
   } catch (error) {
-    console.error('List error:', error)
+    console.error('💥 列表函数执行失败:', error)
     throw error
   }
 }

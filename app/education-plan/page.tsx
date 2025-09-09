@@ -61,27 +61,80 @@ export default function EducationPlanPage() {
       return
     }
 
-    const formData = new FormData()
-    formData.append('file', selectedFile)
-    formData.append('year', uploadYear)
+    // 验证文件类型
+    if (selectedFile.type !== 'application/pdf') {
+      setMessage({ type: 'error', text: '请选择 PDF 文件' })
+      return
+    }
+
+    // 验证年份格式
+    if (!/^\d{4}$/.test(uploadYear)) {
+      setMessage({ type: 'error', text: '年份格式不正确' })
+      return
+    }
+
+    // 检查文件大小（50MB = 52428800 bytes）
+    if (selectedFile.size > 52428800) {
+      setMessage({ type: 'error', text: '文件大小不能超过 50MB' })
+      return
+    }
+
+    const filename = `Education_Plan_PDF_${uploadYear}.pdf`
 
     setLoading(true)
     try {
-      const response = await fetch('/api/education-plan/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (response.ok) {
-        setMessage({ type: 'success', text: '培养方案上传成功' })
-        setSelectedFile(null)
-        setUploadYear('')
-        fetchPlans()
-      } else {
-        const error = await response.json()
-        setMessage({ type: 'error', text: error.message || '上传失败' })
+      // 先检查是否已存在相同年份的文件
+      console.log('🔍 检查文件是否已存在...')
+      const existingPlans = plans
+      const existingPlan = existingPlans.find(plan => plan.year === uploadYear)
+      
+      if (existingPlan) {
+        setMessage({ type: 'error', text: `${uploadYear} 年的培养方案已存在，请先删除后再上传` })
+        return
       }
+
+      // 客户端直接上传到 Supabase Storage
+      console.log('☁️ 直接上传到 Supabase Storage...')
+      
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+      const { data, error } = await supabase.storage
+        .from('education-plans')
+        .upload(filename, selectedFile, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: 'application/pdf'
+        })
+
+      if (error) {
+        console.error('❌ 上传失败:', error)
+        
+        let errorMessage = '上传失败，请重试'
+        if (error.message.includes('already exists')) {
+          errorMessage = '文件已存在，请先删除后再上传'
+        } else if (error.message.includes('size')) {
+          errorMessage = '文件大小超过限制'
+        } else if (error.message.includes('permission')) {
+          errorMessage = '没有上传权限'
+        }
+        
+        setMessage({ type: 'error', text: errorMessage })
+        return
+      }
+
+      console.log('✅ 上传成功:', data)
+      setMessage({ type: 'success', text: '培养方案上传成功' })
+      setSelectedFile(null)
+      setUploadYear('')
+      
+      // 重新获取文件列表
+      fetchPlans()
+
     } catch (error) {
+      console.error('💥 上传过程中发生错误:', error)
       setMessage({ type: 'error', text: '上传失败，请重试' })
     } finally {
       setLoading(false)
