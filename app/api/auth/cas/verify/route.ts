@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { validateCasTicket } from '@/lib/cas';
 import { SessionData, sessionOptions } from '@/lib/session';
-import crypto from 'crypto';
+import { getHashByStudentNumber } from '@/lib/student-data';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,9 +31,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 生成学号哈希值但不验证数据库（留给最终登录步骤）
-    const hash = crypto.createHash('sha256').update(casUser.userId).digest('hex');
-    console.log('CAS verify: generated hash for student:', hash);
+    // 从映射表获取正确的哈希值
+    const hash = await getHashByStudentNumber(casUser.userId);
+    console.log('CAS verify: found hash from mapping table:', hash);
+    
+    if (!hash) {
+      console.error('CAS verify: no hash found in mapping table for student:', casUser.userId);
+      return NextResponse.json(
+        { error: 'Student not found in mapping table' },
+        { status: 404 }
+      );
+    }
 
     // 获取返回URL，默认重定向到登录页面进行最终认证
     const returnUrl = request.cookies.get('cas-return-url')?.value || '/login';
