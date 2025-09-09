@@ -26,7 +26,7 @@ export async function DELETE() {
     const { error } = await supabase
       .from('student_number_hash_mapping')
       .delete()
-      .gte('id', 0) // 删除所有记录
+      .not('student_number', 'is', null) // 删除所有记录
 
     if (error) {
       console.error('Database delete error:', error)

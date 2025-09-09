@@ -126,8 +126,7 @@ export async function POST(request: NextRequest) {
           .from('student_number_hash_mapping')
           .upsert({
             student_number: record.student_number,
-            student_hash: record.student_hash,
-            updated_at: new Date().toISOString()
+            student_hash: record.student_hash
           }, {
             onConflict: 'student_number'
           })
