@@ -123,8 +123,32 @@ export default function LoginPage() {
             router.push('/dashboard')
             return
           } else {
-            // CAS认证成功但未完成登录，说明学号映射有问题，显示错误
-            setError('学号映射验证失败，请联系管理员检查您的学号权限')
+            // CAS认证成功但未完成登录，自动完成登录流程
+            console.log('Login page: CAS认证成功，数据完整，正在自动完成登录...')
+            try {
+              const loginResponse = await fetch('/api/auth/cas/complete-auto-login', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              })
+              
+              if (loginResponse.ok) {
+                const loginData = await loginResponse.json()
+                if (loginData.success) {
+                  console.log('Login page: 自动登录成功，跳转到dashboard')
+                  router.push('/dashboard')
+                  return
+                }
+              }
+              
+              console.error('Login page: 自动登录失败')
+              setError('自动登录失败，请重试或联系管理员')
+            } catch (error) {
+              console.error('Login page: 自动登录请求失败:', error)
+              setError('登录请求失败，请重试')
+            }
             return
           }
         }
