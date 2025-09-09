@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getHashByStudentNumber, isValidStudentHashInDatabase } from '@/lib/student-data';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
     }
     
     console.log(`=== 开始检查学号 ${studentNumber} 的完整数据 ===`);
-    const supabase = createClient();
     
     // 1. 直接查询映射表
     console.log('1. 直接查询映射表...');
