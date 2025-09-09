@@ -11,6 +11,7 @@ import { RadarChart } from "@/components/ui/radar-chart"
 import { Slider } from "@/components/ui/slider"
 
 import { useAuth } from "@/contexts/AuthContext"
+import { listEducationPlans, getEducationPlanUrl } from "@/lib/supabase"
 
 // 能力标签（支持中英文）
 const abilityLabels = {
@@ -951,6 +952,34 @@ export default function Analysis() {
     try {
       setDownloading(true);
       const planYear = resolvePlanYear();
+      
+      // 首先尝试从 Supabase Storage 获取文件列表
+      try {
+        const plans = await listEducationPlans();
+        
+        if (plans.length > 0) {
+          // 找到匹配年份的文件
+          let targetPlan = plans.find(plan => plan.year === planYear.toString());
+          
+          // 如果没有找到对应年份，按可用年份从新到旧尝试
+          if (!targetPlan) {
+            for (const y of availablePlanYears) {
+              targetPlan = plans.find(plan => plan.year === y.toString());
+              if (targetPlan) break;
+            }
+          }
+          
+          // 如果找到文件，使用 Supabase URL 下载
+          if (targetPlan && targetPlan.url) {
+            window.open(targetPlan.url, '_blank');
+            return;
+          }
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase Storage 获取失败，尝试本地路径:', supabaseError);
+      }
+      
+      // 回退方案：使用本地路径（兼容性）
       const buildUrl = (y: number) => `/Education_Plan_PDF/Education_Plan_PDF_${y}.pdf`;
       let url = buildUrl(planYear);
 
@@ -972,8 +1001,10 @@ export default function Analysis() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      
     } catch (error) {
       console.error('下载失败:', error);
+      alert('下载失败，请稍后再试或联系管理员');
     } finally {
       setDownloading(false);
     }

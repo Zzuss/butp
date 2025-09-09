@@ -14,6 +14,7 @@ interface EducationPlan {
   year: string
   size: number
   lastModified: string
+  url?: string
 }
 
 export default function EducationPlanPage() {
@@ -118,9 +119,15 @@ export default function EducationPlanPage() {
   }
 
   // 下载文件
-  const handleDownload = (filename: string) => {
-    const url = `/Education_Plan_PDF/${filename}`
-    window.open(url, '_blank')
+  const handleDownload = (plan: EducationPlan) => {
+    if (plan.url) {
+      // 使用 Supabase Storage 的公开 URL
+      window.open(plan.url, '_blank')
+    } else {
+      // 回退到本地路径（兼容性）
+      const url = `/Education_Plan_PDF/${plan.name}`
+      window.open(url, '_blank')
+    }
   }
 
   // 格式化文件大小
@@ -251,7 +258,7 @@ export default function EducationPlanPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDownload(plan.name)}
+                          onClick={() => handleDownload(plan)}
                         >
                           <Download className="h-4 w-4" />
                         </Button>

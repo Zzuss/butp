@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
+import { uploadEducationPlan, listEducationPlans } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,28 +37,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const planDirectory = path.join(process.cwd(), 'public', 'Education_Plan_PDF')
-    
-    // 确保目录存在
-    if (!fs.existsSync(planDirectory)) {
-      fs.mkdirSync(planDirectory, { recursive: true })
-    }
-
     // 生成文件名
     const filename = `Education_Plan_PDF_${year}.pdf`
-    const filePath = path.join(planDirectory, filename)
 
     // 检查文件是否已存在
-    if (fs.existsSync(filePath)) {
-      return NextResponse.json(
-        { message: `${year} 年的培养方案已存在，请先删除后再上传` },
-        { status: 400 }
-      )
+    try {
+      const existingPlans = await listEducationPlans()
+      const existingPlan = existingPlans.find(plan => plan.name === filename)
+      
+      if (existingPlan) {
+        return NextResponse.json(
+          { message: `${year} 年的培养方案已存在，请先删除后再上传` },
+          { status: 400 }
+        )
+      }
+    } catch (error) {
+      // 如果列表获取失败，继续上传流程
+      console.warn('Failed to check existing files:', error)
     }
 
-    // 保存文件
-    const buffer = Buffer.from(await file.arrayBuffer())
-    fs.writeFileSync(filePath, buffer)
+    // 上传文件到 Supabase Storage
+    await uploadEducationPlan(file, filename)
 
     return NextResponse.json({
       message: '培养方案上传成功',
@@ -67,6 +65,23 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Failed to upload education plan:', error)
+    
+    // 提供更详细的错误信息
+    if (error instanceof Error) {
+      if (error.message.includes('already exists')) {
+        return NextResponse.json(
+          { message: '文件已存在，请先删除后再上传' },
+          { status: 400 }
+        )
+      }
+      if (error.message.includes('size')) {
+        return NextResponse.json(
+          { message: '文件大小超过限制' },
+          { status: 400 }
+        )
+      }
+    }
+    
     return NextResponse.json(
       { message: '上传失败，请重试' },
       { status: 500 }

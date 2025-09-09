@@ -58,3 +58,85 @@ export interface CohortProbability {
   proba_3: number | null  // 就业
   year: number | null
 }
+
+// Education Plan 相关类型
+export interface EducationPlan {
+  name: string
+  year: string
+  size: number
+  lastModified: string
+  url?: string
+}
+
+// Storage 相关工具函数
+export const EDUCATION_PLAN_BUCKET = 'education-plans'
+
+// 获取文件的公开URL
+export const getEducationPlanUrl = (fileName: string) => {
+  return supabase.storage
+    .from(EDUCATION_PLAN_BUCKET)
+    .getPublicUrl(fileName).data.publicUrl
+}
+
+// 上传文件到 Supabase Storage
+export const uploadEducationPlan = async (file: File, fileName: string) => {
+  try {
+    const { data, error } = await supabase.storage
+      .from(EDUCATION_PLAN_BUCKET)
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
+    
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('Upload error:', error)
+    throw error
+  }
+}
+
+// 删除文件
+export const deleteEducationPlan = async (fileName: string) => {
+  try {
+    const { error } = await supabase.storage
+      .from(EDUCATION_PLAN_BUCKET)
+      .remove([fileName])
+    
+    if (error) throw error
+  } catch (error) {
+    console.error('Delete error:', error)
+    throw error
+  }
+}
+
+// 获取所有文件列表
+export const listEducationPlans = async () => {
+  try {
+    const { data, error } = await supabase.storage
+      .from(EDUCATION_PLAN_BUCKET)
+      .list('', {
+        limit: 100,
+        offset: 0
+      })
+    
+    if (error) throw error
+    
+    return data?.map(file => {
+      // 从文件名提取年份
+      const yearMatch = file.name.match(/Education_Plan_PDF_(\d{4})\.pdf/)
+      const year = yearMatch ? yearMatch[1] : '未知'
+      
+      return {
+        name: file.name,
+        year,
+        size: file.metadata?.size || 0,
+        lastModified: file.updated_at || file.created_at || new Date().toISOString(),
+        url: getEducationPlanUrl(file.name)
+      }
+    }) || []
+  } catch (error) {
+    console.error('List error:', error)
+    throw error
+  }
+}
