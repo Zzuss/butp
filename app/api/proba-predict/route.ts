@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { spawn } from 'child_process'
-import path from 'path'
 
 type FeatureValues = Record<string, number>
 
@@ -12,48 +10,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'featureValues is required' }, { status: 400 })
     }
 
-    // 通过 stdin 把 JSON 传给本地 Python 脚本
-    const pythonPath = 'python'
-    // 以当前工作目录为根，定位到 butp/scripts/xgb_predict_task3.py
-    // 注意：在本项目运行时，process.cwd() 可能已位于 butp 目录，因此这里不再重复拼接 'butp'
-    const scriptPath = path.resolve(process.cwd(), 'scripts', 'xgb_predict_task3.py')
-
-    const child = spawn(pythonPath, [scriptPath])
-
-    const payload = JSON.stringify({ featureValues })
-    child.stdin.write(payload)
-    child.stdin.end()
-
-    let stdout = ''
-    let stderr = ''
-
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString()
-    })
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-    })
-
-    const code: number = await new Promise((resolve) => {
-      child.on('close', (c) => resolve(c ?? 0))
-    })
-
-    if (code !== 0) {
-      return NextResponse.json({ error: 'Python script failed', detail: stderr || stdout }, { status: 500 })
+    // 直接调用后端（无本地回退），失败则返回错误
+    const backendUrl = process.env.PROBA_BACKEND_URL
+    if (!backendUrl) {
+      return NextResponse.json({ error: 'Backend URL is not configured (PROBA_BACKEND_URL)' }, { status: 500 })
     }
 
-    let result: any
     try {
-      result = JSON.parse(stdout || '{}')
-    } catch (e) {
-      return NextResponse.json({ error: 'Invalid JSON from Python', raw: stdout }, { status: 500 })
-    }
+      const controller = new AbortController()
+      const timeoutMs = Number(process.env.PROBA_BACKEND_TIMEOUT_MS || 15000)
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
 
-    if (result && result.error) {
-      return NextResponse.json({ error: result.error }, { status: 500 })
-    }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      }
+      if (process.env.PROBA_BACKEND_API_KEY) {
+        headers['Authorization'] = `Bearer ${process.env.PROBA_BACKEND_API_KEY}`
+      }
 
-    return NextResponse.json({ success: true, data: result })
+      const resp = await fetch(backendUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ featureValues }),
+        signal: controller.signal
+      })
+      clearTimeout(timer)
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '')
+        return NextResponse.json({ error: 'Backend request failed', detail: text, statusCode: resp.status }, { status: 502 })
+      }
+
+      const backendData = await resp.json().catch(() => ({}))
+
+      const probabilities = Array.isArray(backendData?.probabilities)
+        ? backendData.probabilities
+        : Array.isArray(backendData?.data?.probabilities)
+        ? backendData.data.probabilities
+        : undefined
+
+      if (!Array.isArray(probabilities)) {
+        return NextResponse.json({ error: 'Invalid response from backend', raw: backendData }, { status: 502 })
+      }
+
+      return NextResponse.json({ success: true, data: { probabilities } })
+    } catch (err: any) {
+      const message = err?.name === 'AbortError' ? 'Backend request timeout' : (err?.message || 'Backend request error')
+      return NextResponse.json({ error: message }, { status: 502 })
+    }
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Internal error' }, { status: 500 })
   }
