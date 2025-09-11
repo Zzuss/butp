@@ -31,7 +31,7 @@ export default function VotingPoll() {
       
       const [optionsData, userVoteHistoryData] = await Promise.all([
         getVotingOptions(),
-        user?.isLoggedIn ? getUserVote(user.userId) : Promise.resolve(null)
+        user?.isLoggedIn ? getUserVote(user.userHash) : Promise.resolve(null)
       ])
       
       setOptions(optionsData)
@@ -54,7 +54,7 @@ export default function VotingPoll() {
     
     try {
       setVoting(true)
-      const success = await voteForOption(user.userId, optionId)
+      const success = await voteForOption(user.userHash, optionId)
       if (success) {
         await fetchVotingData()
       }
@@ -71,7 +71,7 @@ export default function VotingPoll() {
     
     try {
       setVoting(true)
-      const success = await revokeVote(user.userId, optionId)
+      const success = await revokeVote(user.userHash, optionId)
       if (success) {
         await fetchVotingData()
       }
