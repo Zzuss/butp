@@ -444,7 +444,7 @@ export default function Analysis() {
           
           console.log('📊 英文特征值:', englishFeatureValues);
           
-          const predictionResponse = await fetch('/api/predict-possibility', {
+          const predictionResponse = await fetch('/api/proba-predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -454,15 +454,15 @@ export default function Analysis() {
 
           if (predictionResponse.ok) {
             const predictionData = await predictionResponse.json();
-            if (predictionData.success && predictionData.data) {
-              // 解析预测结果：第一个是国内读研，第二个是海外读研，第三个忽略
-              const probabilities = predictionData.data.probabilities;
-              console.log('✅ 预测成功 - 预测概率:', probabilities);
-              console.log('✅ 预测成功 - 预测类别:', predictionData.data.predictedClass);
+            if (predictionData.success && predictionData.data && Array.isArray(predictionData.data.probabilities)) {
+              const probabilities: number[] = predictionData.data.probabilities
+              // 业务约定：第一个百分比→国内读研，第二个百分比→海外读研，第三个舍弃
+              const domesticPct = Number((probabilities[0] * 100).toFixed(1))  // 第一个百分比
+              const overseasPct = Number((probabilities[1] * 100).toFixed(1)) // 第二个百分比
               setPredictionResult({
-                domesticPercentage: Math.round(probabilities[0] * 100), // 国内读研百分比
-                overseasPercentage: Math.round(probabilities[1] * 100)  // 海外读研百分比
-              });
+                domesticPercentage: domesticPct,
+                overseasPercentage: overseasPct
+              })
             } else {
               console.error('❌ 预测API返回数据格式错误:', predictionData);
               setPredictionResult(null);
