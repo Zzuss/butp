@@ -105,12 +105,11 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
       return cachedData;
     }
 
-    // 简化查询：直接根据哈希值查询所有行
+    // 简化查询：直接根据哈希值查询所有行，不进行数据库排序
     const { data: results, error } = await supabase
       .from('academic_results')
       .select('*')
-      .eq('SNH', studentHash.trim())
-      .order('Semester_Offered', { ascending: true });
+      .eq('"SNH"', studentHash.trim());
 
     if (error) {
       console.error('查询学生成绩时出错:', error);
@@ -366,7 +365,7 @@ export function getSemesterTrends(results: CourseResult[]): SemesterTrend[] {
       average: courseCount > 0 ? Math.round((totalScore / courseCount) * 100) / 100 : 0,
       courseCount
     }))
-    .sort((a, b) => a.semester.localeCompare(b.semester));
+    .sort((a, b) => b.semester.localeCompare(a.semester));
 }
 
 /**
@@ -382,10 +381,10 @@ export async function getTopPercentageGPAThreshold(percentage: number): Promise<
     // 获取所有学生的GPA数据
     const { data: results, error } = await supabase
       .from('academic_results')
-      .select('SNH, Grade, Credit')
-      .not('Grade', 'is', null)
-      .not('Grade', 'eq', '')
-      .not('SNH', 'is', null)
+      .select('"SNH", "Grade", "Credit"')
+      .not('"Grade"', 'is', null)
+      .not('"Grade"', 'eq', '')
+      .not('"SNH"', 'is', null)
 
     if (error) {
       console.error('Error fetching GPA threshold data:', error)
@@ -476,6 +475,10 @@ export async function getSubjectGrades(studentHash: string, language: string = '
       return [];
     }
     
+    // 清除缓存以确保获取最新数据
+    const cacheKey = `student_results_${studentHash}`;
+    cache.delete(cacheKey);
+    
     // 直接使用重构后的getStudentResults函数
     const results = await getStudentResults(studentHash);
     
@@ -486,9 +489,14 @@ export async function getSubjectGrades(studentHash: string, language: string = '
     
     console.log('找到科目成绩数据，数量:', results.length);
     
+    // 按学期倒序排序：学期越靠后，位置越靠前
+    const sortedResults = [...results].sort((a, b) => {
+      return b.semester.localeCompare(a.semester);
+    });
+    
     // 如果需要英文翻译，可以在这里处理
-    // 目前直接返回原始数据
-    return results;
+    // 目前直接返回排序后的数据
+    return sortedResults;
     
   } catch (error) {
     console.error('获取科目成绩时发生异常:', error);
@@ -529,8 +537,8 @@ export async function getStudentInfo(studentHash: string): Promise<{ year: strin
     
     const { data: results, error } = await supabase
       .from('academic_results')
-      .select('Semester_Offered, Current_Major')
-      .eq('SNH', studentHash)
+      .select('"Semester_Offered", "Current_Major"')
+      .eq('"SNH"', studentHash)
       .limit(1);
 
     if (error) {
@@ -607,6 +615,7 @@ export async function getUserProbabilityData(studentId: string): Promise<{
   proba_1: number;
   proba_2: number;
   proba_3: number;
+  year?: number;
 } | null> {
   try {
     // 如果输入的是64位哈希值，直接使用；否则进行哈希处理
@@ -618,8 +627,8 @@ export async function getUserProbabilityData(studentId: string): Promise<{
     
     const { data, error } = await supabase
       .from('cohort_probability')
-      .select('proba_1, proba_2, proba_3')
-      .eq('SNH', studentHash)
+      .select('"proba_1", "proba_2", "proba_3", "year"')
+      .eq('"SNH"', studentHash)
       .single();
 
     if (error) {
@@ -641,7 +650,8 @@ export async function getUserProbabilityData(studentId: string): Promise<{
     return {
       proba_1: data.proba_1,
       proba_2: data.proba_2,
-      proba_3: data.proba_3
+      proba_3: data.proba_3,
+      year: data.year
     };
   } catch (error) {
     console.error('Error in getUserProbabilityData:', error);

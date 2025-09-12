@@ -1,0 +1,13 @@
+﻿{
+  "featureValues": {
+    "public": 0.85,
+    "practice": 0.73,
+    "math_science": 0.91,
+    "political": 0.66,
+    "basic_subject": 0.80,
+    "innovation": 0.62,
+    "english": 0.88,
+    "basic_major": 0.77,
+    "major": 0.84
+  }
+}

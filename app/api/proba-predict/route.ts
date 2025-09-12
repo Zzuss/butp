@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// 明确使用 Node.js 运行时，确保可在请求时读取 process.env
+export const runtime = 'nodejs'
+
 type FeatureValues = Record<string, number>
+
+export async function GET() {
+  const url = process.env.PROBA_BACKEND_URL || ''
+  const masked = url ? url.replace(/(?<=^https?:\/\/)[^/]+/, (m) => m.replace(/.(?=.{3})/g, '*')) : ''
+  const timeout = process.env.PROBA_BACKEND_TIMEOUT_MS || ''
+  const hasKey = Boolean(process.env.PROBA_BACKEND_API_KEY)
+  return NextResponse.json({
+    runtime,
+    hasBackendUrl: Boolean(url),
+    backendUrlMasked: masked,
+    timeoutMs: timeout,
+    hasApiKey: hasKey
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {

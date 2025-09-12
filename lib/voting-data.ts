@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase'
+
 // 投票选项接口
 export interface VotingOption {
   id: number
@@ -17,164 +19,212 @@ export interface UserVote {
   version: string
 }
 
-// 本地存储键名
-const VOTING_OPTIONS_KEY = 'butp_voting_options'
-const USER_VOTE_PREFIX = 'butp_user_vote_'
-const VOTING_VERSION_KEY = 'butp_voting_version'
+// 用户投票历史接口（支持多票）
+export interface UserVoteHistory {
+  user_id: string
+  votes: UserVote[]
+  version: string
+}
+
+// 固定选项键与稳定ID映射（A→1, B→2, ...）
+const OPTION_KEYS = ['A', 'B', 'C', 'D', 'E'] as const
+type OptionKey = typeof OPTION_KEYS[number]
+const keyToId = (key: string): number => Math.max(1, OPTION_KEYS.indexOf(key as OptionKey) + 1)
+const idToKey = (id: number): OptionKey => OPTION_KEYS[Math.max(0, Math.min(OPTION_KEYS.length - 1, id - 1))]
 
 // 当前投票版本号
-const CURRENT_VOTING_VERSION = '1.0'
+const CURRENT_VOTING_VERSION = '1.1'
 
 // 获取所有投票选项（按票数排序）
 export async function getVotingOptions(): Promise<VotingOption[]> {
   try {
-    // 从本地存储获取投票选项
-    const localVotes = localStorage.getItem(VOTING_OPTIONS_KEY)
-    if (localVotes) {
-      const options = JSON.parse(localVotes)
-      // 按票数排序
-      return options.sort((a: VotingOption, b: VotingOption) => b.vote_count - a.vote_count)
-    }
-    
-    // 如果没有本地数据，初始化默认选项
-    const defaultOptions = initialVotingOptions.map((opt, index) => ({
-      id: index + 1,
-      option_key: opt.option_key,
-      option_text: opt.option_text,
-      vote_count: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }))
-    
-    // 保存到本地存储
-    localStorage.setItem(VOTING_OPTIONS_KEY, JSON.stringify(defaultOptions))
-    return defaultOptions
-  } catch (error) {
-    console.error('获取投票选项失败:', error)
-    // 如果出错，返回初始选项
-    return initialVotingOptions.map((opt, index) => ({
-      id: index + 1,
-      option_key: opt.option_key,
-      option_text: opt.option_text,
-      vote_count: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }))
-  }
-}
+    // 读取数据库 vote 表的 option 列，统计每个选项的票数
+    const { data, error } = await supabase
+      .from('vote')
+      .select('option')
 
-// 获取用户已投票的选项
-export async function getUserVote(userId: string): Promise<UserVote | null> {
-  try {
-    const localUserVote = localStorage.getItem(`${USER_VOTE_PREFIX}${userId}`)
-    if (localUserVote) {
-      const userVote = JSON.parse(localUserVote)
-      
-      // 检查版本号，如果版本不匹配则清除旧投票记录
-      if (userVote.version !== CURRENT_VOTING_VERSION) {
-        localStorage.removeItem(`${USER_VOTE_PREFIX}${userId}`)
-        return null
+    // 如果表不存在或返回错误，回退为0票
+    if (error) {
+      console.error('获取投票选项失败:', error.message)
+      return initialVotingOptions.map((opt) => ({
+        id: keyToId(opt.option_key),
+        option_key: opt.option_key,
+        option_text: opt.option_text,
+        vote_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+    }
+
+    // 统计票数（option 存储为 'A C' 这样的空格分隔字符串）
+    const counts: Record<OptionKey, number> = { A: 0, B: 0, C: 0, D: 0, E: 0 }
+    for (const row of data || []) {
+      const text: string = (row as any).option || ''
+      const parts = text.split(/\s+/).map(s => s.trim()).filter(Boolean)
+      for (const p of parts) {
+        if ((OPTION_KEYS as readonly string[]).includes(p)) {
+          counts[p as OptionKey] += 1
+        }
       }
-      
-      return userVote
     }
-    return null
+
+    // 组装返回并按票数排序
+    const now = new Date().toISOString()
+    const options: VotingOption[] = initialVotingOptions.map((opt) => ({
+      id: keyToId(opt.option_key),
+      option_key: opt.option_key,
+      option_text: opt.option_text,
+      vote_count: counts[opt.option_key as OptionKey] || 0,
+      created_at: now,
+      updated_at: now
+    }))
+    return options.sort((a, b) => b.vote_count - a.vote_count)
   } catch (error) {
-    console.error('获取用户投票失败:', error)
-    return null
+    console.error('获取投票选项失败:', (error as Error).message)
+    const now = new Date().toISOString()
+    return initialVotingOptions.map((opt) => ({
+      id: keyToId(opt.option_key),
+      option_key: opt.option_key,
+      option_text: opt.option_text,
+      vote_count: 0,
+      created_at: now,
+      updated_at: now
+    }))
   }
 }
 
-// 用户投票
-export async function voteForOption(userId: string, optionId: number): Promise<boolean> {
+// 获取用户已投票的选项（支持多票）
+export async function getUserVote(userHash: string): Promise<UserVoteHistory | null> {
   try {
-    // 获取当前投票选项
-    const options = await getVotingOptions()
-    
-    // 检查用户是否已经投票
-    const existingVote = await getUserVote(userId)
-    if (existingVote) {
-      // 如果已经投票，先撤销之前的投票
-      await revokeVote(userId)
+    const { data, error } = await supabase
+      .from('vote')
+      .select('option')
+      .eq('SNH', userHash)
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      return null
     }
-    
-    // 更新选项票数
-    const updatedOptions = options.map(opt => 
-      opt.id === optionId 
-        ? { ...opt, vote_count: opt.vote_count + 1, updated_at: new Date().toISOString() }
-        : opt
-    )
-    
-    // 保存更新后的选项
-    localStorage.setItem(VOTING_OPTIONS_KEY, JSON.stringify(updatedOptions))
-    
-    // 保存用户投票记录
-    const userVoteRecord = {
-      id: Date.now(),
-      user_id: userId,
-      option_id: optionId,
+
+    const optionsText: string = data?.option || ''
+    const parts = optionsText.split(/\s+/).map((s: string) => s.trim()).filter(Boolean)
+    const votes: UserVote[] = parts.map((k) => ({
+      id: keyToId(k),
+      user_id: userHash,
+      option_id: keyToId(k),
       created_at: new Date().toISOString(),
       version: CURRENT_VOTING_VERSION
+    }))
+
+    return {
+      user_id: userHash,
+      votes,
+      version: CURRENT_VOTING_VERSION
     }
-    localStorage.setItem(`${USER_VOTE_PREFIX}${userId}`, JSON.stringify(userVoteRecord))
-    
-    return true
   } catch (error) {
-    console.error('投票失败:', error)
+    console.error('获取用户投票失败:', (error as Error).message)
+    return null
+  }
+}
+
+// 用户投票（支持最多3票）
+export async function voteForOption(userHash: string, optionId: number): Promise<boolean> {
+  try {
+    const optionKey = idToKey(optionId)
+
+    // 读取现有记录
+    const { data: existing, error: readError } = await supabase
+      .from('vote')
+      .select('option')
+      .eq('SNH', userHash)
+      .limit(1)
+      .maybeSingle()
+
+    if (readError && readError.code !== 'PGRST116') {
+      // 非空结果错误
+      return false
+    }
+
+    const currentParts = (existing?.option || '')
+      .split(/\s+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+
+    // 已投该选项
+    if (currentParts.includes(optionKey)) {
+      return false
+    }
+
+    // 最多三票
+    if (currentParts.length >= 3) {
+      return false
+    }
+
+    const updatedParts = [...currentParts, optionKey]
+    const updatedText = updatedParts.join(' ')
+
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from('vote')
+        .update({ option: updatedText })
+        .eq('SNH', userHash)
+      return !updateError
+    } else {
+      const { error: insertError } = await supabase
+        .from('vote')
+        .insert({ SNH: userHash, option: updatedText })
+      return !insertError
+    }
+  } catch (error) {
+    console.error('投票失败:', (error as Error).message)
     return false
   }
 }
 
-// 撤销投票
-export async function revokeVote(userId: string): Promise<boolean> {
+// 撤销投票（支持撤销特定选项）
+export async function revokeVote(userHash: string, optionId?: number): Promise<boolean> {
   try {
-    // 获取用户当前投票
-    const userVote = await getUserVote(userId)
-    if (!userVote) {
+    const { data: existing, error: readError } = await supabase
+      .from('vote')
+      .select('option')
+      .eq('SNH', userHash)
+      .limit(1)
+      .maybeSingle()
+
+    if (readError || !existing) {
       return false
     }
-    
-    // 获取当前投票选项
-    const options = await getVotingOptions()
-    
-    // 更新选项票数
-    const updatedOptions = options.map(opt => 
-      opt.id === userVote.option_id 
-        ? { ...opt, vote_count: Math.max(0, opt.vote_count - 1), updated_at: new Date().toISOString() }
-        : opt
-    )
-    
-    // 保存更新后的选项
-    localStorage.setItem(VOTING_OPTIONS_KEY, JSON.stringify(updatedOptions))
-    
-    // 删除用户投票记录
-    localStorage.removeItem(`${USER_VOTE_PREFIX}${userId}`)
-    
-    return true
+
+    const currentParts = (existing.option || '')
+      .split(/\s+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+
+    let updatedParts: string[]
+    if (optionId) {
+      const key = idToKey(optionId)
+      updatedParts = currentParts.filter((k: string) => k !== key)
+    } else {
+      updatedParts = []
+    }
+
+    const { error: updateError } = await supabase
+      .from('vote')
+      .update({ option: updatedParts.join(' ') })
+      .eq('SNH', userHash)
+
+    return !updateError
   } catch (error) {
-    console.error('撤销投票失败:', error)
+    console.error('撤销投票失败:', (error as Error).message)
     return false
   }
 }
 
 // 更新投票版本号（清除所有用户投票记录）
 export function updateVotingVersion(newVersion: string): void {
-  try {
-    // 清除所有用户投票记录
-    const keys = Object.keys(localStorage)
-    keys.forEach(key => {
-      if (key.startsWith(USER_VOTE_PREFIX)) {
-        localStorage.removeItem(key)
-      }
-    })
-    
-    // 保存新版本号
-    localStorage.setItem(VOTING_VERSION_KEY, newVersion)
-    
-    console.log(`投票版本已更新到 ${newVersion}，所有用户投票记录已清除`)
-  } catch (error) {
-    console.error('更新投票版本失败:', error)
-  }
+  // 基于数据库的实现无需本地版本清理，这里保持空实现以兼容调用方
+  console.log(`投票版本已更新到 ${newVersion}`)
 }
 
 // 获取当前投票版本号
@@ -185,8 +235,8 @@ export function getCurrentVotingVersion(): string {
 // 初始化投票选项（如果数据库中没有的话）
 export const initialVotingOptions = [
   { option_key: 'A', option_text: '是否把修改成绩改成滑条式输入' },
-  { option_key: 'B', option_text: '人工智能与机器学习功能' },
-  { option_key: 'C', option_text: '社交学习与讨论功能' },
+  { option_key: 'B', option_text: '是否加入数字CV生成功能' },
+  { option_key: 'C', option_text: '是否细化能力图谱' },
   { option_key: 'D', option_text: '职业规划与就业指导' },
   { option_key: 'E', option_text: '多语言国际化支持' }
 ] 

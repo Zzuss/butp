@@ -41,6 +41,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.rolemodels': '职业分析',
     'sidebar.charts': '图表测试',
     'sidebar.analysis': '学业分析',
+    'sidebar.educationplan': '培养方案管理',
     
     // Profile页面
     'profile.title': '我的信息',
@@ -665,6 +666,7 @@ const translations: Record<Language, Record<string, string>> = {
     'competitions.design': '设计大赛',
     'competitions.ui.design': 'UI设计竞赛',
     'competitions.creative.design': '创意设计挑战赛',
+    'competitions.ai.application': 'AI应用竞赛',
     
     // Skill Names
     'skills.ai.model.training': '大模型训练',
@@ -831,7 +833,146 @@ const translations: Record<Language, Record<string, string>> = {
     'tags.system.thinking': '系统性思维',
     'tags.enterprise.service': '企业服务',
     'tags.work.portfolio': '作品集',
-    'tags.mentor.guidance': '导师指导'
+    'tags.mentor.guidance': '导师指导',
+    
+    // 添加缺失的标签翻译
+    'tags.deeplearning': '深度学习',
+    'tags.nlp': 'NLP',
+    'tags.system.integration': '系统集成',
+    'tags.machine.learning': '机器学习',
+    'tags.computer.vision': '计算机视觉',
+    'tags.react': 'React',
+    'tags.javascript': 'JavaScript',
+    'tags.typescript': 'TypeScript',
+    'tags.vue': 'Vue',
+    'tags.java': 'Java',
+    'tags.spring': 'Spring',
+    'tags.go': 'Go',
+    'tags.ios': 'iOS',
+    'tags.devops': 'DevOps',
+    'tags.cloud.computing': '云计算',
+    'tags.container': '容器',
+    'tags.ui.design': 'UI设计',
+    'tags.ux.design': 'UX设计',
+    
+    // Role Model Card Names
+    'cards.ai.research': '大模型工程师画像(研究型)',
+    'cards.ai.application': '大模型工程师画像(应用型)',
+    'cards.algorithm.recommendation': '算法工程师画像(推荐系统)',
+    'cards.algorithm.cv': '算法工程师画像(计算机视觉)',
+    'cards.frontend.react': '前端工程师画像(React生态)',
+    'cards.frontend.vue': '前端工程师画像(Vue生态)',
+    'cards.backend.java': '后端工程师画像(Java生态)',
+    'cards.backend.go': '后端工程师画像(Go云原生)',
+    'cards.fullstack.startup': '全栈工程师画像(创业型)',
+    'cards.mobile.ios': '移动端工程师画像(iOS原生)',
+    'cards.devops': 'DevOps工程师画像',
+    'cards.data.engineer': '数据工程师画像',
+    'cards.product.manager': '产品经理画像',
+    'cards.ui.ux.designer': 'UI/UX设计师画像',
+    'cards.cs.algorithm': '计算机科学与技术研究生画像(算法方向)',
+    'cards.cs.system': '计算机科学与技术研究生画像(系统方向)',
+    'cards.ee': '电子信息工程研究生画像',
+    'cards.communication': '通信工程研究生画像',
+    'cards.software': '软件工程研究生画像',
+    'cards.ai.graduate': '人工智能研究生画像',
+    'cards.data.science': '数据科学与大数据技术研究生画像',
+    'cards.cybersecurity': '网络空间安全研究生画像',
+    'cards.iot': '物联网工程研究生画像',
+    'cards.tech.backend': '技术实习生画像(后端开发)',
+    'cards.tech.frontend': '技术实习生画像(前端开发)',
+    'cards.tech.algorithm': '技术实习生画像(算法工程)',
+    'cards.product.c': '产品实习生画像(C端产品)',
+    'cards.product.b': '产品实习生画像(B端产品)',
+    'cards.operation.content': '运营实习生画像(内容运营)',
+    'cards.operation.data': '运营实习生画像(数据运营)',
+    'cards.design.uiux': '设计实习生画像(UI/UX设计)',
+    
+    // Role Model Descriptions
+    'desc.ai.research': '研究型大模型工程师专注于前沿算法研究，需具备扎实的深度学习理论基础，熟悉大规模分布式训练，有顶级竞赛和实习经验。',
+    'desc.ai.application': '应用型大模型工程师专注于大模型的产品化和工程实现，需要较强的系统开发能力和产品思维。',
+    'desc.algorithm.recommendation': '推荐算法工程师专注于个性化推荐系统，需有扎实的算法理论基础，参与过算法竞赛，具备数据分析和机器学习能力。',
+    'desc.algorithm.cv': '计算机视觉算法工程师专注于图像和视频分析，需要扎实的数学基础和深度学习知识，有相关竞赛经验。',
+    'desc.frontend.react': 'React生态前端工程师专注于React技术栈，需熟悉React生态系统，有大型项目开发经验，注重用户体验和性能优化。',
+    'desc.frontend.vue': 'Vue生态前端工程师专注于Vue技术栈，擅长中后台系统开发，熟悉Vue生态和组件库开发。',
+    'desc.backend.java': 'Java后端工程师专注于Java生态系统，熟悉Spring框架，有高并发系统开发经验。负责企业级应用开发和架构设计。',
+    'desc.backend.go': 'Go云原生后端工程师专注于高性能系统开发，熟悉云原生技术栈，有大规模分布式系统经验。',
+    'desc.fullstack.startup': '创业型全栈工程师需具备前后端开发能力，能够独立完成产品开发。适合初创公司和需要快速迭代的项目。',
+    'desc.mobile.ios': 'iOS原生工程师专注于iOS平台应用开发，熟悉Swift和UIKit，注重用户体验和性能优化。',
+    'desc.devops': 'DevOps工程师负责开发和运维的协作，构建自动化部署和监控体系，提升系统稳定性和开发效率。',
+    'desc.data.engineer': '数据工程师负责大数据平台建设，数据采集、存储、处理和分析，为业务决策提供数据支撑。',
+    'desc.product.manager': '产品经理负责产品规划、设计和管理，需要良好的沟通能力和商业敏感度，关注用户需求和市场趋势。',
+    'desc.ui.ux.designer': 'UI/UX设计师负责产品界面和用户体验设计，需要良好的设计能力和用户洞察力，关注设计美学和易用性。',
+    'desc.cs.algorithm': '算法方向计算机科学与技术研究生专注于算法理论研究，需有扎实的数学和编程基础，积极参与ACM等算法竞赛。',
+    'desc.cs.system': '系统方向计算机科学与技术研究生专注于计算机系统研究，擅长大规模分布式系统设计和性能优化。',
+    'desc.ee': '电子信息工程研究生需具备扎实的电路与信号处理基础，积极参与电子设计竞赛和科研项目，有较强的硬件开发能力。',
+    'desc.communication': '通信工程研究生专注于通信系统和网络技术研究，需要扎实的通信理论基础和实践能力，关注5G/6G等前沿技术。',
+    'desc.software': '软件工程研究生注重软件开发的工程化方法，具备良好的项目管理和团队协作能力，熟悉软件开发全生命周期。',
+    'desc.ai.graduate': '人工智能研究生是当前最热门的专业方向，需要扎实的数学和编程基础，强烈的科研兴趣和创新能力。',
+    'desc.data.science': '数据科学与大数据技术研究生专注于海量数据的处理和分析，需要扎实的统计学和编程基础。',
+    'desc.cybersecurity': '网络空间安全研究生专注于信息安全技术研究，需要扎实的密码学和网络技术基础，具备安全思维。',
+    'desc.iot': '物联网工程研究生专注于万物互联技术，需要掌握从硬件到软件的全栈技术，具备系统集成能力。',
+    'desc.tech.backend': '后端技术实习生将参与服务端开发，学习大规模分布式系统架构，接受资深工程师指导，获得宝贵的工程实践经验。',
+    'desc.tech.frontend': '前端技术实习生将参与Web应用和移动端开发，学习用户体验设计，掌握现代前端技术栈和工程化实践。',
+    'desc.tech.algorithm': '算法技术实习生将参与推荐系统、机器学习项目开发，接触前沿AI技术，在导师指导下提升算法工程能力。',
+    'desc.product.c': 'C端产品实习生将参与消费者产品设计和用户研究，学习互联网产品的完整开发流程，培养产品感和商业思维。',
+    'desc.product.b': 'B端产品实习生将参与企业级产品设计，学习复杂业务系统的产品化，培养系统性思维和企业服务能力。',
+    'desc.operation.content': '内容运营实习生将参与内容策划、创作和推广，学习社交媒体运营，培养用户洞察和创意能力。',
+    'desc.operation.data': '数据运营实习生将学习业务数据分析，掌握数据驱动的运营方法，培养商业敏感度和分析能力。',
+    'desc.design.uiux': 'UI/UX设计实习生将参与产品界面和用户体验设计，学习设计规范和用户研究方法，完善个人作品集。',
+    
+    // Internship Experience
+    'internship.ai.lab': '大厂AI实验室实习',
+    'internship.algorithm.team': '算法团队实习',
+    'internship.research.institute': '研究院实习',
+    'internship.ai.product': '大模型产品实习',
+    'internship.ai.development': 'AI应用开发实习',
+    'internship.algorithm.engineering': '算法工程实习',
+    'internship.internet.algorithm': '互联网公司算法实习',
+    'internship.recommendation': '推荐算法实习',
+    'internship.data.mining': '数据挖掘实习',
+    'internship.cv': '计算机视觉实习',
+    'internship.image.algorithm': '图像算法实习',
+    'internship.ai.vision': 'AI视觉产品实习',
+    'internship.frontend': '前端开发实习',
+    'internship.ui.ux': 'UI/UX实习',
+    'internship.fullstack': '全栈开发实习',
+    'internship.vue.project': 'Vue项目实习',
+    'internship.frontend.framework': '前端框架实习',
+    'internship.admin.system': '中后台开发实习',
+    'internship.backend': '后端开发实习',
+    'internship.system.architecture': '系统架构实习',
+    'internship.cloud.computing': '云计算实习',
+    'internship.cloud.native': '云原生开发实习',
+    'internship.go.development': 'Go语言实习',
+    'internship.containerization': '容器化实习',
+    'internship.startup': '创业公司实习',
+    'internship.product.development': '产品开发实习',
+    'internship.mobile': '移动端开发实习',
+    'internship.ios': 'iOS开发实习',
+    'internship.swift': 'Swift开发实习',
+    'internship.devops': '运维开发实习',
+    'internship.automation.ops': '自动化运维实习',
+    'internship.bigdata': '大数据开发实习',
+    'internship.data.platform': '数据平台实习',
+    'internship.data.analysis': '数据分析实习',
+    'internship.product.manager': '产品经理实习',
+    'internship.user.research': '用户研究实习',
+    'internship.business.analysis': '商业分析实习',
+    'internship.ui.design': 'UI设计实习',
+    'internship.ux': '用户体验实习',
+    'internship.visual.design': '视觉设计实习',
+    
+    // City Names
+    'city.beijing': '北京',
+    'city.shenzhen': '深圳',
+    'city.hangzhou': '杭州',
+    'city.shanghai': '上海',
+    'city.guangzhou': '广州',
+    'city.chengdu': '成都',
+    'city.nanjing': '南京',
+    'city.xian': '西安',
+    'city.wuxi': '无锡'
   },
   en: {
     // 登录页面
@@ -857,6 +998,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.rolemodels': 'Career Analysis',
     'sidebar.charts': 'Charts Test',
     'sidebar.analysis': 'Academic Analysis',
+    'sidebar.educationplan': 'Education Plan Management',
     
     // Profile页面
     'profile.title': 'My Profile',
@@ -1634,6 +1776,125 @@ const translations: Record<Language, Record<string, string>> = {
     'tags.work.portfolio': 'Work Portfolio',
     'tags.mentor.guidance': 'Mentor Guidance',
     
+    // Role Model Card Names
+    'cards.ai.research': 'AI Engineer Profile (Research)',
+    'cards.ai.application': 'AI Engineer Profile (Application)',
+    'cards.algorithm.recommendation': 'Algorithm Engineer Profile (Recommendation)',
+    'cards.algorithm.cv': 'Algorithm Engineer Profile (Computer Vision)',
+    'cards.frontend.react': 'Frontend Engineer Profile (React)',
+    'cards.frontend.vue': 'Frontend Engineer Profile (Vue)',
+    'cards.backend.java': 'Backend Engineer Profile (Java)',
+    'cards.backend.go': 'Backend Engineer Profile (Go)',
+    'cards.fullstack.startup': 'Full Stack Engineer Profile (Startup)',
+    'cards.mobile.ios': 'Mobile Engineer Profile (iOS)',
+    'cards.devops': 'DevOps Engineer Profile',
+    'cards.data.engineer': 'Data Engineer Profile',
+    'cards.product.manager': 'Product Manager Profile',
+    'cards.ui.ux.designer': 'UI/UX Designer Profile',
+    'cards.cs.algorithm': 'Computer Science Graduate Profile (Algorithm)',
+    'cards.cs.system': 'Computer Science Graduate Profile (System)',
+    'cards.ee': 'Electronic Information Engineering Graduate Profile',
+    'cards.communication': 'Communication Engineering Graduate Profile',
+    'cards.software': 'Software Engineering Graduate Profile',
+    'cards.ai.graduate': 'Artificial Intelligence Graduate Profile',
+    'cards.data.science': 'Data Science Graduate Profile',
+    'cards.cybersecurity': 'Cybersecurity Graduate Profile',
+    'cards.iot': 'IoT Engineering Graduate Profile',
+    'cards.tech.backend': 'Technical Intern Profile (Backend)',
+    'cards.tech.frontend': 'Technical Intern Profile (Frontend)',
+    'cards.tech.algorithm': 'Technical Intern Profile (Algorithm)',
+    'cards.product.c': 'Product Intern Profile (C-end)',
+    'cards.product.b': 'Product Intern Profile (B-end)',
+    'cards.operation.content': 'Operations Intern Profile (Content)',
+    'cards.operation.data': 'Operations Intern Profile (Data)',
+    'cards.design.uiux': 'Design Intern Profile (UI/UX)',
+    
+    // Role Model Descriptions
+    'desc.ai.research': 'Research-oriented AI engineers focus on cutting-edge algorithm research, requiring solid theoretical foundations in deep learning, familiarity with large-scale distributed training, and top-tier competition and internship experience.',
+    'desc.ai.application': 'Application-oriented AI engineers focus on productization and engineering implementation of large models, requiring strong system development capabilities and product thinking.',
+    'desc.algorithm.recommendation': 'Recommendation algorithm engineers focus on personalized recommendation systems, requiring solid algorithmic theoretical foundations, participation in algorithm competitions, and data analysis and machine learning capabilities.',
+    'desc.algorithm.cv': 'Computer vision algorithm engineers focus on image and video analysis, requiring solid mathematical foundations and deep learning knowledge, with relevant competition experience.',
+    'desc.frontend.react': 'React ecosystem frontend engineers focus on React technology stack, requiring familiarity with React ecosystem, large-scale project development experience, and emphasis on user experience and performance optimization.',
+    'desc.frontend.vue': 'Vue ecosystem frontend engineers focus on Vue technology stack, excel at back-office system development, familiar with Vue ecosystem and component library development.',
+    'desc.backend.java': 'Java backend engineers focus on Java ecosystem, familiar with Spring framework, with high-concurrency system development experience. Responsible for enterprise application development and architecture design.',
+    'desc.backend.go': 'Go cloud-native backend engineers focus on high-performance system development, familiar with cloud-native technology stack, with large-scale distributed system experience.',
+    'desc.fullstack.startup': 'Startup-oriented full stack engineers need front-end and back-end development capabilities, able to independently complete product development. Suitable for startups and projects requiring rapid iteration.',
+    'desc.mobile.ios': 'iOS native engineers focus on iOS platform application development, familiar with Swift and UIKit, emphasizing user experience and performance optimization.',
+    'desc.devops': 'DevOps engineers are responsible for development and operations collaboration, building automated deployment and monitoring systems, improving system stability and development efficiency.',
+    'desc.data.engineer': 'Data engineers are responsible for big data platform construction, data collection, storage, processing and analysis, providing data support for business decisions.',
+    'desc.product.manager': 'Product managers are responsible for product planning, design and management, requiring good communication skills and business sensitivity, focusing on user needs and market trends.',
+    'desc.ui.ux.designer': 'UI/UX designers are responsible for product interface and user experience design, requiring good design capabilities and user insight, focusing on design aesthetics and usability.',
+    'desc.cs.algorithm': 'Algorithm-oriented computer science graduate students focus on algorithmic theoretical research, requiring solid mathematical and programming foundations, actively participating in ACM and other algorithm competitions.',
+    'desc.cs.system': 'System-oriented computer science graduate students focus on computer system research, excelling at large-scale distributed system design and performance optimization.',
+    'desc.ee': 'Electronic information engineering graduate students need solid foundations in circuits and signal processing, actively participate in electronic design competitions and research projects, with strong hardware development capabilities.',
+    'desc.communication': 'Communication engineering graduate students focus on communication system and network technology research, requiring solid communication theoretical foundations and practical capabilities, focusing on 5G/6G and other cutting-edge technologies.',
+    'desc.software': 'Software engineering graduate students focus on engineering methods of software development, with good project management and team collaboration capabilities, familiar with the entire software development lifecycle.',
+    'desc.ai.graduate': 'Artificial intelligence graduate students are currently the most popular professional direction, requiring solid mathematical and programming foundations, strong research interest and innovation capabilities.',
+    'desc.data.science': 'Data science and big data technology graduate students focus on massive data processing and analysis, requiring solid foundations in statistics and programming.',
+    'desc.cybersecurity': 'Cybersecurity graduate students focus on information security technology research, requiring solid foundations in cryptography and network technology, with security thinking.',
+    'desc.iot': 'IoT engineering graduate students focus on Internet of Things technology, need to master full-stack technology from hardware to software, with system integration capabilities.',
+    'desc.tech.backend': 'Backend technical interns will participate in server-side development, learn large-scale distributed system architecture, receive guidance from senior engineers, and gain valuable engineering practice experience.',
+    'desc.tech.frontend': 'Frontend technical interns will participate in web application and mobile development, learn user experience design, and master modern frontend technology stack and engineering practices.',
+    'desc.tech.algorithm': 'Algorithm technical interns will participate in recommendation system and machine learning project development, exposure to cutting-edge AI technology, and improve algorithm engineering capabilities under mentor guidance.',
+    'desc.product.c': 'C-end product interns will participate in consumer product design and user research, learn the complete development process of Internet products, and cultivate product sense and business thinking.',
+    'desc.product.b': 'B-end product interns will participate in enterprise-level product design, learn productization of complex business systems, and cultivate systematic thinking and enterprise service capabilities.',
+    'desc.operation.content': 'Content operations interns will participate in content planning, creation and promotion, learn social media operations, and cultivate user insight and creative capabilities.',
+    'desc.operation.data': 'Data operations interns will learn business data analysis, master data-driven operational methods, and cultivate business sensitivity and analytical capabilities.',
+    'desc.design.uiux': 'UI/UX design interns will participate in product interface and user experience design, learn design specifications and user research methods, and improve personal portfolios.',
+    
+    // Internship Experience
+    'internship.ai.lab': 'Big Tech AI Lab Internship',
+    'internship.algorithm.team': 'Algorithm Team Internship',
+    'internship.research.institute': 'Research Institute Internship',
+    'internship.ai.product': 'AI Product Internship',
+    'internship.ai.development': 'AI Application Development Internship',
+    'internship.algorithm.engineering': 'Algorithm Engineering Internship',
+    'internship.internet.algorithm': 'Internet Company Algorithm Internship',
+    'internship.recommendation': 'Recommendation Algorithm Internship',
+    'internship.data.mining': 'Data Mining Internship',
+    'internship.cv': 'Computer Vision Internship',
+    'internship.image.algorithm': 'Image Algorithm Internship',
+    'internship.ai.vision': 'AI Vision Product Internship',
+    'internship.frontend': 'Frontend Development Internship',
+    'internship.ui.ux': 'UI/UX Internship',
+    'internship.fullstack': 'Full Stack Development Internship',
+    'internship.vue.project': 'Vue Project Internship',
+    'internship.frontend.framework': 'Frontend Framework Internship',
+    'internship.admin.system': 'Admin System Development Internship',
+    'internship.backend': 'Backend Development Internship',
+    'internship.system.architecture': 'System Architecture Internship',
+    'internship.cloud.computing': 'Cloud Computing Internship',
+    'internship.cloud.native': 'Cloud Native Development Internship',
+    'internship.go.development': 'Go Language Internship',
+    'internship.containerization': 'Containerization Internship',
+    'internship.startup': 'Startup Company Internship',
+    'internship.product.development': 'Product Development Internship',
+    'internship.mobile': 'Mobile Development Internship',
+    'internship.ios': 'iOS Development Internship',
+    'internship.swift': 'Swift Development Internship',
+    'internship.devops': 'DevOps Internship',
+    'internship.automation.ops': 'Automation Operations Internship',
+    'internship.bigdata': 'Big Data Development Internship',
+    'internship.data.platform': 'Data Platform Internship',
+    'internship.data.analysis': 'Data Analysis Internship',
+    'internship.product.manager': 'Product Manager Internship',
+    'internship.user.research': 'User Research Internship',
+    'internship.business.analysis': 'Business Analysis Internship',
+    'internship.ui.design': 'UI Design Internship',
+    'internship.ux': 'User Experience Internship',
+    'internship.visual.design': 'Visual Design Internship',
+    
+    // City Names
+    'city.beijing': 'Beijing',
+    'city.shenzhen': 'Shenzhen',
+    'city.hangzhou': 'Hangzhou',
+    'city.shanghai': 'Shanghai',
+    'city.guangzhou': 'Guangzhou',
+    'city.chengdu': 'Chengdu',
+    'city.nanjing': 'Nanjing',
+    'city.xian': 'Xi\'an',
+    'city.wuxi': 'Wuxi',
+    
     // Privacy Agreement Page
     'privacy.title': 'Privacy Agreement',
     'privacy.description': 'Please carefully read the following privacy policy and user data usage terms. You must agree to use the system services.',
@@ -1654,33 +1915,111 @@ const translations: Record<Language, Record<string, string>> = {
 // 语言提供者组件
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>('zh')
+  const [isClient, setIsClient] = useState(false)
+
+  // 确保在客户端渲染
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // 从 localStorage 读取语言设置
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('language') as Language
-    if (savedLanguage && (savedLanguage === 'zh' || savedLanguage === 'en')) {
-      setLanguage(savedLanguage)
+    if (isClient) {
+      try {
+        const savedLanguage = localStorage.getItem('language') as Language
+        if (savedLanguage && (savedLanguage === 'zh' || savedLanguage === 'en')) {
+          setLanguage(savedLanguage)
+        }
+      } catch (error) {
+        console.warn('Failed to read language from localStorage:', error)
+        // 使用默认语言
+        setLanguage('zh')
+      }
     }
-  }, [])
+  }, [isClient])
 
   // 保存语言设置到 localStorage
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang)
-    localStorage.setItem('language', lang)
+    if (isClient) {
+      try {
+        localStorage.setItem('language', lang)
+      } catch (error) {
+        console.warn('Failed to save language to localStorage:', error)
+      }
+    }
   }
 
   // 翻译函数
   const t = (key: string, params?: Record<string, string | number>): string => {
-    let translation = translations[language][key] || key
-    
-    // 如果有参数，进行替换
-    if (params) {
-      Object.entries(params).forEach(([paramKey, paramValue]) => {
-        translation = translation.replace(new RegExp(`{${paramKey}}`, 'g'), String(paramValue))
-      })
+    try {
+      let translation = translations[language][key]
+      
+      // 如果没有找到翻译，尝试使用中文作为回退
+      if (!translation && language === 'en') {
+        translation = translations['zh'][key]
+      }
+      
+      // 如果还是没有找到，返回原始键值
+      if (!translation) {
+        // 在生产环境中，如果找不到翻译，尝试从键名推断中文
+        if (key.startsWith('cards.')) {
+          const fallbackMap: Record<string, string> = {
+            'cards.ai.research': '大模型工程师画像(研究型)',
+            'cards.ai.application': '大模型工程师画像(应用型)',
+            'cards.algorithm.recommendation': '算法工程师画像(推荐系统)',
+            'cards.algorithm.cv': '算法工程师画像(计算机视觉)',
+            'cards.frontend.react': '前端工程师画像(React生态)',
+            'cards.frontend.vue': '前端工程师画像(Vue生态)',
+            'cards.backend.java': '后端工程师画像(Java生态)',
+            'cards.backend.go': '后端工程师画像(Go云原生)',
+            'cards.fullstack.startup': '全栈工程师画像(创业型)',
+            'cards.mobile.ios': '移动端工程师画像(iOS原生)',
+            'cards.devops': 'DevOps工程师画像',
+            'cards.data.engineer': '数据工程师画像',
+            'cards.product.manager': '产品经理画像',
+            'cards.ui.ux.designer': 'UI/UX设计师画像',
+            'cards.cs.algorithm': '计算机科学与技术研究生画像(算法方向)',
+            'cards.cs.system': '计算机科学与技术研究生画像(系统方向)',
+            'cards.ee': '电子信息工程研究生画像',
+            'cards.communication': '通信工程研究生画像',
+            'cards.software': '软件工程研究生画像',
+            'cards.ai.graduate': '人工智能研究生画像',
+            'cards.data.science': '数据科学与大数据技术研究生画像',
+            'cards.cybersecurity': '网络空间安全研究生画像',
+            'cards.iot': '物联网工程研究生画像',
+            'cards.tech.backend': '技术实习生画像(后端开发)',
+            'cards.tech.frontend': '技术实习生画像(前端开发)',
+            'cards.tech.algorithm': '技术实习生画像(算法工程)',
+            'cards.product.c': '产品实习生画像(C端产品)',
+            'cards.product.b': '产品实习生画像(B端产品)',
+            'cards.operation.content': '运营实习生画像(内容运营)',
+            'cards.operation.data': '运营实习生画像(数据运营)',
+            'cards.design.uiux': '设计实习生画像(UI/UX设计)'
+          }
+          const fallback = fallbackMap[key]
+          if (fallback) {
+            console.warn(`Using fallback translation for key: ${key}`)
+            return fallback
+          }
+        }
+        
+        console.warn(`Translation not found for key: ${key}`)
+        return key
+      }
+      
+      // 如果有参数，进行替换
+      if (params) {
+        Object.entries(params).forEach(([paramKey, paramValue]) => {
+          translation = translation.replace(new RegExp(`{${paramKey}}`, 'g'), String(paramValue))
+        })
+      }
+      
+      return translation
+    } catch (error) {
+      console.error(`Translation error for key: ${key}:`, error)
+      return key
     }
-    
-    return translation
   }
 
   return (

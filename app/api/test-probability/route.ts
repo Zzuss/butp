@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('cohort_probability')
-      .select('proba_1, proba_2, proba_3, major')
-      .eq('SNH', hash)
+      .select('"proba_1", "proba_2", "proba_3", "major", "year"')
+      .eq('"SNH"', hash)
       .single()
 
     if (error) {
@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
         proba_1: data.proba_1,
         proba_2: data.proba_2,
         proba_3: data.proba_3,
-        major: data.major
+        major: data.major,
+        year: data.year
       }
     })
 

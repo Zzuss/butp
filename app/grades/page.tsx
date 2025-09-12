@@ -36,25 +36,14 @@ export default function AllGrades() {
   async function loadGrades(studentId: string) {
     setLoading(true)
     try {
-      // 优先使用缓存的数据
-      const { getStudentResults, getFromCache, getStudentInfo, getCourseNameTranslation } = await import('@/lib/dashboard-data')
+      // 使用getSubjectGrades函数，它会处理排序
+      const { getSubjectGrades, getStudentInfo, getCourseNameTranslation } = await import('@/lib/dashboard-data')
       
-      // 检查是否有缓存数据
-      const cacheKey = `student_results_${studentId}`
-      const cachedData = getFromCache<CourseResult[]>(cacheKey)
+      // 获取学生信息（年级和专业）
+      const studentInfo = await getStudentInfo(studentId)
       
-      let results: CourseResult[]
-      if (cachedData) {
-        console.log('使用缓存的学生成绩数据')
-        results = cachedData
-      } else {
-        console.log('缓存中没有数据，开始查询数据库')
-        // 获取学生信息（年级和专业）
-        const studentInfo = await getStudentInfo(studentId)
-        
-        // 获取所有成绩
-        results = await getStudentResults(studentId)
-      }
+      // 获取所有成绩（已包含排序逻辑）
+      const results = await getSubjectGrades(studentId)
       
       if (results && results.length > 0) {
         // 如果是英文模式，需要翻译课程名称
@@ -90,13 +79,8 @@ export default function AllGrades() {
           }
         }
         
-        // 按学分从高到低排序
-        const sortedGrades = [...results].sort((a, b) => {
-          const creditA = typeof a.credit === 'number' ? a.credit : parseFloat(String(a.credit)) || 0
-          const creditB = typeof b.credit === 'number' ? b.credit : parseFloat(String(b.credit)) || 0
-          return creditB - creditA
-        })
-        setGrades(sortedGrades)
+        // 保持原有的学期排序（已在getSubjectGrades中完成）
+        setGrades(results)
       } else {
         setGrades([])
       }

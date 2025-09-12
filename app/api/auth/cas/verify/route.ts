@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { validateCasTicket } from '@/lib/cas';
 import { SessionData, sessionOptions } from '@/lib/session';
-import crypto from 'crypto';
+import { getHashByStudentNumber } from '@/lib/student-data';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,9 +31,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 生成学号哈希值但不验证数据库（留给最终登录步骤）
-    const hash = crypto.createHash('sha256').update(casUser.userId).digest('hex');
-    console.log('CAS verify: generated hash for student:', hash);
+    // 从映射表获取正确的哈希值
+    const hash = await getHashByStudentNumber(casUser.userId);
+    console.log('CAS verify: found hash from mapping table:', hash);
+    
+    if (!hash) {
+      console.error('CAS verify: no hash found in mapping table for student:', casUser.userId);
+      
+      // 创建响应对象用于清除session
+      const response = NextResponse.redirect(new URL('/login?error=no_mapping&message=您的学号未在系统中注册，请联系管理员添加权限', request.url));
+      
+      // 获取session并清除数据
+      const session = await getIronSession<SessionData>(request, response, sessionOptions);
+      session.userId = '';
+      session.userHash = '';
+      session.name = '';
+      session.isLoggedIn = false;
+      session.isCasAuthenticated = false;
+      session.loginTime = 0;
+      session.lastActiveTime = 0;
+      
+      await session.save();
+      console.log('CAS verify: session cleared due to mapping not found');
+      
+      return response;
+    }
 
     // 获取返回URL，默认重定向到登录页面进行最终认证
     const returnUrl = request.cookies.get('cas-return-url')?.value || '/login';

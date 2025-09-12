@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
     const supabase = createSupabaseClient()
     const { data, error } = await supabase
       .from('cohort_probability')
-      .select('proba_1, proba_2')
-      .eq('SNH', studentId)
+      .select('"proba_1", "proba_2", "year"')
+      .eq('"SNH"', studentId)
       .single()
 
     if (error) {
@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       proba_1: data.proba_1,
-      proba_2: data.proba_2
+      proba_2: data.proba_2,
+      year: data.year
     })
 
   } catch (error) {
