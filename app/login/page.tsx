@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertCircle, User, Hash, Copy, Code, LogOut } from "lucide-react"
+import { AlertCircle, User, Hash, Copy, Code, LogOut, Shield, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { trackUserAction } from "@/lib/analytics"
 
@@ -18,6 +18,13 @@ export default function LoginPage() {
   const [hashValue, setHashValue] = useState("")
   const [hashValidating, setHashValidating] = useState(false)
   const [isDevMode, setIsDevMode] = useState(false)
+  
+  // 管理员登录相关状态
+  const [showAdminLogin, setShowAdminLogin] = useState(false)
+  const [adminUsername, setAdminUsername] = useState("")
+  const [adminPassword, setAdminPassword] = useState("")
+  const [showAdminPassword, setShowAdminPassword] = useState(false)
+  const [adminLoading, setAdminLoading] = useState(false)
 
   // 检查是否为开发环境
   useEffect(() => {
@@ -55,6 +62,9 @@ export default function LoginPage() {
           break
         case 'mapping_error':
           errorMessage = messageParam || '查询学号映射时发生错误，请重试或联系管理员'
+          break
+        case 'admin_required':
+          errorMessage = messageParam || '该页面需要管理员权限，请以管理员身份登录'
           break
         default:
           errorMessage = messageParam || '登录过程中发生错误，请重试'
@@ -265,6 +275,47 @@ export default function LoginPage() {
     }
   };
 
+  // 管理员登录
+  const handleAdminLogin = async () => {
+    if (!adminUsername.trim() || !adminPassword.trim()) {
+      setError("请输入管理员用户名和密码")
+      return
+    }
+
+    try {
+      setAdminLoading(true)
+      setError("")
+      
+      const response = await fetch("/api/auth/admin-login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: adminUsername,
+          password: adminPassword
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "管理员登录失败")
+      }
+
+      // 登录成功，跳转到管理员页面
+      trackUserAction('auth', 'login_success', 'admin')
+      window.location.href = "/admin"
+      
+    } catch (err) {
+      console.error("管理员登录失败:", err)
+      setError(err instanceof Error ? err.message : "管理员登录失败，请重试")
+      trackUserAction('auth', 'login_failed', 'admin', { error: String(err) })
+    } finally {
+      setAdminLoading(false)
+    }
+  }
+
   // 开发模式直接哈希登录
   const handleDevHashLogin = async () => {
     if (!hashValue.trim()) {
@@ -460,6 +511,111 @@ export default function LoginPage() {
                     )}
                   </Button>
                 </div>
+
+                {/* 开发模式管理员登录区域 */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-orange-300" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-orange-50 px-2 text-orange-600">管理员登录</span>
+                  </div>
+                </div>
+
+                {!showAdminLogin ? (
+                  <Button
+                    onClick={() => setShowAdminLogin(true)}
+                    variant="outline"
+                    className="w-full border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-400"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      管理员登录（开发模式）
+                    </div>
+                  </Button>
+                ) : (
+                  <div className="space-y-3 p-4 border border-purple-200 rounded-lg bg-purple-50">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-purple-800 flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        管理员登录
+                      </h3>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowAdminLogin(false)
+                          setAdminUsername("")
+                          setAdminPassword("")
+                          setError("")
+                        }}
+                        className="text-purple-600 hover:text-purple-800"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Input
+                        type="text"
+                        placeholder="管理员用户名"
+                        value={adminUsername}
+                        onChange={(e) => setAdminUsername(e.target.value)}
+                        disabled={adminLoading}
+                        className="bg-white"
+                      />
+                      
+                      <div className="relative">
+                        <Input
+                          type={showAdminPassword ? "text" : "password"}
+                          placeholder="密码"
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          disabled={adminLoading}
+                          className="bg-white pr-10"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                        >
+                          {showAdminPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400" />
+                          )}
+                        </Button>
+                      </div>
+                      
+                      <Button
+                        onClick={handleAdminLogin}
+                        disabled={adminLoading || !adminUsername.trim() || !adminPassword.trim()}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        {adminLoading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            登录中...
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Shield className="h-4 w-4" />
+                            管理员登录
+                          </div>
+                        )}
+                      </Button>
+
+                      {/* 开发模式的便利提示 */}
+                      <div className="text-center">
+                        <p className="text-xs text-purple-600 bg-purple-100 p-2 rounded">
+                          💡 默认管理员账户：admin / admin123
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -522,6 +678,104 @@ export default function LoginPage() {
                   示例用户无需认证，可直接体验系统功能
                 </p>
               </div>
+
+              {/* 管理员登录区域 */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-gradient-to-br from-blue-50 to-indigo-100 px-2 text-gray-500">管理员登录</span>
+                </div>
+              </div>
+
+              {!showAdminLogin ? (
+                <Button
+                  onClick={() => setShowAdminLogin(true)}
+                  variant="outline"
+                  className="w-full border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-400"
+                >
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    管理员登录
+                  </div>
+                </Button>
+              ) : (
+                <div className="space-y-3 p-4 border border-purple-200 rounded-lg bg-purple-50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-purple-800 flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      管理员登录
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowAdminLogin(false)
+                        setAdminUsername("")
+                        setAdminPassword("")
+                        setError("")
+                      }}
+                      className="text-purple-600 hover:text-purple-800"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Input
+                      type="text"
+                      placeholder="管理员用户名"
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      disabled={adminLoading}
+                      className="bg-white"
+                    />
+                    
+                    <div className="relative">
+                      <Input
+                        type={showAdminPassword ? "text" : "password"}
+                        placeholder="密码"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        disabled={adminLoading}
+                        className="bg-white pr-10"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                      >
+                        {showAdminPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                    
+                    <Button
+                      onClick={handleAdminLogin}
+                      disabled={adminLoading || !adminUsername.trim() || !adminPassword.trim()}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      {adminLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          登录中...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          管理员登录
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

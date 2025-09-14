@@ -62,6 +62,8 @@ const sidebarItems = [
   },
 ]
 
+// 管理员导航项已移除，管理员使用独立的 /admin 页面
+
 export function AppSidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
@@ -70,6 +72,7 @@ export function AppSidebar() {
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  // 管理员状态检查已移除，管理员使用独立页面
 
   // 处理登出事件
   const handleLogout = () => {
@@ -109,6 +112,8 @@ export function AppSidebar() {
     }
   }, [])
 
+  // 管理员身份检查已移除，管理员使用独立页面
+
   // 如果sidebar不可见，则不渲染
   if (!isSidebarVisible) {
     return null
@@ -121,8 +126,8 @@ export function AppSidebar() {
     localStorage.setItem('sidebarCollapsed', String(newState))
   }
 
-  // 如果在登录页面，不显示侧边栏
-  if (pathname === '/login') {
+  // 如果在登录页面或管理员页面，不显示侧边栏
+  if (pathname === '/login' || pathname.startsWith('/admin')) {
     return null
   }
 
@@ -169,6 +174,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="flex-1">
         <nav className="space-y-2">
+          {/* 常规导航项 */}
           {sidebarItems.map((item) => (
               <Link key={item.href} href={item.href} onClick={() => isMobile && setIsOpen(false)}>
               <SidebarItem
@@ -181,6 +187,8 @@ export function AppSidebar() {
               </SidebarItem>
             </Link>
           ))}
+
+          {/* 管理员功能已移除，管理员使用独立页面 */}
         </nav>
       </SidebarContent>
       
@@ -230,7 +238,7 @@ export function AppSidebar() {
             <Button
               variant="outline"
               size="sm"
-              onClick={logout}
+              onClick={handleLogout}
               className="w-full flex items-center gap-2 justify-start border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-all duration-200"
             >
               <LogOut className="h-4 w-4 flex-shrink-0" />
@@ -259,7 +267,8 @@ export function AppSidebar() {
                 </Button>
                 
                 {/* 用户头像 - 折叠状态 */}
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center"
+                     title={user.name}>
                   <User className="h-4 w-4 text-primary-foreground" />
                 </div>
                 
@@ -267,7 +276,7 @@ export function AppSidebar() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={logout}
+                  onClick={handleLogout}
                   title={language === 'zh' ? '退出登录' : 'Logout'}
                   className="w-8 h-8 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-all duration-200"
                 >
