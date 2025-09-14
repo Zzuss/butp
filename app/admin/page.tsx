@@ -47,8 +47,9 @@ export default function AdminPage() {
           </Card>
         </Link>
 
-        {/* 智育成绩管理 */}
-        <Link href="/admin/prediction">
+        {/* 智育成绩管理 - 本地开发可用，生产环境注释 */}
+        {/* TODO: 预测算法功能需要Python环境，Vercel无法部署，本地开发时可取消注释 */}
+        {/* <Link href="/admin/prediction">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -63,7 +64,23 @@ export default function AdminPage() {
               </p>
             </CardContent>
           </Card>
-        </Link>
+        </Link> */}
+        
+        {/* 临时替代卡片 - 生产环境显示 */}
+        <Card className="opacity-50 cursor-not-allowed">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              智育成绩管理
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-semibold text-gray-500">开发中</div>
+            <p className="text-xs text-muted-foreground">
+              预测算法功能需要Python环境支持
+            </p>
+          </CardContent>
+        </Card>
 
         {/* 培养方案管理 */}
         <Link href="/admin/education-plan">

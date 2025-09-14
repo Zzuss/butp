@@ -46,10 +46,21 @@ ENV/
 env.bak/
 venv.bak/
 
-# Prediction temp files
+# Prediction temp files and algorithms (保留本地，但不部署到Vercel)
 temp_predictions/
 function/prediction_log_*.txt
 function/run_prediction_temp.py
+app/admin/prediction/
+app/api/admin/prediction/
+app/api/admin/academic-records/
+app/utils/*.py
+*.sql
+function/
+execute_batches.js
+generate_*.js
+check_excel_headers.js
+install_dependencies.py
+scripts/import-predictions.js
 
 # IDE
 .vscode/
