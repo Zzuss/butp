@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertCircle, User, Hash, Copy, Code } from "lucide-react"
+import { AlertCircle, User, Hash, Copy, Code, LogOut } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { trackUserAction } from "@/lib/analytics"
 
@@ -178,6 +178,20 @@ export default function LoginPage() {
       console.error('❌ CAS登录跳转失败:', error)
       setError('登录跳转失败，请重试')
       setLoading(false)
+    }
+  }
+
+  // CAS登出 - 清除认证状态
+  const handleCasLogout = () => {
+    console.log('🚀 退出登录按钮被点击')
+    try {
+      // 强制跳转到CAS服务器登出页面，清除所有认证状态
+      // 使用 force=true 参数确保即使在localhost也会跳转到真实的CAS服务器
+      console.log('⏰ 开始跳转到CAS服务器登出页面（强制模式）')
+      window.location.href = '/api/auth/cas/logout?force=true'
+    } catch (error) {
+      console.error('❌ CAS登出跳转失败:', error)
+      setError('退出登录失败，请重试')
     }
   }
 
@@ -511,6 +525,30 @@ export default function LoginPage() {
             </div>
           )}
         </CardContent>
+        
+        {/* 退出登录按钮区域 - 仅在生产环境显示 */}
+        {!isDevMode && (
+          <div className="px-6 pb-6">
+            <div className="border-t pt-4">
+              <div className="text-center mb-2">
+                <p className="text-xs text-gray-500">
+                  如果您遇到登录问题或需要重置认证状态
+                </p>
+              </div>
+              <Button
+                onClick={handleCasLogout}
+                variant="ghost"
+                size="sm"
+                className="w-full text-gray-600 hover:text-red-600 hover:bg-red-50"
+              >
+                <div className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4" />
+                  清除认证状态并退出登录
+                </div>
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   )

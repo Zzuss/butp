@@ -46,6 +46,9 @@ async function clearLoginSession(request: NextRequest, response: NextResponse) {
 
 export async function GET(request: NextRequest) {
   try {
+    // 检查是否强制执行CAS服务器登出
+    const forceServerLogout = request.nextUrl.searchParams.get('force') === 'true';
+    
     // 检查是否为本地开发环境
     const isLocalhost = request.nextUrl.hostname === 'localhost' || 
                        request.nextUrl.hostname === '127.0.0.1' ||
@@ -57,10 +60,18 @@ export async function GET(request: NextRequest) {
     
     console.log('CAS logout GET: session cleared successfully');
     
-    // 本地环境直接重定向到首页，不跳转到CAS服务器
-    if (isLocalhost) {
-      console.log('CAS logout GET: localhost detected, redirecting to home page');
-      const response = NextResponse.redirect(new URL('/', request.url));
+    // 如果强制服务器登出，或者在生产环境，都跳转到CAS服务器
+    if (forceServerLogout || !isLocalhost) {
+      console.log('CAS logout GET: redirecting to CAS server logout', { 
+        forceServerLogout, 
+        isLocalhost,
+        environment: process.env.NODE_ENV 
+      });
+      
+      // 🔧 强制清除CAS服务器认证状态：重定向到CAS logout，完成后重定向到登录页面
+      // 这样确保用户下次访问时必须重新进行完整的CAS认证流程
+      const casLogoutUrl = buildCasLogoutUrl();
+      const response = NextResponse.redirect(casLogoutUrl);
       
       // 复制session cookies到响应
       const sessionCookieHeader = tempResponse.headers.get('set-cookie');
@@ -68,16 +79,13 @@ export async function GET(request: NextRequest) {
         response.headers.set('set-cookie', sessionCookieHeader);
       }
       
+      console.log('✅ CAS logout GET: force logout from CAS server, redirecting to:', casLogoutUrl);
       return response;
     }
     
-    // 生产环境跳转到CAS服务器退出
-    console.log('CAS logout GET: production environment, redirecting to CAS logout');
-    
-    // 🔧 强制清除CAS服务器认证状态：重定向到CAS logout，完成后重定向到登录页面而不是首页
-    // 这样确保用户下次访问时必须重新进行完整的CAS认证流程
-    const casLogoutUrl = buildCasLogoutUrl();
-    const response = NextResponse.redirect(casLogoutUrl);
+    // 本地环境且非强制模式，直接重定向到首页
+    console.log('CAS logout GET: localhost detected, redirecting to home page');
+    const response = NextResponse.redirect(new URL('/', request.url));
     
     // 复制session cookies到响应
     const sessionCookieHeader = tempResponse.headers.get('set-cookie');
@@ -85,7 +93,6 @@ export async function GET(request: NextRequest) {
       response.headers.set('set-cookie', sessionCookieHeader);
     }
     
-    console.log('✅ CAS logout GET: force logout from CAS server, redirecting to:', casLogoutUrl);
     return response;
   } catch (error) {
     console.error('Error in CAS logout GET:', error);
