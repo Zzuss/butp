@@ -50,15 +50,6 @@ venv.bak/
 temp_predictions/
 function/prediction_log_*.txt
 function/run_prediction_temp.py
-app/admin/prediction/
-app/api/admin/prediction/
-app/api/admin/academic-records/
-app/utils/*.py
-*.sql
-function/
-execute_batches.js
-generate_*.js
-check_excel_headers.js
 
 # IDE
 .vscode/
