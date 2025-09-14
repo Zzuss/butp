@@ -7,10 +7,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // 实验性功能
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
+  // 服务器外部包配置（Next.js 15+ 配置）
+  serverExternalPackages: [],
 }
 
 export default nextConfig

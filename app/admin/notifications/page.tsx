@@ -139,11 +139,18 @@ export default function AdminNotificationsPage() {
       })
 
       if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || '更新通知状态失败')
+        let errorMessage = '更新通知状态失败'
+        try {
+          const errData = await response.json()
+          errorMessage = errData.error || errorMessage
+        } catch (jsonError) {
+          errorMessage = `更新通知状态失败 (HTTP ${response.status})`
+        }
+        throw new Error(errorMessage)
       }
       fetchNotifications()
     } catch (err) {
+      console.error('更新通知状态错误:', err)
       setError(err instanceof Error ? err.message : '更新通知状态失败')
     }
   }
@@ -159,11 +166,35 @@ export default function AdminNotificationsPage() {
       })
 
       if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || '删除通知失败')
+        let errorMessage = '删除通知失败'
+        try {
+          // 尝试解析错误响应为JSON
+          const errData = await response.json()
+          errorMessage = errData.error || errorMessage
+        } catch (jsonError) {
+          // 如果JSON解析失败，使用HTTP状态作为错误消息
+          errorMessage = `删除通知失败 (HTTP ${response.status})`
+        }
+        throw new Error(errorMessage)
       }
+      
+      // 检查响应是否有内容
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const result = await response.json()
+          console.log('删除成功:', result)
+        } catch (jsonError) {
+          console.warn('JSON解析失败，但删除可能成功:', jsonError)
+        }
+      } else {
+        console.log('删除成功，无JSON响应')
+      }
+      
+      // 删除成功，刷新列表
       fetchNotifications()
     } catch (err) {
+      console.error('删除通知错误:', err)
       setError(err instanceof Error ? err.message : '删除通知失败')
     }
   }

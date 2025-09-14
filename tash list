@@ -1,0 +1,20 @@
+[33mc13db81[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: 解决文件上传 413 错误 - 实现客户端直接上传
+[33mcc6b9da[m feat: 迁移教育方案到 Supabase Storage
+[33mcd2d616[m 修复SNH管理和CAS认证相关问题
+[33m8472f44[m fix: 修复login页面错误的CAS认证检查逻辑，CAS认证成功后自动完成登录而非显示错误
+[33m9f0ba85[m fix: 修复CAS认证中错误使用SHA256计算哈希值的问题，改为从映射表获取正确哈希值
+[33mee6ba75[m fix: 修复调试接口中的Supabase client导入问题
+[33m1c5fa4e[m debug: 添加登录流程调试接口，支持CAS认证和数据验证
+[33m807e767[m fix: 修复cookie传递问题，使用正确的方法复制所有set-cookie头到重定向响应
+[33m560ca77[m fix: 修复CAS登录session设置顺序问题，确保session正确保存到cookie
+[33md78e6c7[m fix: 完善登录错误处理，添加学号映射相关错误处理逻辑
+[33m15bb635[m fix: 修复学号映射SQL查询字段名大小写问题，解决登录失败错误
+[33mba0be18[m feat: 添加学号映射调试工具和测试页面
+[33m89203c7[m fix: 添加学号映射相关错误处理到登录页面
+[33m2737716[m fix: 完全删除CAS认证后的哈希值输入界面
+[33m7b7543d[m fix: 移除CAS认证向后兼容性，强制要求学号映射
+[33m180a7a1[m feat: 添加教育计划功能和核心应用优化
+[33md4320fe[m Merge branch 'main' of https://github.com/Zzuss/butp
+[33md3fc457[m feat: 添加学号哈希值映射功能
+[33ma262686[m fix: 修复Vercel部署后角色模型页面翻译显示问题
+[33m86e4a1b[m fix: 修复角色模型页面SchoolCard组件中的HTML标签缩进问题

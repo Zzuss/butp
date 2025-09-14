@@ -35,15 +35,15 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
           {...props}
         />
         <div
-          className={`h-6 w-11 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 ${
+          className={`relative h-6 w-11 rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-opacity-75 ${
             checkedValue
               ? 'bg-blue-600'
               : 'bg-gray-200'
           }`}
         >
           <div
-            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-              checkedValue ? 'translate-x-5' : 'translate-x-0'
+            className={`pointer-events-none absolute top-0.5 left-0.5 inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+              checkedValue ? 'translate-x-4' : 'translate-x-0'
             }`}
           />
         </div>
