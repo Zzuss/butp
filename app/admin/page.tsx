@@ -47,23 +47,21 @@ export default function AdminPage() {
           </Card>
         </Link>
 
-        {/* 智育成绩管理 */}
-        <Link href="/admin/prediction">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                智育成绩管理
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg font-semibold text-purple-700">成绩预测</div>
-              <p className="text-xs text-muted-foreground">
-                管理学生智育成绩和预测数据
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+        {/* 智育成绩管理 - 待推出 */}
+        <Card className="opacity-50 cursor-not-allowed">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              智育成绩管理
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-semibold text-gray-500">待推出</div>
+            <p className="text-xs text-muted-foreground">
+              智育成绩管理功能
+            </p>
+          </CardContent>
+        </Card>
 
         {/* 培养方案管理 */}
         <Link href="/admin/education-plan">
