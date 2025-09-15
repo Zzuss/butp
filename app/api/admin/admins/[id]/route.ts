@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 // 更新管理员信息
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 检查当前用户是否为管理员
@@ -26,7 +26,7 @@ export async function PATCH(
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     
     // 获取目标管理员信息
@@ -191,7 +191,7 @@ export async function PATCH(
 // 删除管理员
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 检查当前用户是否为管理员
@@ -213,7 +213,7 @@ export async function DELETE(
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // 不能删除自己
     if (currentAdmin.id === id) {
