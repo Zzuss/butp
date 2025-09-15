@@ -82,6 +82,14 @@ export default function DebugNotifications() {
           
           <div className="flex flex-wrap gap-2">
             <Button 
+              onClick={() => testEndpoint('GET', '/api/test-dynamic/test123')}
+              disabled={loading}
+              variant="default"
+            >
+              🧪 测试动态路由
+            </Button>
+            
+            <Button 
               onClick={() => testEndpoint('GET', '/api/admin/notifications')}
               disabled={loading}
               variant="outline"
