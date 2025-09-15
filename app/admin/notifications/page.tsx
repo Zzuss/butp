@@ -108,7 +108,7 @@ export default function AdminNotificationsPage() {
         end_date: formData.end_date || null
       }
       
-      const response = await fetch(`/api/admin/notifications/${id}`, {
+      const response = await fetch(`/api/admin/notifications/single?id=${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -132,7 +132,7 @@ export default function AdminNotificationsPage() {
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     setError(null)
     try {
-      const response = await fetch(`/api/admin/notifications/${id}`, {
+      const response = await fetch(`/api/admin/notifications/single?id=${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !currentStatus }),
@@ -161,7 +161,7 @@ export default function AdminNotificationsPage() {
       return
     }
     try {
-      const response = await fetch(`/api/admin/notifications/${id}`, {
+      const response = await fetch(`/api/admin/notifications/single?id=${id}`, {
         method: 'DELETE',
       })
 

@@ -98,11 +98,19 @@ export default function DebugNotifications() {
             </Button>
             
             <Button 
+              onClick={() => testEndpoint('GET', `/api/admin/notifications/single?id=${testId}`)}
+              disabled={loading}
+              variant="outline"
+            >
+              🔍 GET 单个通知 (新)
+            </Button>
+            
+            <Button 
               onClick={() => testEndpoint('GET', `/api/admin/notifications/${testId}`)}
               disabled={loading}
               variant="outline"
             >
-              🔍 GET 单个通知
+              🔍 GET 单个通知 (旧-动态路由)
             </Button>
             
             <Button 
@@ -120,21 +128,39 @@ export default function DebugNotifications() {
             </Button>
             
             <Button 
-              onClick={() => testEndpoint('PATCH', `/api/admin/notifications/${testId}`, {
+              onClick={() => testEndpoint('PATCH', `/api/admin/notifications/single?id=${testId}`, {
                 is_active: false
               })}
               disabled={loading}
               variant="secondary"
             >
-              ✏️ PATCH 更新通知
+              ✏️ PATCH 更新通知 (新)
+            </Button>
+            
+            <Button 
+              onClick={() => testEndpoint('PATCH', `/api/admin/notifications/${testId}`, {
+                is_active: false
+              })}
+              disabled={loading}
+              variant="outline"
+            >
+              ✏️ PATCH 更新通知 (旧)
+            </Button>
+            
+            <Button 
+              onClick={() => testEndpoint('DELETE', `/api/admin/notifications/single?id=${testId}`)}
+              disabled={loading}
+              variant="destructive"
+            >
+              🗑️ DELETE 删除通知 (新)
             </Button>
             
             <Button 
               onClick={() => testEndpoint('DELETE', `/api/admin/notifications/${testId}`)}
               disabled={loading}
-              variant="destructive"
+              variant="outline"
             >
-              🗑️ DELETE 删除通知
+              🗑️ DELETE 删除通知 (旧)
             </Button>
           </div>
           

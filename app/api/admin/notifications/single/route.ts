@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-// 简化的权限检查
+// 验证管理员权限的辅助函数
 function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId?: string } {
   try {
     const adminSessionCookie = request.cookies.get('admin-session')
     if (!adminSessionCookie?.value) {
       return { isValid: false }
     }
+
     const adminSession = JSON.parse(adminSessionCookie.value)
     if (!adminSession.id || !adminSession.username || !adminSession.loginTime) {
       return { isValid: false }
     }
+
+    // 检查会话是否过期（24小时）
     const loginTime = new Date(adminSession.loginTime)
     const now = new Date()
     const hoursSinceLogin = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60)
+
     if (hoursSinceLogin > 24) {
       return { isValid: false }
     }
+
     return { isValid: true, adminId: adminSession.id }
   } catch (error) {
     console.error('权限检查失败:', error)
@@ -25,36 +30,60 @@ function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId
   }
 }
 
-// GET 方法 - 测试路由是否工作
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  console.log('[GET-SIMPLE] 路由正常工作! ID:', id)
+// GET - 获取单个通知
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
   
+  console.log('[GET-SINGLE] 获取通知请求, ID:', id)
+  
+  if (!id) {
+    return NextResponse.json({ error: '缺少通知ID参数' }, { status: 400 })
+  }
+
   const { isValid } = checkAdminPermission(request)
   if (!isValid) {
     return NextResponse.json({ error: '需要管理员权限' }, { status: 401 })
   }
 
-  return NextResponse.json({
-    success: true,
-    message: '路由工作正常',
-    id,
-    method: 'GET',
-    timestamp: new Date().toISOString()
-  })
+  try {
+    const { data: notification, error } = await supabase
+      .from('system_notifications')
+      .select(`
+        *,
+        admin_accounts(username, full_name)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error('[GET-SINGLE] 获取通知失败:', error)
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: '通知不存在' }, { status: 404 })
+      }
+      return NextResponse.json({ error: '获取通知失败' }, { status: 500 })
+    }
+
+    console.log('[GET-SINGLE] 获取通知成功')
+    return NextResponse.json(notification)
+
+  } catch (error) {
+    console.error('[GET-SINGLE] 获取通知错误:', error)
+    return NextResponse.json({ error: '服务器错误' }, { status: 500 })
+  }
 }
 
-// PATCH 方法 - 更新通知
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  console.log('[PATCH-SIMPLE] 更新请求, ID:', id)
+// PATCH - 更新通知
+export async function PATCH(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
   
+  console.log('[PATCH-SINGLE] 更新通知请求, ID:', id)
+  
+  if (!id) {
+    return NextResponse.json({ error: '缺少通知ID参数' }, { status: 400 })
+  }
+
   const { isValid } = checkAdminPermission(request)
   if (!isValid) {
     return NextResponse.json({ error: '需要管理员权限' }, { status: 401 })
@@ -62,10 +91,12 @@ export async function PATCH(
 
   try {
     const body = await request.json()
-    console.log('[PATCH-SIMPLE] 请求体:', body)
+    console.log('[PATCH-SINGLE] 请求体:', body)
 
-    const updateData: any = { updated_at: new Date().toISOString() }
-    
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+
     if (body.title !== undefined) updateData.title = body.title
     if (body.content !== undefined) updateData.content = body.content
     if (body.type !== undefined) updateData.type = body.type
@@ -82,7 +113,7 @@ export async function PATCH(
       .single()
 
     if (error) {
-      console.error('[PATCH-SIMPLE] 更新失败:', error)
+      console.error('[PATCH-SINGLE] 更新通知失败:', error)
       return NextResponse.json({ error: '更新通知失败' }, { status: 500 })
     }
 
@@ -90,22 +121,26 @@ export async function PATCH(
       return NextResponse.json({ error: '通知不存在' }, { status: 404 })
     }
 
-    console.log('[PATCH-SIMPLE] 更新成功')
+    console.log('[PATCH-SINGLE] 更新通知成功')
     return NextResponse.json(notification)
+
   } catch (error) {
-    console.error('[PATCH-SIMPLE] 错误:', error)
+    console.error('[PATCH-SINGLE] 更新通知错误:', error)
     return NextResponse.json({ error: '服务器错误' }, { status: 500 })
   }
 }
 
-// DELETE 方法 - 删除通知
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  console.log('[DELETE-SIMPLE] 删除请求, ID:', id)
+// DELETE - 删除通知
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
   
+  console.log('[DELETE-SINGLE] 删除通知请求, ID:', id)
+  
+  if (!id) {
+    return NextResponse.json({ error: '缺少通知ID参数' }, { status: 400 })
+  }
+
   const { isValid } = checkAdminPermission(request)
   if (!isValid) {
     return NextResponse.json({ error: '需要管理员权限' }, { status: 401 })
@@ -118,14 +153,15 @@ export async function DELETE(
       .eq('id', id)
 
     if (error) {
-      console.error('[DELETE-SIMPLE] 删除失败:', error)
+      console.error('[DELETE-SINGLE] 删除通知失败:', error)
       return NextResponse.json({ error: '删除通知失败' }, { status: 500 })
     }
 
-    console.log('[DELETE-SIMPLE] 删除成功')
+    console.log('[DELETE-SINGLE] 删除通知成功')
     return NextResponse.json({ success: true })
+
   } catch (error) {
-    console.error('[DELETE-SIMPLE] 错误:', error)
+    console.error('[DELETE-SINGLE] 删除通知错误:', error)
     return NextResponse.json({ error: '服务器错误' }, { status: 500 })
   }
 }
