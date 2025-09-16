@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, BarChart3, BookOpen, GraduationCap, PercentCircle, Download } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { NotificationStack } from '@/components/ui/notification-modal'
 
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
@@ -29,6 +30,15 @@ import {
 import { CourseStatsChart } from '@/components/ui/chart'
 // ProxyHealthCheck removed per request
 
+// 通知接口定义
+interface SystemNotification {
+  id: string;
+  title: string;
+  content: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  priority: number;
+}
+
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
   const { t, language } = useLanguage()
@@ -41,6 +51,51 @@ export default function DashboardPage() {
   const [semesterTrends, setSemesterTrends] = useState<SemesterTrend[]>([])
   const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
   // const [courseResults, setCourseResults] = useState<CourseResult[]>([])
+  
+  // 通知相关状态
+  const [notifications, setNotifications] = useState<SystemNotification[]>([])
+  const [notificationLoading, setNotificationLoading] = useState(false)
+
+  // 获取未读通知
+  const fetchUnreadNotifications = async (userId: string) => {
+    setNotificationLoading(true)
+    try {
+      const response = await fetch(`/api/notifications?userId=${encodeURIComponent(userId)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setNotifications(data)
+      }
+    } catch (error) {
+      console.error('获取通知失败:', error)
+    } finally {
+      setNotificationLoading(false)
+    }
+  }
+
+  // 标记通知为已读
+  const markNotificationAsRead = async (notificationId: string) => {
+    if (!user?.userId) return
+    
+    try {
+      const response = await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.userId,
+          notificationId: notificationId
+        })
+      })
+
+      if (response.ok) {
+        // 从未读通知中移除该通知
+        setNotifications(prev => prev.filter(n => n.id !== notificationId))
+      }
+    } catch (error) {
+      console.error('标记通知已读失败:', error)
+    }
+  }
 
   useEffect(() => {
     // 如果未登录，不加载数据
@@ -77,6 +132,9 @@ export default function DashboardPage() {
         // 获取学期成绩趋势
         const trends = getSemesterTrends(results)
         setSemesterTrends(trends)
+        
+        // 获取未读通知
+        await fetchUnreadNotifications(user!.userId)
       } catch (error) {
         console.error('Error loading dashboard data:', error)
       } finally {
@@ -114,6 +172,7 @@ export default function DashboardPage() {
   }
   
   return (
+    <>
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -385,5 +444,14 @@ export default function DashboardPage() {
         {t('disclaimer.data.accuracy')}
       </div>
     </div>
+    
+    {/* 系统通知弹窗 */}
+    {notifications.length > 0 && (
+      <NotificationStack
+        notifications={notifications}
+        onMarkAsRead={markNotificationAsRead}
+      />
+    )}
+    </>
   )
 }

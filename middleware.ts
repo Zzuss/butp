@@ -14,6 +14,12 @@ const PROTECTED_PATHS = [
   // 可以根据需要添加更多受保护的路由
 ];
 
+// 需要管理员权限的路由路径
+const ADMIN_PROTECTED_PATHS = [
+  '/admin',
+  // 所有以/admin开头的路由都需要管理员权限
+];
+
 // 不需要隐私条款检查的路由路径
 const PRIVACY_EXEMPT_PATHS = [
   '/privacy-agreement',
@@ -34,9 +40,49 @@ const PUBLIC_PATHS = [
   // 可以根据需要添加更多公开路由
 ];
 
+// 检查管理员身份的辅助函数
+function checkAdminPermission(request: NextRequest): boolean {
+  try {
+    const adminSessionCookie = request.cookies.get('admin-session');
+    console.log('🍪 Cookie check - admin-session:', adminSessionCookie ? 'EXISTS' : 'NOT_FOUND');
+    console.log('🍪 All cookies:', request.cookies.getAll().map(c => c.name));
+    
+    if (!adminSessionCookie?.value) {
+      console.log('🚫 No admin-session cookie found');
+      return false;
+    }
+
+    // 解析管理员session cookie
+    const adminSession = JSON.parse(adminSessionCookie.value);
+    
+    // 检查session是否有效（检查必要字段和过期时间）
+    if (!adminSession.id || !adminSession.username || !adminSession.loginTime) {
+      console.log('🚫 Invalid admin session data');
+      return false;
+    }
+
+    // 检查session是否过期（24小时）
+    const loginTime = new Date(adminSession.loginTime);
+    const now = new Date();
+    const hoursSinceLogin = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSinceLogin > 24) {
+      console.log('🚫 Admin session expired');
+      return false;
+    }
+
+    console.log('✅ Valid admin session for user:', adminSession.username);
+    return true;
+  } catch (error) {
+    console.error('🚫 检查管理员权限失败:', error);
+    return false;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  console.log('🔥🔥🔥 MIDDLEWARE EXECUTING FOR PATH:', pathname);
   console.log('🚀 Middleware triggered for path:', pathname);
 
   // 检查是否是API路由
@@ -46,8 +92,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 检查是否是公开路径
-  if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+  // 检查是否是公开路径（精确匹配或特定前缀匹配）
+  const isPublicPath = PUBLIC_PATHS.some(path => {
+    if (path === '/') {
+      return pathname === '/';  // 只匹配根路径
+    }
+    return pathname.startsWith(path);
+  });
+  
+  if (isPublicPath) {
     console.log('🔓 Middleware: public path detected, allowing access');
     return NextResponse.next();
   }
@@ -57,6 +110,27 @@ export async function middleware(request: NextRequest) {
 
   // 检查是否是受保护的路径
   const isProtectedPath = PROTECTED_PATHS.some(path => pathname.startsWith(path));
+  const isAdminProtectedPath = ADMIN_PROTECTED_PATHS.some(path => pathname.startsWith(path));
+  
+  // 检查管理员路由保护
+  if (isAdminProtectedPath) {
+    console.log('🛡️ Middleware: admin protected path detected:', pathname);
+    console.log('🔍 Middleware: checking admin permission...');
+    
+    const hasAdminPermission = checkAdminPermission(request);
+    console.log('🔍 Middleware: admin permission result:', hasAdminPermission);
+    
+    if (!hasAdminPermission) {
+      console.log('🚫 Middleware: user does not have admin permission, redirecting to login');
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('error', 'admin_required');
+      loginUrl.searchParams.set('message', '该页面需要管理员权限，请以管理员身份登录');
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    console.log('✅ Middleware: admin permission verified, allowing access to admin path');
+    return NextResponse.next();
+  }
   
   if (isProtectedPath) {
     console.log('🔒 Middleware: protected path detected, checking auth');

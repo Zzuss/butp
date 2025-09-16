@@ -228,7 +228,8 @@ export async function POST(request: NextRequest) {
     const reservedKeys = new Set([
       'SNH', 'major', 'year', 'grade', 'count',
       'current_public','current_practice','current_math_science','current_political','current_basic_subject','current_innovation','current_english','current_basic_major','current_major','current_pred',
-      'target1_min_required_score','target2_min_required_score'
+      'target1_min_required_score','target2_min_required_score',
+      'current_prob1','current_prob2','current_prob3'
     ]);
 
     const courseScores = Object.entries(predictionsData)

@@ -1,0 +1,19 @@
+[33mcommit 27d921d49d2a0d5ebf444752ca3b9c1f780c67db[m
+Author: heheda <your-email@example.com>
+Date:   Fri Aug 22 22:07:31 2025 +0800
+
+    pdfTest
+
+CAMPUS_PDF_DEPLOYMENT_GUIDE.md
+HUAWEI_CLOUD_DEPLOYMENT.md
+app/api/pdf/generate/route.ts
+app/api/pdf/health/route.ts
+app/role-models/page.tsx
+cloud-pdf-service/README.md
+cloud-pdf-service/deploy-huawei.sh
+cloud-pdf-service/huawei-cloud-server-config.md
+cloud-pdf-service/quick-setup-guide.md
+cloud-pdf-service/setup-frontend.md
+components/layout/sidebar.tsx
+components/pdf/CampusPdfServiceButton.tsx
+h origin main

@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, XCircle, Upload, FileSpreadsheet, Download, Trash2 } from 'lucide-react'
+import { CheckCircle, XCircle, Upload, FileSpreadsheet, Download, Trash2, UserCheck } from 'lucide-react'
+import AdminLayout from '@/components/admin/AdminLayout'
 
 interface UploadResult {
   success: boolean
@@ -136,12 +137,15 @@ export default function SNHAdminPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">学号哈希值映射管理</h1>
-        <p className="text-muted-foreground mt-2">
-          管理学号与哈希值的映射关系，支持上传Excel文件批量导入
-        </p>
+    <AdminLayout>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <UserCheck className="h-8 w-8 text-purple-600" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">学生登录管理</h1>
+            <p className="text-gray-600">管理学号与哈希值的映射关系，支持上传Excel文件批量导入</p>
+          </div>
+        </div>
       </div>
 
       {/* 文件上传区域 */}
@@ -250,6 +254,6 @@ export default function SNHAdminPage() {
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </AdminLayout>
   )
 }
