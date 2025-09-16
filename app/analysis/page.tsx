@@ -927,6 +927,12 @@ export default function Analysis() {
   // 获取当前语言的能力标签
   const currentAbilityLabels = abilityLabels[language as keyof typeof abilityLabels] || abilityLabels.zh;
   
+  // 处理雷达图角点击
+  const handleRadarCornerClick = (cornerIndex: number, label: string, value: number) => {
+    console.log("click once");
+    // 这里可以添加更多处理逻辑
+  };
+  
   // 下载状态
   const [downloading, setDownloading] = useState(false);
   const availablePlanYears = [2024, 2023, 2022, 2020];
@@ -1171,6 +1177,7 @@ export default function Analysis() {
                       data={abilityData} 
                       labels={currentAbilityLabels}
                       className="mt-4"
+                      onCornerClick={handleRadarCornerClick}
                     />
                   )}
                   <div className="mt-4 p-3 bg-purple-50 rounded-lg">

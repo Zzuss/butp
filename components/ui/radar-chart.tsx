@@ -6,9 +6,10 @@ interface RadarChartProps {
   data: number[]
   labels: string[]
   className?: string
+  onCornerClick?: (cornerIndex: number, label: string, value: number) => void
 }
 
-export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
+export function RadarChart({ data, labels, className = "", onCornerClick }: RadarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -148,10 +149,60 @@ export function RadarChart({ data, labels, className = "" }: RadarChartProps) {
     }
   }, [data, labels])
 
+  // 处理Canvas点击事件
+  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!onCornerClick) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    // 获取点击坐标（相对于Canvas）
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+    
+    // 转换为相对于雷达图中心的坐标
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const relativeX = x - centerX;
+    const relativeY = y - centerY;
+    
+    // 计算角度（注意：Canvas的Y轴向下，需要翻转）
+    const angle = Math.atan2(-relativeY, relativeX);
+    const normalizedAngle = (angle + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+    
+    // 计算距离中心的距离
+    const distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
+    
+    // 判断点击是否在有效区域内（距离中心一定范围内）
+    const maxRadius = (canvas.width / 2 - 80) + 50; // 标签区域
+    if (distance > maxRadius) return;
+    
+    // 计算属于哪个角
+    const anglePerCorner = (2 * Math.PI) / data.length;
+    const cornerIndex = Math.floor(normalizedAngle / anglePerCorner);
+    
+    // 检查是否在点击区域内（可以设置一个容错范围）
+    const cornerAngle = cornerIndex * anglePerCorner;
+    const angleDiff = Math.abs(normalizedAngle - cornerAngle);
+    const tolerance = anglePerCorner / 3; // 每个角1/3的容错范围
+    
+    if (angleDiff <= tolerance || angleDiff >= (2 * Math.PI - tolerance)) {
+      onCornerClick(cornerIndex, labels[cornerIndex], data[cornerIndex]);
+    }
+  };
+
   return (
     <div className={`flex justify-center ${className}`}>
       <div className="relative overflow-visible">
-        <canvas ref={canvasRef} className="max-w-full h-auto" />
+        <canvas 
+          ref={canvasRef} 
+          className="max-w-full h-auto cursor-pointer" 
+          onClick={handleCanvasClick}
+        />
       </div>
     </div>
   )
