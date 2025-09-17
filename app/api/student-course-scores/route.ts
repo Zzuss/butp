@@ -167,31 +167,71 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid hash format' }, { status: 400 })
     }
 
-    // 1) 按专业映射选择表
-    const majorToTable: Record<string, string> = {
-      '智能科学与技术': 'Cohort2023_Predictions_ai',
-      '电子信息工程': 'Cohort2023_Predictions_ee',
-      '电信工程及管理': 'Cohort2023_Predictions_tewm',
-      '物联网工程': 'Cohort2023_Predictions_iot'
+    // 1) 动态确定应该使用哪一年的预测表
+    // 首先尝试从学生信息中获取年级信息来确定使用哪个cohort表
+    const majorToTableMapping: Record<string, string> = {
+      '智能科学与技术': 'Predictions_ai',
+      '电子信息工程': 'Predictions_ee',
+      '电信工程及管理': 'Predictions_tewm',
+      '物联网工程': 'Predictions_iot'
     };
 
-    if (!major || !(major in majorToTable)) {
+    if (!major || !(major in majorToTableMapping)) {
       return NextResponse.json({ error: 'Invalid or unsupported major' }, { status: 400 })
     }
 
-    const tableName = majorToTable[major];
+    const tableSuffix = majorToTableMapping[major];
+    
+    // 尝试按年份优先级查找学生数据 (2024 -> 2023 -> 2022)
+    const cohortYears = [2024, 2023, 2022];
+    let tableName = '';
+    let predictionsData = null;
+    let predictionsError = null;
 
-    // 2) 查询该表一行（选取全部列，后续过滤课程列）
-    const { data: predictionsData, error: predictionsError } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('SNH', trimmedHash)
-      .limit(1)
-      .single();
-
-    if (predictionsError || !predictionsData) {
-      return NextResponse.json({ error: `Student not found in table ${tableName}` }, { status: 404 })
+    console.log('查询预测数据 - 专业:', major);
+    console.log('查询预测数据 - 哈希值:', trimmedHash);
+    
+    for (const year of cohortYears) {
+      tableName = `Cohort${year}_${tableSuffix}`;
+      console.log('尝试查询表:', tableName);
+      
+      const result = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('SNH', trimmedHash)
+        .limit(1)
+        .single();
+      
+      if (!result.error && result.data) {
+        predictionsData = result.data;
+        predictionsError = null;
+        console.log('✅ 在表中找到学生数据:', tableName);
+        break;
+      } else {
+        console.log('❌ 表中未找到学生:', tableName, result.error?.message || 'No data');
+      }
     }
+
+    // 2) 检查是否在任何cohort表中找到了学生数据
+    if (predictionsError || !predictionsData) {
+      console.error('❌ 学生预测数据缺失!');
+      console.error('📊 所有 cohort 预测表中都找不到该学生数据');
+      console.error('🔍 尝试的表:', cohortYears.map(year => `Cohort${year}_${tableSuffix}`));
+      console.error('🔍 查询的哈希值:', trimmedHash);
+      console.error('🎓 专业:', major);
+      console.error('💡 可能原因: 学生哈希值不在任何年份的预测表中，或专业信息不匹配');
+      return NextResponse.json({ 
+        error: `学生预测数据缺失: 在专业 "${major}" 的所有年份预测表中都找不到该学生数据`,
+        details: {
+          studentHash: trimmedHash,
+          major: major,
+          triedTables: cohortYears.map(year => `Cohort${year}_${tableSuffix}`),
+          suggestion: '请检查学生哈希值是否正确，或该学生的专业信息是否匹配'
+        }
+      }, { status: 404 })
+    }
+
+    console.log('✅ 成功找到学生数据，使用表:', tableName);
 
     // 2. 从courses表获取课程详细信息
     // 获取所有在映射表中的课程ID
