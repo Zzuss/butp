@@ -13,7 +13,6 @@ export const isSupabaseConfigured = () => {
 }
 
 export interface Course {
-  id: number
   course_id: string
   course_name: string | null
   category: string | null
@@ -27,7 +26,9 @@ export interface Course {
   remarks: string | null
   major: string | null
   year: number | null
-  created_at: string | null
+  required_total: number | null
+  required_compulsory: number | null
+  required_elective: number | null
 }
 
 export interface AcademicResult {
