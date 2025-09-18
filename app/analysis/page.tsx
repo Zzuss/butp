@@ -139,6 +139,7 @@ export default function Analysis() {
   // 特征值状态
   const [calculatedFeatures, setCalculatedFeatures] = useState<Record<string, number> | null>(null);
   const [loadingFeatures, setLoadingFeatures] = useState(false);
+  const [academicStrength, setAcademicStrength] = useState<number | null>(null);
   
   // 预测结果状态
   const [predictionResult, setPredictionResult] = useState<{
@@ -544,6 +545,39 @@ export default function Analysis() {
               englishFeatureValues[englishName] = value;
             }
           });
+          // 计算 AcademicStrength
+          // 步骤1：填充缺失值
+          // 仅对 major 和 innovation 进行填充
+          if (englishFeatureValues['major'] === 0) {
+            englishFeatureValues['major'] = englishFeatureValues['basic_major'] * 0.5 + englishFeatureValues['basic_subject'] * 0.3 + englishFeatureValues['math_science'] * 0.2;
+          }
+          if (englishFeatureValues['innovation'] === 0) {
+            englishFeatureValues['innovation'] = englishFeatureValues['practice'] * 0.4 + englishFeatureValues['major'] * 0.35 + englishFeatureValues['basic_major'] * 0.15 + englishFeatureValues['basic_subject'] * 0.1;
+          }
+          // 步骤2：获取专业基准数据（假设使用 _global_，实际应根据学生专业选择）
+          const strengthStats = {
+            'public': [84.82204689896997, 4.143366335953203],
+            'political': [86.12457264957264, 2.7169474528845057],
+            'english': [79.34048297381631, 6.140405395538642],
+            'math_science': [78.69331772479921, 8.399991165101154],
+            'basic_subject': [81.95231535388756, 6.609251767392124],
+            'basic_major': [80.99553919085157, 5.045698290548678],
+            'major': [81.68312065476074, 7.143527823218448],
+            'practice': [85.6373547217951, 4.35426980203138],
+            'innovation': [82.82630183345319, 5.204012346585702]
+          };
+          // 步骤3：计算 Z-score
+          let zScores = [];
+          for (const [key, value] of Object.entries(englishFeatureValues)) {
+            const score = value === 0 ? 60 : value; // 对于值为 0 的类别，临时使用 60 计算 Z-score
+            const [mean, std] = strengthStats[key];
+            const zScore = (score - mean) / std;
+            zScores.push(zScore);
+          }
+          // 步骤4：计算 AcademicStrength
+          const academicStrengthValue = zScores.reduce((sum, z) => sum + z, 0) / zScores.length;
+          setAcademicStrength(academicStrengthValue);
+          englishFeatureValues['AcademicStrength'] = academicStrengthValue;
           
           console.log('📊 英文特征值:', englishFeatureValues);
           
@@ -2549,7 +2583,7 @@ export default function Analysis() {
 
             {/* 计算出的特征值显示 */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-semibold mb-3 text-blue-800">基于当前数据计算出的9个特征值</h4>
+              <h4 className="font-semibold mb-3 text-blue-800">基于当前数据计算出的特征值</h4>
               {loadingFeatures ? (
                 <div className="text-center py-4">
                   <div className="text-blue-600">计算特征值中...</div>
@@ -2562,6 +2596,12 @@ export default function Analysis() {
                       <div className="text-xl font-bold text-blue-600">{value.toFixed(2)}</div>
                     </div>
                   ))}
+                  {academicStrength !== null && (
+                    <div className="p-3 border border-blue-300 rounded-lg bg-white">
+                      <div className="text-sm font-medium text-blue-700 mb-1">AcademicStrength</div>
+                      <div className="text-xl font-bold text-blue-600">{academicStrength.toFixed(2)}</div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-4">
