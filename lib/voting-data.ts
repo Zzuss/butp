@@ -234,9 +234,9 @@ export function getCurrentVotingVersion(): string {
 
 // 初始化投票选项（如果数据库中没有的话）
 export const initialVotingOptions = [
-  { option_key: 'A', option_text: '是否把修改成绩改成滑条式输入' },
-  { option_key: 'B', option_text: '是否加入数字CV生成功能' },
-  { option_key: 'C', option_text: '是否细化能力图谱' },
-  { option_key: 'D', option_text: '职业规划与就业指导' },
-  { option_key: 'E', option_text: '多语言国际化支持' }
+  { option_key: 'A', option_text: '把滑条输入改为数字输入' },
+  { option_key: 'B', option_text: '生成动态数字CV' },
+  { option_key: 'C', option_text: '动态能力图谱' },
+  { option_key: 'D', option_text: '导出动态数字人' },
+  { option_key: 'E', option_text: '通告栏公示功能' }
 ] 
