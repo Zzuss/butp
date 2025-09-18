@@ -154,6 +154,9 @@ export default function Analysis() {
   // 概率数据加载重试计数
   const probabilityRetryRef = useRef(0)
   
+  // 浮层状态
+  const [overlayVisible, setOverlayVisible] = useState(false);
+  const [selectedCorner, setSelectedCorner] = useState<{ index: number; label: string; value: number } | null>(null);
 
 
   // 获取GPA门槛值
@@ -1073,8 +1076,8 @@ export default function Analysis() {
   
   // 处理雷达图角点击
   const handleRadarCornerClick = (cornerIndex: number, label: string, value: number) => {
-    console.log("click once");
-    // 这里可以添加更多处理逻辑
+    setOverlayVisible(true);
+    setSelectedCorner({ index: cornerIndex, label, value });
   };
   
   // 下载状态
@@ -1160,6 +1163,12 @@ export default function Analysis() {
     }
   };
 
+  // 关闭浮层
+  const handleCloseOverlay = () => {
+    setOverlayVisible(false);
+    setSelectedCorner(null);
+  };
+
   // 如果未登录，显示登录提示
   if (!authLoading && !user?.isLoggedIn) {
     return (
@@ -1173,519 +1182,585 @@ export default function Analysis() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
-          <p className="text-muted-foreground">
-            {studentInfo 
-              ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-              : t('analysis.loading')
-            }
+    <div className="container mx-auto p-4 space-y-6 relative">
+      {/* 浮层 */}
+      {overlayVisible && selectedCorner && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">为数理逻辑与科学基础，建议注重以下课程</h2>
+            <ul className="list-decimal list-inside space-y-2">
+              <li>工程数学</li>
+              <li>高等数学A</li>
+              <li>线性代数</li>
+              <li>高等数学A</li>
+              <li>近代物理</li>
+            </ul>
+            <Button className="mt-4" onClick={handleCloseOverlay}>关闭</Button>
+          </div>
+        </div>
+      )}
+      {/* 其他内容 */}
+      <div className="p-6">
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
+            <p className="text-muted-foreground">
+              {studentInfo 
+                ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+                : t('analysis.loading')
+              }
+            </p>
+          </div>
+
+        </div>
+
+        {/* 免责声明 */}
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-800 text-center">
+            {t('disclaimer.data.accuracy')}
           </p>
         </div>
 
-      </div>
-
-      {/* 免责声明 */}
-      <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <p className="text-sm text-yellow-800 text-center">
-          {t('disclaimer.data.accuracy')}
-        </p>
-      </div>
-
-      {/* 三个交互按钮 */}
-      <div className="mb-6 grid grid-cols-3 gap-2 md:gap-4">
-        <Button
-          variant={selectedButton === 'graduation' ? 'default' : 'outline'}
-          className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
-            selectedButton === 'graduation' 
-              ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-              : 'hover:scale-95'
-          }`}
-          onClick={() => handleButtonSelect('graduation')}
-        >
-          <span>{t('analysis.graduation.title')}</span>
-          <span className="text-xs text-red-500 mt-1 px-1 text-center leading-tight break-words whitespace-normal">
-            {t('analysis.graduation.pending')}
-          </span>
-        </Button>
-                 <Button
-           variant={selectedButton === 'overseas' ? 'default' : 'outline'}
-           className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
-             selectedButton === 'overseas' 
-               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-               : 'hover:scale-95'
-           }`}
-           onClick={() => handleButtonSelect('overseas')}
-         >
-           <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
-             <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-               <span>{t('analysis.overseas.title')}</span>
+        {/* 三个交互按钮 */}
+        <div className="mb-6 grid grid-cols-3 gap-2 md:gap-4">
+          <Button
+            variant={selectedButton === 'graduation' ? 'default' : 'outline'}
+            className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
+              selectedButton === 'graduation' 
+                ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
+                : 'hover:scale-95'
+            }`}
+            onClick={() => handleButtonSelect('graduation')}
+          >
+            <span>{t('analysis.graduation.title')}</span>
+            <span className="text-xs text-red-500 mt-1 px-1 text-center leading-tight break-words whitespace-normal">
+              {t('analysis.graduation.pending')}
+            </span>
+          </Button>
+                   <Button
+             variant={selectedButton === 'overseas' ? 'default' : 'outline'}
+             className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
+               selectedButton === 'overseas' 
+                 ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
+                 : 'hover:scale-95'
+             }`}
+             onClick={() => handleButtonSelect('overseas')}
+           >
+             <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
+               <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
+                 <span>{t('analysis.overseas.title')}</span>
+               </div>
+               <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
+                 <span className="text-base text-blue-500 font-medium">
+                   {loadingProbability ? t('analysis.target.score.loading') : 
+                    probabilityData && probabilityData.proba_2 !== null ? 
+                    `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
+                    t('analysis.target.score.no.data')}
+                 </span>
+               </div>
              </div>
-             <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
-               <span className="text-base text-blue-500 font-medium">
-                 {loadingProbability ? t('analysis.target.score.loading') : 
-                  probabilityData && probabilityData.proba_2 !== null ? 
-                  `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
-                  t('analysis.target.score.no.data')}
-               </span>
+           </Button>
+                   <Button
+             variant={selectedButton === 'domestic' ? 'default' : 'outline'}
+             className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
+               selectedButton === 'domestic' 
+                 ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
+                 : 'hover:scale-95'
+             }`}
+             onClick={() => handleButtonSelect('domestic')}
+           >
+             <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
+               <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
+                 <span>{t('analysis.domestic.title')}</span>
+               </div>
+               <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
+                 <span className="text-base text-blue-500 font-medium">
+                   {loadingProbability ? t('analysis.target.score.loading') : 
+                    probabilityData && probabilityData.proba_1 !== null ? 
+                    `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
+                    t('analysis.target.score.no.data')}
+                 </span>
+               </div>
              </div>
-           </div>
-         </Button>
-                 <Button
-           variant={selectedButton === 'domestic' ? 'default' : 'outline'}
-           className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
-             selectedButton === 'domestic' 
-               ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-               : 'hover:scale-95'
-           }`}
-           onClick={() => handleButtonSelect('domestic')}
-         >
-           <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
-             <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-               <span>{t('analysis.domestic.title')}</span>
-             </div>
-             <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
-               <span className="text-base text-blue-500 font-medium">
-                 {loadingProbability ? t('analysis.target.score.loading') : 
-                  probabilityData && probabilityData.proba_1 !== null ? 
-                  `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
-                  t('analysis.target.score.no.data')}
-               </span>
-             </div>
-           </div>
-         </Button>
-      </div>
-
-      <div className="analysis-content">
-        {/* 初始界面内容 - 仅在未选择按钮时显示 */}
-        {!selectedButton && (
-          <>
-            {/* GPA门槛值分析 - 独立卡片，填满整个宽度 - 已隐藏 */}
-            <div className="mb-6 hidden">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">{t('analysis.tops.title')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                {/* 前10% GPA */}
-                <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
-                  <div className="text-lg font-medium mb-2">
-                    {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top10 !== null ? gpaThresholds.top10.toFixed(2) : t('analysis.target.score.no.data'))}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('analysis.tops.top10')} GPA
-                  </p>
-                </div>
-                
-                {/* 前20% GPA */}
-                <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
-                  <div className="text-lg font-medium mb-2">
-                    {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top20 !== null ? gpaThresholds.top20.toFixed(2) : t('analysis.target.score.no.data'))}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('analysis.tops.top20')} GPA
-                  </p>
-                </div>
-                
-                {/* 前30% GPA */}
-                <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
-                  <div className="text-lg font-medium mb-2">
-                    {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top30 !== null ? gpaThresholds.top30.toFixed(2) : t('analysis.target.score.no.data'))}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('analysis.tops.top30')} GPA
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+           </Button>
         </div>
 
-            {/* 能力评估雷达图 - 在2列网格中显示 */}
-            <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-                  <CardTitle>{t('analysis.ability.title')}</CardTitle>
-                  <CardDescription>{t('analysis.ability.description')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                  {loadingAbility ? (
-                    <div className="flex justify-center items-center h-64">
-                      <div className="text-muted-foreground">{t('analysis.target.score.loading')}</div>
+        <div className="analysis-content">
+          {/* 初始界面内容 - 仅在未选择按钮时显示 */}
+          {!selectedButton && (
+            <>
+              {/* GPA门槛值分析 - 独立卡片，填满整个宽度 - 已隐藏 */}
+              <div className="mb-6 hidden">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">{t('analysis.tops.title')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  {/* 前10% GPA */}
+                  <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
+                    <div className="text-lg font-medium mb-2">
+                      {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top10 !== null ? gpaThresholds.top10.toFixed(2) : t('analysis.target.score.no.data'))}
                     </div>
-                  ) : (
-                    <RadarChart 
-                      data={abilityData} 
-                      labels={currentAbilityLabels}
-                      className="mt-4"
-                      onCornerClick={handleRadarCornerClick}
-                    />
-                  )}
-                  <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                    <div className="text-sm font-medium text-purple-800">
-                      {t('analysis.ability.overall', { 
-                        score: Math.round(abilityData.reduce((acc, item) => acc + item, 0) / abilityData.length) 
-                      })}
-                      </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t('analysis.tops.top10')} GPA
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                  
+                  {/* 前20% GPA */}
+                  <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
+                    <div className="text-lg font-medium mb-2">
+                      {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top20 !== null ? gpaThresholds.top20.toFixed(2) : t('analysis.target.score.no.data'))}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t('analysis.tops.top20')} GPA
+                    </p>
+                  </div>
+                  
+                  {/* 前30% GPA */}
+                  <div className="text-center py-4 border-r border-gray-200 last:border-r-0">
+                    <div className="text-lg font-medium mb-2">
+                      {loadingGPA ? t('analysis.calculating') : (gpaThresholds.top30 !== null ? gpaThresholds.top30.toFixed(2) : t('analysis.target.score.no.data'))}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t('analysis.tops.top30')} GPA
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-              {/* 培养方案卡片 - 填满右边空缺 */}
+              {/* 能力评估雷达图 - 在2列网格中显示 */}
+              <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                    <CardTitle>{t('analysis.ability.title')}</CardTitle>
+                    <CardDescription>{t('analysis.ability.description')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                    {loadingAbility ? (
+                      <div className="flex justify-center items-center h-64">
+                        <div className="text-muted-foreground">{t('analysis.target.score.loading')}</div>
+                      </div>
+                    ) : (
+                      <RadarChart 
+                        data={abilityData} 
+                        labels={currentAbilityLabels}
+                        className="mt-4"
+                        onCornerClick={handleRadarCornerClick}
+                        cornerStyle={{ zIndex: 50 }}
+                        chartStyle={{ width: '110%', marginLeft: '-5%' }}
+                      />
+                    )}
+                    <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                      <div className="text-sm font-medium text-purple-800">
+                        {t('analysis.ability.overall', { 
+                          score: Math.round(abilityData.reduce((acc, item) => acc + item, 0) / abilityData.length) 
+                        })}
+                        </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 培养方案卡片 - 填满右边空缺 */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div>
+                      <CardTitle>{t('analysis.curriculum.title')}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-center h-24">
+                      <Button
+                        variant="default"
+                        size="lg"
+                        className="w-3/4 h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                        onClick={handleDownloadCurriculum}
+                        disabled={downloading}
+                      >
+                        {downloading ? '下载中...' : t('analysis.curriculum.view.full')}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+
+          {/* 毕业要求检查界面 - 当选择毕业按钮时显示 */}
+          {selectedButton === 'graduation' && (
+            <div className="mb-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <div>
-                    <CardTitle>{t('analysis.curriculum.title')}</CardTitle>
+                    <CardTitle>{t('analysis.graduation.title')}</CardTitle>
+                    <CardDescription>{t('analysis.graduation.description')}</CardDescription>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-center h-24">
-                    <Button
-                      variant="default"
-                      size="lg"
-                      className="w-3/4 h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                      onClick={handleDownloadCurriculum}
-                      disabled={downloading}
-                    >
-                      {downloading ? '下载中...' : t('analysis.curriculum.view.full')}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        )}
-
-        {/* 毕业要求检查界面 - 当选择毕业按钮时显示 */}
-        {selectedButton === 'graduation' && (
-          <div className="mb-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle>{t('analysis.graduation.title')}</CardTitle>
-                  <CardDescription>{t('analysis.graduation.description')}</CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                  disabled={submitting}
-                  className="h-8 px-3 text-sm"
-                >
-                  {isEditing ? t('analysis.edit.cancel') : t('analysis.edit.start')}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {/* 学分要求 - 仅显示未完成的 */}
-                  {!graduationRequirements.credits.completed && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">学分要求</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                            待完成
-                          </span>
-                          {isEditing && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGraduationEdit('credits')}
-                              disabled={submitting}
-                              className="h-7 px-2 text-xs"
-                            >
-                              标记完成
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        需要 {graduationRequirements.credits.required} 学分，已获得 {graduationRequirements.credits.earned} 学分
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(100, (graduationRequirements.credits.earned / graduationRequirements.credits.required) * 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* GPA要求 - 仅显示未完成的 */}
-                  {!graduationRequirements.gpa.completed && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">GPA要求</h3>
-                        <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                          待完成
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        需要 GPA {graduationRequirements.gpa.required}，当前 GPA {graduationRequirements.gpa.current}
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(100, (graduationRequirements.gpa.current / graduationRequirements.gpa.required) * 100)}%` }}
-                          ></div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 毕业论文 - 仅显示未完成的 */}
-                  {!graduationRequirements.thesis.completed && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">毕业论文</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                            待完成
-                          </span>
-                          {isEditing && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGraduationEdit('thesis')}
-                              disabled={submitting}
-                              className="h-7 px-2 text-xs"
-                            >
-                              标记完成
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        需要完成毕业论文并通过答辩
-                      </p>
-                    </div>
-                  )}
-
-                  {/* 证书要求 - 仅显示未完成的 */}
-                  {!graduationRequirements.certificates.completed && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">证书要求</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                            待完成
-                          </span>
-                          {isEditing && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGraduationEdit('certificates')}
-                              disabled={submitting}
-                              className="h-7 px-2 text-xs"
-                            >
-                              标记完成
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        需要获得相关专业证书
-                      </p>
-                    </div>
-                  )}
-
-                  {/* 思政课程 - 仅显示未完成的 */}
-                  {!graduationRequirements.political.completed && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">思政课程</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                            待完成
-                          </span>
-                          {isEditing && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGraduationEdit('political')}
-                              disabled={submitting}
-                              className="h-7 px-2 text-xs"
-                            >
-                              标记完成
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        需要 {graduationRequirements.political.required} 学分，已获得 {graduationRequirements.political.earned} 学分
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(100, (graduationRequirements.political.earned / graduationRequirements.political.required) * 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                  )}
-
-                  {/* 军训学分 - 仅显示未完成的 */}
-                  {!graduationRequirements.military.completed && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">军训学分</h3>
-                    <div className="flex items-center gap-2">
-                          <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                            待完成
-                          </span>
-                          {isEditing && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGraduationEdit('military')}
-                              disabled={submitting}
-                              className="h-7 px-2 text-xs"
-                            >
-                              标记完成
-                            </Button>
-                          )}
-                    </div>
-                  </div>
-                      <p className="text-sm text-muted-foreground">
-                        需要 {graduationRequirements.military.required} 学分，已获得 {graduationRequirements.military.earned} 学分
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-red-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(100, (graduationRequirements.military.earned / graduationRequirements.military.required) * 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 创新创业学分 - 仅显示未完成的 */}
-                  {!graduationRequirements.innovation.completed && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">创新创业学分</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                            待完成
-                          </span>
-                          {isEditing && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGraduationEdit('innovation')}
-                              disabled={submitting}
-                              className="h-7 px-2 text-xs"
-                            >
-                              标记完成
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        需要 {graduationRequirements.innovation.required} 学分，已获得 {graduationRequirements.innovation.earned} 学分
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-teal-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(100, (graduationRequirements.innovation.earned / graduationRequirements.innovation.required) * 100)}%` }}
-                        ></div>
-                  </div>
-                  </div>
-                  )}
-
-                  {/* 毕业要求详细表格 */}
-                  {graduationRequirementsData.length > 0 ? (
-                    <GraduationRequirementsTable graduationRequirements={graduationRequirementsData} />
-                  ) : loadingGraduationRequirements ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="text-muted-foreground">正在加载毕业要求数据...</div>
-                    </div>
-                  ) : selectedButton === 'graduation' ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="text-muted-foreground">暂无毕业要求数据</div>
-                    </div>
-                  ) : null}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        )}
-
-        {/* 海外读研分析界面 - 仿照模板设计 */}
-        {selectedButton === 'overseas' && (
-          <div className="space-y-6">
-            {/* 目标分数显示 */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  <div className="text-center">
-                    <p className="text-blue-800 font-medium">
-                      {t('analysis.target.score.minimum')}{' '}
-                      <span className="text-blue-600 font-bold">
-                        {loadingTargetScores ? '加载中...' : 
-                         targetScores && targetScores.target2_score !== null ? 
-                         `${targetScores.target2_score}` : 
-                         '暂无数据'}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-                <div className="ml-4">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs"
-                    onClick={loadAllCourseData}
-                    disabled={loadingAllCourseData}
+                    onClick={() => setIsEditing(!isEditing)}
+                    disabled={submitting}
+                    className="h-8 px-3 text-sm"
                   >
-                    {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
+                    {isEditing ? t('analysis.edit.cancel') : t('analysis.edit.start')}
                   </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* 学分要求 - 仅显示未完成的 */}
+                    {!graduationRequirements.credits.completed && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">学分要求</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                              待完成
+                            </span>
+                            {isEditing && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGraduationEdit('credits')}
+                                disabled={submitting}
+                                className="h-7 px-2 text-xs"
+                              >
+                                标记完成
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          需要 {graduationRequirements.credits.required} 学分，已获得 {graduationRequirements.credits.earned} 学分
+                        </p>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(100, (graduationRequirements.credits.earned / graduationRequirements.credits.required) * 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* GPA要求 - 仅显示未完成的 */}
+                    {!graduationRequirements.gpa.completed && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">GPA要求</h3>
+                          <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                            待完成
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          需要 GPA {graduationRequirements.gpa.required}，当前 GPA {graduationRequirements.gpa.current}
+                        </p>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(100, (graduationRequirements.gpa.current / graduationRequirements.gpa.required) * 100)}%` }}
+                            ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 毕业论文 - 仅显示未完成的 */}
+                    {!graduationRequirements.thesis.completed && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">毕业论文</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                              待完成
+                            </span>
+                            {isEditing && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGraduationEdit('thesis')}
+                                disabled={submitting}
+                                className="h-7 px-2 text-xs"
+                              >
+                                标记完成
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          需要完成毕业论文并通过答辩
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 证书要求 - 仅显示未完成的 */}
+                    {!graduationRequirements.certificates.completed && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">证书要求</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                              待完成
+                            </span>
+                            {isEditing && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGraduationEdit('certificates')}
+                                disabled={submitting}
+                                className="h-7 px-2 text-xs"
+                              >
+                                标记完成
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          需要获得相关专业证书
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 思政课程 - 仅显示未完成的 */}
+                    {!graduationRequirements.political.completed && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">思政课程</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                              待完成
+                            </span>
+                            {isEditing && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGraduationEdit('political')}
+                                disabled={submitting}
+                                className="h-7 px-2 text-xs"
+                              >
+                                标记完成
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          需要 {graduationRequirements.political.required} 学分，已获得 {graduationRequirements.political.earned} 学分
+                        </p>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(100, (graduationRequirements.political.earned / graduationRequirements.political.required) * 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                    )}
+
+                    {/* 军训学分 - 仅显示未完成的 */}
+                    {!graduationRequirements.military.completed && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">军训学分</h3>
+                      <div className="flex items-center gap-2">
+                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                              待完成
+                            </span>
+                            {isEditing && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGraduationEdit('military')}
+                                disabled={submitting}
+                                className="h-7 px-2 text-xs"
+                              >
+                                标记完成
+                              </Button>
+                            )}
+                      </div>
+                    </div>
+                        <p className="text-sm text-muted-foreground">
+                          需要 {graduationRequirements.military.required} 学分，已获得 {graduationRequirements.military.earned} 学分
+                        </p>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(100, (graduationRequirements.military.earned / graduationRequirements.military.required) * 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 创新创业学分 - 仅显示未完成的 */}
+                    {!graduationRequirements.innovation.completed && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">创新创业学分</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                              待完成
+                            </span>
+                            {isEditing && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGraduationEdit('innovation')}
+                                disabled={submitting}
+                                className="h-7 px-2 text-xs"
+                              >
+                                标记完成
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          需要 {graduationRequirements.innovation.required} 学分，已获得 {graduationRequirements.innovation.earned} 学分
+                        </p>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(100, (graduationRequirements.innovation.earned / graduationRequirements.innovation.required) * 100)}%` }}
+                          ></div>
+                    </div>
+                    </div>
+                    )}
+
+                    {/* 毕业要求详细表格 */}
+                    {graduationRequirementsData.length > 0 ? (
+                      <GraduationRequirementsTable graduationRequirements={graduationRequirementsData} />
+                    ) : loadingGraduationRequirements ? (
+                      <div className="flex justify-center items-center py-8">
+                        <div className="text-muted-foreground">正在加载毕业要求数据...</div>
+                      </div>
+                    ) : selectedButton === 'graduation' ? (
+                      <div className="flex justify-center items-center py-8">
+                        <div className="text-muted-foreground">暂无毕业要求数据</div>
+                      </div>
+                    ) : null}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          )}
+
+          {/* 海外读研分析界面 - 仿照模板设计 */}
+          {selectedButton === 'overseas' && (
+            <div className="space-y-6">
+              {/* 目标分数显示 */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="text-center">
+                      <p className="text-blue-800 font-medium">
+                        {t('analysis.target.score.minimum')}{' '}
+                        <span className="text-blue-600 font-bold">
+                          {loadingTargetScores ? '加载中...' : 
+                           targetScores && targetScores.target2_score !== null ? 
+                           `${targetScores.target2_score}` : 
+                           '暂无数据'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={loadAllCourseData}
+                      disabled={loadingAllCourseData}
+                    >
+                      {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            {/* 预测结果显示框 */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  <div className="text-center">
-                    <p className="text-blue-800 font-medium">
-                      {predictionResult ? (
-                        selectedButton === 'overseas' ? (
-                          t('analysis.prediction.result', { current: predictionResult.overseasPercentage || 0, other: predictionResult.domesticPercentage || 0 })
-                        ) : selectedButton === 'domestic' ? (
-                          t('analysis.prediction.result', { current: predictionResult.domesticPercentage || 0, other: predictionResult.overseasPercentage || 0 })
+              
+              {/* 预测结果显示框 */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="text-center">
+                      <p className="text-blue-800 font-medium">
+                        {predictionResult ? (
+                          selectedButton === 'overseas' ? (
+                            t('analysis.prediction.result', { current: predictionResult.overseasPercentage || 0, other: predictionResult.domesticPercentage || 0 })
+                          ) : selectedButton === 'domestic' ? (
+                            t('analysis.prediction.result', { current: predictionResult.domesticPercentage || 0, other: predictionResult.overseasPercentage || 0 })
+                          ) : (
+                            t('analysis.prediction.result', { current: predictionResult.overseasPercentage || 0, other: predictionResult.domesticPercentage || 0 })
+                          )
                         ) : (
-                          t('analysis.prediction.result', { current: predictionResult.overseasPercentage || 0, other: predictionResult.domesticPercentage || 0 })
-                        )
-                      ) : (
-                        t('analysis.prediction.not.started')
-                      )}
-                    </p>
+                          t('analysis.prediction.not.started')
+                        )}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="ml-4">
-                  <div className="w-20"></div>
+                  <div className="ml-4">
+                    <div className="w-20"></div>
+                  </div>
                 </div>
               </div>
-            </div>
-                
-            {/* 课程成绩表格 */}
-          <Card>
-            <CardHeader>
-                {/* 手机端布局 - 上下排列 */}
-                <div className="flex flex-col space-y-4 md:hidden">
-                  <div>
-                    <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_2 !== null ? `${(probabilityData.proba_2 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
-                    <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
-                  </div>
-                  <div className="flex flex-col space-y-3">
-                    {isEditMode ? (
-                      <>
+                  
+              {/* 课程成绩表格 */}
+            <Card>
+              <CardHeader>
+                  {/* 手机端布局 - 上下排列 */}
+                  <div className="flex flex-col space-y-4 md:hidden">
+                    <div>
+                      <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_2 !== null ? `${(probabilityData.proba_2 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
+                      <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
+                    </div>
+                    <div className="flex flex-col space-y-3">
+                      {isEditMode ? (
+                        <>
+                          <Button 
+                            variant="default"
+                            size="lg"
+                            className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
+                            onClick={handleConfirmModification}
+                            disabled={loadingFeatures}
+                          >
+                            {loadingFeatures ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>{t('analysis.calculating')}</span>
+                              </div>
+                            ) : (
+                              t('analysis.course.scores.confirm.modify')
+                            )}
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            size="lg"
+                            className="w-full px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
+                            onClick={handleEditModeToggle}
+                          >
+                            {t('analysis.course.scores.exit.modify')}
+                          </Button>
+                        </>
+                      ) : (
                         <Button 
                           variant="default"
                           size="lg"
-                          className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
+                          className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
+                          onClick={handleEditModeToggle}
+                        >
+                          {t('analysis.course.scores.modify.future')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* PC端布局 - 保持原有的左右排列 */}
+                  <div className="hidden md:flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_2 !== null ? `${(probabilityData.proba_2 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
+                      <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
+                    </div>
+                    <div className="flex-1 flex justify-center items-center gap-4">
+                      {isEditMode ? (
+                        <Button 
+                          variant="default"
+                          size="lg"
+                          className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
                           onClick={handleConfirmModification}
                           disabled={loadingFeatures}
                         >
@@ -1698,74 +1773,149 @@ export default function Analysis() {
                             t('analysis.course.scores.confirm.modify')
                           )}
                         </Button>
+                      ) : (
+                        <Button 
+                          variant="default"
+                          size="lg"
+                          className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
+                          onClick={handleEditModeToggle}
+                        >
+                          {t('analysis.course.scores.modify.future')}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="w-32 flex justify-end">
+                      {isEditMode && (
                         <Button 
                           variant="destructive"
                           size="lg"
-                          className="w-full px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
+                          className="px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
                           onClick={handleEditModeToggle}
                         >
-                          {t('analysis.course.scores.exit.modify')}
+                          退出修改
                         </Button>
-                      </>
-                    ) : (
-                      <Button 
-                        variant="default"
-                        size="lg"
-                        className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
-                        onClick={handleEditModeToggle}
-                      >
-                        {t('analysis.course.scores.modify.future')}
-                      </Button>
-                    )}
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
+                          {!isEditMode && (
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                          )}
+                          {isEditMode && (
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
+                              修改成绩
+                            </th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const modifiedScores = getModifiedScores();
+                          // 过滤掉没有成绩的课程（以 modified 为准）
+                          const filteredScores = modifiedScores.filter((course: any) => 
+                            course.score !== null && course.score !== undefined
+                          );
+                          
+                          if (filteredScores.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                                  {loadingOriginalScores ? t('analysis.target.score.loading') : t('analysis.course.scores.no.data')}
+                                </td>
+                              </tr>
+                            );
+                          }
+                          
+                          return filteredScores.map((course: any, index: number) => {
+                            const score = course.score;
+                            let scoreColor = 'text-gray-600';
+                            if (score !== null && score !== undefined) {
+                              if (score >= 90) scoreColor = 'text-green-600';
+                              else if (score >= 80) scoreColor = 'text-blue-600';
+                              else if (score >= 70) scoreColor = 'text-yellow-600';
+                              else if (score >= 60) scoreColor = 'text-orange-600';
+                              else scoreColor = 'text-red-600';
+                            }
+                            
+                            return (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
+                                  {index + 1}
+                                </td>
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
+                                  {course.semester ? `第${course.semester}学期` : '未知学期'}
+                                </td>
+                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                  {course.courseName}
+                                </td>
+                                <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+                                  {course.category || '未分类'}
+                                </td>
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
+                                  {course.credit || '0.0'}
+                                </td>
+                                {!isEditMode && (
+                                  <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                    {score !== null && score !== undefined ? (
+                                      <span className={`font-bold ${scoreColor}`}>{score}</span>
+                                    ) : (
+                                      <span className="text-gray-400">暂无成绩</span>
+                                    )}
+                                  </td>
+                                )}
+                                {isEditMode && (
+                                  <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
+                                    {score !== null && score !== undefined ? (
+                                      <Slider
+                                        value={(() => {
+                                          // 从modified缓存中查找当前课程的最新成绩
+                                          const modifiedScores = getModifiedScores();
+                                          const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
+                                          if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
+                                            return Number(modifiedCourse.score);
+                                          }
+                                          return Number(score); // 如果没有修改，显示原始成绩
+                                        })()}
+                                        min={60}
+                                        max={90}
+                                        step={1}
+                                        onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
+                                        className="w-full"
+                                      />
+                                    ) : (
+                                      <span className="text-gray-400 italic text-xs">无原始成绩</span>
+                                    )}
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                    <div className="text-center text-sm text-muted-foreground mt-4">
+                      共{getOriginalScores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* PC端布局 - 保持原有的左右排列 */}
-                <div className="hidden md:flex justify-between items-center">
+            {/* Source2 课程成绩表格 - 只读 */}
+            <Card className="mt-6">
+              <CardHeader>
+                <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_2 !== null ? `${(probabilityData.proba_2 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
-                    <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
-                  </div>
-                  <div className="flex-1 flex justify-center items-center gap-4">
-                    {isEditMode ? (
-                      <Button 
-                        variant="default"
-                        size="lg"
-                        className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
-                        onClick={handleConfirmModification}
-                        disabled={loadingFeatures}
-                      >
-                        {loadingFeatures ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>{t('analysis.calculating')}</span>
-                          </div>
-                        ) : (
-                          t('analysis.course.scores.confirm.modify')
-                        )}
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="default"
-                        size="lg"
-                        className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
-                        onClick={handleEditModeToggle}
-                      >
-                        {t('analysis.course.scores.modify.future')}
-                      </Button>
-                    )}
-                  </div>
-                  <div className="w-32 flex justify-end">
-                    {isEditMode && (
-                      <Button 
-                        variant="destructive"
-                        size="lg"
-                        className="px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
-                        onClick={handleEditModeToggle}
-                      >
-                        退出修改
-                      </Button>
-                    )}
+                    <CardTitle className="text-lg font-medium text-orange-700">已修成绩</CardTitle>
                   </div>
                 </div>
               </CardHeader>
@@ -1773,41 +1923,39 @@ export default function Analysis() {
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse border border-gray-200">
                     <thead>
-                      <tr className="bg-gray-50">
+                      <tr className="bg-orange-50">
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
                         <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                        {!isEditMode && (
-                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
-                        )}
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
                         {isEditMode && (
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩
+                            修改状态
                           </th>
                         )}
                       </tr>
                     </thead>
                     <tbody>
                       {(() => {
-                        const modifiedScores = getModifiedScores();
-                        // 过滤掉没有成绩的课程（以 modified 为准）
-                        const filteredScores = modifiedScores.filter((course: any) => 
+                        const source2Scores = getSource2Scores();
+                        // 过滤掉没有成绩的课程
+                        const filteredSource2Scores = source2Scores.filter((course: any) => 
                           course.score !== null && course.score !== undefined
                         );
                         
-                        if (filteredScores.length === 0) {
+                        if (filteredSource2Scores.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                                {loadingOriginalScores ? t('analysis.target.score.loading') : t('analysis.course.scores.no.data')}
+                              <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                                {loadingSource2Scores ? '加载中...' : '暂无有成绩的课程数据'}
                               </td>
                             </tr>
                           );
                         }
                         
-                        return filteredScores.map((course: any, index: number) => {
+                        return filteredSource2Scores.map((course: any, index: number) => {
                           const score = course.score;
                           let scoreColor = 'text-gray-600';
                           if (score !== null && score !== undefined) {
@@ -1819,7 +1967,363 @@ export default function Analysis() {
                           }
                           
                           return (
-                            <tr key={index} className="hover:bg-gray-50">
+                            <tr key={index} className="hover:bg-orange-50">
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
+                                {index + 1}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-left text-sm font-medium text-gray-500">
+                                {course.semester ? `第${course.semester}学期` : '未知学期'}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                {course.courseName}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+                                {course.category || '未分类'}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
+                                {course.credit || '0.0'}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                {score !== null && score !== undefined ? (
+                                  <span className={`font-bold ${scoreColor}`}>{score}</span>
+                                ) : (
+                                  <span className="text-gray-400">暂无成绩</span>
+                                )}
+                              </td>
+                              {isEditMode && (
+                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                  <span className="text-gray-400 italic text-xs bg-gray-100 px-2 py-1 rounded">
+                                    无法修改
+                                  </span>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                  <div className="text-center text-sm text-muted-foreground mt-4">
+                    共{getSource2Scores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          )}
+
+          {/* 国内读研分析界面 - 仿照模板设计 */}
+          {selectedButton === 'domestic' && (
+            <div className="space-y-6">
+              {/* 目标分数显示 */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="text-center">
+                      <p className="text-blue-800 font-medium">
+                        {t('analysis.target.score.minimum')}{' '}
+                        <span className="text-blue-600 font-bold">
+                          {loadingTargetScores ? '加载中...' : 
+                           targetScores && targetScores.target1_score !== null ? 
+                           `${targetScores.target1_score}` : 
+                           '暂无数据'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={loadAllCourseData}
+                      disabled={loadingAllCourseData}
+                    >
+                      {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 预测结果显示框 */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="text-center">
+                      <p className="text-blue-800 font-medium">
+                        {predictionResult ? (
+                          t('analysis.prediction.result', { current: predictionResult.domesticPercentage || 0, other: predictionResult.overseasPercentage || 0 })
+                        ) : (
+                          t('analysis.prediction.not.started')
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <div className="w-20"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 课程成绩表格 */}
+            <Card>
+              <CardHeader>
+                  {/* 手机端布局 - 上下排列 */}
+                  <div className="flex flex-col space-y-4 md:hidden">
+                    <div>
+                      <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_1 !== null ? `${(probabilityData.proba_1 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
+                      <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
+                    </div>
+                    <div className="flex flex-col space-y-3">
+                      {isEditMode ? (
+                        <>
+                          <Button 
+                            variant="default"
+                            size="lg"
+                            className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
+                            onClick={handleConfirmModification}
+                            disabled={loadingFeatures}
+                          >
+                            {loadingFeatures ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>{t('analysis.calculating')}</span>
+                              </div>
+                            ) : (
+                              t('analysis.course.scores.confirm.modify')
+                            )}
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            size="lg"
+                            className="w-full px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
+                            onClick={handleEditModeToggle}
+                          >
+                            {t('analysis.course.scores.exit.modify')}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button 
+                          variant="default"
+                          size="lg"
+                          className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
+                          onClick={handleEditModeToggle}
+                        >
+                          {t('analysis.course.scores.modify.future')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* PC端布局 - 保持原有的左右排列 */}
+                  <div className="hidden md:flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_1 !== null ? `${(probabilityData.proba_1 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
+                      <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
+                    </div>
+                    <div className="flex-1 flex justify-center items-center gap-4">
+                      {isEditMode ? (
+                        <Button 
+                          variant="default"
+                          size="lg"
+                          className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
+                          onClick={handleConfirmModification}
+                          disabled={loadingFeatures}
+                        >
+                          {loadingFeatures ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>{t('analysis.calculating')}</span>
+                            </div>
+                          ) : (
+                            t('analysis.course.scores.confirm.modify')
+                          )}
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="default"
+                          size="lg"
+                          className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
+                          onClick={handleEditModeToggle}
+                        >
+                          {t('analysis.course.scores.modify.future')}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="w-32 flex justify-end">
+                      {isEditMode && (
+                        <Button 
+                          variant="destructive"
+                          size="lg"
+                          className="px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
+                          onClick={handleEditModeToggle}
+                        >
+                          退出修改
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+              </CardHeader>
+              <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                          {isEditMode && (
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
+                              修改成绩
+                            </th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const modifiedScores = getModifiedScores();
+                          // 过滤掉没有成绩的课程（以 modified 为准）
+                          const filteredScores = modifiedScores.filter((course: any) => 
+                            course.score !== null && course.score !== undefined
+                          );
+                          
+                          if (filteredScores.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                                  {loadingOriginalScores ? '加载中...' : '暂无有成绩的课程数据'}
+                                </td>
+                              </tr>
+                            );
+                          }
+                          
+                          return filteredScores.map((course: any, index: number) => {
+                            const score = course.score;
+                            let scoreColor = 'text-gray-600';
+                            if (score !== null && score !== undefined) {
+                              if (score >= 90) scoreColor = 'text-green-600';
+                              else if (score >= 80) scoreColor = 'text-blue-600';
+                              else if (score >= 70) scoreColor = 'text-yellow-600';
+                              else if (score >= 60) scoreColor = 'text-orange-600';
+                              else scoreColor = 'text-red-600';
+                            }
+                            
+                            return (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">{index + 1}</td>
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
+                                  {course.semester ? `第${course.semester}学期` : '-'}
+                                </td>
+                                <td className="border border-gray-200 px-4 py-2 text-sm">{course.courseName}</td>
+                                <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">{course.category || '-'}</td>
+                                <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">{course.credit || '-'}</td>
+                                {!isEditMode && (
+                                  <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                    {course.score !== null ? (
+                                      <span className={`font-bold ${scoreColor}`}>{course.score}</span>
+                                    ) : (
+                                      <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
+                                    )}
+                                  </td>
+                                )}
+                                {isEditMode && (
+                                  <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
+                                    {score !== null && score !== undefined ? (
+                                      <Slider
+                                        value={(() => {
+                                          // 从modified缓存中查找当前课程的最新成绩
+                                          const modifiedScores = getModifiedScores();
+                                          const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
+                                          if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
+                                            return Number(modifiedCourse.score);
+                                          }
+                                          return Number(score); // 如果没有修改，显示原始成绩
+                                        })()}
+                                        min={60}
+                                        max={90}
+                                        step={1}
+                                        onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
+                                        className="w-full"
+                                      />
+                                    ) : (
+                                      <span className="text-gray-400 italic text-xs">无原始成绩</span>
+                                    )}
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                                     <div className="text-center text-sm text-muted-foreground mt-4">
+                       共{getOriginalScores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
+                  </div>
+                   </div>
+              </CardContent>
+            </Card>
+
+            {/* Source2 课程成绩表格 - 只读 */}
+            <Card className="mt-6">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-lg font-medium text-orange-700">已修成绩</CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-200">
+                    <thead>
+                      <tr className="bg-orange-50">
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                        {isEditMode && (
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
+                            修改状态
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const source2Scores = getSource2Scores();
+                        // 过滤掉没有成绩的课程
+                        const filteredSource2Scores = source2Scores.filter((course: any) => 
+                          course.score !== null && course.score !== undefined
+                        );
+                        
+                        if (filteredSource2Scores.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                                {loadingSource2Scores ? '加载中...' : '暂无有成绩的课程数据'}
+                              </td>
+                            </tr>
+                          );
+                        }
+                        
+                        return filteredSource2Scores.map((course: any, index: number) => {
+                          const score = course.score;
+                          let scoreColor = 'text-gray-600';
+                          if (score !== null && score !== undefined) {
+                            if (score >= 90) scoreColor = 'text-green-600';
+                            else if (score >= 80) scoreColor = 'text-blue-600';
+                            else if (score >= 70) scoreColor = 'text-yellow-600';
+                            else if (score >= 60) scoreColor = 'text-orange-600';
+                            else scoreColor = 'text-red-600';
+                          }
+                          
+                          return (
+                            <tr key={index} className="hover:bg-orange-50">
                               <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
                                 {index + 1}
                               </td>
@@ -1835,37 +2339,18 @@ export default function Analysis() {
                               <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
                                 {course.credit || '0.0'}
                               </td>
-                              {!isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                                  {score !== null && score !== undefined ? (
-                                    <span className={`font-bold ${scoreColor}`}>{score}</span>
-                                  ) : (
-                                    <span className="text-gray-400">暂无成绩</span>
-                                  )}
-                                </td>
-                              )}
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
+                                {score !== null && score !== undefined ? (
+                                  <span className={`font-bold ${scoreColor}`}>{score}</span>
+                                ) : (
+                                  <span className="text-gray-400">暂无成绩</span>
+                                )}
+                              </td>
                               {isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
-                                  {score !== null && score !== undefined ? (
-                                    <Slider
-                                      value={(() => {
-                                        // 从modified缓存中查找当前课程的最新成绩
-                                        const modifiedScores = getModifiedScores();
-                                        const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
-                                        if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
-                                          return Number(modifiedCourse.score);
-                                        }
-                                        return Number(score); // 如果没有修改，显示原始成绩
-                                      })()}
-                                      min={60}
-                                      max={90}
-                                      step={1}
-                                      onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
-                                      className="w-full"
-                                    />
-                                  ) : (
-                                    <span className="text-gray-400 italic text-xs">无原始成绩</span>
-                                  )}
+                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                  <span className="text-gray-400 italic text-xs bg-gray-100 px-2 py-1 rounded">
+                                    无法修改
+                                  </span>
                                 </td>
                               )}
                             </tr>
@@ -1875,746 +2360,291 @@ export default function Analysis() {
                     </tbody>
                   </table>
                   <div className="text-center text-sm text-muted-foreground mt-4">
-                    共{getOriginalScores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
+                    共{getSource2Scores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+          )}
 
-          {/* Source2 课程成绩表格 - 只读 */}
-          <Card className="mt-6">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-lg font-medium text-orange-700">已修成绩</CardTitle>
-                </div>
+        {/* 悬浮提示窗 */}
+        {showNotification && (
+          <div className="fixed bottom-6 right-6 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm z-50 md:scale-150 md:origin-bottom-right">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                    </div>
+                  </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">提交成功</p>
+                <p className="text-sm text-gray-600 mt-1">已提交修改，请您耐心等待后台反馈。</p>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-200">
-                  <thead>
-                    <tr className="bg-orange-50">
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
-                      {isEditMode && (
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                          修改状态
-                        </th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const source2Scores = getSource2Scores();
-                      // 过滤掉没有成绩的课程
-                      const filteredSource2Scores = source2Scores.filter((course: any) => 
-                        course.score !== null && course.score !== undefined
-                      );
-                      
-                      if (filteredSource2Scores.length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                              {loadingSource2Scores ? '加载中...' : '暂无有成绩的课程数据'}
-                            </td>
-                          </tr>
-                        );
-                      }
-                      
-                      return filteredSource2Scores.map((course: any, index: number) => {
-                        const score = course.score;
-                        let scoreColor = 'text-gray-600';
-                        if (score !== null && score !== undefined) {
-                          if (score >= 90) scoreColor = 'text-green-600';
-                          else if (score >= 80) scoreColor = 'text-blue-600';
-                          else if (score >= 70) scoreColor = 'text-yellow-600';
-                          else if (score >= 60) scoreColor = 'text-orange-600';
-                          else scoreColor = 'text-red-600';
-                        }
-                        
-                        return (
-                          <tr key={index} className="hover:bg-orange-50">
-                            <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
-                              {index + 1}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-left text-sm font-medium text-gray-500">
-                              {course.semester ? `第${course.semester}学期` : '未知学期'}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm">
-                              {course.courseName}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
-                              {course.category || '未分类'}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
-                              {course.credit || '0.0'}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                              {score !== null && score !== undefined ? (
-                                <span className={`font-bold ${scoreColor}`}>{score}</span>
-                              ) : (
-                                <span className="text-gray-400">暂无成绩</span>
-                              )}
-                            </td>
-                            {isEditMode && (
-                              <td className="border border-gray-200 px-4 py-2 text-sm">
-                                <span className="text-gray-400 italic text-xs bg-gray-100 px-2 py-1 rounded">
-                                  无法修改
-                                </span>
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      });
-                    })()}
-                  </tbody>
-                </table>
-                <div className="text-center text-sm text-muted-foreground mt-4">
-                  共{getSource2Scores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <button 
+                onClick={() => setShowNotification(false)}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
         )}
 
-        {/* 国内读研分析界面 - 仿照模板设计 */}
-        {selectedButton === 'domestic' && (
-          <div className="space-y-6">
-            {/* 目标分数显示 */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  <div className="text-center">
-                    <p className="text-blue-800 font-medium">
-                      {t('analysis.target.score.minimum')}{' '}
-                      <span className="text-blue-600 font-bold">
-                        {loadingTargetScores ? '加载中...' : 
-                         targetScores && targetScores.target1_score !== null ? 
-                         `${targetScores.target1_score}` : 
-                         '暂无数据'}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={loadAllCourseData}
-                    disabled={loadingAllCourseData}
-                  >
-                    {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
-                  </Button>
+        {/* 编辑模式悬浮提示窗 */}
+        {showEditModal && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowEditModal(false)}
+          >
+            <div 
+              className="bg-white rounded-lg p-6 max-w-md w-full shadow-2xl animate-in fade-in-0 zoom-in-95 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
                 </div>
               </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {t('analysis.edit.welcome')}
+              </h3>
+              <p className="text-lg text-gray-600">
+                您现在可以修改课程成绩，探索不同的人生可能性
+              </p>
             </div>
+          </div>
+        )}
 
-            {/* 预测结果显示框 */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  <div className="text-center">
-                    <p className="text-blue-800 font-medium">
-                      {predictionResult ? (
-                        t('analysis.prediction.result', { current: predictionResult.domesticPercentage || 0, other: predictionResult.overseasPercentage || 0 })
-                      ) : (
-                        t('analysis.prediction.not.started')
-                      )}
-                    </p>
+
+
+        {/* 所有课程数据模态框 */}
+        {showAllCourseData && allCourseData && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowAllCourseData(false)}
+          >
+            <div 
+              className="bg-white rounded-lg shadow-xl p-6 max-w-6xl mx-4 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">所有课程数据收集结果</h3>
+                        <button 
+                  onClick={() => setShowAllCourseData(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                        >
+                  ✕
+                        </button>
+                      </div>
+              
+              {/* 数据摘要 */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold mb-2">数据摘要</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">总课程数：</span>
+                    <span className="text-blue-600">{allCourseData.summary?.totalCourses || 0}</span>
                   </div>
+                  <div>
+                    <span className="font-medium">来源1课程：</span>
+                    <span className="text-green-600">{allCourseData.summary?.source1Count || 0}</span>
                 </div>
-                <div className="ml-4">
-                  <div className="w-20"></div>
+                  <div>
+                    <span className="font-medium">来源2课程：</span>
+                    <span className="text-orange-600">{allCourseData.summary?.source2Count || 0}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">唯一课程：</span>
+                    <span className="text-purple-600">{allCourseData.summary?.uniqueCourses || 0}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* 课程成绩表格 */}
-          <Card>
-            <CardHeader>
-                {/* 手机端布局 - 上下排列 */}
-                <div className="flex flex-col space-y-4 md:hidden">
-                  <div>
-                    <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_1 !== null ? `${(probabilityData.proba_1 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
-                    <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
-                  </div>
-                  <div className="flex flex-col space-y-3">
-                    {isEditMode ? (
-                      <>
-                        <Button 
-                          variant="default"
-                          size="lg"
-                          className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
-                          onClick={handleConfirmModification}
-                          disabled={loadingFeatures}
-                        >
-                          {loadingFeatures ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              <span>{t('analysis.calculating')}</span>
-                            </div>
-                          ) : (
-                            t('analysis.course.scores.confirm.modify')
-                          )}
-                        </Button>
-                        <Button 
-                          variant="destructive"
-                          size="lg"
-                          className="w-full px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
-                          onClick={handleEditModeToggle}
-                        >
-                          {t('analysis.course.scores.exit.modify')}
-                        </Button>
-                      </>
-                    ) : (
-                      <Button 
-                        variant="default"
-                        size="lg"
-                        className="w-full px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
-                        onClick={handleEditModeToggle}
-                      >
-                        {t('analysis.course.scores.modify.future')}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* PC端布局 - 保持原有的左右排列 */}
-                <div className="hidden md:flex justify-between items-center">
-                  <div>
-                    <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_1 !== null ? `${(probabilityData.proba_1 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
-                    <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
-                  </div>
-                  <div className="flex-1 flex justify-center items-center gap-4">
-                    {isEditMode ? (
-                      <Button 
-                        variant="default"
-                        size="lg"
-                        className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
-                        onClick={handleConfirmModification}
-                        disabled={loadingFeatures}
-                      >
-                        {loadingFeatures ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>{t('analysis.calculating')}</span>
-                          </div>
-                        ) : (
-                          t('analysis.course.scores.confirm.modify')
-                        )}
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="default"
-                        size="lg"
-                        className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl scale-105"
-                        onClick={handleEditModeToggle}
-                      >
-                        {t('analysis.course.scores.modify.future')}
-                      </Button>
-                    )}
-                  </div>
-                  <div className="w-32 flex justify-end">
-                    {isEditMode && (
-                      <Button 
-                        variant="destructive"
-                        size="lg"
-                        className="px-6 py-3 text-lg font-semibold transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
-                        onClick={handleEditModeToggle}
-                      >
-                        退出修改
-                      </Button>
-                    )}
-                  </div>
-                </div>
-            </CardHeader>
-            <CardContent>
+              {/* 来源1数据表格 */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-3 text-green-700">来源1：专业预测表（包含修改后的成绩）</h4>
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-200">
+                  <table className="w-full border-collapse border border-gray-200 text-sm">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
-                        {isEditMode && (
-                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                            修改成绩
-                          </th>
-                        )}
+                        <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(() => {
-                        const modifiedScores = getModifiedScores();
-                        // 过滤掉没有成绩的课程（以 modified 为准）
-                        const filteredScores = modifiedScores.filter((course: any) => 
-                          course.score !== null && course.score !== undefined
-                        );
-                        
-                        if (filteredScores.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan={6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                                {loadingOriginalScores ? '加载中...' : '暂无有成绩的课程数据'}
-                              </td>
-                            </tr>
-                          );
-                        }
-                        
-                        return filteredScores.map((course: any, index: number) => {
-                          const score = course.score;
-                          let scoreColor = 'text-gray-600';
-                          if (score !== null && score !== undefined) {
-                            if (score >= 90) scoreColor = 'text-green-600';
-                            else if (score >= 80) scoreColor = 'text-blue-600';
-                            else if (score >= 70) scoreColor = 'text-yellow-600';
-                            else if (score >= 60) scoreColor = 'text-orange-600';
-                            else scoreColor = 'text-red-600';
-                          }
-                          
-                          return (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">{index + 1}</td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
-                                {course.semester ? `第${course.semester}学期` : '-'}
-                              </td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm">{course.courseName}</td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">{course.category || '-'}</td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">{course.credit || '-'}</td>
-                              {!isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                                  {course.score !== null ? (
-                                    <span className={`font-bold ${scoreColor}`}>{course.score}</span>
-                                  ) : (
-                                    <span className="text-gray-400 italic text-xs">{t('analysis.course.scores.no.original.score')}</span>
-                                  )}
-                                </td>
-                              )}
-                              {isEditMode && (
-                                <td className="border border-gray-200 px-4 py-2 text-sm min-w-[270px] md:min-w-[270px]">
-                                  {score !== null && score !== undefined ? (
-                                    <Slider
-                                      value={(() => {
-                                        // 从modified缓存中查找当前课程的最新成绩
-                                        const modifiedScores = getModifiedScores();
-                                        const modifiedCourse = modifiedScores.find((c: any) => c.courseName === course.courseName);
-                                        if (modifiedCourse && modifiedCourse.score !== null && modifiedCourse.score !== undefined) {
-                                          return Number(modifiedCourse.score);
-                                        }
-                                        return Number(score); // 如果没有修改，显示原始成绩
-                                      })()}
-                                      min={60}
-                                      max={90}
-                                      step={1}
-                                      onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
-                                      className="w-full"
-                                    />
-                                  ) : (
-                                    <span className="text-gray-400 italic text-xs">无原始成绩</span>
-                                  )}
-                                </td>
-                              )}
-                            </tr>
-                          );
-                        });
-                      })()}
+                      {allCourseData.source1Data?.map((course: any, index: number) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
+                          <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2 font-mono">
+                            <span className={`font-bold ${
+                              course.score >= 90 ? 'text-green-600' :
+                              course.score >= 80 ? 'text-blue-600' :
+                              course.score >= 70 ? 'text-yellow-600' :
+                              course.score >= 60 ? 'text-orange-600' :
+                              'text-red-600'
+                            }`}>
+                              {course.score}
+                            </span>
+                          </td>
+                          <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
-                                     <div className="text-center text-sm text-muted-foreground mt-4">
-                     共{getOriginalScores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
-                </div>
-                 </div>
-            </CardContent>
-          </Card>
+                      </div>
+                      </div>
 
-          {/* Source2 课程成绩表格 - 只读 */}
-          <Card className="mt-6">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-lg font-medium text-orange-700">已修成绩</CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-200">
-                  <thead>
-                    <tr className="bg-orange-50">
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                      <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
-                      {isEditMode && (
-                        <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
-                          修改状态
-                        </th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const source2Scores = getSource2Scores();
-                      // 过滤掉没有成绩的课程
-                      const filteredSource2Scores = source2Scores.filter((course: any) => 
-                        course.score !== null && course.score !== undefined
-                      );
-                      
-                      if (filteredSource2Scores.length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan={isEditMode ? 7 : 6} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                              {loadingSource2Scores ? '加载中...' : '暂无有成绩的课程数据'}
-                            </td>
-                          </tr>
-                        );
-                      }
-                      
-                      return filteredSource2Scores.map((course: any, index: number) => {
-                        const score = course.score;
-                        let scoreColor = 'text-gray-600';
-                        if (score !== null && score !== undefined) {
-                          if (score >= 90) scoreColor = 'text-green-600';
-                          else if (score >= 80) scoreColor = 'text-blue-600';
-                          else if (score >= 70) scoreColor = 'text-yellow-600';
-                          else if (score >= 60) scoreColor = 'text-orange-600';
-                          else scoreColor = 'text-red-600';
-                        }
-                        
-                        return (
-                          <tr key={index} className="hover:bg-orange-50">
-                            <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600">
-                              {index + 1}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500">
-                              {course.semester ? `第${course.semester}学期` : '未知学期'}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm">
-                              {course.courseName}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
-                              {course.category || '未分类'}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm font-mono text-gray-600">
-                              {course.credit || '0.0'}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-sm font-mono">
-                              {score !== null && score !== undefined ? (
-                                <span className={`font-bold ${scoreColor}`}>{score}</span>
-                              ) : (
-                                <span className="text-gray-400">暂无成绩</span>
-                              )}
-                            </td>
-                            {isEditMode && (
-                              <td className="border border-gray-200 px-4 py-2 text-sm">
-                                <span className="text-gray-400 italic text-xs bg-gray-100 px-2 py-1 rounded">
-                                  无法修改
-                                </span>
-                              </td>
+              {/* 来源2数据表格 */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-3 text-orange-700">来源2：academic_results 表</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-200 text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">课程类型</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allCourseData.source2Data?.map((course: any, index: number) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
+                          <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2 font-mono">
+                            {course.score !== null ? (
+                              <span className={`font-bold ${
+                                course.score >= 90 ? 'text-green-600' :
+                                course.score >= 80 ? 'text-blue-600' :
+                                course.score >= 70 ? 'text-yellow-600' :
+                                course.score >= 60 ? 'text-orange-600' :
+                                'text-red-600'
+                              }`}>
+                                {course.score}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic">暂无成绩</span>
                             )}
-                          </tr>
-                        );
-                      });
-                    })()}
-                  </tbody>
-                </table>
-                <div className="text-center text-sm text-muted-foreground mt-4">
-                  共{getSource2Scores().filter((course: any) => course.score !== null && course.score !== undefined).length}门课程
+                          </td>
+                          <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2">{course.courseType || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                    </div>
+              </div>
+
+              {/* 合并后的所有课程数据 */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-3 text-blue-700">合并后的所有课程数据（来源1优先，包含修改）</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-200 text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-200 px-3 py-2 text-left">来源</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
+                        <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allCourseData.allCourses?.map((course: any, index: number) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-200 px-3 py-2">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              course.source === '专业预测表' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-orange-100 text-orange-800'
+                            }`}>
+                              {course.source === '专业预测表' ? '来源1' : '来源2'}
+                            </span>
+                          </td>
+                          <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
+                          <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2 font-mono">
+                            {course.score !== null ? (
+                              <span className={`font-bold ${
+                                course.score >= 90 ? 'text-green-600' :
+                                course.score >= 80 ? 'text-blue-600' :
+                                course.score >= 70 ? 'text-yellow-600' :
+                                course.score >= 60 ? 'text-orange-600' :
+                                'text-red-600'
+                              }`}>
+                                {course.score}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic">暂无成绩</span>
+                            )}
+                          </td>
+                          <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
+                          <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+
+              {/* 计算出的特征值显示 */}
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-semibold mb-3 text-blue-800">基于当前数据计算出的特征值</h4>
+                {loadingFeatures ? (
+                  <div className="text-center py-4">
+                    <div className="text-blue-600">计算特征值中...</div>
+                  </div>
+                ) : calculatedFeatures ? (
+                  <div className="grid grid-cols-3 gap-4">
+                    {Object.entries(calculatedFeatures).map(([category, value]) => (
+                      <div key={category} className="p-3 border border-blue-300 rounded-lg bg-white">
+                        <div className="text-sm font-medium text-blue-700 mb-1">{category}</div>
+                        <div className="text-xl font-bold text-blue-600">{value.toFixed(2)}</div>
+                      </div>
+                    ))}
+                    {academicStrength !== null && (
+                      <div className="p-3 border border-blue-300 rounded-lg bg-white">
+                        <div className="text-sm font-medium text-blue-700 mb-1">AcademicStrength</div>
+                        <div className="text-xl font-bold text-blue-600">{academicStrength.toFixed(2)}</div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="text-gray-500">暂无特征值数据</div>
+                  </div>
+                )}
+                <div className="mt-3 text-xs text-blue-600">
+                  计算方法：按类别分组，计算加权平均值（成绩×学分/总学分）
+                </div>
+              </div>
+            </div>
+          </div>
         )}
-
-      {/* 悬浮提示窗 */}
-      {showNotification && (
-        <div className="fixed bottom-6 right-6 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm z-50 md:scale-150 md:origin-bottom-right">
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0">
-              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                  </div>
-                </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">提交成功</p>
-              <p className="text-sm text-gray-600 mt-1">已提交修改，请您耐心等待后台反馈。</p>
-            </div>
-            <button 
-              onClick={() => setShowNotification(false)}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
         </div>
-      )}
-
-      {/* 编辑模式悬浮提示窗 */}
-      {showEditModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowEditModal(false)}
-        >
-          <div 
-            className="bg-white rounded-lg shadow-xl p-8 max-w-md mx-4 text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              {t('analysis.edit.welcome')}
-            </h3>
-            <p className="text-lg text-gray-600">
-              您现在可以修改课程成绩，探索不同的人生可能性
-            </p>
-          </div>
-        </div>
-      )}
-
-
-
-      {/* 所有课程数据模态框 */}
-      {showAllCourseData && allCourseData && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowAllCourseData(false)}
-        >
-          <div 
-            className="bg-white rounded-lg shadow-xl p-6 max-w-6xl mx-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">所有课程数据收集结果</h3>
-                      <button 
-                onClick={() => setShowAllCourseData(false)}
-                className="text-gray-500 hover:text-gray-700"
-                      >
-                ✕
-                      </button>
-                    </div>
-            
-            {/* 数据摘要 */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold mb-2">数据摘要</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">总课程数：</span>
-                  <span className="text-blue-600">{allCourseData.summary?.totalCourses || 0}</span>
-                </div>
-                <div>
-                  <span className="font-medium">来源1课程：</span>
-                  <span className="text-green-600">{allCourseData.summary?.source1Count || 0}</span>
-              </div>
-                <div>
-                  <span className="font-medium">来源2课程：</span>
-                  <span className="text-orange-600">{allCourseData.summary?.source2Count || 0}</span>
-                </div>
-                <div>
-                  <span className="font-medium">唯一课程：</span>
-                  <span className="text-purple-600">{allCourseData.summary?.uniqueCourses || 0}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 来源1数据表格 */}
-            <div className="mb-6">
-              <h4 className="font-semibold mb-3 text-green-700">来源1：专业预测表（包含修改后的成绩）</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-200 text-sm">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allCourseData.source1Data?.map((course: any, index: number) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
-                        <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2 font-mono">
-                          <span className={`font-bold ${
-                            course.score >= 90 ? 'text-green-600' :
-                            course.score >= 80 ? 'text-blue-600' :
-                            course.score >= 70 ? 'text-yellow-600' :
-                            course.score >= 60 ? 'text-orange-600' :
-                            'text-red-600'
-                          }`}>
-                            {course.score}
-                          </span>
-                        </td>
-                        <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                    </div>
-                    </div>
-
-            {/* 来源2数据表格 */}
-            <div className="mb-6">
-              <h4 className="font-semibold mb-3 text-orange-700">来源2：academic_results 表</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-200 text-sm">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">课程类型</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allCourseData.source2Data?.map((course: any, index: number) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
-                        <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2 font-mono">
-                          {course.score !== null ? (
-                            <span className={`font-bold ${
-                              course.score >= 90 ? 'text-green-600' :
-                              course.score >= 80 ? 'text-blue-600' :
-                              course.score >= 70 ? 'text-yellow-600' :
-                              course.score >= 60 ? 'text-orange-600' :
-                              'text-red-600'
-                            }`}>
-                              {course.score}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 italic">暂无成绩</span>
-                          )}
-                        </td>
-                        <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2">{course.courseType || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                  </div>
-            </div>
-
-            {/* 合并后的所有课程数据 */}
-            <div className="mb-6">
-              <h4 className="font-semibold mb-3 text-blue-700">合并后的所有课程数据（来源1优先，包含修改）</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-200 text-sm">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-200 px-3 py-2 text-left">来源</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">课程名称</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">课程编号</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">成绩</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">学期</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">类别</th>
-                      <th className="border border-gray-200 px-3 py-2 text-left">学分</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allCourseData.allCourses?.map((course: any, index: number) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-3 py-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            course.source === '专业预测表' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-orange-100 text-orange-800'
-                          }`}>
-                            {course.source === '专业预测表' ? '来源1' : '来源2'}
-                          </span>
-                        </td>
-                        <td className="border border-gray-200 px-3 py-2">{course.courseName}</td>
-                        <td className="border border-gray-200 px-3 py-2 font-mono text-xs">{course.courseId || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2 font-mono">
-                          {course.score !== null ? (
-                            <span className={`font-bold ${
-                              course.score >= 90 ? 'text-green-600' :
-                              course.score >= 80 ? 'text-blue-600' :
-                              course.score >= 70 ? 'text-yellow-600' :
-                              course.score >= 60 ? 'text-orange-600' :
-                              'text-red-600'
-                            }`}>
-                              {course.score}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 italic">暂无成绩</span>
-                          )}
-                        </td>
-                        <td className="border border-gray-200 px-3 py-2">{course.semester || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2">{course.category || '-'}</td>
-                        <td className="border border-gray-200 px-3 py-2">{course.credit || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* 计算出的特征值显示 */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-semibold mb-3 text-blue-800">基于当前数据计算出的特征值</h4>
-              {loadingFeatures ? (
-                <div className="text-center py-4">
-                  <div className="text-blue-600">计算特征值中...</div>
-                </div>
-              ) : calculatedFeatures ? (
-                <div className="grid grid-cols-3 gap-4">
-                  {Object.entries(calculatedFeatures).map(([category, value]) => (
-                    <div key={category} className="p-3 border border-blue-300 rounded-lg bg-white">
-                      <div className="text-sm font-medium text-blue-700 mb-1">{category}</div>
-                      <div className="text-xl font-bold text-blue-600">{value.toFixed(2)}</div>
-                    </div>
-                  ))}
-                  {academicStrength !== null && (
-                    <div className="p-3 border border-blue-300 rounded-lg bg-white">
-                      <div className="text-sm font-medium text-blue-700 mb-1">AcademicStrength</div>
-                      <div className="text-xl font-bold text-blue-600">{academicStrength.toFixed(2)}</div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <div className="text-gray-500">暂无特征值数据</div>
-                </div>
-              )}
-              <div className="mt-3 text-xs text-blue-600">
-                计算方法：按类别分组，计算加权平均值（成绩×学分/总学分）
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
     </div>
   )
