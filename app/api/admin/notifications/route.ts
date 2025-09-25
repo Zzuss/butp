@@ -85,11 +85,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, content, type = 'info', priority = 0, start_date, end_date } = body
+    const { title, content, type = 'info', priority = 1, start_date, end_date, image_url } = body
 
     if (!title || !content) {
       return NextResponse.json(
         { error: '标题和内容不能为空' },
+        { status: 400 }
+      )
+    }
+
+    // 验证优先级范围
+    if (priority < 1 || priority > 10) {
+      return NextResponse.json(
+        { error: '优先级必须在1到10之间' },
         { status: 400 }
       )
     }
@@ -103,6 +111,7 @@ export async function POST(request: NextRequest) {
         priority,
         start_date: start_date || new Date().toISOString(),
         end_date,
+        image_url,
         created_by: adminId
       })
       .select()

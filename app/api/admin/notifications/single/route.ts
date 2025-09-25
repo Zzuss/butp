@@ -93,6 +93,14 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     console.log('[PATCH-SINGLE] 请求体:', body)
 
+    // 验证优先级范围（如果提供了priority）
+    if (body.priority !== undefined && (body.priority < 1 || body.priority > 10)) {
+      return NextResponse.json(
+        { error: '优先级必须在1到10之间' },
+        { status: 400 }
+      )
+    }
+
     const updateData: any = {
       updated_at: new Date().toISOString()
     }
@@ -104,6 +112,7 @@ export async function PATCH(request: NextRequest) {
     if (body.is_active !== undefined) updateData.is_active = body.is_active
     if (body.start_date !== undefined) updateData.start_date = body.start_date
     if (body.end_date !== undefined) updateData.end_date = body.end_date
+    if (body.image_url !== undefined) updateData.image_url = body.image_url
 
     const { data: notification, error } = await supabase
       .from('system_notifications')

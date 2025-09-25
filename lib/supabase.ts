@@ -71,6 +71,7 @@ export interface EducationPlan {
 
 // Storage 相关工具函数
 export const EDUCATION_PLAN_BUCKET = 'education-plans'
+export const NOTIFICATION_IMAGES_BUCKET = 'notification-images'
 
 // 获取文件的公开URL
 export const getEducationPlanUrl = (fileName: string) => {
@@ -153,6 +154,53 @@ export const listEducationPlans = async () => {
     }) || []
   } catch (error) {
     console.error('💥 列表函数执行失败:', error)
+    throw error
+  }
+}
+
+// 获取通知图片的公开URL
+export const getNotificationImageUrl = (fileName: string) => {
+  return supabase.storage
+    .from(NOTIFICATION_IMAGES_BUCKET)
+    .getPublicUrl(fileName).data.publicUrl
+}
+
+// 上传通知图片到 Supabase Storage
+export const uploadNotificationImage = async (file: File, fileName: string) => {
+  try {
+    console.log(`📤 开始上传图片到 Supabase: ${fileName}, 大小: ${file.size} bytes`)
+    
+    const { data, error } = await supabase.storage
+      .from(NOTIFICATION_IMAGES_BUCKET)
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type
+      })
+    
+    if (error) {
+      console.error('❌ Supabase 图片上传错误:', error)
+      throw new Error(`Supabase 图片上传失败: ${error.message}`)
+    }
+    
+    console.log('✅ 图片上传成功，数据:', data)
+    return data
+  } catch (error) {
+    console.error('💥 图片上传函数执行失败:', error)
+    throw error
+  }
+}
+
+// 删除通知图片
+export const deleteNotificationImage = async (fileName: string) => {
+  try {
+    const { error } = await supabase.storage
+      .from(NOTIFICATION_IMAGES_BUCKET)
+      .remove([fileName])
+    
+    if (error) throw error
+  } catch (error) {
+    console.error('Delete image error:', error)
     throw error
   }
 }
