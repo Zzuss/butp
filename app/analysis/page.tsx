@@ -154,9 +154,6 @@ export default function Analysis() {
   // 概率数据加载重试计数
   const probabilityRetryRef = useRef(0)
   
-  // 浮层状态
-  const [overlayVisible, setOverlayVisible] = useState(false);
-  const [selectedCorner, setSelectedCorner] = useState<{ index: number; label: string; value: number } | null>(null);
 
 
   // 获取GPA门槛值
@@ -1074,11 +1071,6 @@ export default function Analysis() {
   // 获取当前语言的能力标签
   const currentAbilityLabels = abilityLabels[language as keyof typeof abilityLabels] || abilityLabels.zh;
   
-  // 处理雷达图角点击
-  const handleRadarCornerClick = (cornerIndex: number, label: string, value: number) => {
-    setOverlayVisible(true);
-    setSelectedCorner({ index: cornerIndex, label, value });
-  };
   
   // 下载状态
   const [downloading, setDownloading] = useState(false);
@@ -1163,11 +1155,6 @@ export default function Analysis() {
     }
   };
 
-  // 关闭浮层
-  const handleCloseOverlay = () => {
-    setOverlayVisible(false);
-    setSelectedCorner(null);
-  };
 
   // 如果未登录，显示登录提示
   if (!authLoading && !user?.isLoggedIn) {
@@ -1183,22 +1170,6 @@ export default function Analysis() {
 
   return (
     <div className="container mx-auto p-4 space-y-6 relative">
-      {/* 浮层 */}
-      {overlayVisible && selectedCorner && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">为数理逻辑与科学基础，建议注重以下课程</h2>
-            <ul className="list-decimal list-inside space-y-2">
-              <li>工程数学</li>
-              <li>高等数学A</li>
-              <li>线性代数</li>
-              <li>高等数学A</li>
-              <li>近代物理</li>
-            </ul>
-            <Button className="mt-4" onClick={handleCloseOverlay}>关闭</Button>
-          </div>
-        </div>
-      )}
       {/* 其他内容 */}
       <div className="p-6">
         <div className="mb-6 flex justify-between items-center">
@@ -1348,9 +1319,59 @@ export default function Analysis() {
                         data={abilityData} 
                         labels={currentAbilityLabels}
                         className="mt-4"
-                        onCornerClick={handleRadarCornerClick}
-                        cornerStyle={{ zIndex: 50 }}
-                        chartStyle={{ width: '110%', marginLeft: '-5%' }}
+                        showBuiltInModal={true}
+                        modalContents={[
+                          {
+                            title: "为提高数理逻辑与科学基础能力，建议注重以下课程:",
+                            content: [
+                              "工程数学",
+                              "高等数学A",
+                              "线性代数",
+                              "高等数学A",
+                              "近代物理"
+                            ]
+                          },
+                          {
+                            title: "为提高专业核心技术能力，建议注重以下课程:",
+                            content: [
+                              "工程数学",
+                              "操作系统",
+                              "电子电路基础",
+                              "信号与系统",
+                              "信号与系统"
+                            ]
+                          },
+                          {
+                            title: "为提高人文与社会素养能力，建议注重以下课程:",
+                            content: [
+                              "视听电影",
+                              "进阶听说（下）",
+                              "进阶听说（上）",
+                              "综合英语（上）",
+                              "综合英语（下）"
+                            ]
+                          },
+                          {
+                            title: "为提高工程实践与创新应用能力，建议注重以下课程:",
+                            content: [
+                              "个人发展计划1",
+                              "电路实验",
+                              "毕业设计",
+                              "数据结构与算法课程设计",
+                              "计算导论与程序设计课程设计"
+                            ]
+                          },
+                          {
+                            title: "为提高职业发展与团队协作能力，建议注重以下课程:",
+                            content: [
+                              "科学思考与艺术实践",
+                              "科学思考与艺术实践",
+                              "图像识别应用实训",
+                              "Web创新实践",
+                              "智能交互机器人实验"
+                            ]
+                          }
+                        ]}
                       />
                     )}
                     <div className="mt-4 p-3 bg-purple-50 rounded-lg">

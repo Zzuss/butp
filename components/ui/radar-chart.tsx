@@ -1,16 +1,37 @@
 "use client"
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface RadarChartProps {
   data: number[]
   labels: string[]
   className?: string
   onCornerClick?: (cornerIndex: number, label: string, value: number) => void
+  showBuiltInModal?: boolean
+  modalTitle?: string
+  modalContent?: string[]
+  modalContents?: Array<{
+    title: string
+    content: string[]
+  }>
 }
 
-export function RadarChart({ data, labels, className = "", onCornerClick }: RadarChartProps) {
+export function RadarChart({ 
+  data, 
+  labels, 
+  className = "", 
+  onCornerClick,
+  showBuiltInModal = false,
+  modalTitle = "为数理逻辑与科学基础，建议注重以下课程",
+  modalContent = ["工程数学", "高等数学A", "线性代数", "高等数学A", "近代物理"],
+  modalContents = []
+}: RadarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [selectedModalContent, setSelectedModalContent] = useState<{
+    title: string
+    content: string[]
+  } | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -151,8 +172,6 @@ export function RadarChart({ data, labels, className = "", onCornerClick }: Rada
 
   // 处理Canvas点击事件
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!onCornerClick) return;
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -170,28 +189,91 @@ export function RadarChart({ data, labels, className = "", onCornerClick }: Rada
     const relativeX = x - centerX;
     const relativeY = y - centerY;
     
-    // 计算角度（注意：Canvas的Y轴向下，需要翻转）
-    const angle = Math.atan2(-relativeY, relativeX);
-    const normalizedAngle = (angle + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
-    
     // 计算距离中心的距离
     const distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
     
-    // 判断点击是否在有效区域内（距离中心一定范围内）
-    const maxRadius = (canvas.width / 2 - 80) + 50; // 标签区域
-    if (distance > maxRadius) return;
+    // 设置点击容错半径（以像素为单位）
+    const clickToleranceRadius = 40; // 40像素的点击容错范围
     
-    // 计算属于哪个角
-    const anglePerCorner = (2 * Math.PI) / data.length;
-    const cornerIndex = Math.floor(normalizedAngle / anglePerCorner);
+    // 遍历所有顶点，检查点击位置是否在某个顶点附近
+    for (let i = 0; i < data.length; i++) {
+      const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2;
+      
+      // 计算该顶点的位置（基于实际数据值）
+      const normalizedValue = Math.min((data[i] / 100) * 4, 1);
+      const radius = (canvas.width / 2 - 80) * normalizedValue;
+      const vertexX = centerX + radius * Math.cos(angle);
+      const vertexY = centerY + radius * Math.sin(angle);
+      
+      // 计算点击位置到该顶点的距离
+      const distanceToVertex = Math.sqrt(
+        Math.pow(x - vertexX, 2) + Math.pow(y - vertexY, 2)
+      );
+      
+      // 如果点击位置在该顶点的容错范围内，则触发点击事件
+      if (distanceToVertex <= clickToleranceRadius) {
+        // 如果启用了内置模态框，显示模态框
+        if (showBuiltInModal) {
+          // 设置选中的模态框内容
+          if (modalContents.length > 0 && modalContents[i]) {
+            setSelectedModalContent(modalContents[i]);
+          } else {
+            // 回退到默认内容
+            setSelectedModalContent({
+              title: modalTitle,
+              content: modalContent
+            });
+          }
+          setShowModal(true);
+        }
+        
+        // 如果提供了外部点击处理函数，也调用它
+        if (onCornerClick) {
+          onCornerClick(i, labels[i], data[i]);
+        }
+        
+        // 找到匹配的顶点后立即返回，避免重复触发
+        return;
+      }
+    }
     
-    // 检查是否在点击区域内（可以设置一个容错范围）
-    const cornerAngle = cornerIndex * anglePerCorner;
-    const angleDiff = Math.abs(normalizedAngle - cornerAngle);
-    const tolerance = anglePerCorner / 3; // 每个角1/3的容错范围
-    
-    if (angleDiff <= tolerance || angleDiff >= (2 * Math.PI - tolerance)) {
-      onCornerClick(cornerIndex, labels[cornerIndex], data[cornerIndex]);
+    // 如果没有点击到任何顶点，检查是否点击在标签区域
+    // 计算标签位置并检查点击是否在标签附近
+    for (let i = 0; i < labels.length; i++) {
+      const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2;
+      const labelRadius = (canvas.width / 2 - 80) + 50; // 标签半径
+      const labelX = centerX + labelRadius * Math.cos(angle);
+      const labelY = centerY + labelRadius * Math.sin(angle);
+      
+      // 计算点击位置到标签的距离
+      const distanceToLabel = Math.sqrt(
+        Math.pow(x - labelX, 2) + Math.pow(y - labelY, 2)
+      );
+      
+      // 如果点击位置在标签的容错范围内，也触发点击事件
+      if (distanceToLabel <= clickToleranceRadius) {
+        // 如果启用了内置模态框，显示模态框
+        if (showBuiltInModal) {
+          // 设置选中的模态框内容
+          if (modalContents.length > 0 && modalContents[i]) {
+            setSelectedModalContent(modalContents[i]);
+          } else {
+            // 回退到默认内容
+            setSelectedModalContent({
+              title: modalTitle,
+              content: modalContent
+            });
+          }
+          setShowModal(true);
+        }
+        
+        // 如果提供了外部点击处理函数，也调用它
+        if (onCornerClick) {
+          onCornerClick(i, labels[i], data[i]);
+        }
+        
+        return;
+      }
     }
   };
 
@@ -203,6 +285,26 @@ export function RadarChart({ data, labels, className = "", onCornerClick }: Rada
           className="max-w-full h-auto cursor-pointer" 
           onClick={handleCanvasClick}
         />
+        
+        {/* 内置模态框 */}
+        {showModal && selectedModalContent && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+              <h2 className="text-2xl font-bold mb-4">{selectedModalContent.title}</h2>
+              <ul className="list-decimal list-inside space-y-2">
+                {selectedModalContent.content.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+              <button 
+                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                onClick={() => setShowModal(false)}
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
