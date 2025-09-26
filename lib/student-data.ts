@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { supabaseSecondary } from './supabaseSecondary';
 
 // 硬编码 Supabase 配置（用于 API 路由）
 const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co';
@@ -69,7 +70,7 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
         
         for (const field of possibleFields) {
           try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseSecondary
               .from(table)
               .select(`"${field}"`)  // 使用双引号包围字段名以处理大小写敏感问题
               .eq(`"${field}"`, hash)
@@ -388,21 +389,18 @@ export async function getStudentInfoById(studentId: string): Promise<{ id: strin
  */
 export async function getHashByStudentNumber(studentNumber: string): Promise<string | null> {
   try {
-    const { data, error } = await supabase
-      .from('student_number_hash_mapping')
-      .select('"student_hash"')  // 使用双引号包围字段名
-      .eq('"student_number"', studentNumber)
+    const { data, error } = await supabaseSecondary
+      .from('student_number_hash_mapping_rows')
+      .select('student_hash')
+      .eq('student_number', studentNumber)
       .limit(1);
-
     if (error) {
       console.error('Error querying student number mapping:', error);
       return null;
     }
-
     if (data && data.length > 0) {
       return data[0].student_hash;
     }
-
     return null;
   } catch (error) {
     console.error('Database query failed:', error);
