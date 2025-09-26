@@ -1,18 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Supabase 配置
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+import { supabaseSecondary } from '@/lib/supabaseSecondary'
 
 export async function DELETE() {
   try {
     console.log('Clearing all SNH mappings')
     
     // 先获取当前记录数
-    const { count: currentCount } = await supabase
+    const { count: currentCount } = await supabaseSecondary
       .from('student_number_hash_mapping')
       .select('*', { count: 'exact', head: true })
 
@@ -23,7 +17,7 @@ export async function DELETE() {
     }
 
     // 删除所有记录
-    const { error } = await supabase
+    const { error } = await supabaseSecondary
       .from('student_number_hash_mapping')
       .delete()
       .not('student_number', 'is', null) // 删除所有记录

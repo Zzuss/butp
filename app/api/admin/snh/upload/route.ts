@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import * as XLSX from 'xlsx'
-
-// Supabase 配置
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+import { supabaseSecondary } from '@/lib/supabaseSecondary'
 
 interface ParsedRecord {
   student_number: string
@@ -122,7 +116,7 @@ export async function POST(request: NextRequest) {
     
     for (const record of parsedData) {
       try {
-        const { error } = await supabase
+        const { error } = await supabaseSecondary
           .from('student_number_hash_mapping')
           .upsert({
             student_number: record.student_number,
