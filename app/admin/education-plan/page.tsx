@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Upload, Download, Trash2, FileText, AlertCircle } from 'lucide-react'
+import { Upload, Download, Trash2, FileText, AlertCircle, AlertTriangle } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import AdminLayout from '@/components/admin/AdminLayout'
 
 interface EducationPlan {
@@ -24,6 +25,9 @@ export default function AdminEducationPlanPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadYear, setUploadYear] = useState('')
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
+  const [duplicateFileName, setDuplicateFileName] = useState('')
+  const [hasFileNameConflict, setHasFileNameConflict] = useState(false)
 
   // 获取所有培养方案
   const fetchPlans = async () => {
@@ -43,14 +47,37 @@ export default function AdminEducationPlanPage() {
     fetchPlans()
   }, [])
 
+  // 检查文件名是否重复
+  const checkFileNameDuplicate = (fileName: string) => {
+    return plans.some(plan => plan.name === fileName)
+  }
+
   // 处理文件选择
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      // 重置状态
+      setMessage(null)
+      setHasFileNameConflict(false)
+      setShowDuplicateDialog(false)
+      setDuplicateFileName('')
+
       if (file.type !== 'application/pdf') {
         setMessage({ type: 'error', text: '请选择 PDF 文件' })
         return
       }
+
+      // 检查文件名重复（基于原文件名，不是重命名后的文件名）
+      if (checkFileNameDuplicate(file.name)) {
+        setDuplicateFileName(file.name)
+        setHasFileNameConflict(true)
+        setShowDuplicateDialog(true)
+        setSelectedFile(null)
+        // 清空文件输入
+        event.target.value = ''
+        return
+      }
+
       setSelectedFile(file)
     }
   }
@@ -59,6 +86,12 @@ export default function AdminEducationPlanPage() {
   const handleUpload = async () => {
     if (!selectedFile || !uploadYear) {
       setMessage({ type: 'error', text: '请选择文件并输入年份' })
+      return
+    }
+
+    // 检查是否有文件名冲突
+    if (hasFileNameConflict) {
+      setMessage({ type: 'error', text: '存在文件名冲突，请重新选择文件' })
       return
     }
 
@@ -84,13 +117,21 @@ export default function AdminEducationPlanPage() {
 
     setLoading(true)
     try {
-      // 先检查是否已存在相同年份的文件
+      // 再次检查文件名是否重复（基于原始文件名）
+      if (checkFileNameDuplicate(selectedFile.name)) {
+        setMessage({ type: 'error', text: '文件名已存在，请先删除旧文件或重新选择文件' })
+        setLoading(false)
+        return
+      }
+
+      // 检查是否已存在相同年份的文件
       console.log('🔍 检查文件是否已存在...')
       const existingPlans = plans
       const existingPlan = existingPlans.find(plan => plan.year === uploadYear)
       
       if (existingPlan) {
         setMessage({ type: 'error', text: `${uploadYear} 年的培养方案已存在，请先删除后再上传` })
+        setLoading(false)
         return
       }
 
@@ -201,6 +242,31 @@ export default function AdminEducationPlanPage() {
           <h1 className="text-3xl font-bold">培养方案管理</h1>
         </div>
 
+        {/* 文件名重复警告弹窗 */}
+        <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                文件名重复警告
+              </DialogTitle>
+              <DialogDescription>
+                您选择的文件名 "<span className="font-semibold text-gray-900">{duplicateFileName}</span>" 与已存在的文件重复。
+                <br />
+                如需替换此文件，请先删除旧文件再上传新文件。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDuplicateDialog(false)}
+              >
+                我知道了
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {message && (
           <Alert className={message.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
             <AlertCircle className="h-4 w-4" />
@@ -248,11 +314,11 @@ export default function AdminEducationPlanPage() {
               <div className="flex items-end">
                 <Button 
                   onClick={handleUpload} 
-                  disabled={!selectedFile || !uploadYear || loading}
+                  disabled={!selectedFile || !uploadYear || loading || hasFileNameConflict}
                   className="w-full"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  {loading ? '上传中...' : '上传文件'}
+                  {loading ? '上传中...' : hasFileNameConflict ? '文件名冲突' : '上传文件'}
                 </Button>
               </div>
             </div>

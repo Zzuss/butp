@@ -37,6 +37,7 @@ interface SystemNotification {
   content: string;
   type: 'info' | 'warning' | 'success' | 'error';
   priority: number;
+  image_url?: string;
 }
 
 export default function DashboardPage() {

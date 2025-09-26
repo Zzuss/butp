@@ -23,6 +23,7 @@ interface Notification {
   end_date: string | null;
   created_at: string;
   updated_at: string;
+  image_url?: string;
   admin_accounts?: {
     username: string;
     full_name: string | null;
@@ -41,11 +42,17 @@ export default function AdminNotificationsPage() {
     title: '',
     content: '',
     type: 'info' as const,
-    priority: 0,
+    priority: 1,
     start_date: new Date().toISOString().slice(0, 16),
-    end_date: ''
+    end_date: '',
+    image_url: ''
   })
   const [formLoading, setFormLoading] = useState(false)
+  
+  // 图片上传状态
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>('')
+  const [imageUploading, setImageUploading] = useState(false)
 
   useEffect(() => {
     fetchNotifications()
@@ -73,8 +80,21 @@ export default function AdminNotificationsPage() {
     setError(null)
     setFormLoading(true)
     try {
+      // 先上传图片（如果有的话）
+      let imageUrl = formData.image_url
+      if (selectedImage) {
+        const uploadedUrl = await uploadImage()
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl
+        } else {
+          // 如果图片上传失败，停止创建通知
+          return
+        }
+      }
+      
       const payload = {
         ...formData,
+        image_url: imageUrl,
         end_date: formData.end_date || null
       }
       
@@ -103,8 +123,21 @@ export default function AdminNotificationsPage() {
     setError(null)
     setFormLoading(true)
     try {
+      // 先上传图片（如果有新选择的图片）
+      let imageUrl = formData.image_url
+      if (selectedImage) {
+        const uploadedUrl = await uploadImage()
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl
+        } else {
+          // 如果图片上传失败，停止更新通知
+          return
+        }
+      }
+      
       const payload = {
         ...formData,
+        image_url: imageUrl,
         end_date: formData.end_date || null
       }
       
@@ -204,10 +237,13 @@ export default function AdminNotificationsPage() {
       title: '',
       content: '',
       type: 'info',
-      priority: 0,
+      priority: 1,
       start_date: new Date().toISOString().slice(0, 16),
-      end_date: ''
+      end_date: '',
+      image_url: ''
     })
+    setSelectedImage(null)
+    setImagePreview('')
   }
 
   const startEdit = (notification: Notification) => {
@@ -217,8 +253,11 @@ export default function AdminNotificationsPage() {
       type: notification.type,
       priority: notification.priority,
       start_date: new Date(notification.start_date).toISOString().slice(0, 16),
-      end_date: notification.end_date ? new Date(notification.end_date).toISOString().slice(0, 16) : ''
+      end_date: notification.end_date ? new Date(notification.end_date).toISOString().slice(0, 16) : '',
+      image_url: notification.image_url || ''
     })
+    setSelectedImage(null)
+    setImagePreview(notification.image_url || '')
     setEditingId(notification.id)
     setShowCreateForm(false)
   }
@@ -226,6 +265,70 @@ export default function AdminNotificationsPage() {
   const cancelEdit = () => {
     setEditingId(null)
     resetForm()
+  }
+
+  // 处理图片文件选择
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // 验证文件类型
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        setError('只支持 JPG、PNG、GIF、WebP 格式的图片')
+        return
+      }
+      
+      // 验证文件大小 (5MB)
+      if (file.size > 5242880) {
+        setError('图片大小不能超过 5MB')
+        return
+      }
+      
+      setSelectedImage(file)
+      
+      // 创建预览
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // 上传图片
+  const uploadImage = async (): Promise<string | null> => {
+    if (!selectedImage) return null
+    
+    setImageUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedImage)
+      
+      const response = await fetch('/api/admin/notifications/upload-image', {
+        method: 'POST',
+        body: formData,
+      })
+      
+      if (!response.ok) {
+        const errData = await response.json()
+        throw new Error(errData.error || '图片上传失败')
+      }
+      
+      const data = await response.json()
+      return data.imageUrl
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '图片上传失败')
+      return null
+    } finally {
+      setImageUploading(false)
+    }
+  }
+
+  // 移除图片
+  const removeImage = () => {
+    setSelectedImage(null)
+    setImagePreview('')
+    setFormData({ ...formData, image_url: '' })
   }
 
   const getTypeColor = (type: string) => {
@@ -318,14 +421,61 @@ export default function AdminNotificationsPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-2">通知图片 (可选)</label>
+              <div className="space-y-3">
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleImageSelect}
+                  disabled={formLoading || imageUploading}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-gray-500">
+                  支持 JPG、PNG、GIF、WebP 格式，文件大小不超过 5MB
+                </p>
+                
+                {imagePreview && (
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="图片预览"
+                      className="w-32 h-32 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-1 right-1 p-1 h-6 w-6"
+                      onClick={removeImage}
+                      disabled={formLoading || imageUploading}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+                
+                {imageUploading && (
+                  <p className="text-sm text-blue-600">正在上传图片...</p>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">优先级</label>
+                <label className="block text-sm font-medium mb-2">优先级 (1-10)</label>
                 <Input
                   type="number"
+                  min="1"
+                  max="10"
                   value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
-                  placeholder="0"
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value)
+                    if (!isNaN(value) && value >= 1 && value <= 10) {
+                      setFormData({ ...formData, priority: value })
+                    }
+                  }}
+                  placeholder="1"
                   disabled={formLoading}
                 />
               </div>
@@ -363,10 +513,10 @@ export default function AdminNotificationsPage() {
               </Button>
               <Button
                 onClick={editingId ? () => handleUpdateNotification(editingId) : handleCreateNotification}
-                disabled={formLoading || !formData.title.trim() || !formData.content.trim()}
+                disabled={formLoading || imageUploading || !formData.title.trim() || !formData.content.trim() || formData.priority < 1 || formData.priority > 10}
               >
                 <Save className="h-4 w-4 mr-2" />
-                {formLoading ? '保存中...' : (editingId ? '更新' : '创建')}
+                {formLoading || imageUploading ? '保存中...' : (editingId ? '更新' : '创建')}
               </Button>
             </div>
           </CardContent>

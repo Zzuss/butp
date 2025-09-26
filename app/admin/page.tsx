@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Users, UserCheck, TrendingUp, FileText, Bell, Award, Shield } from 'lucide-react'
+import { Users, UserCheck, TrendingUp, FileText, Bell, Award, Shield, Database } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from 'next/link'
 import AdminLayout from '@/components/admin/AdminLayout'
@@ -47,9 +47,8 @@ export default function AdminPage() {
           </Card>
         </Link>
 
-        {/* 智育成绩管理 - 本地开发可用，生产环境注释 */}
-        {/* TODO: 预测算法功能需要Python环境，Vercel无法部署，本地开发时可取消注释 */}
-        {/* <Link href="/admin/prediction">
+        {/* 智育成绩管理 - 已启用 */}
+        <Link href="/admin/prediction">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -64,23 +63,25 @@ export default function AdminPage() {
               </p>
             </CardContent>
           </Card>
-        </Link> */}
-        
-        {/* 临时替代卡片 - 生产环境显示 */}
-        <Card className="opacity-50 cursor-not-allowed">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              智育成绩管理
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold text-gray-500">开发中</div>
-            <p className="text-xs text-muted-foreground">
-              预测算法功能需要Python环境支持
-            </p>
-          </CardContent>
-        </Card>
+        </Link>
+
+        {/* 预测表导入工具 */}
+        <Link href="/admin/prediction-import">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                预测表导入工具
+              </CardTitle>
+              <Database className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-semibold text-green-700">数据导入</div>
+              <p className="text-xs text-muted-foreground">
+                单独导入各专业预测文件到数据库
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
         {/* 培养方案管理 */}
         <Link href="/admin/education-plan">
@@ -113,6 +114,24 @@ export default function AdminPage() {
               <div className="text-lg font-semibold text-purple-700">系统通知</div>
               <p className="text-xs text-muted-foreground">
                 管理系统消息和通知弹窗
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* 隐私条款管理 */}
+        <Link href="/admin/privacy-policy">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                隐私条款管理
+              </CardTitle>
+              <FileText className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-semibold text-red-700">隐私条款</div>
+              <p className="text-xs text-muted-foreground">
+                管理用户隐私条款同意记录
               </p>
             </CardContent>
           </Card>
