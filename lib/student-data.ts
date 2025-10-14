@@ -58,7 +58,8 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
       'student_profiles',
       'course_enrollments',
       'grade_records',
-      'student_records'
+      'student_records',
+      'student_number_hash_mapping_rows'
     ];
     
     for (const table of tables) {
