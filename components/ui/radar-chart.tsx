@@ -288,20 +288,28 @@ export function RadarChart({
         
         {/* 内置模态框 */}
         {showModal && selectedModalContent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
-              <h2 className="text-2xl font-bold mb-4">{selectedModalContent.title}</h2>
+          <div 
+            className="fixed inset-0 flex items-center justify-center z-50"
+            onClick={() => setShowModal(false)}
+          >
+            <div 
+              className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">{selectedModalContent.title}</h2>
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold leading-none"
+                >
+                  ✕
+                </button>
+              </div>
               <ul className="list-decimal list-inside space-y-2">
                 {selectedModalContent.content.map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
-              <button 
-                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                onClick={() => setShowModal(false)}
-              >
-                关闭
-              </button>
             </div>
           </div>
         )}
