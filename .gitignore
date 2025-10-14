@@ -50,9 +50,7 @@ venv.bak/
 temp_predictions/
 function/prediction_log_*.txt
 function/run_prediction_temp.py
-app/admin/prediction/
-app/api/admin/prediction/
-app/api/admin/academic-records/
+# 注意: app/admin/prediction/, app/api/admin/prediction/, app/api/admin/academic-records/ 需要部署，所以从忽略列表中移除
 app/utils/*.py
 *.sql
 function/
