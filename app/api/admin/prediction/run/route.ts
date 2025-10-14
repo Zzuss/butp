@@ -61,7 +61,11 @@ async function predictMajor(major: string, students: any[], year: string) {
     const XLSX = require('xlsx')
     // 使用专业代码避免中文路径问题
     const majorCode = MAJOR_CODE_MAP[major] || 'unknown'
-    const tempDir = join(process.cwd(), 'temp_predictions', `prediction_${majorCode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+    // 在Vercel等serverless环境中使用/tmp目录，本地开发使用项目目录
+    const baseDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+      ? '/tmp' 
+      : process.cwd()
+    const tempDir = join(baseDir, 'temp_predictions', `prediction_${majorCode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
     const fs = require('fs')
     
     // 确保目录存在
@@ -1298,8 +1302,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // 创建临时目录
-    const tempDir = join(process.cwd(), 'temp_predictions', `prediction_${Date.now()}`)
+    // 创建临时目录 (兼容Vercel serverless环境)
+    const baseDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+      ? '/tmp' 
+      : process.cwd()
+    const tempDir = join(baseDir, 'temp_predictions', `prediction_${Date.now()}`)
     if (!existsSync(tempDir)) {
       mkdirSync(tempDir, { recursive: true })
     }

@@ -18,8 +18,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '无效的文件名' }, { status: 400 })
     }
 
-    // 在temp_predictions目录中查找文件
-    const tempBaseDir = join(process.cwd(), 'temp_predictions')
+    // 在temp_predictions目录中查找文件 (兼容Vercel)
+    const baseDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+      ? '/tmp' 
+      : process.cwd()
+    const tempBaseDir = join(baseDir, 'temp_predictions')
     let filePath: string | null = null
 
     if (batchId) {

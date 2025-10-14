@@ -554,7 +554,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 创建临时目录
-    const tempDir = join(process.cwd(), 'temp_predictions', `import_${Date.now()}`)
+    // 兼容Vercel serverless环境
+    const baseDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+      ? '/tmp' 
+      : process.cwd()
+    const tempDir = join(baseDir, 'temp_predictions', `import_${Date.now()}`)
     if (!existsSync(tempDir)) {
       mkdirSync(tempDir, { recursive: true })
     }

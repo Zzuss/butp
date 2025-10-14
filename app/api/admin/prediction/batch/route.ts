@@ -427,7 +427,11 @@ export async function POST(request: NextRequest) {
     }
     
     const batchId = `batch_${Date.now()}`
-    const batchTempDir = join(process.cwd(), 'temp_predictions', batchId)
+    // 兼容Vercel serverless环境
+    const baseDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+      ? '/tmp' 
+      : process.cwd()
+    const batchTempDir = join(baseDir, 'temp_predictions', batchId)
     if (!existsSync(batchTempDir)) {
       mkdirSync(batchTempDir, { recursive: true })
     }

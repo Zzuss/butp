@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
   try {
     const { maxHours = CLEANUP_HOURS } = await request.json().catch(() => ({}))
     
-    const tempBaseDir = join(process.cwd(), 'temp_predictions')
+    // 兼容Vercel serverless环境
+    const baseDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+      ? '/tmp' 
+      : process.cwd()
+    const tempBaseDir = join(baseDir, 'temp_predictions')
     
     if (!existsSync(tempBaseDir)) {
       return NextResponse.json({
@@ -88,7 +92,11 @@ export async function POST(request: NextRequest) {
 // 获取临时文件统计信息
 export async function GET() {
   try {
-    const tempBaseDir = join(process.cwd(), 'temp_predictions')
+    // 兼容Vercel serverless环境
+    const baseDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+      ? '/tmp' 
+      : process.cwd()
+    const tempBaseDir = join(baseDir, 'temp_predictions')
     
     if (!existsSync(tempBaseDir)) {
       return NextResponse.json({
