@@ -1,12 +1,19 @@
 {
-  "env": {
-    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
-    "PUPPETEER_EXECUTABLE_PATH": "/opt/google/chrome/chrome"
-  },
   "functions": {
-    "app/api/education-plan/upload/route.ts": {
-      "maxDuration": 60,
-      "memory": 1024
+    "app/api/admin/prediction/run/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/admin/prediction/batch/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/admin/prediction-import/route.ts": {
+      "maxDuration": 300
+    }
+  },
+  "regions": ["hkg1"],
+  "build": {
+    "env": {
+      "NEXT_TELEMETRY_DISABLED": "1"
     }
   }
 }

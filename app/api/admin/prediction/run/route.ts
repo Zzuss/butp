@@ -3,6 +3,7 @@ import { writeFile } from 'fs/promises'
 import { join, extname, basename } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { supabase } from '@/lib/supabase'
+import { importAcademicResults, importPredictionToDatabase } from '../../../../../lib/prediction-import'
 
 interface PredictionConfig {
   year: string
@@ -291,150 +292,7 @@ function mapColumnName(excelColumnName: string): string {
   return cleanedName
 }
 
-// 导入成绩数据到academic_results表
-async function importAcademicResults(filePath: string, year: string) {
-  try {
-    console.log(`开始导入成绩数据到 academic_results 表，文件: ${filePath}`)
-    
-    // 读取Excel文件
-    const XLSX = require('xlsx')
-    
-    // 使用缓冲读取方式
-    let workbook: any
-    let attempts = 0
-    const maxAttempts = 3
-    
-    while (attempts < maxAttempts) {
-      try {
-        if (attempts === 0) {
-          workbook = XLSX.readFile(filePath)
-        } else {
-          const fs = require('fs')
-          const buffer = fs.readFileSync(filePath)
-          workbook = XLSX.read(buffer, { type: 'buffer' })
-        }
-        break
-      } catch (error) {
-        attempts++
-        if (attempts >= maxAttempts) {
-          throw error
-        }
-        console.log(`Excel读取尝试 ${attempts} 失败，重试...`)
-        await new Promise(resolve => setTimeout(resolve, 1000))
-      }
-    }
-    
-    // 获取第一个工作表
-    const sheetName = workbook.SheetNames[0]
-    const worksheet = workbook.Sheets[sheetName]
-    
-    if (!worksheet) {
-      throw new Error('Excel文件中没有找到工作表')
-    }
-    
-    const jsonData = XLSX.utils.sheet_to_json(worksheet)
-    console.log(`从Excel文件读取到 ${jsonData.length} 条成绩记录`)
-    
-    if (jsonData.length === 0) {
-      console.log('Excel文件中没有数据，跳过导入')
-      return true
-    }
-    
-    // 直接操作数据库而不是生成SQL脚本
-    
-    console.log(`准备导入成绩数据到数据库`)
-    
-    // 处理和清理数据
-    const processedData = jsonData.map((row: any) => {
-      return {
-        SNH: row.SNH || null,
-        Semester_Offered: row.Semester_Offered || null,
-        Current_Major: row.Current_Major || null,
-        Course_ID: row.Course_ID || null,
-        Course_Name: row.Course_Name || null,
-        Grade: row.Grade ? String(row.Grade) : null,
-        Grade_Remark: row.Grade_Remark || null,
-        Course_Type: row.Course_Type || null,
-        Course_Attribute: row['Course_Attribute '] || row.Course_Attribute || null, // 注意空格
-        Hours: row.Hours ? String(row.Hours) : null,
-        Credit: row.Credit ? String(row.Credit) : null,
-        Offering_Unit: row.Offering_Unit || null,
-        Tags: row.Tags || null,
-        Description: row.Description || null,
-        Exam_Type: row.Exam_Type || null,
-        Assessment_Method: row['Assessment_Method '] || row.Assessment_Method || null, // 注意空格
-        year: parseInt(year)
-      }
-    })
-    
-    // 直接批量插入数据库（像SNH页面那样）
-    console.log(`开始直接导入成绩数据到数据库，共${processedData.length}条记录...`)
-    
-    const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
-    
-    const { createClient } = require('@supabase/supabase-js')
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    
-    // 批量插入数据库（每批1000条，避免超时）
-    let processedCount = 0
-    const errors: string[] = []
-    const batchSize = 1000
-    
-    console.log(`📊 数据导入策略: ${processedData.length}条记录，每批${batchSize}条`)
-    
-    for (let i = 0; i < processedData.length; i += batchSize) {
-      const batch = processedData.slice(i, i + batchSize)
-      const batchNum = Math.floor(i / batchSize) + 1
-      const totalBatches = Math.ceil(processedData.length / batchSize)
-      
-      console.log(`🚀 执行批次 ${batchNum}/${totalBatches}: ${batch.length} 条记录`)
-      
-      try {
-        const { error, count } = await supabase
-          .from('academic_results')
-          .insert(batch)
-        
-        if (error) {
-          errors.push(`批次 ${batchNum}: ${error.message}`)
-          console.error(`❌ 批次 ${batchNum} 失败:`, error.message)
-        } else {
-          processedCount += batch.length
-          console.log(`✅ 批次 ${batchNum}/${totalBatches} 成功: ${batch.length} 条记录`)
-        }
-      } catch (dbError) {
-        const errorMsg = `批次 ${batchNum}: 数据库连接错误`
-        errors.push(errorMsg)
-        console.error(`❌ 批次 ${batchNum} 数据库错误:`, dbError)
-      }
-      
-      // 添加小延迟，避免过快请求
-      if (i + batchSize < processedData.length) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-    }
-    
-    console.log(`📊 导入完成统计: 成功 ${processedCount}/${processedData.length} 条记录`)
-    
-    if (errors.length > 0) {
-      console.log(`⚠️ 导入过程中有 ${errors.length} 个批次出现错误:`)
-      errors.forEach(error => console.log(`  - ${error}`))
-    }
-    
-    return { 
-      success: processedCount > 0, 
-      recordCount: processedCount, 
-      totalRecords: processedData.length,
-      errors: errors,
-      sqlGenerated: false,
-      directInsert: true
-    }
-    
-  } catch (error) {
-    console.error(`导入成绩数据失败:`, error)
-    throw error
-  }
-}
+// importAcademicResults函数已移动到 lib/prediction-import.ts
 
 // 简化的文件等待 - 只检查基本可访问性
 async function waitForFile(filePath: string, maxRetries = 5, delay = 3000): Promise<boolean> {
