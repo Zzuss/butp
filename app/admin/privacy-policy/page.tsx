@@ -1,100 +1,101 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Trash2, FileText, Users, Clock, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react'
+import { AlertCircle, FileText, Upload, RefreshCw, CheckCircle, Download, FileUp } from 'lucide-react'
 import AdminLayout from '@/components/admin/AdminLayout'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-interface PrivacyStats {
-  totalAgreements: number
-  recentAgreements: Array<{
-    SNH: string
-    created_at: string
-  }>
-  queriedAt: string
-}
-
 export default function PrivacyPolicyAdminPage() {
-  const [stats, setStats] = useState<PrivacyStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [clearing, setClearing] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // 加载隐私条款统计数据
-  const loadStats = async () => {
-    try {
-      setLoading(true)
-      setError('')
+  // 下载当前隐私条款文件
+  const handleDownload = () => {
+    const link = document.createElement('a')
+    link.href = '/隐私政策与用户数据使用条款_clean_Aug2025.docx'
+    link.download = '当前隐私条款.docx'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // 处理文件选择
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // 检查文件类型 - 支持常见文档格式
+      const allowedTypes = ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'application/pdf', 'text/plain', 'text/html']
+      const allowedExtensions = /\.(docx|doc|pdf|txt|html)$/i
       
-      const response = await fetch('/api/admin/privacy-policy', {
-        method: 'GET',
-        credentials: 'include'
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setStats(data)
-      } else {
-        setError(data.error || '加载统计数据失败')
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.test(file.name)) {
+        setError('仅支持 .docx, .doc, .pdf, .txt, .html 文件格式')
+        return
       }
-    } catch (error) {
-      console.error('加载统计数据失败:', error)
-      setError('网络错误，请重试')
-    } finally {
-      setLoading(false)
+
+      // 检查文件大小 (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('文件大小不能超过 10MB')
+        return
+      }
+
+      setSelectedFile(file)
+      setError('')
     }
   }
 
-  // 清空所有隐私条款同意记录
-  const handleClearAll = async () => {
-    if (!confirm('⚠️ 确认要清空所有用户的隐私条款同意记录吗？\n\n这将导致所有用户在下次登录时需要重新阅读并同意隐私条款。\n\n此操作无法撤销！')) {
-      return
-    }
-
-    if (!confirm('🔴 最后确认：您真的要清空所有隐私条款记录吗？\n\n这将影响所有用户的使用体验。')) {
+  // 上传隐私条款文件
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setError('请先选择文件')
       return
     }
 
     try {
-      setClearing(true)
+      setUploading(true)
       setError('')
       setSuccess('')
+
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', selectedFile)
       
-      const response = await fetch('/api/admin/privacy-policy', {
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await fetch('/api/admin/privacy-policy/replace', {
+        method: 'POST',
+        credentials: 'include',
+        body: uploadFormData
       })
 
       const data = await response.json()
 
       if (response.ok && data.success) {
-        setSuccess(`✅ 清空成功！所有用户的隐私条款同意记录已清空。操作时间：${new Date(data.clearedAt).toLocaleString()}`)
-        // 重新加载统计数据
-        await loadStats()
+        setSuccess('隐私条款文件替换成功！所有用户需要重新同意。')
+        setSelectedFile(null)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
       } else {
-        setError(data.error || '清空操作失败')
+        setError(data.error || '上传失败')
       }
     } catch (error) {
-      console.error('清空操作失败:', error)
+      console.error('上传失败:', error)
       setError('网络错误，请重试')
     } finally {
-      setClearing(false)
+      setUploading(false)
     }
   }
 
-  // 格式化时间
-  const formatTime = (timeString: string) => {
-    return new Date(timeString).toLocaleString('zh-CN')
+  // 清除文件选择
+  const handleClearFile = () => {
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
-
-  // 组件加载时获取数据
-  useEffect(() => {
-    loadStats()
-  }, [])
 
   return (
     <AdminLayout showBackButton={true}>
@@ -107,18 +108,19 @@ export default function PrivacyPolicyAdminPage() {
               隐私条款管理
             </h1>
             <p className="text-gray-600 mt-1">
-              管理用户隐私条款同意记录，可强制所有用户重新阅读隐私条款
+              上传新文件直接替换当前隐私条款，所有用户需要重新同意
             </p>
           </div>
-          <Button
-            onClick={loadStats}
-            variant="outline"
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            刷新数据
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleDownload}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              下载当前文件
+            </Button>
+          </div>
         </div>
 
         {/* 错误提示 */}
@@ -137,147 +139,92 @@ export default function PrivacyPolicyAdminPage() {
           </Alert>
         )}
 
-        {/* 统计数据卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 总体统计 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-600" />
-                隐私条款同意统计
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">
-                  <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-                  <p className="text-gray-600">正在加载统计数据...</p>
-                </div>
-              ) : stats ? (
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-3xl font-bold text-blue-600">
-                      {stats.totalAgreements}
-                    </div>
-                    <p className="text-gray-600">用户已同意隐私条款</p>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    <Clock className="h-4 w-4 inline mr-1" />
-                    统计时间：{formatTime(stats.queriedAt)}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  无法加载统计数据
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 操作面板 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                危险操作区域
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-                  <h3 className="font-semibold text-red-800 mb-2">清空所有隐私条款记录</h3>
-                  <p className="text-sm text-red-700 mb-4">
-                    此操作将清空所有用户的隐私条款同意记录，所有用户在下次登录时需要重新阅读并同意隐私条款。
-                  </p>
-                  <p className="text-xs text-red-600 mb-4">
-                    ⚠️ 此操作无法撤销，请谨慎使用！
-                  </p>
-                  <Button
-                    onClick={handleClearAll}
-                    disabled={clearing || loading}
-                    variant="destructive"
-                    className="w-full"
-                  >
-                    {clearing ? (
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        正在清空...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Trash2 className="h-4 w-4" />
-                        清空所有隐私条款记录
-                      </div>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 最近同意记录 */}
-        {stats && stats.recentAgreements && stats.recentAgreements.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-green-600" />
-                最近同意记录
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {stats.recentAgreements.map((record, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded"
-                  >
-                    <span className="text-sm font-mono text-gray-700">
-                      用户哈希: {record.SNH.substring(0, 12)}...
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      已同意
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 使用说明 */}
+        {/* 当前文件信息 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-gray-600" />
-              功能说明
+              <FileText className="h-5 w-5 text-blue-600" />
+              当前隐私条款文件
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 text-sm text-gray-700">
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                <p>
-                  <strong>隐私条款同意统计：</strong> 显示当前已同意隐私条款的用户数量
-                </p>
+            <div className="text-sm text-gray-700">
+              <p><strong>文件名:</strong> 隐私政策与用户数据使用条款_clean_Aug2025.docx</p>
+              <p><strong>位置:</strong> /public/隐私政策与用户数据使用条款_clean_Aug2025.docx</p>
+              <p className="text-amber-600 mt-2">
+                <strong>⚠️ 注意:</strong> 上传新文件将直接替换当前文件，所有用户需要重新同意
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 文件上传区域 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-blue-600" />
+              替换隐私条款文件
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">选择新的隐私条款文件</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileSelect}
+                accept=".docx,.doc,.pdf,.txt,.html"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                支持的文件格式: .docx, .doc, .pdf, .txt, .html (最大 10MB)
+              </p>
+            </div>
+
+            {selectedFile && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileUp className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">已选择文件</span>
+                  </div>
+                  <Button onClick={handleClearFile} variant="outline" size="sm">
+                    清除
+                  </Button>
+                </div>
+                <div className="text-sm text-blue-700">
+                  <div>文件名: {selectedFile.name}</div>
+                  <div>大小: {(selectedFile.size / 1024).toFixed(1)} KB</div>
+                  <div>类型: {selectedFile.type || '未知'}</div>
+                </div>
               </div>
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
-                <p>
-                  <strong>清空所有记录：</strong> 清空所有用户的隐私条款同意状态，强制所有用户重新同意
-                </p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                <p>
-                  <strong>最近同意记录：</strong> 显示最近10条用户同意隐私条款的记录
-                </p>
-              </div>
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded mt-4">
-                <p className="text-yellow-800">
-                  <strong>⚠️ 注意：</strong> 清空隐私条款记录后，所有用户（包括已登录用户）在下次访问受保护页面时都需要重新阅读并同意隐私条款。
-                </p>
-              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button
+                onClick={handleUpload}
+                disabled={!selectedFile || uploading}
+                className="flex items-center gap-2"
+              >
+                {uploading ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {uploading ? '替换中...' : '立即替换'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 简化的使用说明 */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
+              <p className="text-yellow-800 text-sm">
+                <strong>操作说明：</strong> 选择新的隐私条款文件并点击"立即替换"，系统将直接替换现有文件。
+                替换后，所有用户在下次访问时都需要重新同意新的隐私条款才能继续使用系统。
+              </p>
             </div>
           </CardContent>
         </Card>

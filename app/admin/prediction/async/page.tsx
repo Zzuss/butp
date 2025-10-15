@@ -9,7 +9,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, Upload, FileSpreadsheet, Clock, Brain, RefreshCw, Download, Eye, Trash2 } from 'lucide-react'
+import { CheckCircle, XCircle, Upload, FileSpreadsheet, Clock, Brain, RefreshCw, Download, Eye, Trash2, Home, LogOut, Database, Eraser } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 // 异步任务状态类型
 interface AsyncTask {
@@ -37,9 +39,12 @@ export default function AsyncPredictionPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [tasks, setTasks] = useState<AsyncTask[]>([])
   const [alerts, setAlerts] = useState<{ id: string, type: 'success' | 'error' | 'info', message: string }[]>([])
+  const [isCheckingGrades, setIsCheckingGrades] = useState(false)
+  const [isClearingGrades, setIsClearingGrades] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollingIntervals = useRef<{ [taskId: string]: NodeJS.Timeout }>({})
+  const router = useRouter()
 
   // 添加提示消息
   const addAlert = useCallback((type: 'success' | 'error' | 'info', message: string) => {
@@ -274,6 +279,60 @@ export default function AsyncPredictionPage() {
     addAlert('info', '任务已删除')
   }
 
+  // 检查成绩表
+  const checkGradeTable = async () => {
+    setIsCheckingGrades(true)
+    try {
+      const response = await fetch('/api/admin/prediction/check-grades')
+      const result = await response.json()
+      
+      if (result.success) {
+        addAlert('success', `成绩表检查完成: 共${result.data.totalRecords}条记录`)
+      } else {
+        addAlert('error', `检查失败: ${result.error}`)
+      }
+    } catch (error) {
+      addAlert('error', '检查成绩表失败，请检查网络连接')
+    } finally {
+      setIsCheckingGrades(false)
+    }
+  }
+
+  // 清除成绩表
+  const clearGradeTable = async () => {
+    if (!confirm('确定要清除所有成绩表数据吗？此操作无法撤销！')) {
+      return
+    }
+    
+    setIsClearingGrades(true)
+    try {
+      const response = await fetch('/api/admin/prediction/clear-grades', {
+        method: 'POST'
+      })
+      const result = await response.json()
+      
+      if (result.success) {
+        addAlert('success', `成绩表已清除: 删除了${result.data.deletedRecords}条记录`)
+      } else {
+        addAlert('error', `清除失败: ${result.error}`)
+      }
+    } catch (error) {
+      addAlert('error', '清除成绩表失败，请检查网络连接')
+    } finally {
+      setIsClearingGrades(false)
+    }
+  }
+
+  // 退出登录
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/login')
+    } catch (error) {
+      addAlert('error', '退出登录失败')
+    }
+  }
+
   // 组件卸载时清理轮询
   useEffect(() => {
     return () => {
@@ -297,11 +356,30 @@ export default function AsyncPredictionPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">异步预测系统</h1>
-          <p className="text-gray-600">
-            上传成绩文件并启动后台预测任务。任务将在阿里云服务器上异步执行，您可以实时查看进度。
-          </p>
+        {/* 顶部导航 */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">异步预测系统</h1>
+            <p className="text-gray-600">
+              上传成绩文件并启动后台预测任务。任务将在阿里云服务器上异步执行，您可以实时查看进度。
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/admin">
+              <Button variant="outline" className="flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                返回主页
+              </Button>
+            </Link>
+            <Button 
+              variant="destructive"
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              退出登录
+            </Button>
+          </div>
         </div>
 
         {/* 提示消息 */}
@@ -320,6 +398,59 @@ export default function AsyncPredictionPage() {
             </AlertDescription>
           </Alert>
         ))}
+
+        {/* 成绩表管理 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                成绩表管理
+              </CardTitle>
+              <CardDescription>
+                检查或清除数据库中的成绩数据
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={checkGradeTable}
+                disabled={isCheckingGrades}
+                variant="outline"
+                className="w-full"
+              >
+                {isCheckingGrades ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    检查中...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 h-4 w-4" />
+                    检查成绩表
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={clearGradeTable}
+                disabled={isClearingGrades}
+                variant="destructive"
+                className="w-full"
+              >
+                {isClearingGrades ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    清除中...
+                  </>
+                ) : (
+                  <>
+                    <Eraser className="mr-2 h-4 w-4" />
+                    清除成绩表
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* 新建预测任务 */}
         <Card className="mb-8">

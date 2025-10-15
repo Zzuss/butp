@@ -32,78 +32,7 @@ function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  try {
-    // 检查管理员权限
-    const { isValid, adminId } = checkAdminPermission(request)
-
-    if (!isValid) {
-      return NextResponse.json({ 
-        success: false, 
-        error: '权限不足，仅管理员可访问' 
-      }, { status: 403 })
-    }
-
-    console.log('🔧 管理员清空隐私条款记录 - 开始', {
-      adminId: adminId,
-      timestamp: new Date().toISOString()
-    })
-
-    try {
-      // 清空所有用户的隐私条款同意记录
-      const { data, error } = await supabase
-        .from('privacy_policy')
-        .delete()
-        .not('SNH', 'is', null) // 删除所有记录（SNH不为null的记录）
-
-      if (error) {
-        console.error('❌ 清空隐私条款记录失败:', error)
-        return NextResponse.json({
-          success: false,
-          error: '清空隐私条款记录失败: ' + error.message
-        }, { status: 500 })
-      }
-
-      // 查询清空后的记录数量确认
-      const { count, error: countError } = await supabase
-        .from('privacy_policy')
-        .select('*', { count: 'exact', head: true })
-
-      if (countError) {
-        console.warn('⚠️ 无法确认清空结果:', countError)
-      }
-
-      console.log('✅ 隐私条款记录清空成功', {
-        adminId: adminId,
-        remainingRecords: count || 0,
-        timestamp: new Date().toISOString()
-      })
-
-      return NextResponse.json({
-        success: true,
-        message: '所有用户的隐私条款同意记录已清空',
-        remainingRecords: count || 0,
-        clearedAt: new Date().toISOString(),
-        clearedBy: adminId
-      })
-
-    } catch (dbError) {
-      console.error('❌ 数据库操作失败:', dbError)
-      return NextResponse.json({
-        success: false,
-        error: '数据库操作失败'
-      }, { status: 500 })
-    }
-
-  } catch (error) {
-    console.error('❌ 隐私条款管理API错误:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: '服务器内部错误' 
-    }, { status: 500 })
-  }
-}
-
+// GET - 获取当前活跃的隐私条款
 export async function GET(request: NextRequest) {
   try {
     // 检查管理员权限
@@ -117,34 +46,24 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      // 查询隐私条款同意记录统计
-      const { count, error } = await supabase
+      // 查询当前活跃的隐私条款
+      const { data: privacyPolicy, error } = await supabase
         .from('privacy_policy')
-        .select('*', { count: 'exact', head: true })
+        .select('id, title, file_name, file_path, file_size, file_type, version, effective_date, created_at, updated_at, is_active, created_by')
+        .eq('is_active', true)
+        .single()
 
       if (error) {
-        console.error('❌ 查询隐私条款记录失败:', error)
+        console.error('❌ 查询隐私条款失败:', error)
         return NextResponse.json({
           success: false,
-          error: '查询隐私条款记录失败: ' + error.message
+          error: '查询隐私条款失败: ' + error.message
         }, { status: 500 })
-      }
-
-      // 查询最近的同意记录
-      const { data: recentRecords, error: recentError } = await supabase
-        .from('privacy_policy')
-        .select('SNH')
-        .limit(10)
-
-      if (recentError) {
-        console.error('❌ 查询最近记录失败:', recentError)
       }
 
       return NextResponse.json({
         success: true,
-        totalAgreements: count || 0,
-        recentAgreements: recentRecords || [],
-        queriedAt: new Date().toISOString()
+        data: privacyPolicy
       })
 
     } catch (dbError) {
@@ -163,3 +82,5 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
+
+// POST方法已移除，文件上传功能请使用 /api/admin/privacy-policy/upload
