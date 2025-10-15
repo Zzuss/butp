@@ -331,6 +331,20 @@ export async function importPredictionToDatabase(filePath: string, year: string,
     const { createClient } = require('@supabase/supabase-js')
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
     
+    // 导入前先清空该专业的现有预测数据
+    console.log(`🗑️ 清空表 ${tableName} 中的现有数据...`)
+    const { error: deleteError, count: deletedCount } = await supabase
+      .from(tableName)
+      .delete({ count: 'exact' })
+      .neq('SNH', 'dummy_value_that_should_not_exist') // 删除所有记录
+    
+    if (deleteError) {
+      console.error(`⚠️ 清空表 ${tableName} 失败:`, deleteError)
+      // 继续执行，可能是表不存在等情况
+    } else {
+      console.log(`✅ 已清空 ${deletedCount || 0} 条现有预测数据`)
+    }
+    
     // 批量插入数据
     let processedCount = 0
     const errors: string[] = []

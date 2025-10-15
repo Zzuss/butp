@@ -18,7 +18,7 @@ export async function POST() {
     const { error } = await supabase
       .from('academic_results')
       .delete()
-      .neq('id', 0) // 删除所有记录
+      .neq('SNH', 'dummy_value_that_should_not_exist') // 删除所有记录
 
     if (error) {
       console.error('清除成绩表失败:', error)
