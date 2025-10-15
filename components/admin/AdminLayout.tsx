@@ -21,15 +21,15 @@ export default function AdminLayout({ children, showBackButton = true }: AdminLa
           if (data.isAdmin && data.admin) {
             setAdminInfo(data.admin)
           } else {
-            // 未登录或非管理员，跳转到登录页
-            window.location.href = '/login?error=admin_required&message=请先以管理员身份登录'
+            // 未登录或非管理员，跳转到管理员登录页
+            window.location.href = '/admin-login?error=admin_required&message=请先以管理员身份登录'
           }
         } else {
-          window.location.href = '/login?error=admin_required&message=请先以管理员身份登录'
+          window.location.href = '/admin-login?error=admin_required&message=请先以管理员身份登录'
         }
       } catch (error) {
         console.error('获取管理员信息失败:', error)
-        window.location.href = '/login?error=admin_required&message=请先以管理员身份登录'
+        window.location.href = '/admin-login?error=admin_required&message=请先以管理员身份登录'
       } finally {
         setLoading(false)
       }

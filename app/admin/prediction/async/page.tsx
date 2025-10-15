@@ -9,9 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, Upload, FileSpreadsheet, Clock, Brain, RefreshCw, Download, Eye, Trash2, Home, LogOut, Database, Eraser } from 'lucide-react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { CheckCircle, XCircle, Upload, FileSpreadsheet, Clock, Brain, RefreshCw, Download, Eye, Trash2, Database, Eraser } from 'lucide-react'
+import AdminLayout from '@/components/admin/AdminLayout'
 
 // 异步任务状态类型
 interface AsyncTask {
@@ -44,7 +43,6 @@ export default function AsyncPredictionPage() {
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollingIntervals = useRef<{ [taskId: string]: NodeJS.Timeout }>({})
-  const router = useRouter()
 
   // 添加提示消息
   const addAlert = useCallback((type: 'success' | 'error' | 'info', message: string) => {
@@ -323,15 +321,6 @@ export default function AsyncPredictionPage() {
     }
   }
 
-  // 退出登录
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (error) {
-      addAlert('error', '退出登录失败')
-    }
-  }
 
   // 组件卸载时清理轮询
   useEffect(() => {
@@ -354,32 +343,14 @@ export default function AsyncPredictionPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <AdminLayout showBackButton={true}>
       <div className="max-w-6xl mx-auto">
-        {/* 顶部导航 */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">异步预测系统</h1>
-            <p className="text-gray-600">
-              上传成绩文件并启动后台预测任务。任务将在阿里云服务器上异步执行，您可以实时查看进度。
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/admin">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                返回主页
-              </Button>
-            </Link>
-            <Button 
-              variant="destructive"
-              onClick={handleLogout}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              退出登录
-            </Button>
-          </div>
+        {/* 页面标题 */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">异步预测系统</h1>
+          <p className="text-gray-600">
+            上传成绩文件并启动后台预测任务。任务将在阿里云服务器上异步执行，您可以实时查看进度。
+          </p>
         </div>
 
         {/* 提示消息 */}
@@ -642,6 +613,6 @@ export default function AsyncPredictionPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AdminLayout>
   )
 }
