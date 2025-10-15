@@ -16,13 +16,51 @@ export default function PrivacyPolicyAdminPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 下载当前隐私条款文件
-  const handleDownload = () => {
-    const link = document.createElement('a')
-    link.href = '/隐私政策与用户数据使用条款_clean_Aug2025.docx'
-    link.download = '当前隐私条款.docx'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleDownload = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const response = await fetch('/api/admin/privacy-policy/download', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '下载失败')
+      }
+
+      const blob = await response.blob()
+      const contentDisposition = response.headers.get('Content-Disposition')
+      let filename = '隐私政策与用户数据使用条款.docx' // Default filename
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/)
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1]
+        }
+      }
+
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', filename)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      setSuccess('文件下载成功！')
+    } catch (err: any) {
+      console.error('下载失败:', err)
+      setError(err.message || '下载当前隐私条款文件失败')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // 处理文件选择
@@ -116,8 +154,13 @@ export default function PrivacyPolicyAdminPage() {
               onClick={handleDownload}
               variant="outline"
               className="flex items-center gap-2"
+              disabled={loading}
             >
-              <Download className="h-4 w-4" />
+              {loading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
               下载当前文件
             </Button>
           </div>
@@ -149,8 +192,9 @@ export default function PrivacyPolicyAdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-sm text-gray-700">
-              <p><strong>文件名:</strong> 隐私政策与用户数据使用条款_clean_Aug2025.docx</p>
-              <p><strong>位置:</strong> /public/隐私政策与用户数据使用条款_clean_Aug2025.docx</p>
+              <p><strong>文件名:</strong> privacy-policy-latest.docx (当前活跃版本)</p>
+              <p><strong>位置:</strong> Supabase Storage Bucket: privacy-files</p>
+              <p><strong>状态:</strong> <span className="text-green-600">✅ 已部署</span></p>
               <p className="text-amber-600 mt-2">
                 <strong>⚠️ 注意:</strong> 上传新文件将直接替换当前文件，所有用户需要重新同意
               </p>

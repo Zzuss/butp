@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import mammoth from 'mammoth'
 
@@ -10,7 +10,7 @@ interface PrivacyContent {
 }
 
 // GET - 从Supabase Storage读取隐私条款内容
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // 首先从数据库获取当前活跃的隐私条款信息
     const { data: policyRecord, error: dbError } = await supabase
@@ -98,44 +98,86 @@ async function processFileContent(fileBlob: Blob, fileType: string, fileName: st
   const defaultTitle = '隐私政策与用户数据使用条款'
   const defaultDate = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })
   
+  console.log(`开始处理文件: ${fileName}, 类型: ${fileType}, 文件大小: ${fileBlob.size} bytes`)
+  
   try {
     const extension = fileName.split('.').pop()?.toLowerCase() || 'txt'
+    console.log(`文件扩展名: ${extension}`)
     
     switch (extension) {
       case 'docx':
       case 'doc':
-        const arrayBuffer = await fileBlob.arrayBuffer()
-        const result = await mammoth.extractRawText({ arrayBuffer })
-        
-        const text = result.value
-        const lines = text.split('\n').filter(line => line.trim())
-        const title = lines[0] || defaultTitle
-        
-        // 查找更新时间
-        let lastUpdated = defaultDate
-        const datePatterns = [
-          /最后更新时间[：:]\s*([^\n]+)/,
-          /更新时间[：:]\s*([^\n]+)/,
-          /(\d{4}年\d{1,2}月)/,
-          /(\d{4}-\d{1,2}-\d{1,2})/
-        ]
-        
-        for (const pattern of datePatterns) {
-          const match = text.match(pattern)
-          if (match) {
-            lastUpdated = match[1]
-            break
+        try {
+          console.log('开始处理Word文档...')
+          const arrayBuffer = await fileBlob.arrayBuffer()
+          console.log(`ArrayBuffer大小: ${arrayBuffer.byteLength}`)
+          
+          // 尝试多种方式处理mammoth
+          let result
+          try {
+            // 方法1: 直接使用arrayBuffer
+            result = await mammoth.extractRawText({ arrayBuffer })
+            console.log('方法1 (arrayBuffer) 成功')
+          } catch (error1) {
+            console.log('方法1失败，尝试方法2 (buffer):', error1.message)
+            // 方法2: 转换为Buffer
+            const buffer = Buffer.from(arrayBuffer)
+            result = await mammoth.extractRawText({ buffer })
+            console.log('方法2 (buffer) 成功')
           }
-        }
+          
+          const text = result.value || ''
+          console.log(`文本提取成功，长度: ${text.length}`)
+          
+          if (!text.trim()) {
+            return {
+              title: defaultTitle,
+              content: '文档内容为空，请检查文件是否正确上传',
+              lastUpdated: defaultDate,
+              fileType: 'word'
+            }
+          }
+          
+          const lines = text.split('\n').filter(line => line.trim())
+          const title = lines[0]?.substring(0, 100) || defaultTitle
+          
+          // 查找更新时间
+          let lastUpdated = defaultDate
+          const datePatterns = [
+            /最后更新时间[：:]\s*([^\n]+)/,
+            /更新时间[：:]\s*([^\n]+)/,
+            /(\d{4}年\d{1,2}月)/,
+            /(\d{4}-\d{1,2}-\d{1,2})/
+          ]
+          
+          for (const pattern of datePatterns) {
+            const match = text.match(pattern)
+            if (match) {
+              lastUpdated = match[1].trim()
+              break
+            }
+          }
 
-        return {
-          title,
-          content: text,
-          lastUpdated,
-          fileType: 'word'
+          console.log(`Word文档处理完成，标题: ${title.substring(0, 50)}...`)
+          return {
+            title,
+            content: text,
+            lastUpdated,
+            fileType: 'word'
+          }
+          
+        } catch (wordError) {
+          console.error('Word文档处理失败:', wordError)
+          return {
+            title: defaultTitle,
+            content: `Word文档解析失败: ${wordError.message}\n\n请确保上传的是有效的.docx或.doc文件。`,
+            lastUpdated: defaultDate,
+            fileType: 'word-error'
+          }
         }
         
       case 'txt':
+        console.log('处理文本文件...')
         const textContent = await fileBlob.text()
         const textLines = textContent.split('\n').filter(line => line.trim())
         const textTitle = textLines[0]?.replace(/^#\s*/, '') || defaultTitle
@@ -148,6 +190,7 @@ async function processFileContent(fileBlob: Blob, fileType: string, fileName: st
         }
         
       case 'html':
+        console.log('处理HTML文件...')
         const htmlContent = await fileBlob.text()
         // 简单提取文本内容
         const htmlText = htmlContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
@@ -164,28 +207,39 @@ async function processFileContent(fileBlob: Blob, fileType: string, fileName: st
         }
         
       case 'pdf':
+        console.log('处理PDF文件...')
         return {
           title: defaultTitle,
-          content: `此隐私条款为 PDF 格式文件：${fileName}\n\n由于技术限制，无法直接显示PDF内容。请联系管理员获取文档内容，或要求管理员上传文本格式版本。`,
+          content: `此隐私条款为 PDF 格式文件：${fileName}\n\n由于技术限制，无法直接显示PDF内容。请联系管理员获取文档内容，或要求管理员上传Word格式版本。`,
           lastUpdated: defaultDate,
           fileType: 'pdf'
         }
         
       default:
-        // 尝试作为文本处理
-        const unknownContent = await fileBlob.text()
-        return {
-          title: defaultTitle,
-          content: unknownContent,
-          lastUpdated: defaultDate,
-          fileType: 'unknown'
+        console.log('处理未知格式文件，尝试作为文本...')
+        try {
+          const unknownContent = await fileBlob.text()
+          return {
+            title: defaultTitle,
+            content: unknownContent,
+            lastUpdated: defaultDate,
+            fileType: 'unknown'
+          }
+        } catch (unknownError) {
+          console.error('未知格式文件处理失败:', unknownError)
+          return {
+            title: defaultTitle,
+            content: `不支持的文件格式: ${extension}`,
+            lastUpdated: defaultDate,
+            fileType: 'unsupported'
+          }
         }
     }
   } catch (error) {
     console.error(`处理文件内容失败 (${fileName}):`, error)
     return {
       title: defaultTitle,
-      content: '文件内容解析失败，请联系管理员检查文件格式',
+      content: '文件内容解析失败，请联系管理员检查文件格式。\n\n错误详情: ' + (error instanceof Error ? error.message : String(error)),
       lastUpdated: defaultDate,
       fileType: 'error'
     }

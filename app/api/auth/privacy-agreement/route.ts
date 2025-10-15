@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
 
       // 查询用户是否已同意当前版本的隐私条款
       const { data: agreementRecord, error: agreementError } = await supabase
-        .from('privacy_agreements')
+        .from('user_privacy_agreements')
         .select('id, agreed_at, privacy_policy_id')
-        .eq('user_hash', session.userHash)
+        .eq('user_id', session.userHash)
         .eq('privacy_policy_id', currentPolicy.id)
         .single()
 
@@ -143,15 +143,15 @@ export async function POST(request: NextRequest) {
 
       // 使用upsert插入或更新用户同意记录
       const { data: agreementData, error: insertError } = await supabase
-        .from('privacy_agreements')
+        .from('user_privacy_agreements')
         .upsert({
-          user_hash: session.userHash,
+          user_id: session.userHash,
           privacy_policy_id: currentPolicy.id,
           agreed_at: new Date().toISOString(),
           ip_address: clientIP,
           user_agent: userAgent
         }, {
-          onConflict: 'user_hash,privacy_policy_id'
+          onConflict: 'user_id,privacy_policy_id'
         })
         .select()
 

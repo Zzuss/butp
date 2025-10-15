@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
 
 // 验证管理员权限的辅助函数
 function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId?: string } {
@@ -35,7 +32,7 @@ function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId
   }
 }
 
-// GET - 下载隐私条款文件
+// GET - 下载隐私条款文件 (从Supabase Storage)
 export async function GET(request: NextRequest) {
   try {
     // 检查管理员权限
@@ -48,79 +45,64 @@ export async function GET(request: NextRequest) {
       }, { status: 403 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json(
-        { error: '缺少隐私条款ID参数' },
-        { status: 400 }
-      )
-    }
-
     try {
-      // 查询隐私条款记录
-      const { data: privacyPolicy, error } = await supabase
+      // 获取当前活跃的隐私条款记录
+      const { data: policyRecord, error: dbError } = await supabase
         .from('privacy_policy')
-        .select('*')
-        .eq('id', id)
+        .select('file_name, file_path, file_type, file_size')
+        .eq('is_active', true)
         .single()
 
-      if (error || !privacyPolicy) {
-        return NextResponse.json({
-          success: false,
-          error: '隐私条款不存在'
+      if (dbError || !policyRecord) {
+        console.error('❌ 未找到活跃的隐私条款记录:', dbError)
+        return NextResponse.json({ 
+          success: false, 
+          error: '当前没有可下载的隐私条款文件' 
         }, { status: 404 })
       }
 
-      // 构建文件路径
-      const filePath = join(process.cwd(), privacyPolicy.file_path)
+      const storageFileName = policyRecord.file_path.replace('privacy-files/', '')
 
-      if (!existsSync(filePath)) {
+      // 从Supabase Storage下载文件
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('privacy-files')
+        .download(storageFileName)
+
+      if (downloadError) {
+        console.error('❌ 从Supabase Storage下载文件失败:', downloadError)
         return NextResponse.json({
           success: false,
-          error: '文件不存在或已被删除'
-        }, { status: 404 })
+          error: '从Supabase Storage下载文件失败: ' + downloadError.message
+        }, { status: 500 })
       }
 
-      // 读取文件
-      const fileBuffer = await readFile(filePath)
+      // 将Blob转换为Buffer
+      const arrayBuffer = await fileData.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
 
-      // 确定 MIME 类型
-      let contentType = privacyPolicy.file_type || 'application/octet-stream'
-      if (privacyPolicy.file_name.endsWith('.pdf')) {
-        contentType = 'application/pdf'
-      } else if (privacyPolicy.file_name.endsWith('.html')) {
-        contentType = 'text/html'
-      } else if (privacyPolicy.file_name.endsWith('.md')) {
-        contentType = 'text/markdown'
-      } else if (privacyPolicy.file_name.endsWith('.txt')) {
-        contentType = 'text/plain'
-      }
-
-      console.log('✅ 隐私条款文件下载', {
+      console.log('✅ 隐私条款文件下载成功', {
         adminId: adminId,
-        policyId: privacyPolicy.id,
-        fileName: privacyPolicy.file_name,
-        fileSize: privacyPolicy.file_size,
+        fileName: policyRecord.file_name,
+        fileSize: policyRecord.file_size,
         timestamp: new Date().toISOString()
       })
 
-      // 返回文件
-      return new NextResponse(fileBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': contentType,
-          'Content-Disposition': `attachment; filename="${privacyPolicy.file_name}"`,
-          'Content-Length': privacyPolicy.file_size.toString()
-        }
-      })
+      // 设置响应头
+      const headers = new Headers()
+      headers.set('Content-Type', policyRecord.file_type || 'application/octet-stream')
+      headers.set('Content-Disposition', `attachment; filename="${policyRecord.file_name}"`)
+      headers.set('Content-Length', buffer.length.toString())
+      headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      headers.set('Pragma', 'no-cache')
+      headers.set('Expires', '0')
 
-    } catch (fileError) {
-      console.error('❌ 文件读取失败:', fileError)
-      return NextResponse.json({
-        success: false,
-        error: '文件读取失败'
+      return new NextResponse(buffer, { headers })
+
+    } catch (error) {
+      console.error('❌ 下载隐私条款文件失败:', error)
+      return NextResponse.json({ 
+        success: false, 
+        error: '服务器内部错误或文件读取失败' 
       }, { status: 500 })
     }
 
