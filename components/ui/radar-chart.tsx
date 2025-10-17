@@ -293,7 +293,7 @@ export function RadarChart({
             onClick={() => setShowModal(false)}
           >
             <div 
-              className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg mx-4"
+              className="bg-purple-50 border border-black rounded-lg p-6 max-w-md w-full shadow-lg mx-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
