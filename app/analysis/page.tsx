@@ -570,8 +570,10 @@ export default function Analysis() {
           // 步骤3：计算 Z-score
           let zScores = [];
           for (const [key, value] of Object.entries(englishFeatureValues)) {
-            const score = value === 0 ? 60 : value; // 对于值为 0 的类别，临时使用 60 计算 Z-score
-            const [mean, std] = strengthStats[key];
+            const score = value === 0 ? 60 : (value as number); // 对于值为 0 的类别，临时使用 60 计算 Z-score
+            const stats = strengthStats[key as keyof typeof strengthStats];
+            if (!stats) continue;
+            const [mean, std] = stats;
             const zScore = (score - mean) / std;
             zScores.push(zScore);
           }
@@ -660,7 +662,11 @@ export default function Analysis() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ studentHash: user.userHash, major: studentInfo?.major }),
+        body: JSON.stringify({ 
+          studentHash: user.userHash, 
+          major: studentInfo?.major,
+          studentNumber: typeof (user as any)?.studentNumber === 'string' ? (user as any).studentNumber : (user?.userId || '')
+        }),
       });
       
       if (response.ok) {
