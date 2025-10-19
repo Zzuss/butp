@@ -239,9 +239,19 @@ export default function Analysis() {
       const result = await response.json();
       console.log('API result:', result);
       
-      if (result.success && result.data && result.data.length > 0) {
-        setGraduationRequirementsData(result.data);
-        console.log('Successfully loaded graduation requirements:', result.data.length, 'categories');
+      if (result.success && result.data && result.data.graduation_requirements && result.data.graduation_requirements.length > 0) {
+        setGraduationRequirementsData(result.data.graduation_requirements);
+        console.log('Successfully loaded graduation requirements:', result.data.graduation_requirements.length, 'categories');
+        
+        // 🔧 NEW: Log unmapped courses and graduation summary
+        if (result.data.unmapped_courses && result.data.unmapped_courses.length > 0) {
+          console.log('⚠️ Unmapped courses requiring review:', result.data.unmapped_courses.length, 'courses');
+          console.log('Unmapped courses:', result.data.unmapped_courses.map(c => c.Course_Name));
+        }
+        
+        if (result.data.summary) {
+          console.log('📊 Graduation Summary:', result.data.summary);
+        }
       } else {
         // 如果没有数据，使用示例数据
         console.log('No graduation requirements data found, using sample data');
