@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Get all categories and their required credits for the student's major and year from the courses table
+    // 🔧 FIX: Get distinct category requirements to avoid duplication
     const { data: requiredCreditsData, error: requiredCreditsError } = await supabase
       .from('courses')
       .select('category, required_total, required_compulsory, required_elective')
@@ -49,16 +50,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch required credits' }, { status: 500 });
     }
 
-    // Aggregate required credits by category
+    // 🔧 FIX: Use first occurrence of each category instead of SUM aggregation
+    // Each category should have consistent requirements across all courses
     const requiredCreditsByCategory: Record<string, { required_total: number; required_compulsory: number; required_elective: number }> = {};
     requiredCreditsData.forEach(course => {
       const category = course.category;
       if (!requiredCreditsByCategory[category]) {
-        requiredCreditsByCategory[category] = { required_total: 0, required_compulsory: 0, required_elective: 0 };
+        // Take the first occurrence - all courses in same category should have same requirements
+        requiredCreditsByCategory[category] = { 
+          required_total: course.required_total || 0, 
+          required_compulsory: course.required_compulsory || 0, 
+          required_elective: course.required_elective || 0 
+        };
       }
-      requiredCreditsByCategory[category].required_total += course.required_total || 0;
-      requiredCreditsByCategory[category].required_compulsory += course.required_compulsory || 0;
-      requiredCreditsByCategory[category].required_elective += course.required_elective || 0;
+      // ❌ REMOVED: Don't sum up the requirements - each course already contains the total category requirement
+      // requiredCreditsByCategory[category].required_total += course.required_total || 0;
     });
 
     // 3. Calculate earned credits for each category from academic_results
@@ -77,10 +83,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch earned credits' }, { status: 500 });
     }
 
-    // Map Course_Name from academic_results to category using the courses table
+    // 🔧 FIX: Map Course_Name to category with priority for student's major and year
     const { data: courseCategoryMapping, error: courseCategoryMappingError } = await supabase
       .from('courses')
-      .select('course_name, category')
+      .select('course_name, category, major, year')
       .in('course_name', earnedCreditsData.map(c => c.Course_Name));
 
     if (courseCategoryMappingError) {
@@ -88,7 +94,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch course category mapping' }, { status: 500 });
     }
 
-    const courseToCategoryMap = new Map(courseCategoryMapping.map(c => [c.course_name, c.category]));
+    // 🔧 FIX: Prioritize course mappings that match student's major and year
+    const courseToCategoryMap = new Map();
+    earnedCreditsData.forEach(course => {
+      const courseName = course.Course_Name;
+      const matchingMappings = courseCategoryMapping.filter(m => m.course_name === courseName);
+      
+      if (matchingMappings.length > 0) {
+        // Priority 1: Exact match with student's major and year
+        let bestMatch = matchingMappings.find(m => m.major === studentMajor && m.year === studentYear);
+        
+        // Priority 2: Match with student's major (any year)
+        if (!bestMatch) {
+          bestMatch = matchingMappings.find(m => m.major === studentMajor);
+        }
+        
+        // Priority 3: Use first available mapping
+        if (!bestMatch) {
+          bestMatch = matchingMappings[0];
+        }
+        
+        courseToCategoryMap.set(courseName, bestMatch.category);
+      }
+    });
 
     const earnedCreditsByCategory: Record<string, { earned_credits: number; courses: { Course_Name: string; Credit: number }[] }> = {};
 
@@ -119,6 +147,16 @@ export async function POST(request: NextRequest) {
         courses_taken: earned.courses,
       };
     });
+
+    // 🔧 DEBUG: Log fixed results for verification
+    console.log(`✅ Fixed graduation requirements for ${studentMajor} ${studentYear}:`);
+    console.log(`📊 Total categories: ${graduationRequirements.length}`);
+    graduationRequirements.forEach(req => {
+      console.log(`  • ${req.category}: ${req.required_total_credits} 总学分 (${req.credits_already_obtained} 已获得)`);
+    });
+    
+    const totalRequiredCredits = graduationRequirements.reduce((sum, req) => sum + req.required_total_credits, 0);
+    console.log(`🎯 Total required credits: ${totalRequiredCredits} (should be ~150-180)`);
 
     return NextResponse.json({ success: true, data: graduationRequirements });
 
