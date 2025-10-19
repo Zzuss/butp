@@ -1,0 +1,22 @@
+=== 开始2024级专业预测 ===
+日志文件: /opt/prediction-service/function/prediction_log_20251014_091512.txt
+年级: 2024
+成绩文件: test_scores_2024.xlsx
+注意: 使用原始培养方案文件 /opt/prediction-service/function/education-plan2024/2024级智能科学与技术培养方案.xlsx
+建议创建处理后的Course_Process_2024_ai.xlsx文件以获得更好的预测效果
+✅ 智能科学与技术: /opt/prediction-service/function/education-plan2024/2024级智能科学与技术培养方案.xlsx
+
+开始处理专业：智能科学与技术
+培养方案文件: /opt/prediction-service/function/education-plan2024/2024级智能科学与技术培养方案.xlsx
+输出文件: /opt/prediction-service/function/Cohort2024_Predictions_ai.xlsx
+
+=== predict_students 开始 ===
+scores_file=test_scores_2024.xlsx
+course_file=/opt/prediction-service/function/education-plan2024/2024级智能科学与技术培养方案.xlsx
+major_name=智能科学与技术
+out_path=/opt/prediction-service/function/Cohort2024_Predictions_ai.xlsx
+model_dir=/opt/prediction-service/function
+正在加载模型文件，目录: /opt/prediction-service/function
+找到文件: feature_columns.json
+专业 智能科学与技术 处理失败: 模型文件不存在: /opt/prediction-service/function/model_params.json
+没有成功处理的专业

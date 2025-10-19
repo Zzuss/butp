@@ -1,0 +1,6 @@
+=== 开始2024级专业预测 ===
+日志文件: D:\newProject\butp\function_aliyun\prediction_log_20251014_101954.txt
+年级: 2024
+成绩文件: D:\newProject\butp\function_aliyun\debug_test_2024.xlsx
+注意: 使用原始培养方案文件 D:\newProject\butp\function_aliyun\education-plan2024\2024级智能科学与技术培养方案.xlsx
+建议创建处理后的Course_Process_2024_ai.xlsx文件以获得更好的预测效果

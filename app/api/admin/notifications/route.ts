@@ -102,6 +102,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 验证结束时间必须在开始时间之后
+    if (end_date && start_date) {
+      const startDateTime = new Date(start_date)
+      const endDateTime = new Date(end_date)
+      
+      if (endDateTime <= startDateTime) {
+        return NextResponse.json(
+          { error: '结束时间必须在开始时间之后' },
+          { status: 400 }
+        )
+      }
+    }
+
     const { data: notification, error } = await supabase
       .from('system_notifications')
       .insert({

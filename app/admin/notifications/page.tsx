@@ -78,6 +78,18 @@ export default function AdminNotificationsPage() {
 
   const handleCreateNotification = async () => {
     setError(null)
+    
+    // 验证结束时间必须在开始时间之后
+    if (formData.end_date && formData.start_date) {
+      const startDate = new Date(formData.start_date)
+      const endDate = new Date(formData.end_date)
+      
+      if (endDate <= startDate) {
+        setError('结束时间必须在开始时间之后')
+        return
+      }
+    }
+    
     setFormLoading(true)
     try {
       // 先上传图片（如果有的话）
@@ -121,6 +133,18 @@ export default function AdminNotificationsPage() {
 
   const handleUpdateNotification = async (id: string) => {
     setError(null)
+    
+    // 验证结束时间必须在开始时间之后
+    if (formData.end_date && formData.start_date) {
+      const startDate = new Date(formData.start_date)
+      const endDate = new Date(formData.end_date)
+      
+      if (endDate <= startDate) {
+        setError('结束时间必须在开始时间之后')
+        return
+      }
+    }
+    
     setFormLoading(true)
     try {
       // 先上传图片（如果有新选择的图片）
@@ -478,6 +502,9 @@ export default function AdminNotificationsPage() {
                   placeholder="1"
                   disabled={formLoading}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  数值越大，优先级越高，消息越在前面显示
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">开始时间</label>

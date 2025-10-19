@@ -20,7 +20,7 @@ export default function AdminHeader({ adminInfo, showBackButton = false }: Admin
         method: 'POST',
         credentials: 'include'
       })
-      window.location.href = '/login'
+      window.location.href = '/admin-login'
     } catch (error) {
       console.error('退出登录失败:', error)
     }

@@ -1,0 +1,18 @@
+{
+  "tableName": "cohort2023_predictions_ai",
+  "totalRows": 61,
+  "fieldsCount": 82,
+  "sampleFields": [
+    "snh",
+    "major",
+    "grade",
+    "count",
+    "current_public",
+    "current_practice",
+    "current_math_science",
+    "current_political",
+    "current_basic_subject",
+    "current_innovation"
+  ],
+  "readyForInsert": true
+}

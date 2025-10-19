@@ -48,7 +48,7 @@ export default function AdminPage() {
         </Link>
 
         {/* 智育成绩管理 - 已启用 */}
-        <Link href="/admin/prediction">
+        <Link href="/admin/prediction/async">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -59,7 +59,7 @@ export default function AdminPage() {
             <CardContent>
               <div className="text-lg font-semibold text-purple-700">成绩预测</div>
               <p className="text-xs text-muted-foreground">
-                管理学生智育成绩和预测数据
+                管理学生智育成绩和异步预测系统
               </p>
             </CardContent>
           </Card>
