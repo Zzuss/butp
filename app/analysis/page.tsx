@@ -199,10 +199,11 @@ export default function Analysis() {
   // 加载能力数据
   const loadAbilityData = async () => {
     if (!user?.userHash) return;
+    if (!studentInfo?.year) return;
     
     setLoadingAbility(true);
     try {
-      const data = await getStudentAbilityData(user.userHash);
+      const data = await getStudentAbilityData(user.userHash, studentInfo?.year);
       setAbilityData(data);
     } catch (error) {
       console.error('Failed to load ability data:', error);
@@ -579,8 +580,10 @@ export default function Analysis() {
           // 步骤3：计算 Z-score
           let zScores = [];
           for (const [key, value] of Object.entries(englishFeatureValues)) {
-            const score = value === 0 ? 60 : value; // 对于值为 0 的类别，临时使用 60 计算 Z-score
-            const [mean, std] = strengthStats[key];
+            const score = value === 0 ? 60 : (value as number); // 对于值为 0 的类别，临时使用 60 计算 Z-score
+            const stats = strengthStats[key as keyof typeof strengthStats];
+            if (!stats) continue;
+            const [mean, std] = stats;
             const zScore = (score - mean) / std;
             zScores.push(zScore);
           }
@@ -669,7 +672,11 @@ export default function Analysis() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ studentHash: user.userHash, major: studentInfo?.major }),
+        body: JSON.stringify({ 
+          studentHash: user.userHash, 
+          major: studentInfo?.major,
+          studentNumber: typeof (user as any)?.studentNumber === 'string' ? (user as any).studentNumber : (user?.userId || '')
+        }),
       });
       
       if (response.ok) {
@@ -743,7 +750,8 @@ export default function Analysis() {
         },
         body: JSON.stringify({ 
           studentHash: user.userHash,
-          major: studentInfo?.major
+          major: studentInfo?.major,
+          studentNumber: typeof (user as any)?.studentNumber === 'string' ? (user as any).studentNumber : (user?.userId || '')
         }),
       });
       
@@ -976,10 +984,10 @@ export default function Analysis() {
   useEffect(() => {
     if (authLoading) return;
     
-    if (user?.userHash) {
+    if (user?.userHash && studentInfo?.year) {
       loadAbilityData();
     }
-  }, [user?.userHash, authLoading]);
+  }, [user?.userHash, studentInfo?.year, authLoading]);
 
   // 加载目标分数（等待专业加载）
   useEffect(() => {
