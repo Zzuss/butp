@@ -11,11 +11,8 @@ export async function getStudentAbilityData(studentId: string, year?: string | n
     console.log('查询学生能力数据 - 原始ID:', studentId);
     console.log('查询学生能力数据 - 使用的哈希:', studentHash);
 
-    // 计算表名：根据年级选择相应的表，例如 student_abilities_2022
-    const normalizedYear = String(year ?? '').slice(0, 4)
-    const tableName = /^(19|20)\d{2}$/.test(normalizedYear)
-      ? `student_abilities_${normalizedYear}`
-      : 'student_abilities_2023' // 默认回退到 2023（可按需调整）
+    // 使用固定的能力数据表名
+    const tableName = 'student_abilities_rada'
 
     const { data, error } = await supabase
       .from(tableName)

@@ -740,7 +740,8 @@ export default function Analysis() {
         },
         body: JSON.stringify({ 
           studentHash: user.userHash,
-          major: studentInfo?.major
+          major: studentInfo?.major,
+          studentNumber: typeof (user as any)?.studentNumber === 'string' ? (user as any).studentNumber : (user?.userId || '')
         }),
       });
       
