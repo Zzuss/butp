@@ -102,8 +102,8 @@ def test_api_endpoints():
     
     servers = [
         'http://localhost:8080',
-        'http://8.152.102.160:8080',
-        'http://8.152.102.160:8001'
+        'http://39.96.196.67:8080',
+        'http://39.96.196.67:8001'
     ]
     
     for server_url in servers:
@@ -156,7 +156,7 @@ def test_api_prediction():
     
     servers = [
         'http://localhost:8080',
-        'http://8.152.102.160:8080'
+        'http://39.96.196.67:8080'
     ]
     
     for server_url in servers:

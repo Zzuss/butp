@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 查询阿里云任务状态
-    const statusResponse = await fetch(`http://8.152.102.160:8080/api/task/status/${taskId}`, {
+    const statusResponse = await fetch(`http://39.96.196.67:8080/api/task/status/${taskId}`, {
       method: 'GET',
     })
 

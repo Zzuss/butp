@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
  * 处理包含多个专业学生的成绩文件，按专业分组后分别调用预测
  */
 
-const ALIYUN_SERVER = process.env.NEXT_PUBLIC_PREDICTION_API_URL || 'http://8.152.102.160:8080';
+const ALIYUN_SERVER = process.env.NEXT_PUBLIC_PREDICTION_API_URL || 'http://39.96.196.67:8080';
 
 // 专业配置
 const MAJOR_CONFIGS: { [key: string]: any } = {

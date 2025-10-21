@@ -27,6 +27,13 @@ interface AsyncTask {
   error?: string
   statusDescription?: string
   canDownload?: boolean
+  // 成绩数据导入状态
+  academicImportSuccess?: boolean
+  academicRecordCount?: number
+  academicTotalRecords?: number
+  academicImportErrors?: string[]
+  criticalImportError?: boolean
+  warnings?: string[]
   // 本地状态
   isProcessing?: boolean
   processResult?: any
@@ -111,11 +118,25 @@ export default function AsyncPredictionPage() {
           progress: 0,
           message: '任务已启动',
           startedAt: result.data.startedAt,
-          statusDescription: '⏳ 等待开始'
+          statusDescription: '⏳ 等待开始',
+          academicImportSuccess: result.data.academicImportSuccess,
+          academicRecordCount: result.data.academicRecordCount,
+          academicTotalRecords: result.data.academicTotalRecords,
+          academicImportErrors: result.data.academicImportErrors,
+          criticalImportError: result.data.criticalImportError,
+          warnings: result.warnings
         }
 
         setTasks(prev => [newTask, ...prev])
-        addAlert('success', `预测任务已启动，任务ID: ${result.data.taskId}`)
+        
+        // 根据成绩数据导入状态显示不同的消息
+        if (result.data.criticalImportError) {
+          addAlert('error', `⚠️ 预测任务已启动，但成绩数据导入完全失败！任务ID: ${result.data.taskId}`)
+        } else if (!result.data.academicImportSuccess || result.warnings?.length > 0) {
+          addAlert('info', `⚠️ 预测任务已启动，但成绩数据导入有问题。任务ID: ${result.data.taskId}`)
+        } else {
+          addAlert('success', `✅ 预测任务已启动，成绩数据导入成功。任务ID: ${result.data.taskId}`)
+        }
         
         // 清空表单
         setSelectedFile(null)
@@ -518,6 +539,21 @@ export default function AsyncPredictionPage() {
                           </Badge>
                           <span className="font-medium">{task.fileName}</span>
                           <span className="text-sm text-gray-500">{task.year}级</span>
+                          
+                          {/* 成绩数据导入状态指示器 */}
+                          {task.criticalImportError ? (
+                            <Badge className="bg-red-100 text-red-800 text-xs">
+                              ❌ 成绩导入失败
+                            </Badge>
+                          ) : task.academicImportSuccess === false ? (
+                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                              ⚠️ 成绩部分导入
+                            </Badge>
+                          ) : task.academicImportSuccess === true ? (
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              ✅ 成绩导入成功
+                            </Badge>
+                          ) : null}
                         </div>
                         <div className="text-sm text-gray-600">
                           任务ID: {task.taskId}
@@ -525,6 +561,13 @@ export default function AsyncPredictionPage() {
                         <div className="text-sm text-gray-600">
                           开始时间: {new Date(task.startedAt).toLocaleString()}
                         </div>
+                        
+                        {/* 成绩数据导入详情 */}
+                        {typeof task.academicRecordCount !== 'undefined' && (
+                          <div className="text-sm text-gray-600">
+                            成绩数据: {task.academicRecordCount}/{task.academicTotalRecords || '未知'} 条记录导入成功
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
@@ -554,12 +597,45 @@ export default function AsyncPredictionPage() {
                       <Progress value={task.progress} className="w-full" />
                     </div>
 
-                    {/* 错误信息 */}
+                    {/* 成绩数据导入警告 */}
+                    {task.warnings && task.warnings.length > 0 && (
+                      <Alert className="bg-yellow-50 border-yellow-200">
+                        <div className="w-4 h-4 rounded-full bg-yellow-500 flex items-center justify-center text-white text-xs">!</div>
+                        <AlertDescription className="text-yellow-800">
+                          <div className="space-y-1">
+                            <p className="font-medium">成绩数据导入警告:</p>
+                            {task.warnings.map((warning, index) => (
+                              <p key={index} className="text-sm">• {warning}</p>
+                            ))}
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* 成绩数据导入错误详情 */}
+                    {task.academicImportErrors && task.academicImportErrors.length > 0 && (
+                      <Alert className="bg-red-50 border-red-200">
+                        <XCircle className="h-4 w-4" />
+                        <AlertDescription className="text-red-800">
+                          <div className="space-y-1">
+                            <p className="font-medium">成绩数据导入错误:</p>
+                            <div className="max-h-32 overflow-auto text-sm">
+                              {task.academicImportErrors.map((error, index) => (
+                                <p key={index}>• {error}</p>
+                              ))}
+                            </div>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* 预测任务错误信息 */}
                     {task.error && (
                       <Alert className="bg-red-50 border-red-200">
                         <XCircle className="h-4 w-4" />
                         <AlertDescription className="text-red-800">
-                          {task.error}
+                          <p className="font-medium">预测任务错误:</p>
+                          <p>{task.error}</p>
                         </AlertDescription>
                       </Alert>
                     )}

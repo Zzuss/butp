@@ -6,7 +6,7 @@ set -e
 echo "🚀 开始部署异步预测API服务器..."
 
 # 服务器配置
-SERVER_HOST="8.152.102.160"
+SERVER_HOST="39.96.196.67"
 SERVER_USER="root"
 SERVER_PATH="/opt/prediction-service/function"
 

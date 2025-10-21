@@ -4,7 +4,7 @@ REM Windows异步API服务器部署脚本
 echo 🚀 开始部署异步预测API服务器...
 
 REM 服务器配置
-set SERVER_HOST=8.152.102.160
+set SERVER_HOST=39.96.196.67
 set SERVER_USER=root
 set SERVER_PATH=/opt/prediction-service/function
 

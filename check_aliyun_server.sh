@@ -5,7 +5,7 @@ echo "=== 阿里云服务器代码检查 ==="
 
 # 1. 检查run_prediction_direct.py是否包含年级参数
 echo "1. 检查算法文件是否支持年级参数..."
-curl -s "http://8.152.102.160:8080/health" || echo "❌ API服务不可访问"
+curl -s "http://39.96.196.67:8080/health" || echo "❌ API服务不可访问"
 
 # 2. 检查目录结构
 echo -e "\n2. 请在阿里云服务器上执行以下命令："

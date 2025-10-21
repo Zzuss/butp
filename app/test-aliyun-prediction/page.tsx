@@ -11,7 +11,7 @@ import { Loader2, CheckCircle, XCircle, Upload, Server } from 'lucide-react';
 
 // API配置
 const API_CONFIG = {
-  baseURL: process.env.NEXT_PUBLIC_PREDICTION_API_URL || 'http://8.152.102.160:8080',
+  baseURL: process.env.NEXT_PUBLIC_PREDICTION_API_URL || 'http://39.96.196.67:8080',
   timeout: 300000, // 5分钟超时
 };
 
@@ -346,14 +346,14 @@ export default function TestAliyunPrediction() {
                 id="api-url"
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="http://8.152.102.160:8080"
+                placeholder="http://39.96.196.67:8080"
                 className="mt-1"
                 disabled={useProxy}
               />
               <p className="text-sm text-gray-500 mt-1">
                 {useProxy 
                   ? '使用代理模式时，系统会自动连接到配置的服务器地址'
-                  : '请输入你的阿里云服务器地址，格式如: http://8.152.102.160:8080'
+                  : '请输入你的阿里云服务器地址，格式如: http://39.96.196.67:8080'
                 }
               </p>
             </div>

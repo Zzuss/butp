@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     console.log(`🎯 开始处理完成的预测任务: ${taskId}`)
 
     // 1. 查询任务状态，确保已完成
-    const statusResponse = await fetch(`http://8.152.102.160:8080/api/task/status/${taskId}`)
+    const statusResponse = await fetch(`http://39.96.196.67:8080/api/task/status/${taskId}`)
     
     if (!statusResponse.ok) {
       return NextResponse.json({
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`📥 下载文件: ${fileName}`)
         
-        const downloadResponse = await fetch(`http://8.152.102.160:8080/api/task/result/${taskId}/${fileName}`)
+        const downloadResponse = await fetch(`http://39.96.196.67:8080/api/task/result/${taskId}/${fileName}`)
         
         if (!downloadResponse.ok) {
           throw new Error(`下载失败: ${downloadResponse.status} ${downloadResponse.statusText}`)

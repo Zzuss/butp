@@ -14,6 +14,9 @@ interface UploadResult {
   success: boolean
   message: string
   processed: number
+  total?: number
+  fileRows?: number
+  skipped?: number
   errors: string[]
 }
 
@@ -23,6 +26,7 @@ export default function SNHAdminPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [lastUploadedFile, setLastUploadedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 处理文件选择
@@ -44,6 +48,17 @@ export default function SNHAdminPage() {
 
     const formData = new FormData()
     formData.append('file', file)
+    
+    // 保存最后上传的文件，用于重试
+    setLastUploadedFile(file)
+
+    // 模拟进度更新
+    const progressTimer = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev < 85) return prev + Math.random() * 15
+        return prev
+      })
+    }, 500)
 
     try {
       const response = await fetch('/api/admin/snh/upload', {
@@ -53,37 +68,159 @@ export default function SNHAdminPage() {
 
       const result = await response.json()
 
+      // 清除进度定时器
+      clearInterval(progressTimer)
+      setUploadProgress(100)
+
       if (response.ok) {
+        const hasErrors = result.errors && result.errors.length > 0
+        const successCount = result.processed || 0
+        const totalCount = result.total || 0
+        
         setUploadResult({
-          success: true,
-          message: result.message,
-          processed: result.processed,
+          success: !hasErrors || successCount > 0, // 如果有部分成功也算成功
+          message: hasErrors ? 
+            `处理完成，但有 ${result.errors.length} 条记录失败` : 
+            result.message,
+          processed: successCount,
+          total: totalCount,
+          fileRows: result.fileRows,
+          skipped: result.skipped,
           errors: result.errors || []
         })
-        // 清空文件选择
-        setFile(null)
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ''
+        
+        // 只有在完全成功时才清空文件选择
+        if (!hasErrors) {
+          setFile(null)
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
         }
       } else {
         setUploadResult({
           success: false,
           message: result.error || '上传失败',
-          processed: 0,
-          errors: result.errors || []
+          processed: result.processed || 0,
+          total: result.total || 0,
+          fileRows: result.fileRows || 0,
+          skipped: result.skipped || 0,
+          errors: result.errors || [result.error || '未知错误']
         })
       }
     } catch (error) {
+      clearInterval(progressTimer)
+      setUploadProgress(100)
+      
       setUploadResult({
         success: false,
-        message: '网络错误，请重试',
+        message: '网络连接失败，请检查网络后重试',
         processed: 0,
-        errors: [error instanceof Error ? error.message : '未知错误']
+        total: 0,
+        errors: [
+          '网络错误: ' + (error instanceof Error ? error.message : '连接超时或服务器无响应'),
+          '可能的原因：',
+          '• 网络连接不稳定',
+          '• 服务器暂时不可用',
+          '• 文件过大导致超时'
+        ]
       })
     }
 
     setUploading(false)
-    setUploadProgress(100)
+  }
+
+  // 重试上传
+  const handleRetry = async () => {
+    if (!lastUploadedFile && !file) return
+    
+    // 使用最后上传的文件或当前选择的文件
+    const fileToRetry = lastUploadedFile || file
+    if (!fileToRetry) return
+    
+    // 重置结果并重新上传
+    setUploadResult(null)
+    setUploading(true)
+    setUploadProgress(0)
+    
+    const formData = new FormData()
+    formData.append('file', fileToRetry)
+
+    // 模拟进度更新
+    const progressTimer = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev < 85) return prev + Math.random() * 15
+        return prev
+      })
+    }, 500)
+
+    try {
+      const response = await fetch('/api/admin/snh/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      // 清除进度定时器
+      clearInterval(progressTimer)
+      setUploadProgress(100)
+
+      if (response.ok) {
+        const hasErrors = result.errors && result.errors.length > 0
+        const successCount = result.processed || 0
+        const totalCount = result.total || 0
+        
+        setUploadResult({
+          success: !hasErrors || successCount > 0,
+          message: hasErrors ? 
+            `重试完成，但仍有 ${result.errors.length} 条记录失败` : 
+            '重试成功！' + result.message,
+          processed: successCount,
+          total: totalCount,
+          fileRows: result.fileRows,
+          skipped: result.skipped,
+          errors: result.errors || []
+        })
+        
+        // 只有在完全成功时才清空文件选择
+        if (!hasErrors) {
+          setFile(null)
+          setLastUploadedFile(null)
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
+        }
+      } else {
+        setUploadResult({
+          success: false,
+          message: result.error || '重试失败',
+          processed: result.processed || 0,
+          total: result.total || 0,
+          fileRows: result.fileRows || 0,
+          skipped: result.skipped || 0,
+          errors: result.errors || [result.error || '未知错误']
+        })
+      }
+    } catch (error) {
+      clearInterval(progressTimer)
+      setUploadProgress(100)
+      
+      setUploadResult({
+        success: false,
+        message: '重试时网络连接失败',
+        processed: 0,
+        total: 0,
+        errors: [
+          '重试失败: ' + (error instanceof Error ? error.message : '连接超时'),
+          '建议：',
+          '• 检查网络连接',
+          '• 稍后再试',
+          '• 联系技术支持'
+        ]
+      })
+    }
+
+    setUploading(false)
   }
 
   // 清空所有映射
@@ -111,13 +248,14 @@ export default function SNHAdminPage() {
     setDeleteLoading(false)
   }
 
-  // 下载模板
+  // 下载简化格式模板
   const handleDownloadTemplate = () => {
-    // 创建模板数据
+    // 创建简化格式模板数据
     const templateData = [
       ['SN', 'SNH'],
-      ['示例学号1', '示例哈希值1'],
-      ['示例学号2', '示例哈希值2']
+      ['2023213001', 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6'],
+      ['2023213002', 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1'],
+      ['2024213001', 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2']
     ]
 
     // 转换为CSV格式
@@ -128,7 +266,33 @@ export default function SNHAdminPage() {
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob)
       link.setAttribute('href', url)
-      link.setAttribute('download', 'SN_SNH_Template.csv')
+      link.setAttribute('download', '学号哈希映射模板_简化格式.csv')
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
+
+  // 下载数据库字段格式模板
+  const handleDownloadDbTemplate = () => {
+    // 创建数据库字段格式模板数据
+    const templateData = [
+      ['student_number', 'student_hash', 'created_at'],
+      ['2023213001', 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6', '2024-01-01 10:00:00'],
+      ['2023213002', 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1', '2024-01-01 10:01:00'],
+      ['2024213001', 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2', '2024-01-01 10:02:00']
+    ]
+
+    // 转换为CSV格式
+    const csvContent = templateData.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', '学号哈希映射模板_数据库格式.csv')
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
       link.click()
@@ -156,7 +320,8 @@ export default function SNHAdminPage() {
             上传映射文件
           </CardTitle>
           <CardDescription>
-            支持上传Excel(.xlsx)或CSV文件，文件应包含SN（学号）和SNH（哈希值）两列
+            支持上传Excel(.xlsx)或CSV文件，文件必须包含两列：学号列（SN 或 student_number）和哈希值列（SNH 或 student_hash）。
+            如果使用数据库格式模板，created_at 列会被系统自动处理，无需手动填写。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -167,7 +332,15 @@ export default function SNHAdminPage() {
               className="flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
-              下载模板
+              下载简化模板（SN/SNH）
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDownloadDbTemplate}
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              下载数据库格式模板
             </Button>
           </div>
           
@@ -202,31 +375,158 @@ export default function SNHAdminPage() {
           )}
 
           {uploadResult && (
-            <Alert className={uploadResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-              <div className="flex items-center gap-2">
-                {uploadResult.success ? (
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-600" />
-                )}
-                <AlertDescription>
-                  <div className="space-y-2">
-                    <p>{uploadResult.message}</p>
-                    {uploadResult.processed > 0 && (
-                      <p>成功处理 {uploadResult.processed} 条记录</p>
-                    )}
-                    {uploadResult.errors.length > 0 && (
-                      <div>
-                        <p className="font-semibold">错误信息：</p>
-                        <pre className="mt-2 h-24 p-3 text-xs bg-gray-100 rounded-md overflow-auto border">
-                          {uploadResult.errors.join('\n')}
-                        </pre>
+            <div className="space-y-4">
+              {/* 主要结果Alert */}
+              <Alert className={uploadResult.success && uploadResult.errors.length === 0 ? 'border-green-200 bg-green-50' : 
+                              uploadResult.processed > 0 ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'}>
+                <div className="flex items-center gap-2">
+                  {uploadResult.success && uploadResult.errors.length === 0 ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : uploadResult.processed > 0 ? (
+                    <div className="w-4 h-4 rounded-full bg-yellow-500 flex items-center justify-center text-white text-xs">!</div>
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-600" />
+                  )}
+                  <AlertDescription>
+                    <div className="space-y-3">
+                      <p className="font-medium">{uploadResult.message}</p>
+                      
+                      {/* 统计信息卡片 */}
+                      <div className="bg-white border rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-3">处理统计</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">文件总行数:</span>
+                            <span className="font-medium">{uploadResult.fileRows || '未知'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">有效数据行:</span>
+                            <span className="font-medium">{uploadResult.total || uploadResult.processed}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-green-600">✅ 成功处理:</span>
+                            <span className="font-medium text-green-600">{uploadResult.processed}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-red-600">❌ 处理失败:</span>
+                            <span className="font-medium text-red-600">{uploadResult.errors.length}</span>
+                          </div>
+                          <div className="flex justify-between col-span-2">
+                            <span className="text-gray-600">跳过行数:</span>
+                            <span className="font-medium">{uploadResult.skipped || 0}</span>
+                          </div>
+                        </div>
+                        
+                        {/* 成功率显示 */}
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">成功率:</span>
+                            <span className="font-medium">
+                              {uploadResult.total ? 
+                                `${Math.round((uploadResult.processed / uploadResult.total) * 100)}%` : 
+                                '0%'
+                              }
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                uploadResult.errors.length === 0 ? 'bg-green-500' : 
+                                uploadResult.processed > 0 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ 
+                                width: uploadResult.total ? 
+                                  `${Math.max(5, (uploadResult.processed / uploadResult.total) * 100)}%` : 
+                                  '0%' 
+                              }}
+                            ></div>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </AlertDescription>
-              </div>
-            </Alert>
+
+                      {/* 跳过数据提示 */}
+                      {uploadResult.skipped && uploadResult.skipped > 0 && (
+                        <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
+                          <div className="flex items-start gap-2">
+                            <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs mt-0.5">i</div>
+                            <div className="text-blue-700 text-sm">
+                              <p className="font-medium">数据跳过说明</p>
+                              <p>跳过了 {uploadResult.skipped} 行数据，原因可能包括：</p>
+                              <ul className="list-disc list-inside mt-1 space-y-1">
+                                <li>学号或哈希值为空</li>
+                                <li>数据格式不正确</li>
+                                <li>行中包含无效字符</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </div>
+              </Alert>
+
+              {/* 错误详情Alert - 只在有错误时显示 */}
+              {uploadResult.errors.length > 0 && (
+                <Alert className="border-red-200 bg-red-50">
+                  <XCircle className="w-4 h-4 text-red-600" />
+                  <AlertDescription>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-red-800">
+                          处理失败的记录 ({uploadResult.errors.length} 条)
+                        </h4>
+                        {uploadResult.processed > 0 && (
+                          <span className="text-sm text-red-600 bg-red-100 px-2 py-1 rounded">
+                            部分成功：{uploadResult.processed} 条记录已成功保存
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="bg-white border border-red-200 rounded-md max-h-40 overflow-auto">
+                        <div className="p-3">
+                          <div className="space-y-2 text-sm">
+                            {uploadResult.errors.map((error, index) => (
+                              <div key={index} className="flex items-start gap-2 py-1 border-b border-red-100 last:border-b-0">
+                                <span className="text-red-500 font-mono text-xs bg-red-100 px-1 rounded min-w-[20px] text-center">
+                                  {index + 1}
+                                </span>
+                                <span className="text-red-700 text-xs break-all">{error}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-red-100 border border-red-200 rounded-md p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-red-800 text-sm font-medium mb-2">
+                              解决建议：
+                            </p>
+                            <ul className="text-red-700 text-sm space-y-1 list-disc list-inside">
+                              <li>检查失败记录中的学号格式是否正确</li>
+                              <li>确认哈希值长度和格式符合要求</li>
+                              <li>如果是网络问题，可以点击重试按钮</li>
+                              <li>可以修正数据后重新上传（已成功的记录会被更新）</li>
+                            </ul>
+                          </div>
+                          <Button
+                            onClick={handleRetry}
+                            disabled={uploading || (!lastUploadedFile && !file)}
+                            variant="outline"
+                            size="sm"
+                            className="ml-3 border-red-300 text-red-700 hover:bg-red-50"
+                          >
+                            {uploading ? '重试中...' : '重试上传'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

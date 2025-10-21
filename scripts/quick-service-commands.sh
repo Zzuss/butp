@@ -15,7 +15,7 @@ log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # 阿里云服务器信息（请修改为你的实际信息）
-ALIYUN_SERVER="8.152.102.160"  # 你的阿里云服务器IP
+ALIYUN_SERVER="39.96.196.67"  # 你的阿里云服务器IP
 ALIYUN_USER="root"             # SSH用户名
 SSH_KEY=""                     # SSH密钥路径（可选）
 

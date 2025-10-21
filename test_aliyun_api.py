@@ -10,7 +10,7 @@ import os
 
 def test_aliyun_api():
     """测试阿里云API状态"""
-    api_base = "http://8.152.102.160:8080"
+    api_base = "http://39.96.196.67:8080"
     
     print("=== 阿里云API诊断测试 ===")
     

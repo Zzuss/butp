@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * 解决CORS跨域问题的临时方案
  */
 
-const ALIYUN_SERVER = process.env.NEXT_PUBLIC_PREDICTION_API_URL || 'http://8.152.102.160:8080';
+const ALIYUN_SERVER = process.env.NEXT_PUBLIC_PREDICTION_API_URL || 'http://39.96.196.67:8080';
 
 export async function POST(request: NextRequest) {
   try {

@@ -10,7 +10,7 @@ import json
 
 def quick_test():
     """快速测试阿里云API"""
-    api_url = "http://8.152.102.160:8080"
+    api_url = "http://39.96.196.67:8080"
     
     print("=== 阿里云API快速测试 ===")
     

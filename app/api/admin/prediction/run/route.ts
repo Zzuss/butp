@@ -102,10 +102,10 @@ async function predictMajor(major: string, students: any[], year: string) {
     formData.append('year', year)
     formData.append('major', major)
     
-    console.log(`[预测] 调用阿里云API: http://8.152.102.160:8080/api/predict`)
+    console.log(`[预测] 调用阿里云API: http://39.96.196.67:8080/api/predict`)
     console.log(`[预测] ${major} 无超时限制，开始时间: ${new Date().toISOString()}`)
     
-    const response = await fetch('http://8.152.102.160:8080/api/predict', {
+    const response = await fetch('http://39.96.196.67:8080/api/predict', {
       method: 'POST',
       body: formData,
       // 完全取消超时限制，让算法有足够时间处理大数据集

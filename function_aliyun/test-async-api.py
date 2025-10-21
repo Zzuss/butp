@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 # 配置
-ALIYUN_HOST = "8.152.102.160:8080"
+ALIYUN_HOST = "39.96.196.67:8080"
 BASE_URL = f"http://{ALIYUN_HOST}"
 
 def test_health_check():
