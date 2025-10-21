@@ -111,30 +111,58 @@ export async function POST(request: NextRequest) {
 
     console.log(`解析到 ${parsedData.length} 条记录`)
 
-    // 批量插入或更新数据库
-    let processedCount = 0
-    
-    for (const record of parsedData) {
-      try {
-        const { error } = await supabaseSecondary
-          .from('student_number_hash_mapping')
-          .upsert({
-            student_number: record.student_number,
-            student_hash: record.student_hash
-          }, {
-            onConflict: 'student_number'
-          })
+           // 批量插入或更新数据库
+           let processedCount = 0
 
-        if (error) {
-          errors.push(`学号 ${record.student_number}: ${error.message}`)
-        } else {
-          processedCount++
-        }
-      } catch (dbError) {
-        errors.push(`学号 ${record.student_number}: 数据库错误`)
-        console.error('Database error for record:', record, dbError)
-      }
-    }
+           for (const record of parsedData) {
+             try {
+               // 先检查记录是否已存在
+               const { data: existingRecord, error: selectError } = await supabaseSecondary
+                 .from('student_number_hash_mapping_rows')
+                 .select('student_number')
+                 .eq('student_number', record.student_number)
+                 .single()
+
+               if (selectError && selectError.code !== 'PGRST116') {
+                 // PGRST116 是"未找到记录"的错误码，其他错误需要处理
+                 errors.push(`学号 ${record.student_number}: 查询错误 - ${selectError.message}`)
+                 continue
+               }
+
+               let dbError = null
+
+               if (existingRecord) {
+                 // 记录存在，执行更新
+                 const { error } = await supabaseSecondary
+                   .from('student_number_hash_mapping_rows')
+                   .update({
+                     student_hash: record.student_hash
+                   })
+                   .eq('student_number', record.student_number)
+                 
+                 dbError = error
+               } else {
+                 // 记录不存在，执行插入
+                 const { error } = await supabaseSecondary
+                   .from('student_number_hash_mapping_rows')
+                   .insert({
+                     student_number: record.student_number,
+                     student_hash: record.student_hash
+                   })
+                 
+                 dbError = error
+               }
+
+               if (dbError) {
+                 errors.push(`学号 ${record.student_number}: ${dbError.message}`)
+               } else {
+                 processedCount++
+               }
+             } catch (dbError) {
+               errors.push(`学号 ${record.student_number}: 数据库错误`)
+               console.error('Database error for record:', record, dbError)
+             }
+           }
 
     console.log(`成功处理 ${processedCount} 条记录，错误 ${errors.length} 条`)
 

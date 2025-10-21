@@ -202,7 +202,7 @@ export default function LoginPage() {
 
   // 示例用户一键登录
   const handleDemoUserLogin = async () => {
-    const demoUserHash = "06011570edfb1a3f3665251200697ce289307aa3012d916525bb158cf5e4550e";
+    const demoUserHash = "0dbcd0552538d3169d761a13328b631d28787137bf3cc1717cbd54eb05c22a9e";
     
     setLoading(true);
     setError("");

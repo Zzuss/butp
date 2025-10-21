@@ -7,7 +7,7 @@ export async function DELETE() {
     
     // 先获取当前记录数
     const { count: currentCount } = await supabaseSecondary
-      .from('student_number_hash_mapping')
+      .from('student_number_hash_mapping_rows')
       .select('*', { count: 'exact', head: true })
 
     if (currentCount === 0) {
@@ -18,7 +18,7 @@ export async function DELETE() {
 
     // 删除所有记录
     const { error } = await supabaseSecondary
-      .from('student_number_hash_mapping')
+      .from('student_number_hash_mapping_rows')
       .delete()
       .not('student_number', 'is', null) // 删除所有记录
 
