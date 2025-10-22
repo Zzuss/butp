@@ -29,6 +29,7 @@ const PRIVACY_EXEMPT_PATHS = [
   '/api/auth',
   '/api/mock',
   '/auth-status',
+  '/testsupa',
 ];
 
 // 不需要保护的路由路径
@@ -39,6 +40,7 @@ const PUBLIC_PATHS = [
   '/login',
   '/admin-login',
   '/auth-status',
+  '/testsupa',
   // 可以根据需要添加更多公开路由
 ];
 
