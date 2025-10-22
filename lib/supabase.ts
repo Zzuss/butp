@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // 使用正确的Supabase配置
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'NEXT_PUBLIC_SUPABASE_URL=http://39.96.196.67:8000'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzYxMDYyNDAwLCJleHAiOjE5MTg4Mjg4MDB9.FZnKH6Hf88vK-jh3gqpEjs2ULYHD8jVntoJ1Rw8J3H8'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://39.96.196.67:8000'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzYxMDYyNDAwLCJleHAiOjE5MTg4Mjg4MDB9.FZnKH6Hf88vK-jh3gqpEjs2ULYHD8jVntoJ1Rw8J3H8'
 
 // 创建Supabase客户端
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
