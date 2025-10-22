@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// 使用硬编码的Supabase配置
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
-
-const supabase = createClient(supabaseUrl, supabaseKey)
+import { supabase } from '@/lib/supabase'
 
 // 课程名称过滤映射表（将简化的课程名映射为正确名称）
 const courseNameFilterMapping: Record<string, string> = {
@@ -60,6 +54,7 @@ export async function POST(request: NextRequest) {
     
     // 直接使用从学号提取的年份构建表名
     const tableName = `Cohort${year}_Predictions_${tableSuffix}`;
+    //const tableName = `Cohort2024_Predictions_iot`;
     let predictionsData = null;
     let predictionsError = null;
 

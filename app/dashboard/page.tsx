@@ -112,26 +112,33 @@ export default function DashboardPage() {
       try {
         // 获取学生成绩数据
         const results = await getStudentResults(user!.userHash)
+        console.log('[DEBUG] getStudentResults -> count:', Array.isArray(results) ? results.length : 'N/A')
+        console.log('[DEBUG] getStudentResults -> data sample:', Array.isArray(results) && results.length > 0 ? results[0] : results)
         // setCourseResults(results)
         
         // 获取学生信息（年级和专业）
         const info = await getStudentInfo(user!.userHash)
+        console.log('[DEBUG] getStudentInfo ->', info)
         setStudentInfo(info)
         
         // 计算统计数据
         const dashboardStats = calculateDashboardStats(results)
+        console.log('[DEBUG] calculateDashboardStats ->', dashboardStats)
         setStats(dashboardStats)
         
         // 获取最新学期中学分最高的5门课程（用于数据总览显示）
         const topCreditCourses = getLatestSemesterTopCreditCourses(results, 5)
+        console.log('[DEBUG] getLatestSemesterTopCreditCourses ->', topCreditCourses)
         setSubjectGrades(topCreditCourses)
         
         // 获取课程类型统计
         const typeStats = getCourseTypeStats(results)
+        console.log('[DEBUG] getCourseTypeStats ->', typeStats)
         setCourseTypeStats(typeStats)
         
         // 获取学期成绩趋势
         const trends = getSemesterTrends(results)
+        console.log('[DEBUG] getSemesterTrends ->', trends)
         setSemesterTrends(trends)
         
         // 获取未读通知
