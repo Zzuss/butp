@@ -1,0 +1,40 @@
+# 预测算法API服务依赖包
+# 基础Web框架
+Flask==3.0.3
+Flask-CORS==4.0.0
+gunicorn==21.2.0
+
+# 机器学习核心依赖
+catboost==1.2.8
+scikit-learn==1.5.2
+numpy==1.26.4
+pandas==2.3.0
+
+# 数据处理
+openpyxl==3.1.5
+xlrd==2.0.1
+
+# 系统工具
+Werkzeug==3.0.3
+python-dateutil==2.9.0.post0
+
+# 日志和监控
+watchdog==4.0.1
+
+# 生产环境优化
+eventlet==0.36.1
+gevent==24.2.1
+
+# 安全相关
+itsdangerous==2.2.0
+MarkupSafe==2.1.5
+Jinja2==3.1.4
+
+# 可选：如果需要XGBoost模型支持
+# xgboost==2.1.4
+
+# 可选：如果需要GPU支持
+# cupy-cuda12x==13.4.1
+
+# 开发和调试（生产环境可移除）
+# ipython==8.24.0

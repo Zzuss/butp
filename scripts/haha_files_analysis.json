@@ -1,0 +1,3600 @@
+{
+  "analyses": [
+    {
+      "fileName": "Cohort2023_Predictions_ai",
+      "tableName": "cohort2023_predictions_ai",
+      "headers": [
+        "SNH",
+        "major",
+        "grade",
+        "count",
+        "current_public",
+        "current_practice",
+        "current_math_science",
+        "current_political",
+        "current_basic_subject",
+        "current_innovation",
+        "current_english",
+        "current_basic_major",
+        "current_major",
+        "current_pred",
+        "current_prob1",
+        "current_prob2",
+        "current_prob3",
+        "target1_min_required_score",
+        "target2_min_required_score",
+        "思想道德与法治",
+        "中国近现代史纲要",
+        "马克思主义基本原理",
+        "毛泽东思想和中国特色社会主义理论体系概论",
+        "形势与政策1",
+        "形势与政策2",
+        "形势与政策3",
+        "形势与政策4",
+        "形势与政策5",
+        "习近平新时代中国特色社会主义思想概论",
+        "体育基础",
+        "军事理论",
+        "大学生心理健康",
+        "安全教育",
+        "综合英语（上）",
+        "综合英语（下）",
+        "进阶听说（上）",
+        "进阶听说（下）",
+        "线性代数*",
+        "高等数学A(上) *",
+        "高等数学A(下) *",
+        "大学物理C",
+        "离散数学",
+        "概率论与数理统计",
+        "计算方法",
+        "计算导论与程序设计",
+        "电子系统基础",
+        "形式语言与自动机",
+        "数据结构*",
+        "数据库系统*",
+        "数字电路设计*",
+        "JAVA高级语言程序设计*",
+        "操作系统*",
+        "人工智能导论*",
+        "产品开发与管理*",
+        "机器学习*",
+        "计算创新学*",
+        "人工智能法律*",
+        "软件工程*",
+        "数据挖掘",
+        "嵌入式系统*",
+        "推理与智能体*",
+        "视觉计算*",
+        "神经网络与深度学习",
+        "智能游戏*",
+        "认知机器人系统*",
+        "自然语言处理",
+        "军训",
+        "思想道德与法治（实践环节）",
+        "中国近现代史纲要（实践环节）",
+        "马克思主义基本原理（实践环节）",
+        "毛泽东思想和中国特色社会主义理论体系概论（实践环节））",
+        "物理实验C",
+        "计算导论与程序设计课程设计",
+        "数据结构与算法课程设计",
+        "学术交流技能1",
+        "学术交流技能2",
+        "Design & Build实训（智能）",
+        "智能科学与技术专业实习",
+        "个人发展计划1",
+        "个人发展计划2",
+        "个人发展计划3",
+        "毕业设计"
+      ],
+      "fields": [
+        {
+          "original": "SNH",
+          "normalized": "snh",
+          "type": "REAL",
+          "samples": [
+            "013a8258c39f17204bf9335da0ee46212877a5dde7e42c20c98162d51e9c16bc",
+            "02eee0b0aa25aa88a27c292cb8e686051d97009966b484f8340cc0c2e31cfeea",
+            "060911b2ad0a87f494fb53b09b57d3a389c864bb24dc75c424a5be6b843178f8"
+          ]
+        },
+        {
+          "original": "major",
+          "normalized": "major",
+          "type": "TEXT",
+          "samples": [
+            "智能科学与技术",
+            "智能科学与技术",
+            "智能科学与技术"
+          ]
+        },
+        {
+          "original": "grade",
+          "normalized": "grade",
+          "type": "INTEGER",
+          "samples": [
+            62,
+            58,
+            61
+          ]
+        },
+        {
+          "original": "count",
+          "normalized": "count",
+          "type": "INTEGER",
+          "samples": [
+            63,
+            63,
+            63
+          ]
+        },
+        {
+          "original": "current_public",
+          "normalized": "current_public",
+          "type": "REAL",
+          "samples": [
+            80.85714285714286,
+            84.28571428571429,
+            87.71428571428571
+          ]
+        },
+        {
+          "original": "current_practice",
+          "normalized": "current_practice",
+          "type": "REAL",
+          "samples": [
+            88.97540983606557,
+            93.54918032786884,
+            92.0655737704918
+          ]
+        },
+        {
+          "original": "current_math_science",
+          "normalized": "current_math_science",
+          "type": "REAL",
+          "samples": [
+            85.38461538461539,
+            94.92307692307692,
+            89.07692307692308
+          ]
+        },
+        {
+          "original": "current_political",
+          "normalized": "current_political",
+          "type": "REAL",
+          "samples": [
+            82.82876712328766,
+            92.36301369863013,
+            89.00684931506848
+          ]
+        },
+        {
+          "original": "current_basic_subject",
+          "normalized": "current_basic_subject",
+          "type": "REAL",
+          "samples": [
+            86.33333333333333,
+            94.66666666666667,
+            91.33333333333333
+          ]
+        },
+        {
+          "original": "current_innovation",
+          "normalized": "current_innovation",
+          "type": "REAL",
+          "samples": [
+            87.42040402541848,
+            94.18302302005293,
+            91.30627302623445
+          ]
+        },
+        {
+          "original": "current_english",
+          "normalized": "current_english",
+          "type": "REAL",
+          "samples": [
+            82.5,
+            91.25,
+            87.5
+          ]
+        },
+        {
+          "original": "current_basic_major",
+          "normalized": "current_basic_major",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "current_major",
+          "normalized": "current_major",
+          "type": "REAL",
+          "samples": [
+            85.95384615384614,
+            94.76923076923077,
+            90.43076923076923
+          ]
+        },
+        {
+          "original": "current_pred",
+          "normalized": "current_pred",
+          "type": "INTEGER",
+          "samples": [
+            2,
+            1,
+            1
+          ]
+        },
+        {
+          "original": "current_prob1",
+          "normalized": "current_prob1",
+          "type": "REAL",
+          "samples": [
+            0.1049367053796219,
+            0.6267985526740284,
+            0.8695002389409265
+          ]
+        },
+        {
+          "original": "current_prob2",
+          "normalized": "current_prob2",
+          "type": "REAL",
+          "samples": [
+            0.7951073219059179,
+            0.2784439781458127,
+            0.09050270357759216
+          ]
+        },
+        {
+          "original": "current_prob3",
+          "normalized": "current_prob3",
+          "type": "REAL",
+          "samples": [
+            0.09995597271446026,
+            0.09475746918015901,
+            0.03999705748148119
+          ]
+        },
+        {
+          "original": "target1_min_required_score",
+          "normalized": "target1_min_required_score",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "target2_min_required_score",
+          "normalized": "target2_min_required_score",
+          "type": "INTEGER",
+          "samples": [
+            64,
+            60,
+            60
+          ]
+        },
+        {
+          "original": "思想道德与法治",
+          "normalized": "思想道德与法治",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "中国近现代史纲要",
+          "normalized": "zhongguo_jinxiandaishi_gangyao",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "马克思主义基本原理",
+          "normalized": "马克思主义基本原理",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "毛泽东思想和中国特色社会主义理论体系概论",
+          "normalized": "maogai",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策1",
+          "normalized": "形势与政策1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策2",
+          "normalized": "形势与政策2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策3",
+          "normalized": "形势与政策3",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策4",
+          "normalized": "形势与政策4",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策5",
+          "normalized": "形势与政策5",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "习近平新时代中国特色社会主义思想概论",
+          "normalized": "xigai",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "体育基础",
+          "normalized": "体育基础",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "军事理论",
+          "normalized": "军事理论",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "大学生心理健康",
+          "normalized": "大学生心理健康",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "安全教育",
+          "normalized": "安全教育",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "综合英语（上）",
+          "normalized": "综合英语_上",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "综合英语（下）",
+          "normalized": "综合英语_下",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "进阶听说（上）",
+          "normalized": "进阶听说_上",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "进阶听说（下）",
+          "normalized": "进阶听说_下",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "线性代数*",
+          "normalized": "线性代数",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "高等数学A(上) *",
+          "normalized": "高等数学a_上",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "高等数学A(下) *",
+          "normalized": "高等数学a_下",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "大学物理C",
+          "normalized": "大学物理c",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "离散数学",
+          "normalized": "离散数学",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "概率论与数理统计",
+          "normalized": "概率论与数理统计",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "计算方法",
+          "normalized": "计算方法",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "计算导论与程序设计",
+          "normalized": "计算导论与程序design",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "电子系统基础",
+          "normalized": "电子系统基础",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形式语言与自动机",
+          "normalized": "形式语言与自动机",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "数据结构*",
+          "normalized": "数据结构",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "数据库系统*",
+          "normalized": "数据库系统",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "数字电路设计*",
+          "normalized": "数字电路design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "JAVA高级语言程序设计*",
+          "normalized": "java高级语言程序design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "操作系统*",
+          "normalized": "操作系统",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "人工智能导论*",
+          "normalized": "人工智能导论",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "产品开发与管理*",
+          "normalized": "产品开发与管理",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "机器学习*",
+          "normalized": "机器学习",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "计算创新学*",
+          "normalized": "计算创新学",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "人工智能法律*",
+          "normalized": "人工智能法律",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "软件工程*",
+          "normalized": "软件工程",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "数据挖掘",
+          "normalized": "数据挖掘",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "嵌入式系统*",
+          "normalized": "嵌入式系统",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "推理与智能体*",
+          "normalized": "推理与智能体",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "视觉计算*",
+          "normalized": "视觉计算",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "神经网络与深度学习",
+          "normalized": "神经网络与深度学习",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "智能游戏*",
+          "normalized": "智能游戏",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "认知机器人系统*",
+          "normalized": "认知机器人系统",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "自然语言处理",
+          "normalized": "自然语言处理",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "军训",
+          "normalized": "军训",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "思想道德与法治（实践环节）",
+          "normalized": "思想道德与法治_实践环节",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "中国近现代史纲要（实践环节）",
+          "normalized": "中国近现代史纲要_实践环节",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "马克思主义基本原理（实践环节）",
+          "normalized": "马克思主义基本原理_实践环节",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "毛泽东思想和中国特色社会主义理论体系概论（实践环节））",
+          "normalized": "毛泽东思想和中国特色社会主义理论体系概论_实践环节",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "物理实验C",
+          "normalized": "物理experimentc",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "计算导论与程序设计课程设计",
+          "normalized": "计算导论与程序designcourse设计",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "数据结构与算法课程设计",
+          "normalized": "数据结构与算法coursedesign",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "学术交流技能1",
+          "normalized": "学术交流技能1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "学术交流技能2",
+          "normalized": "学术交流技能2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "Design & Build实训（智能）",
+          "normalized": "design_build实训_智能",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "智能科学与技术专业实习",
+          "normalized": "智能科学与技术majorinternship",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "个人发展计划1",
+          "normalized": "个人发展计划1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "个人发展计划2",
+          "normalized": "个人发展计划2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "个人发展计划3",
+          "normalized": "个人发展计划3",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        },
+        {
+          "original": "毕业设计",
+          "normalized": "毕业design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            77,
+            75
+          ]
+        }
+      ],
+      "rowCount": 96
+    },
+    {
+      "fileName": "Cohort2023_Predictions_ee",
+      "tableName": "cohort2023_predictions_ee",
+      "headers": [
+        "SNH",
+        "major",
+        "grade",
+        "count",
+        "current_public",
+        "current_practice",
+        "current_math_science",
+        "current_political",
+        "current_basic_subject",
+        "current_innovation",
+        "current_english",
+        "current_basic_major",
+        "current_major",
+        "current_pred",
+        "current_prob1",
+        "current_prob2",
+        "current_prob3",
+        "target1_min_required_score",
+        "target2_min_required_score",
+        "思想道德与法治",
+        "中国近现代史纲要",
+        "马克思主义基本原理",
+        "毛泽东思想和中国特色社会主义理论体系概论",
+        "形势与政策1",
+        "形势与政策2",
+        "形势与政策3",
+        "形势与政策4",
+        "形势与政策5",
+        "习近平新时代中国特色社会主义思想概论",
+        "体育基础",
+        "军事理论",
+        "大学生心理健康",
+        "安全教育",
+        "综合英语（上）",
+        "综合英语（下）",
+        "进阶听说（上）",
+        "进阶听说（下）",
+        "线性代数*",
+        "高等数学A(上) *",
+        "高等数学A(下) *",
+        "大学物理D（上）",
+        "大学物理D（下）",
+        "工程数学*",
+        "概率论与随机过程",
+        "程序设计基础",
+        "数据设计*",
+        "Java高级语言程序设计*",
+        "软件工程*",
+        "电子信息工程专业导论",
+        "电子系统基础",
+        "电子电路基础",
+        "信号与系统*",
+        "数字电路设计*",
+        "数字信号处理*",
+        "计算机网络",
+        "人工智能导论*",
+        "产品开发与管理*",
+        "电磁场与电磁波",
+        "通信原理I",
+        "多媒体基础*",
+        "数字音频基础*",
+        "信息论",
+        "机器学习*",
+        "高级变换*",
+        "图形与视频处理*",
+        "交互式媒体设计*",
+        "3D图形程序设计*",
+        "深度学习与计算视觉*",
+        "军训",
+        "思想道德与法治（实践环节）",
+        "毛泽东思想和中国特色社会主义理论体系概论（实践环节））",
+        "物理实验C",
+        "电路实验",
+        "学术交流技能1",
+        "学术交流技能2",
+        "Design & Build实训（电子）",
+        "通信原理实验",
+        "电子工艺实习",
+        "电子信息工程专业实习",
+        "个人发展计划1",
+        "个人发展计划2",
+        "个人发展计划3",
+        "毕业设计"
+      ],
+      "fields": [
+        {
+          "original": "SNH",
+          "normalized": "snh",
+          "type": "REAL",
+          "samples": [
+            "0153821640a3789d4f005356f01a7f0410c7950534ed859c49165dccee597bdd",
+            "02456b25a3f469a56bfdc28aa7e9c5671b12fd9a5de4bce578fbd7917acd2ee8",
+            "06cb7d72d5f818fff318860479196f547b39e67a17557dceef38bca29560b4c2"
+          ]
+        },
+        {
+          "original": "major",
+          "normalized": "major",
+          "type": "TEXT",
+          "samples": [
+            "电子信息工程",
+            "电子信息工程",
+            "电子信息工程"
+          ]
+        },
+        {
+          "original": "grade",
+          "normalized": "grade",
+          "type": "INTEGER",
+          "samples": [
+            71,
+            61,
+            60
+          ]
+        },
+        {
+          "original": "count",
+          "normalized": "count",
+          "type": "INTEGER",
+          "samples": [
+            66,
+            66,
+            66
+          ]
+        },
+        {
+          "original": "current_public",
+          "normalized": "current_public",
+          "type": "REAL",
+          "samples": [
+            81.28571428571429,
+            86.8,
+            84
+          ]
+        },
+        {
+          "original": "current_practice",
+          "normalized": "current_practice",
+          "type": "REAL",
+          "samples": [
+            85.8762886597938,
+            85.52577319587628,
+            85.48453608247422
+          ]
+        },
+        {
+          "original": "current_math_science",
+          "normalized": "current_math_science",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "current_political",
+          "normalized": "current_political",
+          "type": "REAL",
+          "samples": [
+            83.89726027397259,
+            84.15753424657532,
+            85.81506849315066
+          ]
+        },
+        {
+          "original": "current_basic_subject",
+          "normalized": "current_basic_subject",
+          "type": "REAL",
+          "samples": [
+            79.14285714285714,
+            79.28571428571429,
+            79.42857142857143
+          ]
+        },
+        {
+          "original": "current_innovation",
+          "normalized": "current_innovation",
+          "type": "REAL",
+          "samples": [
+            84.73355117820323,
+            86.83888070692194,
+            84.64292157584683
+          ]
+        },
+        {
+          "original": "current_english",
+          "normalized": "current_english",
+          "type": "REAL",
+          "samples": [
+            83.25,
+            81.5,
+            87.5
+          ]
+        },
+        {
+          "original": "current_basic_major",
+          "normalized": "current_basic_major",
+          "type": "INTEGER",
+          "samples": [
+            87,
+            93,
+            87
+          ]
+        },
+        {
+          "original": "current_major",
+          "normalized": "current_major",
+          "type": "REAL",
+          "samples": [
+            84.05357142857142,
+            87.85714285714286,
+            84.16071428571428
+          ]
+        },
+        {
+          "original": "current_pred",
+          "normalized": "current_pred",
+          "type": "INTEGER",
+          "samples": [
+            2,
+            2,
+            2
+          ]
+        },
+        {
+          "original": "current_prob1",
+          "normalized": "current_prob1",
+          "type": "REAL",
+          "samples": [
+            0.09374459980951436,
+            0.2269269717616008,
+            0.2854816519830021
+          ]
+        },
+        {
+          "original": "current_prob2",
+          "normalized": "current_prob2",
+          "type": "REAL",
+          "samples": [
+            0.8111943697322336,
+            0.6630339241738101,
+            0.5478427215554692
+          ]
+        },
+        {
+          "original": "current_prob3",
+          "normalized": "current_prob3",
+          "type": "REAL",
+          "samples": [
+            0.0950610304582519,
+            0.1100391040645891,
+            0.1666756264615287
+          ]
+        },
+        {
+          "original": "target1_min_required_score",
+          "normalized": "target1_min_required_score",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "target2_min_required_score",
+          "normalized": "target2_min_required_score",
+          "type": "INTEGER",
+          "samples": [
+            60,
+            71,
+            60
+          ]
+        },
+        {
+          "original": "思想道德与法治",
+          "normalized": "思想道德与法治",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "中国近现代史纲要",
+          "normalized": "zhongguo_jinxiandaishi_gangyao",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "马克思主义基本原理",
+          "normalized": "马克思主义基本原理",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "毛泽东思想和中国特色社会主义理论体系概论",
+          "normalized": "maogai",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策1",
+          "normalized": "形势与政策1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策2",
+          "normalized": "形势与政策2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策3",
+          "normalized": "形势与政策3",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策4",
+          "normalized": "形势与政策4",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策5",
+          "normalized": "形势与政策5",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "习近平新时代中国特色社会主义思想概论",
+          "normalized": "xigai",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "体育基础",
+          "normalized": "体育基础",
+          "type": "INTEGER",
+          "samples": [
+            "",
+            90,
+            ""
+          ]
+        },
+        {
+          "original": "军事理论",
+          "normalized": "军事理论",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "大学生心理健康",
+          "normalized": "大学生心理健康",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "安全教育",
+          "normalized": "安全教育",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "综合英语（上）",
+          "normalized": "综合英语_上",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "综合英语（下）",
+          "normalized": "综合英语_下",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "进阶听说（上）",
+          "normalized": "进阶听说_上",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "进阶听说（下）",
+          "normalized": "进阶听说_下",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "线性代数*",
+          "normalized": "线性代数",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "高等数学A(上) *",
+          "normalized": "高等数学a_上",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "高等数学A(下) *",
+          "normalized": "高等数学a_下",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "大学物理D（上）",
+          "normalized": "大学物理d_上",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "大学物理D（下）",
+          "normalized": "大学物理d_下",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "工程数学*",
+          "normalized": "工程数学",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "概率论与随机过程",
+          "normalized": "概率论与随机过程",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "程序设计基础",
+          "normalized": "程序design基础",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "数据设计*",
+          "normalized": "数据design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "Java高级语言程序设计*",
+          "normalized": "java高级语言程序design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "软件工程*",
+          "normalized": "软件工程",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "电子信息工程专业导论",
+          "normalized": "电子信息工程major导论",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "电子系统基础",
+          "normalized": "电子系统基础",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "电子电路基础",
+          "normalized": "电子电路基础",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "信号与系统*",
+          "normalized": "信号与系统",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "数字电路设计*",
+          "normalized": "数字电路design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "数字信号处理*",
+          "normalized": "数字信号处理",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "计算机网络",
+          "normalized": "计算机网络",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "人工智能导论*",
+          "normalized": "人工智能导论",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "产品开发与管理*",
+          "normalized": "产品开发与管理",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "电磁场与电磁波",
+          "normalized": "电磁场与电磁波",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "通信原理I",
+          "normalized": "通信原理i",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "多媒体基础*",
+          "normalized": "多媒体基础",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "数字音频基础*",
+          "normalized": "数字音频基础",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "信息论",
+          "normalized": "信息论",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "机器学习*",
+          "normalized": "机器学习",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "高级变换*",
+          "normalized": "高级变换",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "图形与视频处理*",
+          "normalized": "图形与视频处理",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "交互式媒体设计*",
+          "normalized": "交互式媒体design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "3D图形程序设计*",
+          "normalized": "3d图形程序design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "深度学习与计算视觉*",
+          "normalized": "深度学习与计算视觉",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "军训",
+          "normalized": "军训",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "思想道德与法治（实践环节）",
+          "normalized": "思想道德与法治_实践环节",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "毛泽东思想和中国特色社会主义理论体系概论（实践环节））",
+          "normalized": "毛泽东思想和中国特色社会主义理论体系概论_实践环节",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "物理实验C",
+          "normalized": "物理experimentc",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "电路实验",
+          "normalized": "电路experiment",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "学术交流技能1",
+          "normalized": "学术交流技能1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "学术交流技能2",
+          "normalized": "学术交流技能2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "Design & Build实训（电子）",
+          "normalized": "design_build实训_电子",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "通信原理实验",
+          "normalized": "通信原理experiment",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "电子工艺实习",
+          "normalized": "电子工艺internship",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "电子信息工程专业实习",
+          "normalized": "电子信息工程majorinternship",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "个人发展计划1",
+          "normalized": "个人发展计划1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "个人发展计划2",
+          "normalized": "个人发展计划2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "个人发展计划3",
+          "normalized": "个人发展计划3",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        },
+        {
+          "original": "毕业设计",
+          "normalized": "毕业design",
+          "type": "INTEGER",
+          "samples": [
+            90,
+            90,
+            85
+          ]
+        }
+      ],
+      "rowCount": 102
+    },
+    {
+      "fileName": "Cohort2023_Predictions_iot",
+      "tableName": "cohort2023_predictions_iot",
+      "headers": [
+        "SNH",
+        "major",
+        "grade",
+        "count",
+        "current_public",
+        "current_practice",
+        "current_math_science",
+        "current_political",
+        "current_basic_subject",
+        "current_innovation",
+        "current_english",
+        "current_basic_major",
+        "current_major",
+        "current_pred",
+        "current_prob1",
+        "current_prob2",
+        "current_prob3",
+        "target1_min_required_score",
+        "target2_min_required_score",
+        "思想道德与法治",
+        "中国近现代史纲要",
+        "马克思主义基本原理",
+        "毛泽东思想和中国特色社会主义理论体系概论",
+        "形势与政策1",
+        "形势与政策2",
+        "形势与政策3",
+        "形势与政策4",
+        "形势与政策5",
+        "习近平新时代中国特色社会主义思想概论",
+        "体育基础",
+        "军事理论",
+        "大学生心理健康",
+        "安全教育",
+        "综合英语（上）",
+        "综合英语（下）",
+        "进阶听说（上）",
+        "进阶听说（下）",
+        "线性代数*",
+        "高等数学A(上) *",
+        "高等数学A(下) *",
+        "大学物理C",
+        "离散数学",
+        "概率论与随机过程",
+        "计算导论与程序设计",
+        "电子系统基础",
+        "信号与系统",
+        "数据结构",
+        "数字电路设计",
+        "物联网技术导论*",
+        "数据库系统*",
+        "机器学习*",
+        "通信与网络*",
+        "操作系统*",
+        "嵌入式系统*",
+        "JAVA高级语言程序设计*",
+        "产品开发与管理*",
+        "中间件技术*",
+        "密码学与网络安全*",
+        "软件工程*",
+        "无线射频识别(RFID) *",
+        "无线传感器网络*",
+        "云计算*",
+        "物联网工程实践*",
+        "智能基础架构与数据架构*",
+        "军训",
+        "思想道德与法治（实践环节）",
+        "毛泽东思想和中国特色社会主义理论体系概论（实践环节）",
+        "物理实验C",
+        "通信与网络课程设计",
+        "学术交流技能1",
+        "学术交流技能2",
+        "Design & Build实训",
+        "物联网工程专业实习",
+        "个人发展计划1",
+        "个人发展计划2",
+        "个人发展计划3",
+        "毕业设计"
+      ],
+      "fields": [
+        {
+          "original": "SNH",
+          "normalized": "snh",
+          "type": "REAL",
+          "samples": [
+            "007de41b80332a32aaf5d0d65556ac3a6650e0a594b152b0d82b0adf3e3554c7",
+            "017ae065092a9b24139fd880f4a6437714054553d1a9a792a18c42f00c78ac1d",
+            "041da2d21fff64f9a89f8bc4ec7f596400b44e890ebcfb3ef3f27893eafa7317"
+          ]
+        },
+        {
+          "original": "major",
+          "normalized": "major",
+          "type": "TEXT",
+          "samples": [
+            "物联网工程",
+            "物联网工程",
+            "物联网工程"
+          ]
+        },
+        {
+          "original": "grade",
+          "normalized": "grade",
+          "type": "INTEGER",
+          "samples": [
+            56,
+            73,
+            60
+          ]
+        },
+        {
+          "original": "count",
+          "normalized": "count",
+          "type": "INTEGER",
+          "samples": [
+            61,
+            61,
+            61
+          ]
+        },
+        {
+          "original": "current_public",
+          "normalized": "current_public",
+          "type": "REAL",
+          "samples": [
+            80.28571428571429,
+            92.85714285714286,
+            90.28571428571429
+          ]
+        },
+        {
+          "original": "current_practice",
+          "normalized": "current_practice",
+          "type": "REAL",
+          "samples": [
+            91.95327102803738,
+            91.14953271028035,
+            88.60747663551402
+          ]
+        },
+        {
+          "original": "current_math_science",
+          "normalized": "current_math_science",
+          "type": "REAL",
+          "samples": [
+            86.9090909090909,
+            80.81818181818181,
+            75.36363636363636
+          ]
+        },
+        {
+          "original": "current_political",
+          "normalized": "current_political",
+          "type": "REAL",
+          "samples": [
+            88.57534246575342,
+            90.35616438356163,
+            84.76712328767123
+          ]
+        },
+        {
+          "original": "current_basic_subject",
+          "normalized": "current_basic_subject",
+          "type": "REAL",
+          "samples": [
+            91.47058823529412,
+            91.58823529411765,
+            87.47058823529412
+          ]
+        },
+        {
+          "original": "current_innovation",
+          "normalized": "current_innovation",
+          "type": "REAL",
+          "samples": [
+            90.94642763697512,
+            89.60789585862831,
+            86.01150835065397
+          ]
+        },
+        {
+          "original": "current_english",
+          "normalized": "current_english",
+          "type": "REAL",
+          "samples": [
+            86.5,
+            84.75,
+            81.5
+          ]
+        },
+        {
+          "original": "current_basic_major",
+          "normalized": "current_basic_major",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "current_major",
+          "normalized": "current_major",
+          "type": "REAL",
+          "samples": [
+            89.64598930481284,
+            87.28021390374332,
+            82.62780748663101
+          ]
+        },
+        {
+          "original": "current_pred",
+          "normalized": "current_pred",
+          "type": "INTEGER",
+          "samples": [
+            2,
+            1,
+            2
+          ]
+        },
+        {
+          "original": "current_prob1",
+          "normalized": "current_prob1",
+          "type": "REAL",
+          "samples": [
+            0.2285288557621953,
+            0.6687484458862478,
+            0.2463566403613296
+          ]
+        },
+        {
+          "original": "current_prob2",
+          "normalized": "current_prob2",
+          "type": "REAL",
+          "samples": [
+            0.6314881280402452,
+            0.2404156907250989,
+            0.6400825137444905
+          ]
+        },
+        {
+          "original": "current_prob3",
+          "normalized": "current_prob3",
+          "type": "REAL",
+          "samples": [
+            0.1399830161975595,
+            0.09083586338865324,
+            0.1135608458941798
+          ]
+        },
+        {
+          "original": "target1_min_required_score",
+          "normalized": "target1_min_required_score",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "target2_min_required_score",
+          "normalized": "target2_min_required_score",
+          "type": "INTEGER",
+          "samples": [
+            60,
+            60,
+            61
+          ]
+        },
+        {
+          "original": "思想道德与法治",
+          "normalized": "思想道德与法治",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "中国近现代史纲要",
+          "normalized": "zhongguo_jinxiandaishi_gangyao",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "马克思主义基本原理",
+          "normalized": "马克思主义基本原理",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "毛泽东思想和中国特色社会主义理论体系概论",
+          "normalized": "maogai",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策1",
+          "normalized": "形势与政策1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策2",
+          "normalized": "形势与政策2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策3",
+          "normalized": "形势与政策3",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策4",
+          "normalized": "形势与政策4",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策5",
+          "normalized": "形势与政策5",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "习近平新时代中国特色社会主义思想概论",
+          "normalized": "xigai",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "体育基础",
+          "normalized": "体育基础",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "军事理论",
+          "normalized": "军事理论",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "大学生心理健康",
+          "normalized": "大学生心理健康",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "安全教育",
+          "normalized": "安全教育",
+          "type": "INTEGER",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "综合英语（上）",
+          "normalized": "综合英语_上",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "综合英语（下）",
+          "normalized": "综合英语_下",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "进阶听说（上）",
+          "normalized": "进阶听说_上",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "进阶听说（下）",
+          "normalized": "进阶听说_下",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "线性代数*",
+          "normalized": "线性代数",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "高等数学A(上) *",
+          "normalized": "高等数学a_上",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "高等数学A(下) *",
+          "normalized": "高等数学a_下",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "大学物理C",
+          "normalized": "大学物理c",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "离散数学",
+          "normalized": "离散数学",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "概率论与随机过程",
+          "normalized": "概率论与随机过程",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "计算导论与程序设计",
+          "normalized": "计算导论与程序design",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "电子系统基础",
+          "normalized": "电子系统基础",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "信号与系统",
+          "normalized": "信号与系统",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "数据结构",
+          "normalized": "数据结构",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "数字电路设计",
+          "normalized": "数字电路design",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "物联网技术导论*",
+          "normalized": "物联网技术导论",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "数据库系统*",
+          "normalized": "数据库系统",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "机器学习*",
+          "normalized": "机器学习",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "通信与网络*",
+          "normalized": "通信与网络",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "操作系统*",
+          "normalized": "操作系统",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "嵌入式系统*",
+          "normalized": "嵌入式系统",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "JAVA高级语言程序设计*",
+          "normalized": "java高级语言程序design",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "产品开发与管理*",
+          "normalized": "产品开发与管理",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "中间件技术*",
+          "normalized": "中间件技术",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "密码学与网络安全*",
+          "normalized": "密码学与网络安全",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "软件工程*",
+          "normalized": "软件工程",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "无线射频识别(RFID) *",
+          "normalized": "无线射频识别_rfid",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "无线传感器网络*",
+          "normalized": "无线传感器网络",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "云计算*",
+          "normalized": "云计算",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "物联网工程实践*",
+          "normalized": "物联网工程实践",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "智能基础架构与数据架构*",
+          "normalized": "智能基础架构与数据架构",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "军训",
+          "normalized": "军训",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "思想道德与法治（实践环节）",
+          "normalized": "思想道德与法治_实践环节",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "毛泽东思想和中国特色社会主义理论体系概论（实践环节）",
+          "normalized": "毛泽东思想和中国特色社会主义理论体系概论_实践环节",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "物理实验C",
+          "normalized": "物理experimentc",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "通信与网络课程设计",
+          "normalized": "通信与网络coursedesign",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "学术交流技能1",
+          "normalized": "学术交流技能1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "学术交流技能2",
+          "normalized": "学术交流技能2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "Design & Build实训",
+          "normalized": "design_build实训",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "物联网工程专业实习",
+          "normalized": "物联网工程majorinternship",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "个人发展计划1",
+          "normalized": "个人发展计划1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "个人发展计划2",
+          "normalized": "个人发展计划2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "个人发展计划3",
+          "normalized": "个人发展计划3",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        },
+        {
+          "original": "毕业设计",
+          "normalized": "毕业design",
+          "type": "INTEGER",
+          "samples": [
+            85,
+            77,
+            82
+          ]
+        }
+      ],
+      "rowCount": 173
+    },
+    {
+      "fileName": "Cohort2023_Predictions_tewm",
+      "tableName": "cohort2023_predictions_tewm",
+      "headers": [
+        "SNH",
+        "major",
+        "grade",
+        "count",
+        "current_public",
+        "current_practice",
+        "current_math_science",
+        "current_political",
+        "current_basic_subject",
+        "current_innovation",
+        "current_english",
+        "current_basic_major",
+        "current_major",
+        "current_pred",
+        "current_prob1",
+        "current_prob2",
+        "current_prob3",
+        "target1_min_required_score",
+        "target2_min_required_score",
+        "思想道德与法治",
+        "中国近现代史纲要",
+        "马克思主义基本原理",
+        "毛泽东思想和中国特色社会主义理论体系概论",
+        "形势与政策1",
+        "形势与政策2",
+        "形势与政策3",
+        "形势与政策4",
+        "形势与政策5",
+        "习近平新时代中国特色社会主义思想概论",
+        "体育基础",
+        "军事理论",
+        "大学生心理健康",
+        "安全教育",
+        "综合英语（上）",
+        "综合英语（下）",
+        "进阶听说（上）",
+        "进阶听说（下）",
+        "线性代数*",
+        "高等数学A(上) *",
+        "高等数学A(下) *",
+        "大学物理D（上）*",
+        "大学物理D（下）*",
+        "工程数学*",
+        "概率论与随机过程*",
+        "程序设计基础*",
+        "Java高级语言程序设计*",
+        "软件工程*",
+        "电信工程及管理专业导论",
+        "电子系统基础*",
+        "电子电路基础*",
+        "信号与系统*",
+        "数字电路设计*",
+        "数字信号处理*",
+        "人工智能导论*",
+        "企业管理*",
+        "互联网协议与网络*",
+        "电磁场与电磁波*",
+        "通信原理I",
+        "产品开发与营销*",
+        "数字系统设计*",
+        "高级网络程序设计*",
+        "机器学习*",
+        "微波、毫米波与光传输*",
+        "微处理器系统设计*",
+        "现代无线技术*",
+        "宽带技术与光纤*",
+        "企业技术战略*",
+        "军训",
+        "物理实验C",
+        "电路实验",
+        "计算机实习",
+        "学术交流技能1",
+        "学术交流技能2",
+        "Design & Build实训",
+        "通信原理实验",
+        "电信工程及管理专业实习",
+        "个人发展计划1",
+        "个人发展计划2",
+        "个人发展计划3",
+        "毕业设计"
+      ],
+      "fields": [
+        {
+          "original": "SNH",
+          "normalized": "snh",
+          "type": "REAL",
+          "samples": [
+            "0018742398e7a8749b61fb7f74ea50d081685f149f3f4e43bacfc59b0df93e94",
+            "00463952e6204bd5d18b439031d5e6154e13ab1e8c8f091f45f069a681c4c190",
+            "01f92c810650d01c5f5f38393287fddf75f46cb8e4d35370f5c8fa857790c210"
+          ]
+        },
+        {
+          "original": "major",
+          "normalized": "major",
+          "type": "TEXT",
+          "samples": [
+            "电信工程及管理",
+            "电信工程及管理",
+            "电信工程及管理"
+          ]
+        },
+        {
+          "original": "grade",
+          "normalized": "grade",
+          "type": "INTEGER",
+          "samples": [
+            58,
+            59,
+            69
+          ]
+        },
+        {
+          "original": "count",
+          "normalized": "count",
+          "type": "INTEGER",
+          "samples": [
+            65,
+            65,
+            65
+          ]
+        },
+        {
+          "original": "current_public",
+          "normalized": "current_public",
+          "type": "REAL",
+          "samples": [
+            92.57142857142857,
+            91.28571428571429,
+            85.28571428571429
+          ]
+        },
+        {
+          "original": "current_practice",
+          "normalized": "current_practice",
+          "type": "REAL",
+          "samples": [
+            89.5,
+            79.40163934426229,
+            88.28688524590163
+          ]
+        },
+        {
+          "original": "current_math_science",
+          "normalized": "current_math_science",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "current_political",
+          "normalized": "current_political",
+          "type": "REAL",
+          "samples": [
+            87.56164383561644,
+            75.4931506849315,
+            89.32876712328766
+          ]
+        },
+        {
+          "original": "current_basic_subject",
+          "normalized": "current_basic_subject",
+          "type": "INTEGER",
+          "samples": [
+            80,
+            60,
+            82
+          ]
+        },
+        {
+          "original": "current_innovation",
+          "normalized": "current_innovation",
+          "type": "REAL",
+          "samples": [
+            84.47058823529413,
+            69.13018322082932,
+            84.95853423336548
+          ]
+        },
+        {
+          "original": "current_english",
+          "normalized": "current_english",
+          "type": "INTEGER",
+          "samples": [
+            86,
+            73.5,
+            85
+          ]
+        },
+        {
+          "original": "current_basic_major",
+          "normalized": "current_basic_major",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "current_major",
+          "normalized": "current_major",
+          "type": "INTEGER",
+          "samples": [
+            80,
+            60,
+            82
+          ]
+        },
+        {
+          "original": "current_pred",
+          "normalized": "current_pred",
+          "type": "INTEGER",
+          "samples": [
+            2,
+            2,
+            2
+          ]
+        },
+        {
+          "original": "current_prob1",
+          "normalized": "current_prob1",
+          "type": "REAL",
+          "samples": [
+            0.2280491337763628,
+            0.1296851668422281,
+            0.2080655063464761
+          ]
+        },
+        {
+          "original": "current_prob2",
+          "normalized": "current_prob2",
+          "type": "REAL",
+          "samples": [
+            0.5477174782511128,
+            0.6082486748564871,
+            0.5775846226393503
+          ]
+        },
+        {
+          "original": "current_prob3",
+          "normalized": "current_prob3",
+          "type": "REAL",
+          "samples": [
+            0.2242333879725244,
+            0.2620661583012848,
+            0.2143498710141736
+          ]
+        },
+        {
+          "original": "target1_min_required_score",
+          "normalized": "target1_min_required_score",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "target2_min_required_score",
+          "normalized": "target2_min_required_score",
+          "type": "INTEGER",
+          "samples": [
+            60,
+            60,
+            60
+          ]
+        },
+        {
+          "original": "思想道德与法治",
+          "normalized": "思想道德与法治",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "中国近现代史纲要",
+          "normalized": "zhongguo_jinxiandaishi_gangyao",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "马克思主义基本原理",
+          "normalized": "马克思主义基本原理",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "毛泽东思想和中国特色社会主义理论体系概论",
+          "normalized": "maogai",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策1",
+          "normalized": "形势与政策1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策2",
+          "normalized": "形势与政策2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策3",
+          "normalized": "形势与政策3",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策4",
+          "normalized": "形势与政策4",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "形势与政策5",
+          "normalized": "形势与政策5",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "习近平新时代中国特色社会主义思想概论",
+          "normalized": "xigai",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "体育基础",
+          "normalized": "体育基础",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "军事理论",
+          "normalized": "军事理论",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "大学生心理健康",
+          "normalized": "大学生心理健康",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "安全教育",
+          "normalized": "安全教育",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "综合英语（上）",
+          "normalized": "综合英语_上",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "综合英语（下）",
+          "normalized": "综合英语_下",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "进阶听说（上）",
+          "normalized": "进阶听说_上",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "进阶听说（下）",
+          "normalized": "进阶听说_下",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "线性代数*",
+          "normalized": "线性代数",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "高等数学A(上) *",
+          "normalized": "高等数学a_上",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "高等数学A(下) *",
+          "normalized": "高等数学a_下",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "大学物理D（上）*",
+          "normalized": "大学物理d_上",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "大学物理D（下）*",
+          "normalized": "大学物理d_下",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "工程数学*",
+          "normalized": "工程数学",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "概率论与随机过程*",
+          "normalized": "概率论与随机过程",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "程序设计基础*",
+          "normalized": "程序design基础",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "Java高级语言程序设计*",
+          "normalized": "java高级语言程序design",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "软件工程*",
+          "normalized": "软件工程",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "电信工程及管理专业导论",
+          "normalized": "电信工程及管理major导论",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "电子系统基础*",
+          "normalized": "电子系统基础",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "电子电路基础*",
+          "normalized": "电子电路基础",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "信号与系统*",
+          "normalized": "信号与系统",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "数字电路设计*",
+          "normalized": "数字电路design",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "数字信号处理*",
+          "normalized": "数字信号处理",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "人工智能导论*",
+          "normalized": "人工智能导论",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "企业管理*",
+          "normalized": "企业管理",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "互联网协议与网络*",
+          "normalized": "互联网协议与网络",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "电磁场与电磁波*",
+          "normalized": "电磁场与电磁波",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "通信原理I",
+          "normalized": "通信原理i",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "产品开发与营销*",
+          "normalized": "产品开发与营销",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "数字系统设计*",
+          "normalized": "数字系统design",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "高级网络程序设计*",
+          "normalized": "高级网络程序design",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "机器学习*",
+          "normalized": "机器学习",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "微波、毫米波与光传输*",
+          "normalized": "微波_毫米波与光传输",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "微处理器系统设计*",
+          "normalized": "微处理器系统design",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "现代无线技术*",
+          "normalized": "现代无线技术",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "宽带技术与光纤*",
+          "normalized": "宽带技术与光纤",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "企业技术战略*",
+          "normalized": "企业技术战略",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "军训",
+          "normalized": "军训",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "物理实验C",
+          "normalized": "物理experimentc",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "电路实验",
+          "normalized": "电路experiment",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "计算机实习",
+          "normalized": "计算机internship",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "学术交流技能1",
+          "normalized": "学术交流技能1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "学术交流技能2",
+          "normalized": "学术交流技能2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "Design & Build实训",
+          "normalized": "design_build实训",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "通信原理实验",
+          "normalized": "通信原理experiment",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "电信工程及管理专业实习",
+          "normalized": "电信工程及管理majorinternship",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "个人发展计划1",
+          "normalized": "个人发展计划1",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "个人发展计划2",
+          "normalized": "个人发展计划2",
+          "type": "TEXT",
+          "samples": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "original": "个人发展计划3",
+          "normalized": "个人发展计划3",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        },
+        {
+          "original": "毕业设计",
+          "normalized": "毕业design",
+          "type": "INTEGER",
+          "samples": [
+            83,
+            90,
+            84
+          ]
+        }
+      ],
+      "rowCount": 293
+    }
+  ],
+  "sqlStatements": [
+    {
+      "tableName": "cohort2023_predictions_ai",
+      "sql": "CREATE TABLE cohort2023_predictions_ai (\n  id SERIAL PRIMARY KEY,\n  snh REAL,\n  major TEXT,\n  grade INTEGER,\n  count INTEGER,\n  current_public REAL,\n  current_practice REAL,\n  current_math_science REAL,\n  current_political REAL,\n  current_basic_subject REAL,\n  current_innovation REAL,\n  current_english REAL,\n  current_basic_major TEXT,\n  current_major REAL,\n  current_pred INTEGER,\n  current_prob1 REAL,\n  current_prob2 REAL,\n  current_prob3 REAL,\n  target1_min_required_score INTEGER,\n  target2_min_required_score INTEGER,\n  思想道德与法治 TEXT,\n  zhongguo_jinxiandaishi_gangyao TEXT,\n  马克思主义基本原理 TEXT,\n  maogai TEXT,\n  形势与政策1 TEXT,\n  形势与政策2 TEXT,\n  形势与政策3 TEXT,\n  形势与政策4 TEXT,\n  形势与政策5 INTEGER,\n  xigai TEXT,\n  体育基础 TEXT,\n  军事理论 TEXT,\n  大学生心理健康 TEXT,\n  安全教育 TEXT,\n  综合英语_上 TEXT,\n  综合英语_下 TEXT,\n  进阶听说_上 TEXT,\n  进阶听说_下 TEXT,\n  线性代数 INTEGER,\n  高等数学a_上 INTEGER,\n  高等数学a_下 INTEGER,\n  大学物理c TEXT,\n  离散数学 TEXT,\n  概率论与数理统计 TEXT,\n  计算方法 TEXT,\n  计算导论与程序design TEXT,\n  电子系统基础 TEXT,\n  形式语言与自动机 TEXT,\n  数据结构 INTEGER,\n  数据库系统 INTEGER,\n  数字电路design INTEGER,\n  java高级语言程序design INTEGER,\n  操作系统 INTEGER,\n  人工智能导论 INTEGER,\n  产品开发与管理 INTEGER,\n  机器学习 INTEGER,\n  计算创新学 INTEGER,\n  人工智能法律 INTEGER,\n  软件工程 INTEGER,\n  数据挖掘 INTEGER,\n  嵌入式系统 INTEGER,\n  推理与智能体 INTEGER,\n  视觉计算 INTEGER,\n  神经网络与深度学习 INTEGER,\n  智能游戏 INTEGER,\n  认知机器人系统 INTEGER,\n  自然语言处理 INTEGER,\n  军训 TEXT,\n  思想道德与法治_实践环节 TEXT,\n  中国近现代史纲要_实践环节 TEXT,\n  马克思主义基本原理_实践环节 TEXT,\n  毛泽东思想和中国特色社会主义理论体系概论_实践环节 INTEGER,\n  物理experimentc TEXT,\n  计算导论与程序designcourse设计 TEXT,\n  数据结构与算法coursedesign TEXT,\n  学术交流技能1 TEXT,\n  学术交流技能2 TEXT,\n  design_build实训_智能 INTEGER,\n  智能科学与技术majorinternship INTEGER,\n  个人发展计划1 TEXT,\n  个人发展计划2 TEXT,\n  个人发展计划3 INTEGER,\n  毕业design INTEGER\n);"
+    },
+    {
+      "tableName": "cohort2023_predictions_ee",
+      "sql": "CREATE TABLE cohort2023_predictions_ee (\n  id SERIAL PRIMARY KEY,\n  snh REAL,\n  major TEXT,\n  grade INTEGER,\n  count INTEGER,\n  current_public REAL,\n  current_practice REAL,\n  current_math_science TEXT,\n  current_political REAL,\n  current_basic_subject REAL,\n  current_innovation REAL,\n  current_english REAL,\n  current_basic_major INTEGER,\n  current_major REAL,\n  current_pred INTEGER,\n  current_prob1 REAL,\n  current_prob2 REAL,\n  current_prob3 REAL,\n  target1_min_required_score INTEGER,\n  target2_min_required_score INTEGER,\n  思想道德与法治 TEXT,\n  zhongguo_jinxiandaishi_gangyao TEXT,\n  马克思主义基本原理 TEXT,\n  maogai TEXT,\n  形势与政策1 TEXT,\n  形势与政策2 TEXT,\n  形势与政策3 TEXT,\n  形势与政策4 TEXT,\n  形势与政策5 INTEGER,\n  xigai TEXT,\n  体育基础 INTEGER,\n  军事理论 TEXT,\n  大学生心理健康 TEXT,\n  安全教育 TEXT,\n  综合英语_上 TEXT,\n  综合英语_下 TEXT,\n  进阶听说_上 TEXT,\n  进阶听说_下 TEXT,\n  线性代数 INTEGER,\n  高等数学a_上 INTEGER,\n  高等数学a_下 INTEGER,\n  大学物理d_上 INTEGER,\n  大学物理d_下 INTEGER,\n  工程数学 INTEGER,\n  概率论与随机过程 TEXT,\n  程序design基础 TEXT,\n  数据design INTEGER,\n  java高级语言程序design INTEGER,\n  软件工程 INTEGER,\n  电子信息工程major导论 TEXT,\n  电子系统基础 TEXT,\n  电子电路基础 TEXT,\n  信号与系统 INTEGER,\n  数字电路design INTEGER,\n  数字信号处理 INTEGER,\n  计算机网络 TEXT,\n  人工智能导论 INTEGER,\n  产品开发与管理 INTEGER,\n  电磁场与电磁波 INTEGER,\n  通信原理i INTEGER,\n  多媒体基础 INTEGER,\n  数字音频基础 INTEGER,\n  信息论 INTEGER,\n  机器学习 INTEGER,\n  高级变换 INTEGER,\n  图形与视频处理 INTEGER,\n  交互式媒体design INTEGER,\n  3d图形程序design INTEGER,\n  深度学习与计算视觉 INTEGER,\n  军训 TEXT,\n  思想道德与法治_实践环节 TEXT,\n  毛泽东思想和中国特色社会主义理论体系概论_实践环节 INTEGER,\n  物理experimentc TEXT,\n  电路experiment TEXT,\n  学术交流技能1 TEXT,\n  学术交流技能2 TEXT,\n  design_build实训_电子 INTEGER,\n  通信原理experiment INTEGER,\n  电子工艺internship INTEGER,\n  电子信息工程majorinternship INTEGER,\n  个人发展计划1 TEXT,\n  个人发展计划2 TEXT,\n  个人发展计划3 INTEGER,\n  毕业design INTEGER\n);"
+    },
+    {
+      "tableName": "cohort2023_predictions_iot",
+      "sql": "CREATE TABLE cohort2023_predictions_iot (\n  id SERIAL PRIMARY KEY,\n  snh REAL,\n  major TEXT,\n  grade INTEGER,\n  count INTEGER,\n  current_public REAL,\n  current_practice REAL,\n  current_math_science REAL,\n  current_political REAL,\n  current_basic_subject REAL,\n  current_innovation REAL,\n  current_english REAL,\n  current_basic_major TEXT,\n  current_major REAL,\n  current_pred INTEGER,\n  current_prob1 REAL,\n  current_prob2 REAL,\n  current_prob3 REAL,\n  target1_min_required_score INTEGER,\n  target2_min_required_score INTEGER,\n  思想道德与法治 TEXT,\n  zhongguo_jinxiandaishi_gangyao TEXT,\n  马克思主义基本原理 TEXT,\n  maogai TEXT,\n  形势与政策1 TEXT,\n  形势与政策2 TEXT,\n  形势与政策3 TEXT,\n  形势与政策4 TEXT,\n  形势与政策5 INTEGER,\n  xigai TEXT,\n  体育基础 TEXT,\n  军事理论 TEXT,\n  大学生心理健康 TEXT,\n  安全教育 INTEGER,\n  综合英语_上 TEXT,\n  综合英语_下 TEXT,\n  进阶听说_上 TEXT,\n  进阶听说_下 TEXT,\n  线性代数 INTEGER,\n  高等数学a_上 INTEGER,\n  高等数学a_下 INTEGER,\n  大学物理c TEXT,\n  离散数学 TEXT,\n  概率论与随机过程 TEXT,\n  计算导论与程序design TEXT,\n  电子系统基础 TEXT,\n  信号与系统 TEXT,\n  数据结构 TEXT,\n  数字电路design TEXT,\n  物联网技术导论 INTEGER,\n  数据库系统 INTEGER,\n  机器学习 INTEGER,\n  通信与网络 INTEGER,\n  操作系统 INTEGER,\n  嵌入式系统 INTEGER,\n  java高级语言程序design INTEGER,\n  产品开发与管理 INTEGER,\n  中间件技术 INTEGER,\n  密码学与网络安全 INTEGER,\n  软件工程 INTEGER,\n  无线射频识别_rfid INTEGER,\n  无线传感器网络 INTEGER,\n  云计算 INTEGER,\n  物联网工程实践 INTEGER,\n  智能基础架构与数据架构 INTEGER,\n  军训 TEXT,\n  思想道德与法治_实践环节 TEXT,\n  毛泽东思想和中国特色社会主义理论体系概论_实践环节 TEXT,\n  物理experimentc TEXT,\n  通信与网络coursedesign INTEGER,\n  学术交流技能1 TEXT,\n  学术交流技能2 TEXT,\n  design_build实训 INTEGER,\n  物联网工程majorinternship INTEGER,\n  个人发展计划1 TEXT,\n  个人发展计划2 TEXT,\n  个人发展计划3 INTEGER,\n  毕业design INTEGER\n);"
+    },
+    {
+      "tableName": "cohort2023_predictions_tewm",
+      "sql": "CREATE TABLE cohort2023_predictions_tewm (\n  id SERIAL PRIMARY KEY,\n  snh REAL,\n  major TEXT,\n  grade INTEGER,\n  count INTEGER,\n  current_public REAL,\n  current_practice REAL,\n  current_math_science TEXT,\n  current_political REAL,\n  current_basic_subject INTEGER,\n  current_innovation REAL,\n  current_english INTEGER,\n  current_basic_major TEXT,\n  current_major INTEGER,\n  current_pred INTEGER,\n  current_prob1 REAL,\n  current_prob2 REAL,\n  current_prob3 REAL,\n  target1_min_required_score INTEGER,\n  target2_min_required_score INTEGER,\n  思想道德与法治 TEXT,\n  zhongguo_jinxiandaishi_gangyao TEXT,\n  马克思主义基本原理 TEXT,\n  maogai TEXT,\n  形势与政策1 TEXT,\n  形势与政策2 TEXT,\n  形势与政策3 TEXT,\n  形势与政策4 TEXT,\n  形势与政策5 INTEGER,\n  xigai TEXT,\n  体育基础 TEXT,\n  军事理论 TEXT,\n  大学生心理健康 TEXT,\n  安全教育 TEXT,\n  综合英语_上 TEXT,\n  综合英语_下 TEXT,\n  进阶听说_上 TEXT,\n  进阶听说_下 TEXT,\n  线性代数 INTEGER,\n  高等数学a_上 INTEGER,\n  高等数学a_下 INTEGER,\n  大学物理d_上 INTEGER,\n  大学物理d_下 INTEGER,\n  工程数学 INTEGER,\n  概率论与随机过程 INTEGER,\n  程序design基础 INTEGER,\n  java高级语言程序design INTEGER,\n  软件工程 INTEGER,\n  电信工程及管理major导论 TEXT,\n  电子系统基础 INTEGER,\n  电子电路基础 INTEGER,\n  信号与系统 INTEGER,\n  数字电路design INTEGER,\n  数字信号处理 INTEGER,\n  人工智能导论 INTEGER,\n  企业管理 INTEGER,\n  互联网协议与网络 INTEGER,\n  电磁场与电磁波 INTEGER,\n  通信原理i INTEGER,\n  产品开发与营销 INTEGER,\n  数字系统design INTEGER,\n  高级网络程序design INTEGER,\n  机器学习 INTEGER,\n  微波_毫米波与光传输 INTEGER,\n  微处理器系统design INTEGER,\n  现代无线技术 INTEGER,\n  宽带技术与光纤 INTEGER,\n  企业技术战略 INTEGER,\n  军训 TEXT,\n  物理experimentc TEXT,\n  电路experiment TEXT,\n  计算机internship TEXT,\n  学术交流技能1 TEXT,\n  学术交流技能2 TEXT,\n  design_build实训 INTEGER,\n  通信原理experiment INTEGER,\n  电信工程及管理majorinternship INTEGER,\n  个人发展计划1 TEXT,\n  个人发展计划2 TEXT,\n  个人发展计划3 INTEGER,\n  毕业design INTEGER\n);"
+    }
+  ]
+}

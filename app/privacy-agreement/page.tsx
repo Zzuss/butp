@@ -6,19 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2, XCircle, FileText, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
-import { readWordDocument } from "@/lib/word-reader"
 import { trackUserAction } from "@/lib/analytics"
-
-interface PrivacyContent {
+// FileContent interface now defined locally
+interface FileContent {
   title: string
   content: string
   lastUpdated: string
+  fileType: string
 }
 
 export default function PrivacyAgreementPage() {
   const router = useRouter()
   const { user, loading, logout } = useAuth()
-  const [privacyContent, setPrivacyContent] = useState<PrivacyContent | null>(null)
+  const [privacyContent, setPrivacyContent] = useState<FileContent | null>(null)
   const [loadingContent, setLoadingContent] = useState(true)
   const [agreeing, setAgreeing] = useState(false)
   const [error, setError] = useState("")
@@ -44,9 +44,22 @@ export default function PrivacyAgreementPage() {
       setLoadingContent(true)
       setError("")
       
-      // 从Word文档读取内容
-      const wordContent = await readWordDocument('/隐私政策与用户数据使用条款_clean_Aug2025.docx')
-      setPrivacyContent(wordContent)
+      // 从Supabase Storage读取隐私条款内容
+      const response = await fetch('/api/privacy-content', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
+        setPrivacyContent(data.data)
+      } else {
+        console.error('加载隐私条款失败:', data.error)
+        setError('加载隐私条款失败，请刷新页面重试')
+      }
       
     } catch (error) {
       console.error('加载隐私条款失败:', error)

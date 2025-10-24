@@ -199,10 +199,11 @@ export default function Analysis() {
   // 加载能力数据
   const loadAbilityData = async () => {
     if (!user?.userHash) return;
+    if (!studentInfo?.year) return;
     
     setLoadingAbility(true);
     try {
-      const data = await getStudentAbilityData(user.userHash);
+      const data = await getStudentAbilityData(user.userHash, studentInfo?.year);
       setAbilityData(data);
     } catch (error) {
       console.error('Failed to load ability data:', error);
@@ -239,9 +240,19 @@ export default function Analysis() {
       const result = await response.json();
       console.log('API result:', result);
       
-      if (result.success && result.data && result.data.length > 0) {
-        setGraduationRequirementsData(result.data);
-        console.log('Successfully loaded graduation requirements:', result.data.length, 'categories');
+      if (result.success && result.data && result.data.graduation_requirements && result.data.graduation_requirements.length > 0) {
+        setGraduationRequirementsData(result.data.graduation_requirements);
+        console.log('Successfully loaded graduation requirements:', result.data.graduation_requirements.length, 'categories');
+        
+        // 🔧 NEW: Log unmapped courses and graduation summary
+        if (result.data.unmapped_courses && result.data.unmapped_courses.length > 0) {
+          console.log('⚠️ Unmapped courses requiring review:', result.data.unmapped_courses.length, 'courses');
+          console.log('Unmapped courses:', result.data.unmapped_courses.map(c => c.Course_Name));
+        }
+        
+        if (result.data.summary) {
+          console.log('📊 Graduation Summary:', result.data.summary);
+        }
       } else {
         // 如果没有数据，使用示例数据
         console.log('No graduation requirements data found, using sample data');
@@ -569,8 +580,10 @@ export default function Analysis() {
           // 步骤3：计算 Z-score
           let zScores = [];
           for (const [key, value] of Object.entries(englishFeatureValues)) {
-            const score = value === 0 ? 60 : value; // 对于值为 0 的类别，临时使用 60 计算 Z-score
-            const [mean, std] = strengthStats[key];
+            const score = value === 0 ? 60 : (value as number); // 对于值为 0 的类别，临时使用 60 计算 Z-score
+            const stats = strengthStats[key as keyof typeof strengthStats];
+            if (!stats) continue;
+            const [mean, std] = stats;
             const zScore = (score - mean) / std;
             zScores.push(zScore);
           }
@@ -659,7 +672,11 @@ export default function Analysis() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ studentHash: user.userHash, major: studentInfo?.major }),
+        body: JSON.stringify({ 
+          studentHash: user.userHash, 
+          major: studentInfo?.major,
+          studentNumber: typeof (user as any)?.studentNumber === 'string' ? (user as any).studentNumber : (user?.userId || '')
+        }),
       });
       
       if (response.ok) {
@@ -733,7 +750,8 @@ export default function Analysis() {
         },
         body: JSON.stringify({ 
           studentHash: user.userHash,
-          major: studentInfo?.major
+          major: studentInfo?.major,
+          studentNumber: typeof (user as any)?.studentNumber === 'string' ? (user as any).studentNumber : (user?.userId || '')
         }),
       });
       
@@ -966,10 +984,10 @@ export default function Analysis() {
   useEffect(() => {
     if (authLoading) return;
     
-    if (user?.userHash) {
+    if (user?.userHash && studentInfo?.year) {
       loadAbilityData();
     }
-  }, [user?.userHash, authLoading]);
+  }, [user?.userHash, studentInfo?.year, authLoading]);
 
   // 加载目标分数（等待专业加载）
   useEffect(() => {
@@ -1409,256 +1427,22 @@ export default function Analysis() {
             </>
           )}
 
-          {/* 毕业要求检查界面 - 当选择毕业按钮时显示 */}
+          {/* 课程类别学分要求 - 当选择毕业按钮时显示 */}
           {selectedButton === 'graduation' && (
             <div className="mb-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div>
-                    <CardTitle>{t('analysis.graduation.title')}</CardTitle>
-                    <CardDescription>{t('analysis.graduation.description')}</CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditing(!isEditing)}
-                    disabled={submitting}
-                    className="h-8 px-3 text-sm"
-                  >
-                    {isEditing ? t('analysis.edit.cancel') : t('analysis.edit.start')}
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {/* 学分要求 - 仅显示未完成的 */}
-                    {!graduationRequirements.credits.completed && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">学分要求</h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                              待完成
-                            </span>
-                            {isEditing && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleGraduationEdit('credits')}
-                                disabled={submitting}
-                                className="h-7 px-2 text-xs"
-                              >
-                                标记完成
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          需要 {graduationRequirements.credits.required} 学分，已获得 {graduationRequirements.credits.earned} 学分
-                        </p>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, (graduationRequirements.credits.earned / graduationRequirements.credits.required) * 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* GPA要求 - 仅显示未完成的 */}
-                    {!graduationRequirements.gpa.completed && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">GPA要求</h3>
-                          <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                            待完成
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          需要 GPA {graduationRequirements.gpa.required}，当前 GPA {graduationRequirements.gpa.current}
-                        </p>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, (graduationRequirements.gpa.current / graduationRequirements.gpa.required) * 100)}%` }}
-                            ></div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 毕业论文 - 仅显示未完成的 */}
-                    {!graduationRequirements.thesis.completed && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">毕业论文</h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                              待完成
-                            </span>
-                            {isEditing && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleGraduationEdit('thesis')}
-                                disabled={submitting}
-                                className="h-7 px-2 text-xs"
-                              >
-                                标记完成
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          需要完成毕业论文并通过答辩
-                        </p>
-                      </div>
-                    )}
-
-                    {/* 证书要求 - 仅显示未完成的 */}
-                    {!graduationRequirements.certificates.completed && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">证书要求</h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                              待完成
-                            </span>
-                            {isEditing && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleGraduationEdit('certificates')}
-                                disabled={submitting}
-                                className="h-7 px-2 text-xs"
-                              >
-                                标记完成
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          需要获得相关专业证书
-                        </p>
-                      </div>
-                    )}
-
-                    {/* 思政课程 - 仅显示未完成的 */}
-                    {!graduationRequirements.political.completed && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">思政课程</h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                              待完成
-                            </span>
-                            {isEditing && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleGraduationEdit('political')}
-                                disabled={submitting}
-                                className="h-7 px-2 text-xs"
-                              >
-                                标记完成
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          需要 {graduationRequirements.political.required} 学分，已获得 {graduationRequirements.political.earned} 学分
-                        </p>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, (graduationRequirements.political.earned / graduationRequirements.political.required) * 100)}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                    )}
-
-                    {/* 军训学分 - 仅显示未完成的 */}
-                    {!graduationRequirements.military.completed && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">军训学分</h3>
-                      <div className="flex items-center gap-2">
-                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                              待完成
-                            </span>
-                            {isEditing && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleGraduationEdit('military')}
-                                disabled={submitting}
-                                className="h-7 px-2 text-xs"
-                              >
-                                标记完成
-                              </Button>
-                            )}
-                      </div>
-                    </div>
-                        <p className="text-sm text-muted-foreground">
-                          需要 {graduationRequirements.military.required} 学分，已获得 {graduationRequirements.military.earned} 学分
-                        </p>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-red-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, (graduationRequirements.military.earned / graduationRequirements.military.required) * 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 创新创业学分 - 仅显示未完成的 */}
-                    {!graduationRequirements.innovation.completed && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">创新创业学分</h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                              待完成
-                            </span>
-                            {isEditing && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleGraduationEdit('innovation')}
-                                disabled={submitting}
-                                className="h-7 px-2 text-xs"
-                              >
-                                标记完成
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          需要 {graduationRequirements.innovation.required} 学分，已获得 {graduationRequirements.innovation.earned} 学分
-                        </p>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-teal-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, (graduationRequirements.innovation.earned / graduationRequirements.innovation.required) * 100)}%` }}
-                          ></div>
-                    </div>
-                    </div>
-                    )}
-
-                    {/* 毕业要求详细表格 */}
-                    {graduationRequirementsData.length > 0 ? (
-                      <GraduationRequirementsTable graduationRequirements={graduationRequirementsData} />
-                    ) : loadingGraduationRequirements ? (
-                      <div className="flex justify-center items-center py-8">
-                        <div className="text-muted-foreground">正在加载毕业要求数据...</div>
-                      </div>
-                    ) : selectedButton === 'graduation' ? (
-                      <div className="flex justify-center items-center py-8">
-                        <div className="text-muted-foreground">暂无毕业要求数据</div>
-                      </div>
-                    ) : null}
+              {/* 毕业要求详细表格 */}
+              {graduationRequirementsData.length > 0 ? (
+                <GraduationRequirementsTable graduationRequirements={graduationRequirementsData} />
+              ) : loadingGraduationRequirements ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-muted-foreground">正在加载毕业要求数据...</div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              ) : selectedButton === 'graduation' ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-muted-foreground">暂无毕业要求数据</div>
+                </div>
+              ) : null}
+            </div>
           )}
 
           {/* 海外读研分析界面 - 仿照模板设计 */}

@@ -24,6 +24,7 @@ const ADMIN_PROTECTED_PATHS = [
 const PRIVACY_EXEMPT_PATHS = [
   '/privacy-agreement',
   '/login',
+  '/admin-login',
   '/',
   '/api/auth',
   '/api/mock',
@@ -36,6 +37,7 @@ const PUBLIC_PATHS = [
   '/api/auth',
   '/api/mock',
   '/login',
+  '/admin-login',
   '/auth-status',
   // 可以根据需要添加更多公开路由
 ];
@@ -121,11 +123,11 @@ export async function middleware(request: NextRequest) {
     console.log('🔍 Middleware: admin permission result:', hasAdminPermission);
     
     if (!hasAdminPermission) {
-      console.log('🚫 Middleware: user does not have admin permission, redirecting to login');
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('error', 'admin_required');
-      loginUrl.searchParams.set('message', '该页面需要管理员权限，请以管理员身份登录');
-      return NextResponse.redirect(loginUrl);
+      console.log('🚫 Middleware: user does not have admin permission, redirecting to admin login');
+      const adminLoginUrl = new URL('/admin-login', request.url);
+      adminLoginUrl.searchParams.set('error', 'admin_required');
+      adminLoginUrl.searchParams.set('message', '该页面需要管理员权限，请以管理员身份登录');
+      return NextResponse.redirect(adminLoginUrl);
     }
     
     console.log('✅ Middleware: admin permission verified, allowing access to admin path');

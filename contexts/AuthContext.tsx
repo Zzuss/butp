@@ -40,6 +40,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // 获取用户信息
   const fetchUser = async (): Promise<User | null> => {
     try {
+      // 🔧 如果在管理员页面路径下，不获取普通用户信息
+      const isAdminPath = pathname.startsWith('/admin');
+      
+      if (isAdminPath) {
+        console.log('🛡️ 检测到管理员页面路径，跳过普通用户信息获取 - 路径:', pathname);
+        return null; // 管理员页面不需要普通用户信息
+      }
+      
       const response = await fetch('/api/auth/user', {
         method: 'GET',
         credentials: 'include',
@@ -92,6 +100,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const resetInactivityTimer = () => {
       if (inactivityTimer) {
         clearTimeout(inactivityTimer);
+      }
+      
+      // 🔧 检查是否在管理员页面路径下
+      const isAdminPath = pathname.startsWith('/admin');
+      
+      if (isAdminPath) {
+        console.log('🛡️ 检测到管理员页面路径，跳过30分钟超时机制 - 路径:', pathname);
+        return; // 管理员页面不设置30分钟超时
       }
       
       console.log('重置30分钟无访问计时器 - 路径:', pathname);

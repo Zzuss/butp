@@ -101,6 +101,19 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
+    // 验证结束时间必须在开始时间之后（如果都提供了值）
+    if (body.end_date && body.start_date) {
+      const startDateTime = new Date(body.start_date)
+      const endDateTime = new Date(body.end_date)
+      
+      if (endDateTime <= startDateTime) {
+        return NextResponse.json(
+          { error: '结束时间必须在开始时间之后' },
+          { status: 400 }
+        )
+      }
+    }
+
     const updateData: any = {
       updated_at: new Date().toISOString()
     }

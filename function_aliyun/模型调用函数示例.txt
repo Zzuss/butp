@@ -1,0 +1,21 @@
+def load_artifacts(model_dir: str):
+    print(f"正在加载模型文件，目录: {model_dir}")
+    req = ['feature_columns.json', 'model_params.json', 'scaler.pkl', 'catboost_model.cbm']
+    for f in req:
+        p=os.path.join(model_dir, f)
+        if not os.path.exists(p):
+            raise FileNotFoundError(f"模型文件不存在: {p}")
+        print(f"找到文件: {f}")
+    with open(os.path.join(model_dir, 'feature_columns.json'),'r',encoding='utf-8') as f:
+        feature_cols = json.load(f)
+        print(f"特征列加载完成，共 {len(feature_cols)} 个特征")
+    with open(os.path.join(model_dir, 'model_params.json'),'r',encoding='utf-8') as f:
+        model_params = json.load(f)
+        print(f"模型参数加载完成")
+    with open(os.path.join(model_dir, 'scaler.pkl'), 'rb') as f:
+        scaler = pickle.load(f)
+        print(f"标准化器加载完成")
+    model = CatBoostClassifier()
+    model.load_model(os.path.join(model_dir, 'catboost_model.cbm'))
+    print(f"CatBoost模型加载完成")
+    return model, scaler, feature_cols, model_params

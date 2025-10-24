@@ -12,7 +12,7 @@ function createSupabaseClient() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentHash, major } = await request.json()
+    const { studentHash, major, studentNumber } = await request.json()
 
     if (!studentHash) {
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 })
@@ -26,19 +26,34 @@ export async function POST(request: NextRequest) {
 
     const supabase = createSupabaseClient()
 
-    // 专业到表名映射（与 original 一致）
-    const majorToTable: Record<string, string> = {
-      '智能科学与技术': 'Cohort2023_Predictions_ai',
-      '电子信息工程': 'Cohort2023_Predictions_ee',
-      '电信工程及管理': 'Cohort2023_Predictions_tewm',
-      '物联网工程': 'Cohort2023_Predictions_iot'
+    // 专业到后缀映射
+    const majorToSuffix: Record<string, string> = {
+      '智能科学与技术': 'ai',
+      '电子信息工程': 'ee',
+      '电信工程及管理': 'tewm',
+      '物联网工程': 'iot'
     };
 
-    if (!major || !(major in majorToTable)) {
+    if (!major || !(major in majorToSuffix)) {
       return NextResponse.json({ error: 'Invalid or unsupported major' }, { status: 400 })
     }
 
-    const tableName = majorToTable[major];
+    // 从学号中提取年份（前四位），构造动态表名 Cohort{YYYY}_Predictions_{suffix}
+    let cohortYear: number | null = null;
+    if (typeof studentNumber === 'string' && studentNumber.trim().length >= 4) {
+      const yearCandidate = parseInt(studentNumber.trim().slice(0, 4), 10)
+      if (!Number.isNaN(yearCandidate) && yearCandidate >= 2000 && yearCandidate <= 2100) {
+        cohortYear = yearCandidate
+      }
+    }
+
+    // 回退：如果学号不可用或无法解析年份，默认使用 2023
+    if (!cohortYear) {
+      cohortYear = 2023
+    }
+
+    const suffix = majorToSuffix[major]
+    const tableName = `Cohort${cohortYear}_Predictions_${suffix}`
 
     // 按专业对应表查询目标分数
     const { data, error } = await supabase

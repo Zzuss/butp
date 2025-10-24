@@ -273,13 +273,10 @@ export async function POST(request: NextRequest) {
       "志愿服务": "3512152201"
     };
 
-    // 处理来源1数据（使用前端传递的修改数据，硬编码映射表获取课号）
+    // 处理来源1数据（使用前端传递的修改数据）
     const source1Courses: any[] = [];
     if (modifiedScores && Array.isArray(modifiedScores) && modifiedScores.length > 0) {
       modifiedScores.forEach((course: any) => {
-        // 使用硬编码映射表获取课号
-        const courseId = courseNameToIdMapping[course.courseName] || null;
-        
         // 当前成绩就是修改后的成绩
         const currentScore = typeof course.score === 'string' ? parseFloat(course.score) : course.score;
         
@@ -290,7 +287,6 @@ export async function POST(request: NextRequest) {
         source1Courses.push({
           source: '专业预测表',
           courseName: course.courseName,
-          courseId: courseId, // 使用硬编码映射表的课号
           score: currentScore,
           semester: course.semester || null,
           category: mappedCategory, // 使用映射后的category

@@ -41,16 +41,23 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // 跳过标题行
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
-          if (values.length >= 2 && values[0] && values[1]) {
-            parsedData.push({
-              student_number: values[0],
-              student_hash: values[1]
-            })
-          }
-        }
+               // 跳过标题行
+               for (let i = 1; i < lines.length; i++) {
+                 const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
+                 
+                 // 更严格的数据验证
+                 const validStudentNumber = values[0] && String(values[0]).trim() !== ''
+                 const validStudentHash = values[1] && String(values[1]).trim() !== ''
+                 
+                 if (values.length >= 2 && validStudentNumber && validStudentHash) {
+                   parsedData.push({
+                     student_number: values[0],
+                     student_hash: values[1]
+                   })
+                 } else {
+                   console.log(`CSV跳过第${i + 1}行: 学号="${values[0]}", 哈希值="${values[1]}"`)
+                 }
+               }
       } else {
         // 处理Excel文件
         const workbook = XLSX.read(buffer, { type: 'array' })
@@ -64,18 +71,24 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // 查找SN和SNH列的索引
+        // 查找学号和哈希值列的索引，支持多种列名格式
         const headerRow = jsonData[0]
-        const snIndex = headerRow.findIndex((header: any) => 
-          String(header).toUpperCase() === 'SN'
-        )
-        const snhIndex = headerRow.findIndex((header: any) => 
-          String(header).toUpperCase() === 'SNH'
-        )
+        
+        // 支持的学号列名：SN, student_number
+        const snIndex = headerRow.findIndex((header: any) => {
+          const headerStr = String(header).toUpperCase().trim()
+          return headerStr === 'SN' || headerStr === 'STUDENT_NUMBER'
+        })
+        
+        // 支持的哈希值列名：SNH, student_hash
+        const snhIndex = headerRow.findIndex((header: any) => {
+          const headerStr = String(header).toUpperCase().trim()
+          return headerStr === 'SNH' || headerStr === 'STUDENT_HASH'
+        })
 
         if (snIndex === -1 || snhIndex === -1) {
           return NextResponse.json(
-            { error: '文件必须包含SN（学号）和SNH（哈希值）列' },
+            { error: '文件必须包含学号列（SN 或 student_number）和哈希值列（SNH 或 student_hash）' },
             { status: 400 }
           )
         }
@@ -86,11 +99,18 @@ export async function POST(request: NextRequest) {
           const studentNumber = row[snIndex]
           const studentHash = row[snhIndex]
 
-          if (studentNumber && studentHash) {
+          // 更严格的数据验证：检查是否存在且不为空字符串
+          const validStudentNumber = studentNumber !== null && studentNumber !== undefined && String(studentNumber).trim() !== ''
+          const validStudentHash = studentHash !== null && studentHash !== undefined && String(studentHash).trim() !== ''
+
+          if (validStudentNumber && validStudentHash) {
             parsedData.push({
               student_number: String(studentNumber).trim(),
               student_hash: String(studentHash).trim()
             })
+          } else {
+            // 记录跳过的行以便调试
+            console.log(`跳过第${i + 1}行: 学号="${studentNumber}", 哈希值="${studentHash}"`)
           }
         }
       }
@@ -111,39 +131,89 @@ export async function POST(request: NextRequest) {
 
     console.log(`解析到 ${parsedData.length} 条记录`)
 
-    // 批量插入或更新数据库
-    let processedCount = 0
-    
-    for (const record of parsedData) {
-      try {
-        const { error } = await supabaseSecondary
-          .from('student_number_hash_mapping')
-          .upsert({
-            student_number: record.student_number,
-            student_hash: record.student_hash
-          }, {
-            onConflict: 'student_number'
-          })
+           // 批量插入或更新数据库
+           let processedCount = 0
 
-        if (error) {
-          errors.push(`学号 ${record.student_number}: ${error.message}`)
-        } else {
-          processedCount++
-        }
-      } catch (dbError) {
-        errors.push(`学号 ${record.student_number}: 数据库错误`)
-        console.error('Database error for record:', record, dbError)
-      }
-    }
+           for (const record of parsedData) {
+             try {
+               // 先检查记录是否已存在
+               const { data: existingRecord, error: selectError } = await supabaseSecondary
+                 .from('student_number_hash_mapping_rows')
+                 .select('student_number')
+                 .eq('student_number', record.student_number)
+                 .single()
 
-    console.log(`成功处理 ${processedCount} 条记录，错误 ${errors.length} 条`)
+               if (selectError && selectError.code !== 'PGRST116') {
+                 // PGRST116 是"未找到记录"的错误码，其他错误需要处理
+                 errors.push(`学号 ${record.student_number}: 查询错误 - ${selectError.message}`)
+                 continue
+               }
 
-    return NextResponse.json({
-      message: `文件上传成功！处理了 ${processedCount} 条记录`,
-      processed: processedCount,
-      total: parsedData.length,
-      errors: errors
-    })
+               let dbError = null
+
+               if (existingRecord) {
+                 // 记录存在，执行更新
+                 const { error } = await supabaseSecondary
+                   .from('student_number_hash_mapping_rows')
+                   .update({
+                     student_hash: record.student_hash
+                   })
+                   .eq('student_number', record.student_number)
+                 
+                 dbError = error
+               } else {
+                 // 记录不存在，执行插入
+                 const { error } = await supabaseSecondary
+                   .from('student_number_hash_mapping_rows')
+                   .insert({
+                     student_number: record.student_number,
+                     student_hash: record.student_hash
+                   })
+                 
+                 dbError = error
+               }
+
+               if (dbError) {
+                 errors.push(`学号 ${record.student_number}: ${dbError.message}`)
+               } else {
+                 processedCount++
+               }
+             } catch (dbError) {
+               errors.push(`学号 ${record.student_number}: 数据库错误`)
+               console.error('Database error for record:', record, dbError)
+             }
+           }
+
+           console.log(`成功处理 ${processedCount} 条记录，错误 ${errors.length} 条`)
+
+           // 计算总行数（包括跳过的行）
+           let totalFileRows = 0
+           if (file.name.endsWith('.csv')) {
+             const text = new TextDecoder().decode(buffer)
+             const lines = text.split('\n').filter(line => line.trim())
+             totalFileRows = Math.max(0, lines.length - 1) // 减去标题行
+           } else {
+             const workbook = XLSX.read(buffer, { type: 'array' })
+             const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][]
+             totalFileRows = Math.max(0, jsonData.length - 1) // 减去标题行
+           }
+
+           const skippedRows = totalFileRows - parsedData.length
+           let message = `文件上传成功！处理了 ${processedCount} 条记录`
+           
+           if (skippedRows > 0) {
+             message += `，跳过了 ${skippedRows} 行空白或无效数据`
+           }
+
+           return NextResponse.json({
+             message: message,
+             processed: processedCount,
+             total: parsedData.length,
+             fileRows: totalFileRows,
+             skipped: skippedRows,
+             errors: errors
+           })
 
   } catch (error) {
     console.error('Upload error:', error)

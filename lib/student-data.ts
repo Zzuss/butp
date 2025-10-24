@@ -61,10 +61,60 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
       'grade_records',
       'student_records'
     ];
+
+    // 检查是否为本地开发环境
+    const isLocalDev = process.env.NODE_ENV === 'development';
     
+    if (isLocalDev) {
+      console.log('本地开发模式：先查询主supabase，再查询supabaseSecondary');
+      
+      // 先查询主supabase数据库的所有表
+      console.log('开始查询主supabase数据库...');
+      for (const table of tables) {
+        try {
+          console.log(`Checking primary supabase table: ${table}`);
+          
+          // 尝试不同的字段名，因为不同表可能使用不同的字段名
+          const possibleFields = ['SNH', 'student_hash', 'hash', 'student_id', 'id'];
+          
+          for (const field of possibleFields) {
+            try {
+              const { data, error } = await supabase
+                .from(table)
+                .select(`"${field}"`)  // 使用双引号包围字段名以处理大小写敏感问题
+                .eq(`"${field}"`, hash)
+                .limit(1);
+              
+              if (error) {
+                // 如果字段不存在，会报错，这是正常的，继续尝试下一个字段
+                console.log(`Field ${field} not found in primary table ${table}, trying next field...`);
+                continue;
+              }
+              
+              if (data && data.length > 0) {
+                console.log(`Hash found in primary supabase table: ${table}, field: ${field}`);
+                return true;
+              }
+            } catch (fieldError) {
+              // 字段不存在或其他错误，继续尝试下一个字段
+              console.log(`Error checking field ${field} in primary table ${table}:`, fieldError);
+              continue;
+            }
+          }
+        } catch (tableError) {
+          console.error(`Error querying primary table ${table}:`, tableError);
+          continue; // 继续检查下一个表
+        }
+      }
+      
+      // 再查询supabaseSecondary数据库的所有表
+      console.log('主supabase未找到，开始查询supabaseSecondary数据库...');
+    }
+    
+    // 查询supabaseSecondary数据库（本地开发模式的第二步，或生产环境的唯一步骤）
     for (const table of tables) {
       try {
-        console.log(`Checking table: ${table}`);
+        console.log(`Checking ${isLocalDev ? 'secondary' : ''} supabase table: ${table}`);
         
         // 尝试不同的字段名，因为不同表可能使用不同的字段名
         const possibleFields = ['SNH', 'student_hash', 'hash', 'student_id', 'id'];
@@ -79,22 +129,22 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
             
             if (error) {
               // 如果字段不存在，会报错，这是正常的，继续尝试下一个字段
-              console.log(`Field ${field} not found in table ${table}, trying next field...`);
+              console.log(`Field ${field} not found in ${isLocalDev ? 'secondary' : ''} table ${table}, trying next field...`);
               continue;
             }
             
             if (data && data.length > 0) {
-              console.log(`Hash found in table: ${table}, field: ${field}`);
+              console.log(`Hash found in ${isLocalDev ? 'secondary' : ''} supabase table: ${table}, field: ${field}`);
               return true;
             }
           } catch (fieldError) {
             // 字段不存在或其他错误，继续尝试下一个字段
-            console.log(`Error checking field ${field} in table ${table}:`, fieldError);
+            console.log(`Error checking field ${field} in ${isLocalDev ? 'secondary' : ''} table ${table}:`, fieldError);
             continue;
           }
         }
       } catch (tableError) {
-        console.error(`Error querying table ${table}:`, tableError);
+        console.error(`Error querying ${isLocalDev ? 'secondary' : ''} table ${table}:`, tableError);
         continue; // 继续检查下一个表
       }
     }

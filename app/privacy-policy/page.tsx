@@ -1,127 +1,132 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { AlertCircle, FileText, RefreshCw } from 'lucide-react'
+import { Alert, AlertDescription } from "@/components/ui/alert"
+// FileContent interface now defined locally
+interface FileContent {
+  title: string
+  content: string
+  lastUpdated: string
+  fileType: string
+}
+
 export default function PrivacyPolicyPage() {
+  const [privacyContent, setPrivacyContent] = useState<FileContent | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // 加载隐私条款
+  const loadPrivacyContent = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      
+      // 从Supabase Storage读取隐私条款内容
+      const response = await fetch('/api/privacy-content', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
+        setPrivacyContent(data.data)
+      } else {
+        setError(data.error || '加载隐私条款失败')
+      }
+      
+    } catch (error) {
+      console.error('加载隐私条款失败:', error)
+      setError('加载隐私条款失败，请刷新页面重试')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 格式化时间
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('zh-CN')
+  }
+
+  // 组件加载时获取数据
+  useEffect(() => {
+    loadPrivacyContent()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="bg-white rounded-lg shadow-sm p-8">
+            <div className="text-center py-12">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600">正在加载隐私条款...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="bg-white rounded-lg shadow-sm p-8">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <div className="mt-4">
+              <button
+                onClick={loadPrivacyContent}
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                重新加载
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!privacyContent) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="bg-white rounded-lg shadow-sm p-8">
+            <div className="text-center py-12">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p className="text-gray-600">暂无隐私条款内容</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">隐私政策与用户数据使用条款</h1>
-      <p className="text-sm text-gray-600 mb-6">版本生效日期：2025年8月13日</p>
-
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold mb-2">概述</h2>
-          <p className="mb-2">欢迎使用"BuTP——大学生终身学习能力培养平台"（以下简称"本平台"）。请认真阅读本《隐私政策与用户数据使用条款》，确保您充分理解本协议中各条款。</p>
-          <p className="mb-2">本平台尊重并保护所有使用服务用户的个人隐私权。为了给您提供更准确、更有个性化的服务，本平台会按照本隐私权政策的规定使用和披露您的个人信息。</p>
-          <p>本平台会不时更新本隐私权政策。您在同意本平台服务使用协议之时，即视为您已经同意本隐私权政策全部内容。本隐私权政策属于本平台服务使用协议不可分割的一部分。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">一、适用范围</h2>
-          <p className="mb-1">（a）在您注册本平台帐号时，您根据本平台要求提供的个人注册信息；</p>
-          <p className="mb-1">（b）在您使用本平台网络服务，或访问本平台平台网页时，本平台自动接收并记录的您的浏览器和计算机上的信息，包括但不限于您的IP地址、网络环境、使用的语言、访问日期和时间等数据。</p>
-          <p className="mb-1">（c）本平台通过合法途径从合作方取得的用户个人数据。</p>
-          <p>（d）您在使用本平台服务过程中提交或生成的个人信息。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">二、信息收集与使用目的</h2>
-          <p className="mb-2">我们收集信息，主要用于：</p>
-          <p className="mb-1">（a）个性化服务提供：如计算排名、均分、生成用户画像、推荐建议等；</p>
-          <p className="mb-1">（b）平台安全和运营维护：限制访问网络环境、提升系统稳定性与体验；</p>
-          <p className="mb-1">（c）技术支持与数据分析：包含匿名统计、用户行为分析；</p>
-          <p className="mb-2">（d）客户服务与反馈管控；</p>
-          <p className="mb-2">未经您明确同意，我们不会将信息用于与以下用途：</p>
-          <p className="mb-1">（a）本平台不会向任何无关第三方提供、出售、出租、分享或交易您的个人信息，除非事先得到您的许可，或该第三方和本平台单独或共同为您提供服务，且在该服务结束后，其将被禁止访问包括其以前能够访问的所有这些资料。</p>
-          <p className="mb-1">（b）本平台亦不允许任何第三方以任何手段收集、编辑、出售或者无偿传播您的个人信息。任何本平台平台用户如从事上述活动，一经发现，本平台有权立即终止与该用户的服务协议。</p>
-          <p>（c）为服务用户的目的，本平台可能通过使用您的个人信息，向您提供您感兴趣的信息，包括但不限于向您发出产品和服务信息，或者与本平台合作伙伴共享信息以便他们向您发送有关其产品和服务的信息（后者需要您的事先同意）。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">三、第三方 SDK 与技术使用</h2>
-          <p className="mb-2">本平台部分功能由我们合作的第三方机构（以下称"SDK技术服务提供方"）以SDK插件的形式提供，SDK技术服务提供方会基于向您提供功能或服务之必须获取相应权限及信息。我们对接入的相关第三方SDK在以下目录中列明。您可以通过相关链接查看第三方的数据使用和保护规则。请注意，第三方SDK可能由于版本升级、策略调整等原因导致其个人信息处理类型发生变化，请以其公示的官方说明为准。我们对平台中集成的SDK均进行了安全监测，确保这些SDK仅使用了为实现其功能或服务的基本权限。当您点击同意本政策后，您同时授权并同意SDK技术服务提供方按照以下列表获取并处理您的权限及信息。</p>
-          <p className="mb-1"><strong>阿里云通义千问模型SDK</strong></p>
-          <p className="mb-1">使用目的：统计分析学业数据</p>
-          <p className="mb-2">官网链接：<a href="https://tongyi.aliyun.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://tongyi.aliyun.com</a></p>
-          <p className="mb-1"><strong>Supabase云储存SDK</strong></p>
-          <p className="mb-1">使用目的：储存用户数据</p>
-          <p className="mb-2">官网链接：<a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://supabase.com</a></p>
-          <p>所有 SDK 的接入与使用均经严格安全审核，确保对用户数据的访问控制仅限于功能必需，并符合隐私保护规范。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">四、信息保护</h2>
-          <p className="mb-2">（a）我们非常重视用户的隐私和个人信息保护，也会采取合理的措施保护用户的个人信息。除法律法规规定或本政策另有约定的情形外，未经用户许可我们不会向第三方公开、透露用户个人信息，并会对相关信息采用专业加密存储与传输方式，保障用户个人信息的安全。</p>
-          <p className="mb-1">1.我们将运用各种安全技术和程序建立完善的管理制度来保护您的个人信息，以免遭受未经授权的访问、使用或披露。</p>
-          <p className="mb-1">2.根据相关法律法规规定，以下情形中收集您的个人信息无需征得您的授权同意：</p>
-          <ul className="ml-4 mb-2">
-            <li>• 与我们履行法律法规规定的义务相关的；</li>
-            <li>• 与国家安全、国防安全有关的；</li>
-            <li>• 与公共安全、公共卫生、重大公共利益直接相关的；</li>
-            <li>• 与刑事侦查、起诉、审判和判决执行等直接相关的；</li>
-            <li>• 出于维护个人信息主体或其他个人的生命、财产等重大合法权益但又很难得到您本人同意的；</li>
-            <li>• 所涉及的个人信息是您自行向社会公众公开的；</li>
-            <li>• 从合法公开披露的信息中收集个人信息的，如合法的新闻报道、政府信息公开等渠道；</li>
-            <li>• 根据您的要求签订和履行合同所必须的；</li>
-            <li>• 用于维护所提供的产品或服务的安全稳定运行所必需的，例如发现、处置产品或服务的故障；</li>
-            <li>• 法律法规的其他情形。</li>
-          </ul>
-          <p className="mb-2">您理解并同意，在不透露单个用户隐私资料的前提下，我们有权对整个用户数据库进行技术分析，只有对进行分析、整理后达到匿名化后的用户数据方才进行商业上的利用。</p>
-          <p className="mb-1"><strong>（b）数据安全措施</strong></p>
-          <p className="mb-1">1.我们会采用符合业界标准的安全防护措施，包括建立合理的制度规范、安全技术来防止您的个人信息遭到未经授权的访问使用、修改，避免数据的损坏或丢失</p>
-          <p className="mb-1">2.我们会采取一切合理可行的措施，确保未收集无关的个人信息。我们只会在达成本政策所述目的所需的期限内保留您的个人信息，除非需要延长保留期或受到法律的允许。</p>
-          <p className="mb-1">3.互联网并非绝对安全的环境，而且电子邮件、即时通讯、及与其他用户的交流方式并未加密，我们强烈建议您不要通过此类方式发送个人信息。请使用复杂密码，协助我们保证您的账号安全。</p>
-          <p className="mb-1">4.互联网环境并非百分之百安全，我们将尽力确保或担保您发送给本平台的任何信息的安全性。</p>
-          <p>5.在不幸发生个人信息安全事件后，我们将按照法律法规的要求，及时向您告知：安全事件的基本情况和影响、我们已采取或将要采取的处置措施、您可自主防范和降低风险的建议、对您的补救措施等。我们将及时将事件相关情况以邮件、短信、电话、推送通知等方式告知您，难以逐一告知个人信息主体时，我们会采取合理、有效的方式发布公告。同时，我们还将按照监管部门要求，主动上报个人信息安全事件的处置情况。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">五、信息储存</h2>
-          <p className="mb-1">用户信息存储于安全加密数据库中，并托管于符合法律法规要求的数据中心。</p>
-          <p className="mb-1">（a）我们有义务按照服务合同的约定，对服务期限内用户在软件中的相关数据进行采集，并向约定的云服务器存储这些数据。</p>
-          <p>（b）云服务由其它第三方提供的情况下，客户有义务监督并保证第三方提供软件运行及应用所需的云服务资源及有效的维护。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">六、信息共享与披露</h2>
-          <p className="mb-1">我们不会出售、出租或无授权公开披露您的个人信息，除非符合以下情况：</p>
-          <p className="mb-1">（a）您明确授权同意；</p>
-          <p className="mb-1">（b）与合作方共同提供服务，但服务完成后对方需立即停止访问；</p>
-          <p className="mb-1">（c）符合法律要求或行政/司法机关要求；</p>
-          <p className="mb-2">（d）匿名或去标识处理用于研究或统计分析。</p>
-          <p>此外，未经您同意，第三方不得在平台外收集、编辑或传输您的信息，一旦发现，我们有权立即终止其使用权限。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">七、用户权利行使</h2>
-          <p className="mb-1">您在符合法律规定的前提下，享有以下权利：</p>
-          <p className="mb-1">• 访问与复制：查看平台保存的个人数据并获取副本；</p>
-          <p className="mb-1">• 更正：申请修改不准确或不完整信息；</p>
-          <p className="mb-1">• 删除或注销：申请删除您的数据或注销账户；</p>
-          <p className="mb-1">• 撤回同意：随时撤回部分处理授权，但可能影响使用体验；</p>
-          <p>• 投诉：向平台或监管机构提出请求。</p>
-          <p className="mt-2">我们将在合理时间内响应并处理您的请求。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">八、未成年人使用条款</h2>
-          <p className="mb-1">（a）若您未满18周岁（未成年人），应在监护人监护、指导下阅读本协议和使用本软件。</p>
-          <p>（b）未成年人用户在使用本软件时，应在监护人或老师的指导下，学习正确使用网络，提高安全意识，加强自我保护。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">九、不涉及的内容</h2>
-          <p>本平台不包含网络游戏、色情、美食、追星、交友、商业广告、动漫、游戏、购物、娱乐、积分商城、集体分数排名、恶意操控用户手机、窃取个人信息、恶意强制捆绑其他应用、匿名弹窗等内容。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">十、其他</h2>
-          <p className="mb-1">（a）我们郑重提醒用户注意本协议中免除本平台责任和限制用户权利的条款，请用户仔细阅读。</p>
-          <p className="mb-1">（b）凡利用本平台产生的后果责任，且确属于用户造成的，由用户承担责任。</p>
-          <p className="mb-1">（c）您与我们签署的本协议列明的条款并不能完整罗列并覆盖您与我们所有权利与义务，现有的约定也不能保证完全符合未来发展的需求。因此本平台享有本协议的最终解释权。</p>
-          <p>（d）我们享有不定期对本协议进行修订或补充的权利，更改后的协议条款一旦公布即代替原来的协议条款，您可在本软件的"隐私政策与用户数据使用条款"查阅最新版协议条款。</p>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-2">十一、联系方式</h2>
-          <p className="mb-1">如您对本政策有疑问、反馈或请求，欢迎通过以下方式联系我们：</p>
-          <p><strong>开发者邮箱：developer@butp.tech</strong></p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="bg-white rounded-lg shadow-sm p-8">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {privacyContent.title}
+            </h1>
+            <div className="text-sm text-gray-500">
+              <span>最后更新: {privacyContent.lastUpdated}</span>
+            </div>
+          </div>
+          
+          <div className="prose prose-lg max-w-none">
+            <div className="whitespace-pre-line text-gray-700 leading-relaxed">
+              {privacyContent.content}
+            </div>
+          </div>
         </div>
       </div>
     </div>

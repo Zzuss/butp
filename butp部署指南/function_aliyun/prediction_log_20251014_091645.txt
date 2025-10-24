@@ -1,0 +1,57 @@
+=== 开始2024级专业预测 ===
+日志文件: /opt/prediction-service/function/prediction_log_20251014_091645.txt
+年级: 2024
+成绩文件: test_scores_2024.xlsx
+注意: 使用原始培养方案文件 /opt/prediction-service/function/education-plan2024/2024级智能科学与技术培养方案.xlsx
+建议创建处理后的Course_Process_2024_ai.xlsx文件以获得更好的预测效果
+✅ 智能科学与技术: /opt/prediction-service/function/education-plan2024/2024级智能科学与技术培养方案.xlsx
+
+开始处理专业：智能科学与技术
+培养方案文件: /opt/prediction-service/function/education-plan2024/2024级智能科学与技术培养方案.xlsx
+输出文件: /opt/prediction-service/function/Cohort2024_Predictions_ai.xlsx
+
+=== predict_students 开始 ===
+scores_file=test_scores_2024.xlsx
+course_file=/opt/prediction-service/function/education-plan2024/2024级智能科学与技术培养方案.xlsx
+major_name=智能科学与技术
+out_path=/opt/prediction-service/function/Cohort2024_Predictions_ai.xlsx
+model_dir=/opt/prediction-service/function
+正在加载模型文件，目录: /opt/prediction-service/function
+找到文件: feature_columns.json
+找到文件: model_params.json
+找到文件: scaler.pkl
+找到文件: catboost_model.cbm
+特征列加载完成，共 10 个特征
+模型参数加载完成
+标准化器加载完成
+CatBoost模型加载完成
+课程文件形状: (120, 12)
+课程文件列名: ['category', 'course_id', 'course_name', 'credit', 'total_hours', 'theory_hours', 'practice_hours', 'semester', 'required', 'exam_type', 'remarks', 'major']
+必修课程数量: 79
+加载必修课程信息: 79 门课程
+课程类型分布: {'公共实践模块': 14, '思想政治理论': 10, '人文素养模块': 7, '国际交流': 7, '专业基础': 7, '数学与自然科学基础': 6, '学科基础': 6, 'nan': 3, '专业课-智能技术模块': 3, '基础实验模块': 3, '体育基础': 2, '专业课-智能认知模块': 2, 'AI+ICT素质课': 2, '国家安全': 2, '专业课-智能应用模块': 2, '国防教育': 1, '心理健康': 1, '智能认知模块': 1}
+成绩文件形状: (2, 13)
+成绩文件列名: ['SNH', 'Semester_Offered', 'Current_Major', 'Course_ID', 'Course_Name', 'Grade', 'Course_Type', 'Course_Attribute ', 'Hours', 'Credit', 'Offering_Unit', 'Exam_Type', 'Assessment_Method ']
+识别列: 学号=SNH, 课程名=Course_Name, 成绩=Grade, 专业=Current_Major
+成功处理 2 名学生的成绩数据
+智能科学与技术 专业将处理 2 名学生
+  进度: 1/2 名学生
+  进度: 2/2 名学生
+
+=== 全局一致性检查 ===
+所有学生的目标一分数都 >= 目标二分数，一致性检查通过！
+
+保存结果到: /opt/prediction-service/function/Cohort2024_Predictions_ai.xlsx
+智能科学与技术 专业处理完成
+完成专业 智能科学与技术: 2 名学生
+算法统计:
+  保研阈值=60占比: 0.0%
+  出国阈值=60占比: 0.0%
+  被去向1支配占比: 0.0%
+  多区间占比(保研): 0.0%
+  多区间占比(出国): 0.0%
+
+=== 生成汇总总表 ===
+读取 智能科学与技术: 2 条记录
+汇总总表已保存: /opt/prediction-service/function/Cohort2024_Predictions_All.xlsx
+总计 2 条预测记录

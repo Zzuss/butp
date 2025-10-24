@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # 预测API服务
+  prediction-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prediction-api
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # 持久化日志
+      - ./logs:/app/logs
+      # 如果需要动态更新模型文件，可以挂载模型目录
+      # - ./function/Model_Params:/app/function/Model_Params
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - prediction-network
+    # 仅在内网访问，不直接暴露端口
+    expose:
+      - "8000"
+
+  # Nginx反向代理
+  nginx:
+    image: nginx:1.24-alpine
+    container_name: prediction-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"  # 如果配置了SSL
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/logs:/var/log/nginx
+      # SSL证书目录（如果使用HTTPS）
+      # - ./nginx/ssl:/etc/nginx/ssl:ro
+      # 静态文件目录（如果有）
+      - ./static:/usr/share/nginx/html/static:ro
+    depends_on:
+      prediction-api:
+        condition: service_healthy
+    networks:
+      - prediction-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis缓存（可选，用于缓存预测结果）
+  redis:
+    image: redis:7-alpine
+    container_name: prediction-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - prediction-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  prediction-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  redis-data:
+    driver: local
