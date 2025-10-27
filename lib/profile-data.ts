@@ -452,3 +452,250 @@ export const OTHER_INFO_CATEGORIES = [
   '其他'
 ] as const;
 
+// 论文接口
+export interface Paper {
+  id?: string;
+  paper_title: string;
+  journal_name?: string;
+  journal_category?: string;
+  bupt_student_id?: string;
+  full_name?: string;
+  class?: string;
+  author_type?: string;
+  publish_date?: string;
+  note?: string;
+  colorIndex: number;
+}
+
+// 专利接口
+export interface Patent {
+  id?: string;
+  patent_name: string;
+  patent_number?: string;
+  patent_date?: string;
+  bupt_student_id?: string;
+  class?: string;
+  full_name?: string;
+  category_of_patent_owner?: string;
+  note?: string;
+  colorIndex: number;
+}
+
+// 论文 CRUD 操作
+export async function getUserPapers(userId: string): Promise<Paper[]> {
+  try {
+    const { data, error } = await supabase
+      .from('student_papers')
+      .select('*')
+      .eq('bupt_student_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching papers:', error);
+      return [];
+    }
+
+    return data?.map(paper => ({
+      id: paper.id,
+      paper_title: paper.paper_title,
+      journal_name: paper.journal_name,
+      journal_category: paper.journal_category,
+      bupt_student_id: paper.bupt_student_id,
+      full_name: paper.full_name,
+      class: paper.class,
+      author_type: paper.author_type,
+      publish_date: paper.publish_date,
+      note: paper.note,
+      colorIndex: Math.floor(Math.random() * 10) // 随机分配颜色索引
+    })) || [];
+  } catch (error) {
+    console.error('Error fetching papers:', error);
+    return [];
+  }
+}
+
+export async function savePaper(userId: string, userName: string, paper: Paper): Promise<boolean> {
+  try {
+    // 处理日期格式：如果是月份格式(YYYY-MM)，转换为完整日期格式(YYYY-MM-01)
+    let formattedDate = null;
+    if (paper.publish_date && paper.publish_date.trim() !== '') {
+      const dateValue = paper.publish_date.trim();
+      // 检查是否为月份格式 (YYYY-MM)
+      if (/^\d{4}-\d{2}$/.test(dateValue)) {
+        formattedDate = `${dateValue}-01`; // 添加第一天
+      } else {
+        formattedDate = dateValue;
+      }
+    }
+
+    const paperData = {
+      paper_title: paper.paper_title,
+      journal_name: paper.journal_name,
+      journal_category: paper.journal_category,
+      bupt_student_id: userId, // 自动填入用户的学号
+      full_name: userName, // 自动填入用户的真实姓名
+      class: paper.class,
+      author_type: paper.author_type,
+      publish_date: formattedDate,
+      note: paper.note
+    };
+
+    if (paper.id) {
+      // 更新现有记录
+      const { error } = await supabase
+        .from('student_papers')
+        .update(paperData)
+        .eq('id', paper.id)
+        .eq('bupt_student_id', userId);
+
+      if (error) {
+        console.error('Error updating paper:', error);
+        return false;
+      }
+    } else {
+      // 创建新记录
+      const { error } = await supabase
+        .from('student_papers')
+        .insert(paperData);
+
+      if (error) {
+        console.error('Error creating paper:', error);
+        return false;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error saving paper:', error);
+    return false;
+  }
+}
+
+export async function deletePaper(userId: string, paperId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('student_papers')
+      .delete()
+      .eq('id', paperId)
+      .eq('bupt_student_id', userId);
+
+    if (error) {
+      console.error('Error deleting paper:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting paper:', error);
+    return false;
+  }
+}
+
+// 专利 CRUD 操作
+export async function getUserPatents(userId: string): Promise<Patent[]> {
+  try {
+    const { data, error } = await supabase
+      .from('student_patents')
+      .select('*')
+      .eq('bupt_student_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching patents:', error);
+      return [];
+    }
+
+    return data?.map(patent => ({
+      id: patent.id,
+      patent_name: patent.patent_name,
+      patent_number: patent.patent_number,
+      patent_date: patent.patent_date,
+      bupt_student_id: patent.bupt_student_id,
+      class: patent.class,
+      full_name: patent.full_name,
+      category_of_patent_owner: patent.category_of_patent_owner,
+      note: patent.note,
+      colorIndex: Math.floor(Math.random() * 10) // 随机分配颜色索引
+    })) || [];
+  } catch (error) {
+    console.error('Error fetching patents:', error);
+    return [];
+  }
+}
+
+export async function savePatent(userId: string, userName: string, patent: Patent): Promise<boolean> {
+  try {
+    // 处理日期格式：如果是月份格式(YYYY-MM)，转换为完整日期格式(YYYY-MM-01)
+    let formattedPatentDate = null;
+    if (patent.patent_date && patent.patent_date.trim() !== '') {
+      const dateValue = patent.patent_date.trim();
+      // 检查是否为月份格式 (YYYY-MM)
+      if (/^\d{4}-\d{2}$/.test(dateValue)) {
+        formattedPatentDate = `${dateValue}-01`; // 添加第一天
+      } else {
+        formattedPatentDate = dateValue;
+      }
+    }
+
+    const patentData = {
+      patent_name: patent.patent_name,
+      patent_number: patent.patent_number,
+      patent_date: formattedPatentDate,
+      bupt_student_id: userId, // 自动填入用户的学号
+      class: patent.class,
+      full_name: userName, // 自动填入用户的真实姓名
+      category_of_patent_owner: patent.category_of_patent_owner,
+      note: patent.note
+    };
+
+    if (patent.id) {
+      // 更新现有记录
+      const { error } = await supabase
+        .from('student_patents')
+        .update(patentData)
+        .eq('id', patent.id)
+        .eq('bupt_student_id', userId);
+
+      if (error) {
+        console.error('Error updating patent:', error);
+        return false;
+      }
+    } else {
+      // 创建新记录
+      const { error } = await supabase
+        .from('student_patents')
+        .insert(patentData);
+
+      if (error) {
+        console.error('Error creating patent:', error);
+        return false;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error saving patent:', error);
+    return false;
+  }
+}
+
+export async function deletePatent(userId: string, patentId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('student_patents')
+      .delete()
+      .eq('id', patentId)
+      .eq('bupt_student_id', userId);
+
+    if (error) {
+      console.error('Error deleting patent:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting patent:', error);
+    return false;
+  }
+}
+

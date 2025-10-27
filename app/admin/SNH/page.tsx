@@ -26,6 +26,7 @@ export default function SNHAdminPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [downloadLoading, setDownloadLoading] = useState(false)
   const [lastUploadedFile, setLastUploadedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -300,6 +301,53 @@ export default function SNHAdminPage() {
     }
   }
 
+  // 下载映射表数据
+  const handleDownloadData = async () => {
+    setDownloadLoading(true)
+    
+    try {
+      const response = await fetch('/api/admin/snh/download', {
+        method: 'GET',
+      })
+
+      if (response.ok) {
+        // 获取文件名（从响应头中获取或使用默认名称）
+        const contentDisposition = response.headers.get('content-disposition')
+        let filename = `snh_mapping_${new Date().toISOString().split('T')[0]}.csv`
+        
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="([^"]*)"/)
+          if (filenameMatch) {
+            filename = filenameMatch[1]
+          }
+        }
+
+        // 创建并触发下载
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = filename
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        
+        // 提示用户下载成功
+        alert('数据表导出成功！')
+      } else {
+        const error = await response.json()
+        alert('下载失败: ' + (error.error || '未知错误'))
+      }
+    } catch (error) {
+      console.error('Download error:', error)
+      alert('下载失败，请检查网络连接后重试')
+    }
+    
+    setDownloadLoading(false)
+  }
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
@@ -322,10 +370,11 @@ export default function SNHAdminPage() {
           <CardDescription>
             支持上传Excel(.xlsx)或CSV文件，文件必须包含两列：学号列（SN 或 student_number）和哈希值列（SNH 或 student_hash）。
             如果使用数据库格式模板，created_at 列会被系统自动处理，无需手动填写。
+            您也可以导出当前数据库中的所有映射记录进行备份或查看。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Button
               variant="outline"
               onClick={handleDownloadTemplate}
@@ -341,6 +390,15 @@ export default function SNHAdminPage() {
             >
               <Download className="w-4 h-4" />
               下载数据库格式模板
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleDownloadData}
+              disabled={downloadLoading}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <Download className="w-4 h-4" />
+              {downloadLoading ? '导出中...' : '导出数据表'}
             </Button>
           </div>
           

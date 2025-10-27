@@ -2,24 +2,31 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Award, Briefcase, Languages, Info, Plus, Edit, Trash2, X, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Award, Briefcase, Languages, Info, Plus, Edit, Trash2, X, Loader2, CheckCircle, AlertCircle, FileText, Shield, Trophy } from "lucide-react"
 import { useState, FormEvent, useRef, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/contexts/AuthContext"
 import { getStudentInfo } from "@/lib/dashboard-data"
+import CompetitionForm from "@/components/competitions/CompetitionForm"
 import { 
   getUserLanguageScores, 
   getUserAwards, 
   getUserInternships,
   getUserOtherInfo,
+  getUserPapers,
+  getUserPatents,
   saveLanguageScore,
   saveAward,
   saveInternship,
   saveOtherInfo,
+  savePaper,
+  savePatent,
   deleteLanguageScore,
   deleteAward,
   deleteInternship,
   deleteOtherInfo,
+  deletePaper,
+  deletePatent,
   convertToToeflScore,
   convertToIeltsScore,
   convertToGreScore,
@@ -27,7 +34,9 @@ import {
   type Award as DbAward,
   type Internship as DbInternship,
   type LanguageScore,
-  type OtherInfo
+  type OtherInfo,
+  type Paper,
+  type Patent
 } from "@/lib/profile-data"
 
 
@@ -83,6 +92,51 @@ interface OtherInfoLocal {
   colorIndex: number;
 }
 
+// 定义论文接口
+interface PaperLocal {
+  id?: string;
+  paper_title: string;
+  journal_name?: string;
+  journal_category?: string;
+  bupt_student_id?: string;
+  full_name?: string;
+  class?: string;
+  author_type?: string;
+  publish_date?: string;
+  note?: string;
+  colorIndex: number;
+}
+
+// 定义专利接口
+interface PatentLocal {
+  id?: string;
+  patent_name: string;
+  patent_number?: string;
+  patent_date?: string;
+  bupt_student_id?: string;
+  class?: string;
+  full_name?: string;
+  category_of_patent_owner?: string;
+  note?: string;
+  colorIndex: number;
+}
+
+// 定义竞赛记录接口
+interface CompetitionRecord {
+  id?: string;
+  competition_region: string;
+  competition_level: string;
+  competition_name: string;
+  bupt_student_id: string;
+  full_name: string;
+  class: string;
+  note: string;
+  score: number;
+  colorIndex: number;
+  award_type?: 'prize' | 'ranking';
+  award_value?: string;
+}
+
 export default function Profile() {
   const { t } = useLanguage()
   const { user, loading: authLoading } = useAuth()
@@ -97,16 +151,30 @@ export default function Profile() {
   const [showAwardForm, setShowAwardForm] = useState(false);
   const [showInternshipForm, setShowInternshipForm] = useState(false);
   const [showOtherInfoForm, setShowOtherInfoForm] = useState(false);
+  const [showPaperForm, setShowPaperForm] = useState(false);
+  const [showPatentForm, setShowPatentForm] = useState(false);
+  const [showCompetitionForm, setShowCompetitionForm] = useState(false);
   const [editingAward, setEditingAward] = useState<Award | null>(null);
   const [editingInternship, setEditingInternship] = useState<Internship | null>(null);
   const [editingOtherInfo, setEditingOtherInfo] = useState<OtherInfoLocal | null>(null);
+  const [editingPaper, setEditingPaper] = useState<PaperLocal | null>(null);
+  const [editingPatent, setEditingPatent] = useState<PatentLocal | null>(null);
+  const [editingCompetition, setEditingCompetition] = useState<CompetitionRecord | null>(null);
   
   // 删除确认窗口状态
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteItemType, setDeleteItemType] = useState<"award" | "internship" | "score" | "other" | null>(null);
+  const [deleteItemType, setDeleteItemType] = useState<"award" | "internship" | "score" | "other" | "paper" | "patent" | "competition" | null>(null);
   const [deleteItemIndex, setDeleteItemIndex] = useState<number | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [deleteScoreType, setDeleteScoreType] = useState<string | null>(null);
+
+  // 表单错误状态
+  const [paperErrors, setPaperErrors] = useState<{[key: string]: string}>({});
+  const [patentErrors, setPatentErrors] = useState<{[key: string]: string}>({});
+  
+  // 自定义输入状态
+  const [paperAuthorTypeCustom, setPaperAuthorTypeCustom] = useState(false);
+  const [patentOwnerCategoryCustom, setPatentOwnerCategoryCustom] = useState(false);
   
   // 颜色数组，用于生成随机颜色
   const colorPairs = [
@@ -191,11 +259,39 @@ export default function Profile() {
   // 其他信息状态
   const [otherInfoList, setOtherInfoList] = useState<OtherInfoLocal[]>([]);
   
+  // 论文和专利状态
+  const [papers, setPapers] = useState<PaperLocal[]>([]);
+  const [patents, setPatents] = useState<PatentLocal[]>([]);
+  
+  // 竞赛记录状态
+  const [competitionRecords, setCompetitionRecords] = useState<CompetitionRecord[]>([]);
+  
   // 表单引用
   const formRef = useRef<HTMLFormElement>(null);
   const awardFormRef = useRef<HTMLFormElement>(null);
   const internshipFormRef = useRef<HTMLFormElement>(null);
   const otherInfoFormRef = useRef<HTMLFormElement>(null);
+  const paperFormRef = useRef<HTMLFormElement>(null);
+  const patentFormRef = useRef<HTMLFormElement>(null);
+  
+  // 获取竞赛记录的函数
+  const getUserCompetitionRecords = async (userId: string): Promise<CompetitionRecord[]> => {
+    try {
+      const response = await fetch(`/api/competition-records?userId=${userId}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        return result.data.map((record: any, index: number) => ({
+          ...record,
+          colorIndex: getRandomColorIndex(competitionRecords.map(r => r.colorIndex))
+        }))
+      }
+      return []
+    } catch (error) {
+      console.error('获取竞赛记录失败:', error)
+      return []
+    }
+  }
 
   // 加载学生信息和用户个人资料数据
   useEffect(() => {
@@ -212,12 +308,15 @@ export default function Profile() {
       setIsLoading(true);
       try {
         // 并行加载所有数据
-        const [info, languageScores, userAwards, userInternships, userOtherInfo] = await Promise.all([
+        const [info, languageScores, userAwards, userInternships, userOtherInfo, userPapers, userPatents, userCompetitionRecords] = await Promise.all([
           getStudentInfo(user.userHash),
           getUserLanguageScores(user.userHash),
           getUserAwards(user.userHash),
           getUserInternships(user.userHash),
-          getUserOtherInfo(user.userHash)
+          getUserOtherInfo(user.userHash),
+          getUserPapers(user.userId),
+          getUserPatents(user.userId),
+          getUserCompetitionRecords(user.userId)
         ]);
         
         setStudentInfo(info);
@@ -233,10 +332,13 @@ export default function Profile() {
           }
         });
         
-        // 更新获奖记录、实习经历和其他信息
+        // 更新获奖记录、实习经历、其他信息、论文、专利和竞赛记录
         setAwards(userAwards);
         setInternships(userInternships);
         setOtherInfoList(userOtherInfo);
+        setPapers(userPapers as PaperLocal[]);
+        setPatents(userPatents as PatentLocal[]);
+        setCompetitionRecords(userCompetitionRecords || []);
         
       } catch (error) {
         console.error('Error loading data:', error);
@@ -459,6 +561,284 @@ export default function Profile() {
     setEditingOtherInfo(null);
   };
   
+  // 添加论文处理函数
+  const handleAddPaper = () => {
+    setEditingPaper(null);
+    setPaperErrors({});
+    setPaperAuthorTypeCustom(false);
+    setShowPaperForm(true);
+  };
+  
+  const handleEditPaper = (paper: PaperLocal) => {
+    setEditingPaper(paper);
+    setPaperErrors({});
+    // 检查是否需要显示自定义输入框
+    const predefinedAuthorTypes = ["第一作者", "通讯作者", "独立第一作者", "独立作者"];
+    if (paper.author_type && !predefinedAuthorTypes.includes(paper.author_type)) {
+      setPaperAuthorTypeCustom(true);
+    } else {
+      setPaperAuthorTypeCustom(false);
+    }
+    setShowPaperForm(true);
+  };
+  
+  const handleCancelPaper = () => {
+    setShowPaperForm(false);
+    setEditingPaper(null);
+    setPaperAuthorTypeCustom(false);
+  };
+  
+  const handlePaperSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    if (!user?.userHash) return;
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    // 清除之前的错误
+    setPaperErrors({});
+    
+    // 验证表单
+    const errors = validatePaperForm(formData);
+    if (Object.keys(errors).length > 0) {
+      setPaperErrors(errors);
+      return;
+    }
+    
+    setSaveStatus('saving');
+    
+    // 处理作者类型，如果选择了"其他"，使用自定义输入的值
+    const authorType = formData.get("author_type") as string;
+    const customAuthorType = formData.get("author_type_custom") as string;
+    const finalAuthorType = authorType === "其他" && customAuthorType ? customAuthorType : authorType;
+
+    const newPaper: PaperLocal = {
+      id: editingPaper?.id,
+      paper_title: formData.get("paper_title") as string,
+      journal_name: formData.get("journal_name") as string,
+      journal_category: formData.get("journal_category") as string,
+      class: formData.get("class") as string,
+      author_type: finalAuthorType,
+      publish_date: formData.get("publish_date") as string,
+      note: formData.get("note") as string,
+      colorIndex: editingPaper ? editingPaper.colorIndex : getRandomColorIndex(papers.map(item => item.colorIndex))
+    };
+    
+    try {
+      const success = await savePaper(user.userId, user.name, newPaper);
+      
+      if (success) {
+        if (editingPaper) {
+          // 更新现有论文
+          setPapers(papers.map(paper => 
+            paper.id === editingPaper.id ? newPaper : paper
+          ));
+        } else {
+          // 重新加载论文记录以获取新的ID
+          const updatedPapers = await getUserPapers(user.userId);
+          setPapers(updatedPapers as PaperLocal[]);
+        }
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving paper:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+    
+    setShowPaperForm(false);
+    setEditingPaper(null);
+    setPaperAuthorTypeCustom(false);
+  };
+  
+  // 添加专利处理函数
+  const handleAddPatent = () => {
+    setEditingPatent(null);
+    setPatentErrors({});
+    setPatentOwnerCategoryCustom(false);
+    setShowPatentForm(true);
+  };
+  
+  const handleEditPatent = (patent: PatentLocal) => {
+    setEditingPatent(patent);
+    setPatentErrors({});
+    // 检查是否需要显示自定义输入框
+    const predefinedPatentOwnerCategories = ["独立发明人", "第一发明人（多人）"];
+    if (patent.category_of_patent_owner && !predefinedPatentOwnerCategories.includes(patent.category_of_patent_owner)) {
+      setPatentOwnerCategoryCustom(true);
+    } else {
+      setPatentOwnerCategoryCustom(false);
+    }
+    setShowPatentForm(true);
+  };
+  
+  const handleCancelPatent = () => {
+    setShowPatentForm(false);
+    setEditingPatent(null);
+    setPatentOwnerCategoryCustom(false);
+  };
+  
+  const handlePatentSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    if (!user?.userHash) return;
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    // 清除之前的错误
+    setPatentErrors({});
+    
+    // 验证表单
+    const errors = validatePatentForm(formData);
+    if (Object.keys(errors).length > 0) {
+      setPatentErrors(errors);
+      return;
+    }
+    
+    setSaveStatus('saving');
+    
+    // 处理专利权人类别，如果选择了"其他"，使用自定义输入的值
+    const patentOwnerCategory = formData.get("category_of_patent_owner") as string;
+    const customPatentOwnerCategory = formData.get("category_of_patent_owner_custom") as string;
+    const finalPatentOwnerCategory = patentOwnerCategory === "其他" && customPatentOwnerCategory ? customPatentOwnerCategory : patentOwnerCategory;
+    
+    const newPatent: PatentLocal = {
+      id: editingPatent?.id,
+      patent_name: formData.get("patent_name") as string,
+      patent_number: formData.get("patent_number") as string,
+      patent_date: formData.get("patent_date") as string,
+      class: formData.get("class") as string,
+      category_of_patent_owner: finalPatentOwnerCategory,
+      note: formData.get("note") as string,
+      colorIndex: editingPatent ? editingPatent.colorIndex : getRandomColorIndex(patents.map(item => item.colorIndex))
+    };
+    
+    try {
+      const success = await savePatent(user.userId, user.name, newPatent);
+      
+      if (success) {
+        if (editingPatent) {
+          // 更新现有专利
+          setPatents(patents.map(patent => 
+            patent.id === editingPatent.id ? newPatent : patent
+          ));
+        } else {
+          // 重新加载专利记录以获取新的ID
+          const updatedPatents = await getUserPatents(user.userId);
+          setPatents(updatedPatents as PatentLocal[]);
+        }
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving patent:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+    
+    setShowPatentForm(false);
+    setEditingPatent(null);
+    setPatentOwnerCategoryCustom(false);
+  };
+  
+  // 添加竞赛处理函数
+  const handleAddCompetition = () => {
+    setEditingCompetition(null);
+    setShowCompetitionForm(true);
+  };
+  
+  const handleEditCompetition = (competition: CompetitionRecord) => {
+    setEditingCompetition(competition);
+    setShowCompetitionForm(true);
+  };
+  
+  const handleCancelCompetition = () => {
+    setShowCompetitionForm(false);
+    setEditingCompetition(null);
+  };
+  
+  const handleCompetitionSubmit = async (record: CompetitionRecord) => {
+    if (!user?.userId || !user?.name) return;
+    
+    setSaveStatus('saving');
+    
+    try {
+      const requestData = {
+        competition_region: record.competition_region,
+        competition_level: record.competition_level,
+        competition_name: record.competition_name,
+        bupt_student_id: user.userId,
+        full_name: user.name,
+        class: record.class,
+        award_type: (record as any).award_type,
+        award_value: (record as any).award_value,
+        note: record.note
+      };
+      
+      const response = await fetch('/api/competition-records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // 重新加载竞赛记录
+        const updatedRecords = await getUserCompetitionRecords(user.userId);
+        setCompetitionRecords(updatedRecords);
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving competition record:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+    
+    setShowCompetitionForm(false);
+    setEditingCompetition(null);
+  };
+  
+  // 表单验证函数
+  const validatePaperForm = (formData: FormData): {[key: string]: string} => {
+    const errors: {[key: string]: string} = {};
+    
+    const paperTitle = formData.get("paper_title") as string;
+    
+    if (!paperTitle || paperTitle.trim() === '') {
+      errors.paper_title = '论文标题不能为空';
+    }
+    
+    return errors;
+  };
+
+  const validatePatentForm = (formData: FormData): {[key: string]: string} => {
+    const errors: {[key: string]: string} = {};
+    
+    const patentName = formData.get("patent_name") as string;
+    
+    if (!patentName || patentName.trim() === '') {
+      errors.patent_name = '专利名称不能为空';
+    }
+    
+    return errors;
+  };
+
   // 获取随机颜色索引，确保不与已有颜色相邻
   const getRandomColorIndex = (existingIndices: number[]): number => {
     // 如果没有现有颜色，返回随机颜色
@@ -495,7 +875,7 @@ export default function Profile() {
   };
   
   // 处理删除确认
-  const handleDeleteConfirm = (type: "award" | "internship" | "other", index: number, id?: string) => {
+  const handleDeleteConfirm = (type: "award" | "internship" | "other" | "paper" | "patent" | "competition", index: number, id?: string) => {
     setDeleteItemType(type);
     setDeleteItemIndex(index);
     setDeleteItemId(id || null);
@@ -532,6 +912,25 @@ export default function Profile() {
         success = await deleteOtherInfo(user.userHash, deleteItemId);
         if (success) {
           setOtherInfoList(otherInfoList.filter(info => info.id !== deleteItemId));
+        }
+      } else if (deleteItemType === "paper" && deleteItemId) {
+        success = await deletePaper(user.userId, deleteItemId);
+        if (success) {
+          setPapers(papers.filter(paper => paper.id !== deleteItemId));
+        }
+      } else if (deleteItemType === "patent" && deleteItemId) {
+        success = await deletePatent(user.userId, deleteItemId);
+        if (success) {
+          setPatents(patents.filter(patent => patent.id !== deleteItemId));
+        }
+      } else if (deleteItemType === "competition" && deleteItemId) {
+        const response = await fetch(`/api/competition-records?id=${deleteItemId}&userId=${user.userId}`, {
+          method: 'DELETE'
+        });
+        const result = await response.json();
+        success = result.success;
+        if (success) {
+          setCompetitionRecords(competitionRecords.filter(record => record.id !== deleteItemId));
         }
       } else if (deleteItemType === "score" && deleteScoreType) {
         success = await deleteLanguageScore(user.userHash, deleteScoreType);
@@ -1149,6 +1548,262 @@ export default function Profile() {
         </div>
       )}
       
+      {/* 论文表单 */}
+      {showPaperForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{editingPaper ? "编辑论文" : "添加论文"}</h3>
+              <Button variant="ghost" size="icon" onClick={handleCancelPaper} className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <form ref={paperFormRef} onSubmit={handlePaperSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">论文标题 *</label>
+                  <input 
+                    name="paper_title"
+                    type="text" 
+                    required
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${paperErrors.paper_title ? 'border-red-500' : ''}`}
+                    defaultValue={editingPaper?.paper_title || ""}
+                    placeholder="请输入论文标题"
+                  />
+                  {paperErrors.paper_title && (
+                    <p className="text-red-500 text-sm mt-1">{paperErrors.paper_title}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">期刊名称</label>
+                  <input 
+                    name="journal_name"
+                    type="text" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPaper?.journal_name || ""}
+                    placeholder="请输入期刊名称"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">期刊级别</label>
+                  <select 
+                    name="journal_category"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPaper?.journal_category || ""}
+                  >
+                    <option value="">请选择期刊级别</option>
+                    <option value="SCI">SCI</option>
+                    <option value="EI">EI</option>
+                    <option value="CSCD">CSCD</option>
+                    <option value="核心期刊">核心期刊</option>
+                    <option value="普通期刊">普通期刊</option>
+                    <option value="会议论文">会议论文</option>
+                    <option value="其他">其他</option>
+                  </select>
+                </div>
+                
+                
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">班级</label>
+                  <input 
+                    name="class"
+                    type="text" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPaper?.class || ""}
+                    placeholder="请输入班级"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">作者类型</label>
+                  <select 
+                    name="author_type"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={(() => {
+                      const predefinedTypes = ["第一作者", "通讯作者", "独立第一作者", "独立作者"];
+                      const authorType = editingPaper?.author_type || "";
+                      return predefinedTypes.includes(authorType) ? authorType : (authorType ? "其他" : "");
+                    })()}
+                    onChange={(e) => {
+                      setPaperAuthorTypeCustom(e.target.value === "其他");
+                    }}
+                  >
+                    <option value="">请选择作者类型</option>
+                    <option value="第一作者">第一作者</option>
+                    <option value="通讯作者">通讯作者</option>
+                    <option value="独立第一作者">独立第一作者</option>
+                    <option value="独立作者">独立作者</option>
+                    <option value="其他">其他</option>
+                  </select>
+                  {paperAuthorTypeCustom && (
+                    <div className="mt-2">
+                      <input 
+                        name="author_type_custom"
+                        type="text" 
+                        placeholder="请输入自定义作者类型"
+                        defaultValue={(() => {
+                          const predefinedTypes = ["第一作者", "通讯作者", "独立第一作者", "独立作者"];
+                          const authorType = editingPaper?.author_type || "";
+                          return predefinedTypes.includes(authorType) ? "" : authorType;
+                        })()}
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">发表日期</label>
+                  <input 
+                    name="publish_date"
+                    type="month" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPaper?.publish_date || ""}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">备注</label>
+                  <textarea 
+                    name="note"
+                    rows={3}
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPaper?.note || ""}
+                    placeholder="请输入备注信息（可选）"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={handleCancelPaper}>取消</Button>
+                  <Button type="submit">保存</Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* 专利表单 */}
+      {showPatentForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{editingPatent ? "编辑专利" : "添加专利"}</h3>
+              <Button variant="ghost" size="icon" onClick={handleCancelPatent} className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <form ref={patentFormRef} onSubmit={handlePatentSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">专利名称 *</label>
+                  <input 
+                    name="patent_name"
+                    type="text" 
+                    required
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${patentErrors.patent_name ? 'border-red-500' : ''}`}
+                    defaultValue={editingPatent?.patent_name || ""}
+                    placeholder="请输入专利名称"
+                  />
+                  {patentErrors.patent_name && (
+                    <p className="text-red-500 text-sm mt-1">{patentErrors.patent_name}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">专利号</label>
+                  <input 
+                    name="patent_number"
+                    type="text" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPatent?.patent_number || ""}
+                    placeholder="请输入专利号"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">申请/授权日期</label>
+                  <input 
+                    name="patent_date"
+                    type="month" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPatent?.patent_date || ""}
+                  />
+                </div>
+                
+                
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">班级</label>
+                  <input 
+                    name="class"
+                    type="text" 
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPatent?.class || ""}
+                    placeholder="请输入班级"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">专利权人类别</label>
+                  <select 
+                    name="category_of_patent_owner"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={(() => {
+                      const predefinedCategories = ["独立发明人", "第一发明人（多人）"];
+                      const category = editingPatent?.category_of_patent_owner || "";
+                      return predefinedCategories.includes(category) ? category : (category ? "其他" : "");
+                    })()}
+                    onChange={(e) => {
+                      setPatentOwnerCategoryCustom(e.target.value === "其他");
+                    }}
+                  >
+                    <option value="">请选择专利权人类别</option>
+                    <option value="独立发明人">独立发明人</option>
+                    <option value="第一发明人（多人）">第一发明人（多人）</option>
+                    <option value="其他">其他</option>
+                  </select>
+                  {patentOwnerCategoryCustom && (
+                    <div className="mt-2">
+                      <input 
+                        name="category_of_patent_owner_custom"
+                        type="text" 
+                        placeholder="请输入自定义专利权人类别"
+                        defaultValue={(() => {
+                          const predefinedCategories = ["独立发明人", "第一发明人（多人）"];
+                          const category = editingPatent?.category_of_patent_owner || "";
+                          return predefinedCategories.includes(category) ? "" : category;
+                        })()}
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">备注</label>
+                  <textarea 
+                    name="note"
+                    rows={3}
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPatent?.note || ""}
+                    placeholder="请输入备注信息（可选）"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={handleCancelPatent}>取消</Button>
+                  <Button type="submit">保存</Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
       {/* 删除确认窗口 */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1162,6 +1817,9 @@ export default function Profile() {
                 {deleteItemType === "award" ? t('profile.common.confirm.delete.award') : 
                  deleteItemType === "internship" ? t('profile.common.confirm.delete.work') :
                  deleteItemType === "other" ? t('profile.common.confirm.delete.other') :
+                 deleteItemType === "paper" ? "您确定要删除这篇论文吗？" :
+                 deleteItemType === "patent" ? "您确定要删除这项专利吗？" :
+                 deleteItemType === "competition" ? "您确定要删除这条竞赛记录吗？" :
                  deleteItemType === "score" && deleteScoreType === "toefl" ? t('profile.common.confirm.delete.toefl') :
                  deleteItemType === "score" && deleteScoreType === "ielts" ? t('profile.common.confirm.delete.ielts') :
                  deleteItemType === "score" && deleteScoreType === "gre" ? t('profile.common.confirm.delete.gre') : 
@@ -1281,6 +1939,173 @@ export default function Profile() {
                       </div>
                       </div>
                       <p className="text-sm mt-2 pl-16">{internship.description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                论文发表
+              </div>
+              <Button size="sm" className="flex items-center gap-2" onClick={handleAddPaper}>
+                <Plus className="h-4 w-4" />
+                添加论文
+              </Button>
+            </CardTitle>
+            <CardDescription>您可以在这里管理您的论文发表记录</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {papers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  暂无论文记录，点击上方按钮添加
+                </div>
+              ) : (
+                <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 ${papers.length > 4 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
+                  {papers.map((paper, index) => (
+                    <div key={index} className="flex flex-col p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className="flex items-start gap-4 mb-2">
+                        <div className={`w-12 h-12 ${colorPairs[paper.colorIndex].bg} rounded-full flex items-center justify-center`}>
+                          <FileText className={`h-6 w-6 ${colorPairs[paper.colorIndex].text}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base">{paper.paper_title}</h4>
+                          {paper.journal_name && <p className="text-sm text-muted-foreground">{paper.journal_name}</p>}
+                          <div className="flex gap-2 text-xs text-muted-foreground mt-1">
+                            {paper.journal_category && <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded">{paper.journal_category}</span>}
+                            {paper.author_type && <span className="bg-green-100 text-green-600 px-2 py-1 rounded">{paper.author_type}</span>}
+                          </div>
+                          {paper.publish_date && <p className="text-xs text-muted-foreground mt-1">{paper.publish_date}</p>}
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditPaper(paper)}>
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("paper", index, paper.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {paper.note && <p className="text-sm mt-2 pl-16 text-muted-foreground">{paper.note}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                专利申请
+              </div>
+              <Button size="sm" className="flex items-center gap-2" onClick={handleAddPatent}>
+                <Plus className="h-4 w-4" />
+                添加专利
+              </Button>
+            </CardTitle>
+            <CardDescription>您可以在这里管理您的专利申请记录</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {patents.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  暂无专利记录，点击上方按钮添加
+                </div>
+              ) : (
+                <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 ${patents.length > 4 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
+                  {patents.map((patent, index) => (
+                    <div key={index} className="flex flex-col p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className="flex items-start gap-4 mb-2">
+                        <div className={`w-12 h-12 ${colorPairs[patent.colorIndex].bg} rounded-full flex items-center justify-center`}>
+                          <Shield className={`h-6 w-6 ${colorPairs[patent.colorIndex].text}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base">{patent.patent_name}</h4>
+                          {patent.patent_number && <p className="text-sm text-muted-foreground">专利号：{patent.patent_number}</p>}
+                          <div className="flex gap-2 text-xs text-muted-foreground mt-1">
+                            {patent.category_of_patent_owner && <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded">{patent.category_of_patent_owner}</span>}
+                          </div>
+                          {patent.patent_date && <p className="text-xs text-muted-foreground mt-1">{patent.patent_date}</p>}
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditPatent(patent)}>
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("patent", index, patent.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {patent.note && <p className="text-sm mt-2 pl-16 text-muted-foreground">{patent.note}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                竞赛获奖
+              </div>
+              <Button size="sm" className="flex items-center gap-2" onClick={handleAddCompetition}>
+                <Plus className="h-4 w-4" />
+                添加竞赛记录
+              </Button>
+            </CardTitle>
+            <CardDescription>您可以在这里管理您的竞赛获奖记录</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {competitionRecords.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  暂无竞赛记录，点击上方按钮添加
+                </div>
+              ) : (
+                <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 ${competitionRecords.length > 4 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
+                  {competitionRecords.map((record, index) => (
+                    <div key={index} className="flex flex-col p-4 border rounded-lg group hover:bg-gray-50">
+                      <div className="flex items-start gap-4 mb-2">
+                        <div className={`w-12 h-12 ${colorPairs[record.colorIndex].bg} rounded-full flex items-center justify-center`}>
+                          <Trophy className={`h-6 w-6 ${colorPairs[record.colorIndex].text}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-base">{record.competition_name}</h4>
+                          <p className="text-sm text-muted-foreground">{record.competition_region} • {record.competition_level}</p>
+                          <div className="flex gap-2 text-xs text-muted-foreground mt-1">
+                            <span className="bg-orange-100 text-orange-600 px-2 py-1 rounded">{record.class}</span>
+                            {record.score === 0 ? (
+                              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded">视当年情况而定</span>
+                            ) : (
+                              <span className="bg-green-100 text-green-600 px-2 py-1 rounded">+{record.score}分</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditCompetition(record)}>
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("competition", index, record.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {record.note && <p className="text-sm mt-2 pl-16 text-muted-foreground">{record.note}</p>}
                     </div>
                   ))}
                 </div>
@@ -1448,6 +2273,17 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* 竞赛记录表单 */}
+      <CompetitionForm
+        isOpen={showCompetitionForm}
+        onClose={handleCancelCompetition}
+        onSubmit={handleCompetitionSubmit}
+        editingRecord={editingCompetition}
+        studentId={user?.userId || ''}
+        studentName={user?.name || ''}
+        loading={saveStatus === 'saving'}
+      />
     </div>
   )
 }
