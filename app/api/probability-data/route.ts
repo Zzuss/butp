@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// 硬编码 Supabase 配置（仅用于按钮百分比接口）
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
-
-// 在每次请求时创建新的客户端，避免连接问题
-function createSupabaseClient() {
-  return createClient(supabaseUrl, supabaseAnonKey)
-}
+import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +10,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 从cohort_probability表中查询数据
-    const supabase = createSupabaseClient()
     const { data, error } = await supabase
       .from('cohort_probability')
       .select('"proba_1", "proba_2", "year"')
