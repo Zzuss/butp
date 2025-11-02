@@ -138,11 +138,28 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
 
     console.log('成功转换数据，课程数量:', courseResults.length);
     
-    // 缓存数据
-    setCache(cacheKey, courseResults);
+    // 过滤：如果成绩小于60分且课程属性为"任选"，则不计入查询结果
+    const filteredResults = courseResults.filter(course => {
+      // 将成绩转换为数字进行比较
+      const gradeValue = typeof course.grade === 'number' 
+        ? course.grade 
+        : (!isNaN(parseFloat(String(course.grade))) ? parseFloat(String(course.grade)) : null);
+      
+      // 如果成绩小于60且课程属性为"任选"，则过滤掉
+      if (gradeValue !== null && gradeValue < 60 && course.course_attribute === '任选') {
+        return false;
+      }
+      
+      return true;
+    });
+
+    console.log(`过滤后课程数量: ${filteredResults.length} (已过滤 ${courseResults.length - filteredResults.length} 门任选课)`);
+    
+    // 缓存数据（缓存过滤后的结果）
+    setCache(cacheKey, filteredResults);
     console.log('数据已缓存');
     
-    return courseResults;
+    return filteredResults;
     
   } catch (error) {
     console.error('获取学生成绩时发生异常:', error);
