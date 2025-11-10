@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storageSupabase } from '@/lib/storageSupabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
+
+// 避免静态化与构建期执行
+export const dynamic = 'force-dynamic'
 
 // 验证管理员权限的辅助函数
 function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId?: string } {
@@ -46,6 +49,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+      const storageSupabase = getStorageSupabase()
       // 尝试获取所有桶的列表
       const { data: buckets, error: bucketsError } = await storageSupabase.storage.listBuckets()
       console.log('🗃️ 可用的桶:', buckets?.map(bucket => bucket.name))
@@ -124,7 +128,7 @@ export async function GET(request: NextRequest) {
       console.error('❌ 下载隐私条款文件失败:', error)
       return NextResponse.json({ 
         success: false, 
-        error: '服务器内部错误或文件读取失败' 
+        error: (error instanceof Error) ? error.message : '服务器内部错误或文件读取失败' 
       }, { status: 500 })
     }
 
