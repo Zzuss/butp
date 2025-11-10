@@ -140,10 +140,26 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
     
     // 过滤：如果成绩小于60分且课程属性为"任选"，则不计入查询结果
     const filteredResults = courseResults.filter(course => {
-      // 将成绩转换为数字进行比较
-      const gradeValue = typeof course.grade === 'number' 
-        ? course.grade 
-        : (!isNaN(parseFloat(String(course.grade))) ? parseFloat(String(course.grade)) : null);
+      // 将成绩转换为数字进行比较（支持等级映射）
+      let gradeValue: number | null;
+      if (typeof course.grade === 'number') {
+        gradeValue = course.grade;
+      } else {
+        const raw = String(course.grade).trim();
+        // 等级映射：优、良、中、及格、不及格 -> 95、85、75、65、59
+        const mapping: Record<string, number> = {
+          '优': 95,
+          '良': 85,
+          '中': 75,
+          '及格': 65,
+          '不及格': 59,
+        };
+        if (raw in mapping) {
+          gradeValue = mapping[raw];
+        } else {
+          gradeValue = !isNaN(parseFloat(raw)) ? parseFloat(raw) : null;
+        }
+      }
       
       // 如果成绩小于60且课程属性为"任选"，则过滤掉
       if (gradeValue !== null && gradeValue < 60 && course.course_attribute === '任选') {
@@ -155,11 +171,34 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
 
     console.log(`过滤后课程数量: ${filteredResults.length} (已过滤 ${courseResults.length - filteredResults.length} 门任选课)`);
     
-    // 缓存数据（缓存过滤后的结果）
-    setCache(cacheKey, filteredResults);
+    // 将映射后的数值成绩返回到前端（仅对指定等级进行数值替换，其他保持原逻辑）
+    const gradeMapping: Record<string, number> = {
+      '优': 95,
+      '良': 85,
+      '中': 75,
+      '及格': 65,
+      '不及格': 59,
+    };
+    const normalizedResults = filteredResults.map(course => {
+      if (typeof course.grade === 'number') return course;
+      const raw = String(course.grade).trim();
+      if (raw in gradeMapping) {
+        return { ...course, grade: gradeMapping[raw] };
+      }
+      // 若原本就是可解析的数字字符串，则转为数字，便于前端统一展示与计算
+      const parsed = parseFloat(raw);
+      if (!isNaN(parsed)) {
+        return { ...course, grade: parsed };
+      }
+      // 其他非常见文本成绩保持原样
+      return course;
+    });
+    
+    // 缓存数据（缓存转换后的结果）
+    setCache(cacheKey, normalizedResults);
     console.log('数据已缓存');
     
-    return filteredResults;
+    return normalizedResults;
     
   } catch (error) {
     console.error('获取学生成绩时发生异常:', error);
@@ -179,14 +218,18 @@ export function calculateDashboardStats(results: CourseResult[]): DashboardStats
     };
   }
   
-  // 计算数值型成绩的平均分
-  const numericGrades = results
-    .filter(r => typeof r.grade === 'number' || !isNaN(parseFloat(r.grade as string)))
-    .map(r => typeof r.grade === 'number' ? r.grade : parseFloat(r.grade as string));
+  // 计算按学分加权的平均分
+  const weightedItems = results
+    .map(r => {
+      const gradeNum = typeof r.grade === 'number' ? r.grade : parseFloat(String(r.grade));
+      const creditNum = typeof r.credit === 'number' ? r.credit : parseFloat(String(r.credit));
+      return { gradeNum, creditNum };
+    })
+    .filter(item => !isNaN(item.gradeNum) && !isNaN(item.creditNum) && item.creditNum > 0);
   
-  const averageScore = numericGrades.length > 0
-    ? numericGrades.reduce((sum, grade) => sum + grade, 0) / numericGrades.length
-    : 0;
+  const totalCreditsForAvg = weightedItems.reduce((sum, item) => sum + item.creditNum, 0);
+  const weightedSum = weightedItems.reduce((sum, item) => sum + item.gradeNum * item.creditNum, 0);
+  const averageScore = totalCreditsForAvg > 0 ? (weightedSum / totalCreditsForAvg) : 0;
   
   // 计算通过率（成绩大于等于60分或非数字成绩为"通过"、"良好"、"优秀"等）
   const passedCourses = results.filter(r => {
