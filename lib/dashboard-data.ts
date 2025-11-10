@@ -140,10 +140,26 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
     
     // 过滤：如果成绩小于60分且课程属性为"任选"，则不计入查询结果
     const filteredResults = courseResults.filter(course => {
-      // 将成绩转换为数字进行比较
-      const gradeValue = typeof course.grade === 'number' 
-        ? course.grade 
-        : (!isNaN(parseFloat(String(course.grade))) ? parseFloat(String(course.grade)) : null);
+      // 将成绩转换为数字进行比较（支持等级映射）
+      let gradeValue: number | null;
+      if (typeof course.grade === 'number') {
+        gradeValue = course.grade;
+      } else {
+        const raw = String(course.grade).trim();
+        // 等级映射：优、良、中、及格、不及格 -> 95、85、75、65、59
+        const mapping: Record<string, number> = {
+          '优': 95,
+          '良': 85,
+          '中': 75,
+          '及格': 65,
+          '不及格': 59,
+        };
+        if (raw in mapping) {
+          gradeValue = mapping[raw];
+        } else {
+          gradeValue = !isNaN(parseFloat(raw)) ? parseFloat(raw) : null;
+        }
+      }
       
       // 如果成绩小于60且课程属性为"任选"，则过滤掉
       if (gradeValue !== null && gradeValue < 60 && course.course_attribute === '任选') {
