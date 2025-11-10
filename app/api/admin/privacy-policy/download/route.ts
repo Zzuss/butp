@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { storageSupabase } from '@/lib/storageSupabase'
 
 // 验证管理员权限的辅助函数
 function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId?: string } {
@@ -46,12 +46,24 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+      // 尝试获取所有桶的列表
+      const { data: buckets, error: bucketsError } = await storageSupabase.storage.listBuckets()
+      console.log('🗃️ 可用的桶:', buckets?.map(bucket => bucket.name))
+      if (bucketsError) {
+        console.error('❌ 获取桶列表失败:', bucketsError)
+      }
+
       // 获取当前活跃的隐私条款记录
-      const { data: policyRecord, error: dbError } = await supabase
+      const { data: policyRecord, error: dbError } = await storageSupabase
         .from('privacy_policy')
         .select('file_name, file_path, file_type, file_size')
         .eq('is_active', true)
         .single()
+
+      console.log('🔍 隐私条款记录:', {
+        record: policyRecord,
+        error: dbError
+      })
 
       if (dbError || !policyRecord) {
         console.error('❌ 未找到活跃的隐私条款记录:', dbError)
@@ -63,10 +75,20 @@ export async function GET(request: NextRequest) {
 
       const storageFileName = policyRecord.file_path.replace('privacy-files/', '')
 
+      console.log('🔍 尝试下载文件:', {
+        bucket: 'privacy-files',
+        fileName: storageFileName
+      })
+
       // 从Supabase Storage下载文件
-      const { data: fileData, error: downloadError } = await supabase.storage
+      const { data: fileData, error: downloadError } = await storageSupabase.storage
         .from('privacy-files')
         .download(storageFileName)
+
+      console.log('📥 文件下载结果:', {
+        fileData: fileData ? `文件大小: ${fileData.size} 字节` : '无文件数据',
+        downloadError
+      })
 
       if (downloadError) {
         console.error('❌ 从Supabase Storage下载文件失败:', downloadError)
