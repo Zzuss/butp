@@ -1,9 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { deleteEducationPlan, listEducationPlans } from '@/lib/supabase'
+import { storageSupabase } from '@/lib/storageSupabase'
+
+// 列出教育计划文件
+async function listEducationPlans() {
+  console.log('🔍 获取文件列表从 Supabase Storage...')
+  
+  const { data, error } = await storageSupabase.storage
+    .from('education-plans')
+    .list()
+
+  if (error) {
+    console.error('❌ 获取文件列表失败:', error)
+    throw error
+  }
+
+  return data.map(file => ({
+    name: file.name,
+    year: file.name.match(/\d{4}/)?.[0] || '未知',
+    size: file.metadata?.size || 0,
+    lastModified: file.updated_at || new Date().toISOString(),
+    url: storageSupabase.storage
+      .from('education-plans')
+      .getPublicUrl(file.name).data.publicUrl
+  }))
+}
+
+// 删除教育计划文件
+async function deleteEducationPlan(filename: string) {
+  console.log('🗑️ 开始删除文件:', filename)
+  
+  const { data, error } = await storageSupabase.storage
+    .from('education-plans')
+    .remove([filename])
+
+  if (error) {
+    console.error('❌ Supabase Storage 删除失败:', error)
+    throw error
+  }
+
+  return data
+}
 
 export async function DELETE(request: NextRequest) {
   try {
     const { filename } = await request.json()
+
+    console.log('📋 接收到删除请求:', { filename })
 
     if (!filename) {
       return NextResponse.json(
@@ -13,7 +55,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 验证文件名格式，防止路径遍历攻击
-    if (!filename.match(/^Education_Plan_PDF_\d{4}\.pdf$/)) {
+    // 允许更灵活的文件名匹配
+    const validFilenamePattern = /^(Education_Plan_PDF_\d{4}\.pdf|[\w-]+\.pdf)$/
+    if (!validFilenamePattern.test(filename)) {
+      console.error('❌ 无效的文件名格式:', filename)
       return NextResponse.json(
         { message: '无效的文件名' },
         { status: 400 }
@@ -23,9 +68,12 @@ export async function DELETE(request: NextRequest) {
     // 检查文件是否存在
     try {
       const existingPlans = await listEducationPlans()
+      console.log('📋 现有文件列表:', existingPlans.map(plan => plan.name))
+      
       const existingPlan = existingPlans.find(plan => plan.name === filename)
       
       if (!existingPlan) {
+        console.error('❌ 文件不存在:', filename)
         return NextResponse.json(
           { message: '文件不存在' },
           { status: 404 }
@@ -37,11 +85,20 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 从 Supabase Storage 删除文件
-    await deleteEducationPlan(filename)
+    try {
+      const deleteResult = await deleteEducationPlan(filename)
+      console.log('✅ 文件删除成功:', { filename, deleteResult })
 
-    return NextResponse.json({
-      message: '培养方案删除成功',
-    })
+      return NextResponse.json({
+        message: '培养方案删除成功',
+      })
+    } catch (deleteError) {
+      console.error('❌ 文件删除失败:', deleteError)
+      return NextResponse.json(
+        { message: '删除失败，请重试' },
+        { status: 500 }
+      )
+    }
   } catch (error) {
     console.error('Failed to delete education plan:', error)
     

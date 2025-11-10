@@ -1,9 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { uploadEducationPlan, listEducationPlans } from '@/lib/supabase'
+import { storageSupabase } from '@/lib/storageSupabase'
 
 // 配置 API 路由以支持大文件上传
 export const runtime = 'nodejs'
 export const maxDuration = 60 // 设置最大执行时间为60秒
+
+// 上传教育计划文件到 Supabase Storage
+async function uploadEducationPlan(file: File, filename: string) {
+  console.log('☁️ 开始上传到 Supabase Storage...')
+  
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+
+  const { data, error } = await storageSupabase.storage
+    .from('education-plans')
+    .upload(filename, buffer, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: 'application/pdf'
+    })
+
+  if (error) {
+    console.error('❌ Supabase Storage 上传失败:', error)
+    throw error
+  }
+
+  return data
+}
+
+// 列出教育计划文件
+async function listEducationPlans() {
+  console.log('🔍 获取文件列表从 Supabase Storage...')
+  
+  const { data, error } = await storageSupabase.storage
+    .from('education-plan')
+    .list()
+
+  if (error) {
+    console.error('❌ 获取文件列表失败:', error)
+    throw error
+  }
+
+  return data.map(file => ({
+    name: file.name,
+    year: file.name.match(/\d{4}/)?.[0] || '未知',
+    size: file.metadata?.size || 0,
+    lastModified: file.updated_at || new Date().toISOString(),
+    url: storageSupabase.storage
+      .from('education-plan')
+      .getPublicUrl(file.name).data.publicUrl
+  }))
+}
 
 export async function POST(request: NextRequest) {
   try {

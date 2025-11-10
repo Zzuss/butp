@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { storageSupabase } from '@/lib/storageSupabase'
 
 // 验证管理员权限的辅助函数
 function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId?: string } {
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       const buffer = new Uint8Array(arrayBuffer)
 
       // 上传文件到Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await storageSupabase.storage
         .from('privacy-files')
         .upload(fileName, buffer, {
           contentType: file.type,
@@ -109,13 +109,13 @@ export async function POST(request: NextRequest) {
       // 更新数据库记录（仅存储元数据）
       try {
         // 将所有现有记录设为非活跃状态
-        const { error: deactivateError } = await supabase
+        const { error: deactivateError } = await storageSupabase
           .from('privacy_policy')
           .update({ is_active: false })
           .eq('is_active', true)
 
         // 创建新的隐私条款记录（只存储元数据）
-        const { data: newRecord, error: insertError } = await supabase
+        const { data: newRecord, error: insertError } = await storageSupabase
           .from('privacy_policy')
           .insert({
             title: '隐私政策与用户数据使用条款',

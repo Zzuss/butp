@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { storageSupabase } from '@/lib/storageSupabase'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // 首先将所有现有的隐私条款设为非活跃状态
-        const { error: deactivateError } = await supabase
+        const { error: deactivateError } = await storageSupabase
           .from('privacy_policy')
           .update({ is_active: false })
           .eq('is_active', true)
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 创建新的隐私条款记录
-        const { data: newPrivacyPolicy, error } = await supabase
+        const { data: newPrivacyPolicy, error } = await storageSupabase
           .from('privacy_policy')
           .insert({
             title: title || '隐私政策与用户数据使用条款',
