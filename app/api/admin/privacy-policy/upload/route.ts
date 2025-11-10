@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storageSupabase } from '@/lib/storageSupabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
@@ -111,6 +111,9 @@ export async function POST(request: NextRequest) {
       }
 
       try {
+        // 获取 Supabase 客户端
+        const storageSupabase = getStorageSupabase()
+
         // 首先将所有现有的隐私条款设为非活跃状态
         const { error: deactivateError } = await storageSupabase
           .from('privacy_policy')
