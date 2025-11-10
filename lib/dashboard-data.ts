@@ -218,14 +218,18 @@ export function calculateDashboardStats(results: CourseResult[]): DashboardStats
     };
   }
   
-  // 计算数值型成绩的平均分
-  const numericGrades = results
-    .filter(r => typeof r.grade === 'number' || !isNaN(parseFloat(r.grade as string)))
-    .map(r => typeof r.grade === 'number' ? r.grade : parseFloat(r.grade as string));
+  // 计算按学分加权的平均分
+  const weightedItems = results
+    .map(r => {
+      const gradeNum = typeof r.grade === 'number' ? r.grade : parseFloat(String(r.grade));
+      const creditNum = typeof r.credit === 'number' ? r.credit : parseFloat(String(r.credit));
+      return { gradeNum, creditNum };
+    })
+    .filter(item => !isNaN(item.gradeNum) && !isNaN(item.creditNum) && item.creditNum > 0);
   
-  const averageScore = numericGrades.length > 0
-    ? numericGrades.reduce((sum, grade) => sum + grade, 0) / numericGrades.length
-    : 0;
+  const totalCreditsForAvg = weightedItems.reduce((sum, item) => sum + item.creditNum, 0);
+  const weightedSum = weightedItems.reduce((sum, item) => sum + item.gradeNum * item.creditNum, 0);
+  const averageScore = totalCreditsForAvg > 0 ? (weightedSum / totalCreditsForAvg) : 0;
   
   // 计算通过率（成绩大于等于60分或非数字成绩为"通过"、"良好"、"优秀"等）
   const passedCourses = results.filter(r => {
