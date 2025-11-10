@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storageSupabase } from '@/lib/storageSupabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
 
 // 验证管理员权限的辅助函数
 function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId?: string } {
@@ -89,6 +89,9 @@ export async function POST(request: NextRequest) {
       // 转换文件为Buffer
       const arrayBuffer = await file.arrayBuffer()
       const buffer = new Uint8Array(arrayBuffer)
+
+      // 获取 Supabase 客户端
+      const storageSupabase = getStorageSupabase()
 
       // 上传文件到Supabase Storage
       const { data: uploadData, error: uploadError } = await storageSupabase.storage

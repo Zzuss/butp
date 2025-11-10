@@ -47,7 +47,7 @@ export async function PATCH(
     const isSuperAdmin = currentAdmin.role === 'super_admin'
     const isSelf = currentAdmin.id === id
     
-    // 普通管理员只能编辑自己
+    // 超级管理员可以编辑所有人，普通管理员只能编辑自己
     if (!isSuperAdmin && !isSelf) {
       return NextResponse.json(
         { error: '没有权限编辑此管理员' },
@@ -115,6 +115,16 @@ export async function PATCH(
           { status: 403 }
         )
       }
+      
+      // 检查角色是否合法
+      const validRoles = ['admin', 'super_admin']
+      if (!validRoles.includes(body.role)) {
+        return NextResponse.json(
+          { error: '无效的角色类型' },
+          { status: 400 }
+        )
+      }
+      
       updateData.role = body.role
     }
 

@@ -124,8 +124,12 @@ export async function POST(request: NextRequest) {
         priority,
         start_date: start_date || new Date().toISOString(),
         end_date,
-        image_url,
-        created_by: adminId
+        // 确保图片 URL 被正确保存
+        image_url: image_url || null, // 明确处理 image_url
+        created_by: adminId,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single()

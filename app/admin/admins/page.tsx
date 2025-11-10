@@ -106,11 +106,10 @@ export default function AdminUsersPage() {
   const canDeleteAdmin = (targetAdmin: AdminUser) => {
     if (!currentUser) return false
     
-    // 不能删除自己
-    if (currentUser.id === targetAdmin.id) return false
-    
-    // 超级管理员可以删除其他人
-    if (currentUser.role === 'super_admin') return true
+    // 超级管理员可以删除管理员和其他超级管理员
+    if (currentUser.role === 'super_admin') {
+      return targetAdmin.role === 'admin' || targetAdmin.role === 'super_admin'
+    }
     
     // 普通管理员不能删除任何人
     return false
@@ -119,10 +118,7 @@ export default function AdminUsersPage() {
   const canToggleStatus = (targetAdmin: AdminUser) => {
     if (!currentUser) return false
     
-    // 不能禁用自己
-    if (currentUser.id === targetAdmin.id) return false
-    
-    // 超级管理员可以切换其他人状态
+    // 超级管理员可以切换所有人的状态
     if (currentUser.role === 'super_admin') return true
     
     // 普通管理员不能切换任何人状态
@@ -178,12 +174,16 @@ export default function AdminUsersPage() {
         username: formData.username,
         email: formData.email || null,
         full_name: formData.full_name || null,
-        role: formData.role
       }
       
       // 如果提供了新密码，则更新密码
       if (formData.password.trim()) {
         updateData.password = formData.password
+      }
+
+      // 只有超级管理员可以修改角色
+      if (currentUser?.role === 'super_admin') {
+        updateData.role = formData.role
       }
 
       const response = await fetch(`/api/admin/admins/${adminId}`, {
@@ -306,6 +306,31 @@ export default function AdminUsersPage() {
     }
   }
 
+  // 角色选择的权限控制
+  const renderRoleSelect = () => {
+    if (currentUser?.role === 'super_admin') {
+      return (
+        <select
+          value={formData.role}
+          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          className="w-full p-2 border rounded-md"
+          disabled={formLoading}
+        >
+          <option value="admin">管理员</option>
+          <option value="super_admin">超级管理员</option>
+        </select>
+      )
+    }
+
+    return (
+      <Input
+        value={getRoleName(formData.role)}
+        disabled={true}
+        className="w-full"
+      />
+    )
+  }
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
@@ -353,15 +378,7 @@ export default function AdminUsersPage() {
               </div>
               <div>
                 <Label>角色</Label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full p-2 border rounded-md"
-                  disabled={formLoading || (!canCreateSuperAdmin() && formData.role === 'super_admin')}
-                >
-                  <option value="admin">管理员</option>
-                  {canCreateSuperAdmin() && <option value="super_admin">超级管理员</option>}
-                </select>
+                {renderRoleSelect()}
               </div>
             </div>
 
@@ -479,8 +496,8 @@ export default function AdminUsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {admins.map((admin) => (
-                  <TableRow key={admin.id}>
+                {admins.map((admin, index) => (
+                  <TableRow key={admin.id || `admin-${index}`}>
                     <TableCell className="font-medium flex items-center gap-2">
                       {admin.id === currentUser?.id ? (
                         <User className="h-4 w-4 text-purple-500" />
