@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import { SessionData, sessionOptions } from '@/lib/session'
-import { storageSupabase } from '@/lib/storageSupabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
 
 // GET - 检查用户隐私条款同意状态
 export async function GET(request: NextRequest) {
@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+      // 获取 Supabase 客户端
+      const storageSupabase = getStorageSupabase()
+
       // 尝试获取所有桶的列表
       const { data: buckets, error: bucketsError } = await storageSupabase.storage.listBuckets()
       console.log('🗃️ 可用的桶:', buckets?.map(bucket => bucket.name))
@@ -135,6 +138,9 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+
+      // 获取 Supabase 客户端
+      const storageSupabase = getStorageSupabase()
 
       // 尝试获取所有桶的列表
       const { data: buckets, error: bucketsError } = await storageSupabase.storage.listBuckets()
