@@ -13,9 +13,9 @@ export async function GET(request: NextRequest) {
       console.error('❌ 获取桶列表失败:', bucketsError)
     }
 
-    // 列出 education-plan Bucket 中的文件
+    // 列出 education-plans Bucket 中的文件
     const { data, error } = await storageSupabase.storage
-      .from('education-plan')
+      .from('education-plans')
       .list()
 
     console.log('🔍 完整的文件列表数据:', JSON.stringify(data, null, 2))
@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ 没有找到任何文件，检查桶权限和文件存在性')
       
       // 检查桶是否存在
-      const { data: bucketData, error: bucketError } = await storageSupabase.storage.getBucket('education-plan')
-      console.log('🔍 education-plan 桶信息:', {
+      const { data: bucketData, error: bucketError } = await storageSupabase.storage.getBucket('education-plans')
+      console.log('🔍 education-plans 桶信息:', {
         exists: !!bucketData,
         error: bucketError
       })
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       size: file.metadata?.size || 0,
       lastModified: file.updated_at || new Date().toISOString(),
       url: storageSupabase.storage
-        .from('education-plan')
+        .from('education-plans')
         .getPublicUrl(file.name).data.publicUrl
     }))
 
