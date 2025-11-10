@@ -39,11 +39,11 @@ export async function getStudentAbilityData(studentId: string, year?: string | n
     const studentRecord = data[0];
     console.log('✅ 成功获取学生能力数据')
     return [
-      studentRecord.数理逻辑与科学基础 || 50,
-      studentRecord.专业核心技术 || 70,
-      studentRecord.人文与社会素养 || 80,
-      studentRecord.工程实践与创新应用 || 50,
-      studentRecord.职业发展与团队协作 || 70
+      studentRecord.数理逻辑与科学基础 || 0,
+      studentRecord.专业核心技术 || 0,
+      studentRecord.人文与社会素养 || 0,
+      studentRecord.工程实践与创新应用 || 0,
+      studentRecord.职业发展与团队协作 || 0
     ]
   } catch (error) {
     console.error('❌ getStudentAbilityData 函数执行失败:', error)

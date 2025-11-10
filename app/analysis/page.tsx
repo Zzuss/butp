@@ -42,7 +42,7 @@ export default function Analysis() {
   const [selectedButton, setSelectedButton] = useState<'graduation' | 'overseas' | 'domestic' | null>(null);
 
   // 能力数据状态
-  const [abilityData, setAbilityData] = useState<number[]>([50, 70, 80, 50, 70]);
+  const [abilityData, setAbilityData] = useState<number[]>([0, 0, 0, 0, 0]);
   const [loadingAbility, setLoadingAbility] = useState(false);
 
   // 毕业要求状态
