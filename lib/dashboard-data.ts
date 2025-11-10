@@ -171,11 +171,34 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
 
     console.log(`过滤后课程数量: ${filteredResults.length} (已过滤 ${courseResults.length - filteredResults.length} 门任选课)`);
     
-    // 缓存数据（缓存过滤后的结果）
-    setCache(cacheKey, filteredResults);
+    // 将映射后的数值成绩返回到前端（仅对指定等级进行数值替换，其他保持原逻辑）
+    const gradeMapping: Record<string, number> = {
+      '优': 95,
+      '良': 85,
+      '中': 75,
+      '及格': 65,
+      '不及格': 59,
+    };
+    const normalizedResults = filteredResults.map(course => {
+      if (typeof course.grade === 'number') return course;
+      const raw = String(course.grade).trim();
+      if (raw in gradeMapping) {
+        return { ...course, grade: gradeMapping[raw] };
+      }
+      // 若原本就是可解析的数字字符串，则转为数字，便于前端统一展示与计算
+      const parsed = parseFloat(raw);
+      if (!isNaN(parsed)) {
+        return { ...course, grade: parsed };
+      }
+      // 其他非常见文本成绩保持原样
+      return course;
+    });
+    
+    // 缓存数据（缓存转换后的结果）
+    setCache(cacheKey, normalizedResults);
     console.log('数据已缓存');
     
-    return filteredResults;
+    return normalizedResults;
     
   } catch (error) {
     console.error('获取学生成绩时发生异常:', error);
