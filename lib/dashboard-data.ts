@@ -1,45 +1,14 @@
 import { supabase } from './supabase'
 import { calculateGPA } from './gpa-calculator'
 import { sha256 } from './utils'
+import { 
+  queryAcademicResults, 
+  getFromCache as getAcademicCache,
+  type AcademicResultRecord 
+} from './academic__data'
 
-// 缓存机制
-interface CacheEntry {
-  data: any
-  timestamp: number
-  expiresAt: number
-}
-
-const cache = new Map<string, CacheEntry>()
-const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
-
-// 缓存管理函数
-function getFromCache<T>(key: string): T | null {
-  const entry = cache.get(key)
-  if (!entry) return null
-  
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(key)
-    return null
-  }
-  
-  return entry.data
-}
-
-function setCache<T>(key: string, data: T): void {
-  const now = Date.now()
-  cache.set(key, {
-    data,
-    timestamp: now,
-    expiresAt: now + CACHE_DURATION
-  })
-}
-
-function clearCache(): void {
-  cache.clear()
-}
-
-// 导出缓存管理函数
-export { getFromCache, setCache, clearCache }
+// 导出缓存管理函数（保持向后兼容，但实际使用 academic__data.ts 的缓存）
+export { getFromCache, setCache, clearCache } from './academic__data'
 
 export interface CourseResult {
   id: string
@@ -79,7 +48,7 @@ export interface SemesterTrend {
   courseCount: number
 }
 
-// 获取学生成绩数据 - 重构版本（带缓存）
+// 获取学生成绩数据 - 重构版本（使用 academic__data.ts 作为唯一数据源）
 export async function getStudentResults(studentHash: string): Promise<CourseResult[]> {
   try {
     console.log('开始查询学生成绩，哈希值:', studentHash);
@@ -90,115 +59,79 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
       return [];
     }
     
-    if (studentHash.length !== 64 || !/^[a-f0-9]{64}$/i.test(studentHash)) {
-      console.error('无效的哈希值格式，必须是64位十六进制字符串:', studentHash);
-      console.error('当前哈希值长度:', studentHash.length);
-      console.error('哈希值格式:', /^[a-f0-9]{64}$/i.test(studentHash) ? '正确' : '错误');
+    const trimmedHash = studentHash.trim();
+    
+    if (trimmedHash.length !== 64 || !/^[a-f0-9]{64}$/i.test(trimmedHash)) {
+      console.error('无效的哈希值格式，必须是64位十六进制字符串:', trimmedHash);
+      console.error('当前哈希值长度:', trimmedHash.length);
+      console.error('哈希值格式:', /^[a-f0-9]{64}$/i.test(trimmedHash) ? '正确' : '错误');
       return [];
     }
 
-    // 检查缓存
-    const cacheKey = `student_results_${studentHash}`
-    const cachedData = getFromCache<CourseResult[]>(cacheKey)
-    if (cachedData) {
-      console.log('从缓存获取学生成绩数据，课程数量:', cachedData.length);
-      return cachedData;
-    }
-
-    // 简化查询：直接根据哈希值查询所有行，不进行数据库排序
-    const { data: results, error } = await supabase
-      .from('academic_results')
-      .select('*')
-      .eq('"SNH"', studentHash.trim());
-
-    if (error) {
-      console.error('查询学生成绩时出错:', error);
-      return [];
-    }
-
-    console.log('查询结果数量:', results?.length || 0);
-
-    if (!results || results.length === 0) {
-      console.log('未找到该学生的成绩数据，哈希值:', studentHash);
-      return [];
+    // 优先从 academic__data.ts 的统一缓存获取数据
+    const unifiedCacheKey = `academic_results_data_${trimmedHash}`;
+    const cachedAcademicData = getAcademicCache<AcademicResultRecord[]>(unifiedCacheKey);
+    
+    let academicResults: AcademicResultRecord[];
+    
+    if (cachedAcademicData) {
+      console.log('从统一缓存获取学术成绩数据，记录数量:', cachedAcademicData.length);
+      academicResults = cachedAcademicData;
+    } else {
+      // 缓存未命中，调用统一查询函数
+      console.log('统一缓存未命中，调用 queryAcademicResults 查询数据');
+      academicResults = await queryAcademicResults(trimmedHash);
+      
+      if (!academicResults || academicResults.length === 0) {
+        console.log('未找到该学生的成绩数据，哈希值:', trimmedHash);
+        return [];
+      }
     }
     
-    // 简化数据转换：只保留必要字段，不做复杂验证
-    const courseResults = results.map(result => ({
-      id: result.id || `${result.Course_ID || 'unknown'}-${result.Semester_Offered || 'unknown'}`,
-      course_name: result.Course_Name || '未知课程',
-      course_id: result.Course_ID || '未知编号',
-      grade: result.Grade || '无成绩',
-      credit: typeof result.Credit === 'number' ? result.Credit : parseFloat(result.Credit || '0') || 0,
-      semester: result.Semester_Offered || '未知学期',
-      course_type: result.Course_Type || '未知类型',
-      course_attribute: result.Course_Attribute || '未知属性',
-      exam_type: result.Exam_Type || '未知考试类型'
-    }));
-
-    console.log('成功转换数据，课程数量:', courseResults.length);
-    
-    // 过滤：如果成绩小于60分且课程属性为"任选"，则不计入查询结果
-    const filteredResults = courseResults.filter(course => {
-      // 将成绩转换为数字进行比较（支持等级映射）
-      let gradeValue: number | null;
-      if (typeof course.grade === 'number') {
-        gradeValue = course.grade;
-      } else {
-        const raw = String(course.grade).trim();
-        // 等级映射：优、良、中、及格、不及格 -> 95、85、75、65、59
-        const mapping: Record<string, number> = {
-          '优': 95,
-          '良': 85,
-          '中': 75,
-          '及格': 65,
-          '不及格': 59,
-        };
-        if (raw in mapping) {
-          gradeValue = mapping[raw];
+    // 将 AcademicResultRecord[] 转换为 CourseResult[]
+    // 注意：这里需要查询 Exam_Type 字段，但 academic__data.ts 的字段列表中没有包含
+    // 为了保持兼容性，我们先转换已有字段，Exam_Type 设为默认值
+    const courseResults: CourseResult[] = academicResults.map(record => {
+      // 处理成绩：支持等级映射
+      let grade: string | number = record.Grade || '无成绩';
+      const gradeMapping: Record<string, number> = {
+        '优': 95,
+        '良': 85,
+        '中': 75,
+        '及格': 65,
+        '不及格': 59,
+      };
+      
+      if (typeof grade === 'string') {
+        const raw = grade.trim();
+        if (raw in gradeMapping) {
+          grade = gradeMapping[raw];
         } else {
-          gradeValue = !isNaN(parseFloat(raw)) ? parseFloat(raw) : null;
+          const parsed = parseFloat(raw);
+          if (!isNaN(parsed)) {
+            grade = parsed;
+          }
         }
       }
       
-      // 如果成绩小于60且课程属性为"任选"，则过滤掉
-      if (gradeValue !== null && gradeValue < 60 && course.course_attribute === '任选') {
-        return false;
-      }
-      
-      return true;
+      return {
+        id: `${record.Course_ID || 'unknown'}-${record.Semester_Offered || 'unknown'}`,
+        course_name: record.Course_Name || '未知课程',
+        course_id: record.Course_ID || '未知编号',
+        grade: grade,
+        credit: typeof record.Credit === 'number' 
+          ? record.Credit 
+          : parseFloat(String(record.Credit || '0')) || 0,
+        semester: record.Semester_Offered || '未知学期',
+        course_type: record.Course_Type || '未知类型',
+        course_attribute: record.Course_Attribute || '未知属性',
+        exam_type: '未知考试类型' // academic__data.ts 的字段列表中没有 Exam_Type，使用默认值
+      };
     });
 
-    console.log(`过滤后课程数量: ${filteredResults.length} (已过滤 ${courseResults.length - filteredResults.length} 门任选课)`);
+    console.log('成功转换数据，课程数量:', courseResults.length);
     
-    // 将映射后的数值成绩返回到前端（仅对指定等级进行数值替换，其他保持原逻辑）
-    const gradeMapping: Record<string, number> = {
-      '优': 95,
-      '良': 85,
-      '中': 75,
-      '及格': 65,
-      '不及格': 59,
-    };
-    const normalizedResults = filteredResults.map(course => {
-      if (typeof course.grade === 'number') return course;
-      const raw = String(course.grade).trim();
-      if (raw in gradeMapping) {
-        return { ...course, grade: gradeMapping[raw] };
-      }
-      // 若原本就是可解析的数字字符串，则转为数字，便于前端统一展示与计算
-      const parsed = parseFloat(raw);
-      if (!isNaN(parsed)) {
-        return { ...course, grade: parsed };
-      }
-      // 其他非常见文本成绩保持原样
-      return course;
-    });
-    
-    // 缓存数据（缓存转换后的结果）
-    setCache(cacheKey, normalizedResults);
-    console.log('数据已缓存');
-    
-    return normalizedResults;
+    return courseResults;
     
   } catch (error) {
     console.error('获取学生成绩时发生异常:', error);
@@ -432,12 +365,20 @@ export function getSemesterTrends(results: CourseResult[]): SemesterTrend[] {
  * 获取前X%学生的GPA门槛值
  * @param percentage 百分比 (10, 20, 30等)
  * @returns GPA门槛值，如果无数据则返回null
+ * 
+ * ⚠️ 已禁用：为了降低查询流量，此函数已暂时禁用数据库查询
+ * 如需启用，请取消注释下方的查询代码
  */
 export async function getTopPercentageGPAThreshold(percentage: number): Promise<number | null> {
   try {
     // 边界检查
     if (percentage <= 0) return null
     
+    // ⚠️ 已禁用：直接返回 null，避免执行数据库查询
+    // 这样可以降低 dashboard 加载时的查询流量
+    return null
+    
+    /* 已注释的数据库查询代码 - 如需启用请取消注释
     // 获取所有学生的GPA数据
     const { data: results, error } = await supabase
       .from('academic_results')
@@ -506,6 +447,7 @@ export async function getTopPercentageGPAThreshold(percentage: number): Promise<
 
     // 返回前N名中最后一名的GPA（即门槛值）
     return sortedStudents[actualCount - 1].gpa
+    */
 
   } catch (error) {
     console.error('Error calculating GPA threshold:', error)
@@ -535,11 +477,8 @@ export async function getSubjectGrades(studentHash: string, language: string = '
       return [];
     }
     
-    // 清除缓存以确保获取最新数据
-    const cacheKey = `student_results_${studentHash}`;
-    cache.delete(cacheKey);
-    
     // 直接使用重构后的getStudentResults函数
+    // 注意：getStudentResults 现在使用 academic__data.ts 的统一缓存
     const results = await getStudentResults(studentHash);
     
     if (!results || results.length === 0) {

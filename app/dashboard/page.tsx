@@ -25,6 +25,8 @@ import {
   type CourseTypeStats,
   type SemesterTrend
 } from '@/lib/dashboard-data'
+// 导入统一数据源查询函数，用于预加载
+import { queryAcademicResults } from '@/lib/academic__data'
 
 // 导入图表组件
 import { CourseStatsChart } from '@/components/ui/chart'
@@ -110,7 +112,12 @@ export default function DashboardPage() {
     async function loadDashboardData() {
       setIsLoading(true)
       try {
-        // 获取学生成绩数据
+        // 预加载学术成绩数据到统一缓存（方案A：统一数据源）
+        // 这样后续的 getStudentResults 调用可以直接从缓存获取
+        await queryAcademicResults(user!.userHash)
+        console.log('[DEBUG] 预加载学术成绩数据完成')
+        
+        // 获取学生成绩数据（现在会优先从统一缓存获取）
         const results = await getStudentResults(user!.userHash)
         console.log('[DEBUG] getStudentResults -> count:', Array.isArray(results) ? results.length : 'N/A')
         console.log('[DEBUG] getStudentResults -> data sample:', Array.isArray(results) && results.length > 0 ? results[0] : results)

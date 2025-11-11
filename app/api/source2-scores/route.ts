@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { queryAcademicResults, getFromCache, type AcademicResultRecord } from '@/lib/academic__data'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,34 +17,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid hash format' }, { status: 400 })
     }
 
-    // 1. 获取来源2的数据（academic_results表）
-    const { data: source2Data, error: source2Error } = await supabase
-      .from('academic_results')
-      .select(`
-        SNH,
-        Semester_Offered,
-        Current_Major,
-        Course_ID,
-        Course_Name,
-        Grade,
-        Grade_Remark,
-        Course_Type,
-        Course_Attribute,
-        Hours,
-        Credit,
-        Offering_Unit,
-        Tags,
-        Description,
-        Exam_Type,
-        Assessment_Method
-      `)
-      .eq('SNH', trimmedHash)
-      .order('Semester_Offered', { ascending: true });
-
-    if (source2Error) {
-      console.error('Source 2 error:', source2Error)
-      return NextResponse.json({ error: 'Failed to fetch source 2 data' }, { status: 500 })
+    // 1. 优先从统一缓存获取数据（方案A：统一数据源）
+    // 只需要 semester、course_name、category、credit 和 grade 字段，缓存中已包含
+    const unifiedCacheKey = `academic_results_data_${trimmedHash}`;
+    let cachedAcademicData = getFromCache<AcademicResultRecord[]>(unifiedCacheKey);
+    
+    let source2Data: AcademicResultRecord[] = [];
+    
+    if (cachedAcademicData) {
+      console.log('从统一缓存获取学术成绩数据，记录数量:', cachedAcademicData.length);
+      source2Data = cachedAcademicData;
+    } else {
+      // 缓存未命中，调用统一查询函数
+      console.log('统一缓存未命中，调用 queryAcademicResults 查询数据');
+      source2Data = await queryAcademicResults(trimmedHash);
     }
+    
+    // 按学期排序
+    source2Data.sort((a, b) => {
+      const semesterA = a.Semester_Offered || '';
+      const semesterB = b.Semester_Offered || '';
+      return semesterA.localeCompare(semesterB);
+    });
 
     // 2. 获取courses表信息用于映射
     const { data: coursesData, error: coursesError } = await supabase
@@ -79,10 +74,10 @@ export async function POST(request: NextRequest) {
       '其他': '基础学科'
     };
 
-    // 5. 处理来源2数据
+    // 5. 处理来源2数据（仅使用缓存中的字段：semester、course_name、category、credit、grade）
     const source2Courses: any[] = [];
     if (source2Data) {
-      source2Data.forEach((record: any) => {
+      source2Data.forEach((record: AcademicResultRecord) => {
         const courseId = record.Course_ID;
         const courseInfo = courseId ? courseIdToInfoMap[courseId] : null;
         
@@ -103,12 +98,11 @@ export async function POST(request: NextRequest) {
           courseId: courseId,
           score: score,
           semester: courseInfo?.semester || record.Semester_Offered,
-          category: courseTypeToCategoryMapping[record.Course_Type] || '基础学科',
-          credit: courseInfo?.credit || parseFloat(record.Credit) || 0.1,
-          courseType: record.Course_Type,
-          courseAttribute: record.Course_Attribute,
-          examType: record.Exam_Type,
-          rawData: record
+          category: courseTypeToCategoryMapping[record.Course_Type || ''] || '基础学科',
+          credit: courseInfo?.credit || (typeof record.Credit === 'number' 
+            ? record.Credit 
+            : parseFloat(String(record.Credit || '0')) || 0.1),
+          // 不再包含其他字段（courseType, courseAttribute, examType, rawData等）
         });
       });
     }

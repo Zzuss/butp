@@ -10,7 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // 检查是否为有效的Supabase配置
 export const isSupabaseConfigured = () => {
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return !!(process.env.NEXT_PUBLIC_SUPABASELOCAL_URL && process.env.NEXT_PUBLIC_SUPABASELOCAL_ANON_KEY);
 }
 
 export interface Course {
