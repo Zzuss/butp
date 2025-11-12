@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
 import { queryAcademicResults, getFromCache, type AcademicResultRecord } from '@/lib/academic__data'
 
 export async function POST(request: NextRequest) {
@@ -40,69 +39,43 @@ export async function POST(request: NextRequest) {
       return semesterA.localeCompare(semesterB);
     });
 
-    // 2. 获取courses表信息用于映射
-    const { data: coursesData, error: coursesError } = await supabase
-      .from('courses')
-      .select('course_id, course_name, semester, category, credit')
-      .not('course_id', 'is', null);
-
-    if (coursesError) {
-      console.error('Courses error:', coursesError)
-      return NextResponse.json({ error: 'Failed to fetch courses data' }, { status: 500 })
-    }
-
-    // 3. 创建课程编号到课程信息的映射
-    const courseIdToInfoMap: Record<string, any> = {};
-    coursesData?.forEach(course => {
-      if (course.course_id) {
-        courseIdToInfoMap[course.course_id] = {
-          semester: course.semester,
-          category: course.category,
-          credit: course.credit
-        };
-      }
-    });
-
-    // 4. 课程类型到类别的映射
-    const courseTypeToCategoryMapping: Record<string, string> = {
-      '思想政治理论课': '政治课程',
-      '公共课': '公共课程',
-      '专业课': '专业课程',
-      '实践教学课': '实践课程',
-      '校级双创课': '创新课程',
-      '院级双创课': '创新课程',
-      '其他': '基础学科'
-    };
-
-    // 5. 处理来源2数据（仅使用缓存中的字段：semester、course_name、category、credit、grade）
+    // 2. 直接从缓存中复制所需字段，不进行任何改动或映射
     const source2Courses: any[] = [];
     if (source2Data) {
       source2Data.forEach((record: AcademicResultRecord) => {
-        const courseId = record.Course_ID;
-        const courseInfo = courseId ? courseIdToInfoMap[courseId] : null;
-        
-        // 转换成绩格式
+        // 转换成绩格式（仅做基本类型转换，确保是数字）
         let score = null;
-        if (record.Grade) {
-          const gradeStr = record.Grade.toString();
-          if (gradeStr.includes('.')) {
-            score = parseFloat(gradeStr);
+        if (record.Grade !== null && record.Grade !== undefined) {
+          if (typeof record.Grade === 'number') {
+            score = record.Grade;
           } else {
-            score = parseInt(gradeStr);
+            const gradeStr = record.Grade.toString();
+            if (gradeStr.includes('.')) {
+              score = parseFloat(gradeStr);
+            } else {
+              score = parseInt(gradeStr);
+            }
+          }
+        }
+        
+        // 转换学分格式（仅做基本类型转换，确保是数字）
+        let credit = null;
+        if (record.Credit !== null && record.Credit !== undefined) {
+          if (typeof record.Credit === 'number') {
+            credit = record.Credit;
+          } else {
+            credit = parseFloat(String(record.Credit)) || null;
           }
         }
         
         source2Courses.push({
           source: 'academic_results',
-          courseName: record.Course_Name,
-          courseId: courseId,
-          score: score,
-          semester: courseInfo?.semester || record.Semester_Offered,
-          category: courseTypeToCategoryMapping[record.Course_Type || ''] || '基础学科',
-          credit: courseInfo?.credit || (typeof record.Credit === 'number' 
-            ? record.Credit 
-            : parseFloat(String(record.Credit || '0')) || 0.1),
-          // 不再包含其他字段（courseType, courseAttribute, examType, rawData等）
+          courseName: record.Course_Name,        // 直接复制
+          courseId: record.Course_ID,            // 直接复制
+          score: score,                          // 仅做基本类型转换
+          semester: record.Semester_Offered,    // 直接复制
+          category: record.Course_Type,          // 直接复制，不映射
+          credit: credit,                        // 仅做基本类型转换
         });
       });
     }

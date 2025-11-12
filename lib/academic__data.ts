@@ -106,8 +106,8 @@ export async function queryAcademicResults(studentHash: string): Promise<Academi
       return cachedData
     }
 
-    // 构建查询字段字符串
-    const fieldsString = ACADEMIC_RESULTS_FIELDS.join(', ')
+    // 构建查询字段字符串（Supabase 需要给包含下划线和大写字母的字段名加双引号）
+    const fieldsString = ACADEMIC_RESULTS_FIELDS.map(field => `"${field}"`).join(', ')
 
     // 查询学术成绩数据
     const { data: results, error } = await supabase
