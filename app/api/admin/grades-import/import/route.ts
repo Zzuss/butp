@@ -4,6 +4,8 @@ import { join } from 'path'
 import { promisify } from 'util'
 import { getAllFilesMetadata, filesMetadata } from '../upload/route'
 
+export const maxDuration = 300
+
 const readdirAsync = promisify(readdir)
 const statAsync = promisify(stat)
 
@@ -14,6 +16,7 @@ const UPLOAD_ROOT =
 const UPLOAD_DIR = join(UPLOAD_ROOT, 'temp_imports', 'grades')
 const MAIN_TABLE = 'academic_results'
 const SHADOW_TABLE = 'academic_results_old'
+const DEFAULT_BATCH_SIZE = parseInt(process.env.IMPORT_BATCH_SIZE || '2000', 10)
 
 function ensureUploadDir() {
   if (!existsSync(UPLOAD_DIR)) {
@@ -154,7 +157,7 @@ async function importToShadowTable(
   let totalImported = 0
   let totalCount = 0
   const errors: string[] = []
-  const batchSize = 1000
+  const batchSize = DEFAULT_BATCH_SIZE
 
   console.log(`开始导入 ${files.length} 个文件到影子表...`)
 
@@ -193,7 +196,7 @@ async function importToShadowTable(
         try {
           const { error } = await supabase
             .from(SHADOW_TABLE)
-            .insert(batch)
+            .insert(batch, { returning: 'minimal' })
 
           if (error) {
             const errorMsg = `文件 ${file.name} 批次 ${batchNum}: ${error.message || JSON.stringify(error)}`
@@ -209,10 +212,7 @@ async function importToShadowTable(
           console.error(`❌ ${errorMsg}`, dbError)
         }
 
-        // 添加延迟避免过快请求
-        if (i + batchSize < processedData.length) {
-          await new Promise((resolve) => setTimeout(resolve, 100))
-        }
+        // 移除不必要的延迟，加快批量导入速度
       }
     } catch (error) {
       const errorMsg = `处理文件 ${file.name} 时出错: ${error instanceof Error ? error.message : '未知错误'}`
