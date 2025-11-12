@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storageSupabase } from '@/lib/storageSupabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
 
 // 配置 API 路由以支持大文件上传
 export const runtime = 'nodejs'
@@ -12,6 +12,7 @@ async function uploadEducationPlan(file: File, filename: string) {
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
 
+  const storageSupabase = getStorageSupabase()
   const { data, error } = await storageSupabase.storage
     .from('education-plans')
     .upload(filename, buffer, {
@@ -32,8 +33,9 @@ async function uploadEducationPlan(file: File, filename: string) {
 async function listEducationPlans() {
   console.log('🔍 获取文件列表从 Supabase Storage...')
   
+  const storageSupabase = getStorageSupabase()
   const { data, error } = await storageSupabase.storage
-    .from('education-plan')
+    .from('education-plans')
     .list()
 
   if (error) {
@@ -47,7 +49,7 @@ async function listEducationPlans() {
     size: file.metadata?.size || 0,
     lastModified: file.updated_at || new Date().toISOString(),
     url: storageSupabase.storage
-      .from('education-plan')
+      .from('education-plans')
       .getPublicUrl(file.name).data.publicUrl
   }))
 }

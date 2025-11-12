@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { 
-  uploadNotificationImageToSpecificStorage, 
-  getNotificationImageUrlFromSpecificStorage 
-} from '@/lib/supabase'
+import { uploadNotificationImage, getNotificationImageUrl } from '@/lib/supabase'
 
 // 配置 API 路由以支持文件上传
 export const runtime = 'nodejs'
@@ -51,10 +48,10 @@ export async function POST(request: NextRequest) {
     console.log('📝 生成文件名:', filename)
 
     // 上传文件到 Supabase Storage
-    console.log('☁️ 开始上传到指定 Supabase Storage...')
+    console.log('☁️ 开始上传到 Supabase Storage...')
     try {
-      await uploadNotificationImageToSpecificStorage(file, filename)
-      const imageUrl = getNotificationImageUrlFromSpecificStorage(filename)
+      await uploadNotificationImage(file, filename)
+      const imageUrl = getNotificationImageUrl(filename)
       
       console.log('✅ 上传成功:', filename)
       console.log('🔗 图片URL:', imageUrl)

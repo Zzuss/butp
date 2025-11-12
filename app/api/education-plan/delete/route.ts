@@ -1,119 +1,89 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storageSupabase } from '@/lib/storageSupabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
+import { supabase } from '@/lib/supabase'
 
 // 列出教育计划文件
-async function listEducationPlans() {
+export async function listEducationPlans() {
   console.log('🔍 获取文件列表从 Supabase Storage...')
   
+  const storageSupabase = getStorageSupabase()
   const { data, error } = await storageSupabase.storage
     .from('education-plans')
     .list()
-
+  
   if (error) {
     console.error('❌ 获取文件列表失败:', error)
     throw error
   }
-
-  return data.map(file => ({
-    name: file.name,
-    year: file.name.match(/\d{4}/)?.[0] || '未知',
-    size: file.metadata?.size || 0,
-    lastModified: file.updated_at || new Date().toISOString(),
-    url: storageSupabase.storage
-      .from('education-plans')
-      .getPublicUrl(file.name).data.publicUrl
-  }))
+  
+  console.log(`✅ 获取到 ${data?.length || 0} 个文件`)
+  return data || []
 }
 
 // 删除教育计划文件
-async function deleteEducationPlan(filename: string) {
+export async function deleteEducationPlan(filename: string) {
   console.log('🗑️ 开始删除文件:', filename)
   
+  const storageSupabase = getStorageSupabase()
   const { data, error } = await storageSupabase.storage
     .from('education-plans')
     .remove([filename])
 
   if (error) {
-    console.error('❌ Supabase Storage 删除失败:', error)
+    console.error('❌ 文件删除失败:', error)
     throw error
   }
 
+  // 额外检查文件是否真的被删除
+  const remainingFiles = await listEducationPlans()
+  const stillExists = remainingFiles.some(file => file.name === filename)
+  
+  if (stillExists) {
+    throw new Error(`文件 ${filename} 删除失败，仍然存在`)
+  }
+
+  console.log('✅ 文件删除成功:', filename)
   return data
 }
 
+// DELETE - 删除教育计划文件
 export async function DELETE(request: NextRequest) {
   try {
-    const { filename } = await request.json()
-
-    console.log('📋 接收到删除请求:', { filename })
+    const body = await request.json()
+    const { filename } = body
 
     if (!filename) {
       return NextResponse.json(
-        { message: '请提供文件名' },
+        { error: '文件名不能为空' },
         { status: 400 }
       )
     }
 
-    // 验证文件名格式，防止路径遍历攻击
-    // 允许更灵活的文件名匹配
-    const validFilenamePattern = /^(Education_Plan_PDF_\d{4}\.pdf|[\w-]+\.pdf)$/
-    if (!validFilenamePattern.test(filename)) {
-      console.error('❌ 无效的文件名格式:', filename)
-      return NextResponse.json(
-        { message: '无效的文件名' },
-        { status: 400 }
-      )
+    // 删除文件
+    await deleteEducationPlan(filename)
+
+    // 从数据库中删除记录（如果需要）
+    const { error: dbDeleteError } = await supabase
+      .from('education_plans')
+      .delete()
+      .eq('filename', filename)
+
+    if (dbDeleteError) {
+      console.error('删除数据库记录失败:', dbDeleteError)
     }
 
-    // 检查文件是否存在
-    try {
-      const existingPlans = await listEducationPlans()
-      console.log('📋 现有文件列表:', existingPlans.map(plan => plan.name))
-      
-      const existingPlan = existingPlans.find(plan => plan.name === filename)
-      
-      if (!existingPlan) {
-        console.error('❌ 文件不存在:', filename)
-        return NextResponse.json(
-          { message: '文件不存在' },
-          { status: 404 }
-        )
-      }
-    } catch (error) {
-      console.warn('Failed to check existing files:', error)
-      // 继续删除流程，让 Supabase 处理文件不存在的情况
-    }
+    return NextResponse.json({ 
+      success: true, 
+      message: '文件删除成功' 
+    })
 
-    // 从 Supabase Storage 删除文件
-    try {
-      const deleteResult = await deleteEducationPlan(filename)
-      console.log('✅ 文件删除成功:', { filename, deleteResult })
-
-      return NextResponse.json({
-        message: '培养方案删除成功',
-      })
-    } catch (deleteError) {
-      console.error('❌ 文件删除失败:', deleteError)
-      return NextResponse.json(
-        { message: '删除失败，请重试' },
-        { status: 500 }
-      )
-    }
   } catch (error) {
-    console.error('Failed to delete education plan:', error)
-    
-    // 提供更详细的错误信息
-    if (error instanceof Error) {
-      if (error.message.includes('not found') || error.message.includes('does not exist')) {
-        return NextResponse.json(
-          { message: '文件不存在' },
-          { status: 404 }
-        )
-      }
-    }
-    
+    console.error('删除文件错误:', error)
     return NextResponse.json(
-      { message: '删除失败，请重试' },
+      { 
+        error: '删除文件失败',
+        details: error instanceof Error ? error.message : '未知错误'
+      },
       { status: 500 }
     )
   }

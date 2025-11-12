@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { getStorageSupabase } from './storageSupabase'
 
 // 使用正确的Supabase配置
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASELOCAL_URL || 'http://39.96.196.67:8000'
@@ -75,7 +76,8 @@ export const NOTIFICATION_IMAGES_BUCKET = 'notification-images'
 
 // 获取文件的公开URL
 export const getEducationPlanUrl = (fileName: string) => {
-  return supabase.storage
+  const storageSupabase = getStorageSupabase()
+  return storageSupabase.storage
     .from(EDUCATION_PLAN_BUCKET)
     .getPublicUrl(fileName).data.publicUrl
 }
@@ -85,7 +87,8 @@ export const uploadEducationPlan = async (file: File, fileName: string) => {
   try {
     console.log(`📤 开始上传文件到 Supabase: ${fileName}, 大小: ${file.size} bytes`)
     
-    const { data, error } = await supabase.storage
+    const storageSupabase = getStorageSupabase()
+    const { data, error } = await storageSupabase.storage
       .from(EDUCATION_PLAN_BUCKET)
       .upload(fileName, file, {
         cacheControl: '3600',
@@ -109,7 +112,8 @@ export const uploadEducationPlan = async (file: File, fileName: string) => {
 // 删除文件
 export const deleteEducationPlan = async (fileName: string) => {
   try {
-    const { error } = await supabase.storage
+    const storageSupabase = getStorageSupabase()
+    const { error } = await storageSupabase.storage
       .from(EDUCATION_PLAN_BUCKET)
       .remove([fileName])
     
@@ -125,7 +129,8 @@ export const listEducationPlans = async () => {
   try {
     console.log('📋 获取文件列表从 Supabase Storage...')
     
-    const { data, error } = await supabase.storage
+    const storageSupabase = getStorageSupabase()
+    const { data, error } = await storageSupabase.storage
       .from(EDUCATION_PLAN_BUCKET)
       .list('', {
         limit: 100,
@@ -160,7 +165,8 @@ export const listEducationPlans = async () => {
 
 // 获取通知图片的公开URL
 export const getNotificationImageUrl = (fileName: string) => {
-  return supabase.storage
+  const storageSupabase = getStorageSupabase()
+  return storageSupabase.storage
     .from(NOTIFICATION_IMAGES_BUCKET)
     .getPublicUrl(fileName).data.publicUrl
 }
@@ -170,7 +176,8 @@ export const uploadNotificationImage = async (file: File, fileName: string) => {
   try {
     console.log(`📤 开始上传图片到 Supabase: ${fileName}, 大小: ${file.size} bytes`)
     
-    const { data, error } = await supabase.storage
+    const storageSupabase = getStorageSupabase()
+    const { data, error } = await storageSupabase.storage
       .from(NOTIFICATION_IMAGES_BUCKET)
       .upload(fileName, file, {
         cacheControl: '3600',
@@ -194,7 +201,8 @@ export const uploadNotificationImage = async (file: File, fileName: string) => {
 // 删除通知图片
 export const deleteNotificationImage = async (fileName: string) => {
   try {
-    const { error } = await supabase.storage
+    const storageSupabase = getStorageSupabase()
+    const { error } = await storageSupabase.storage
       .from(NOTIFICATION_IMAGES_BUCKET)
       .remove([fileName])
     
@@ -205,15 +213,10 @@ export const deleteNotificationImage = async (fileName: string) => {
   }
 }
 
-// 专门用于通知图片的 Supabase 客户端
-const notificationStorageClient = createClient(
-  process.env.NEXT_PUBLIC_STORAGE_SUPABASE_URL!, 
-  process.env.NEXT_PUBLIC_STORAGE_SUPABASE_ANON_KEY!
-)
-
 // 获取通知图片的公开URL（使用新的 Supabase 实例）
 export const getNotificationImageUrlFromSpecificStorage = (fileName: string) => {
-  return notificationStorageClient.storage
+  const storageSupabase = getStorageSupabase()
+  return storageSupabase.storage
     .from('notification-images')
     .getPublicUrl(fileName).data.publicUrl
 }
@@ -223,7 +226,8 @@ export const uploadNotificationImageToSpecificStorage = async (file: File, fileN
   try {
     console.log(`📤 开始上传图片到指定 Supabase: ${fileName}, 大小: ${file.size} bytes`)
     
-    const { data, error } = await notificationStorageClient.storage
+    const storageSupabase = getStorageSupabase()
+    const { data, error } = await storageSupabase.storage
       .from('notification-images')
       .upload(fileName, file, {
         cacheControl: '3600',
