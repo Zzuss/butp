@@ -113,10 +113,14 @@ export async function queryAcademicResults(studentHash: string): Promise<Academi
     const { data: results, error } = await supabase
       .from('academic_results')
       .select(fieldsString)
-      .eq('SNH', trimmedHash)
+      .eq('"SNH"', trimmedHash)
 
     if (error) {
       console.error('查询学术成绩数据失败:', error)
+      console.error('完整错误对象:', JSON.stringify(error, null, 2))
+      console.error('错误代码:', error.code)
+      console.error('错误消息:', error.message)
+      console.error('错误详情:', error.details)
       return []
     }
 

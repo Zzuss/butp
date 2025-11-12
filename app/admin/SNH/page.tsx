@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { CheckCircle, XCircle, Upload, FileSpreadsheet, Download, Trash2, UserCheck } from 'lucide-react'
 import AdminLayout from '@/components/admin/AdminLayout'
+import * as XLSX from 'xlsx'
 
 interface UploadResult {
   success: boolean
@@ -18,6 +19,15 @@ interface UploadResult {
   fileRows?: number
   skipped?: number
   errors: string[]
+  batchProgress?: {
+    current: number
+    total: number
+  }
+}
+
+interface ParsedRecord {
+  student_number: string
+  student_hash: string
 }
 
 export default function SNHAdminPage() {
@@ -39,7 +49,92 @@ export default function SNHAdminPage() {
     }
   }
 
-  // 上传文件
+  // 解析文件（前端解析）
+  const parseFile = async (file: File): Promise<{ records: ParsedRecord[], totalRows: number, skipped: number }> => {
+    const records: ParsedRecord[] = []
+    let totalRows = 0
+    let skipped = 0
+
+    try {
+      if (file.name.endsWith('.csv')) {
+        // 处理CSV文件
+        const text = await file.text()
+        const lines = text.split('\n').filter(line => line.trim())
+        totalRows = Math.max(0, lines.length - 1) // 减去标题行
+
+        // 跳过标题行
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
+          
+          const validStudentNumber = values[0] && String(values[0]).trim() !== ''
+          const validStudentHash = values[1] && String(values[1]).trim() !== ''
+          
+          if (values.length >= 2 && validStudentNumber && validStudentHash) {
+            records.push({
+              student_number: values[0],
+              student_hash: values[1]
+            })
+          } else {
+            skipped++
+          }
+        }
+      } else {
+        // 处理Excel文件
+        const buffer = await file.arrayBuffer()
+        const workbook = XLSX.read(buffer, { type: 'array' })
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][]
+
+        if (jsonData.length < 2) {
+          throw new Error('Excel文件至少需要包含标题行和一行数据')
+        }
+
+        totalRows = Math.max(0, jsonData.length - 1) // 减去标题行
+
+        // 查找学号和哈希值列的索引
+        const headerRow = jsonData[0]
+        
+        const snIndex = headerRow.findIndex((header: any) => {
+          const headerStr = String(header).toUpperCase().trim()
+          return headerStr === 'SN' || headerStr === 'STUDENT_NUMBER'
+        })
+        
+        const snhIndex = headerRow.findIndex((header: any) => {
+          const headerStr = String(header).toUpperCase().trim()
+          return headerStr === 'SNH' || headerStr === 'STUDENT_HASH'
+        })
+
+        if (snIndex === -1 || snhIndex === -1) {
+          throw new Error('文件必须包含学号列（SN 或 student_number）和哈希值列（SNH 或 student_hash）')
+        }
+
+        // 解析数据行
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i]
+          const studentNumber = row[snIndex]
+          const studentHash = row[snhIndex]
+
+          const validStudentNumber = studentNumber !== null && studentNumber !== undefined && String(studentNumber).trim() !== ''
+          const validStudentHash = studentHash !== null && studentHash !== undefined && String(studentHash).trim() !== ''
+
+          if (validStudentNumber && validStudentHash) {
+            records.push({
+              student_number: String(studentNumber).trim(),
+              student_hash: String(studentHash).trim()
+            })
+          } else {
+            skipped++
+          }
+        }
+      }
+    } catch (parseError) {
+      throw new Error('文件解析失败: ' + (parseError instanceof Error ? parseError.message : '未知错误'))
+    }
+
+    return { records, totalRows, skipped }
+  }
+
+  // 分批上传文件
   const handleUpload = async () => {
     if (!file) return
 
@@ -47,82 +142,131 @@ export default function SNHAdminPage() {
     setUploadProgress(0)
     setUploadResult(null)
 
-    const formData = new FormData()
-    formData.append('file', file)
-    
     // 保存最后上传的文件，用于重试
     setLastUploadedFile(file)
 
-    // 模拟进度更新
-    const progressTimer = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev < 85) return prev + Math.random() * 15
-        return prev
-      })
-    }, 500)
-
     try {
-      const response = await fetch('/api/admin/snh/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      // 清除进度定时器
-      clearInterval(progressTimer)
-      setUploadProgress(100)
-
-      if (response.ok) {
-        const hasErrors = result.errors && result.errors.length > 0
-        const successCount = result.processed || 0
-        const totalCount = result.total || 0
-        
-        setUploadResult({
-          success: !hasErrors || successCount > 0, // 如果有部分成功也算成功
-          message: hasErrors ? 
-            `处理完成，但有 ${result.errors.length} 条记录失败` : 
-            result.message,
-          processed: successCount,
-          total: totalCount,
-          fileRows: result.fileRows,
-          skipped: result.skipped,
-          errors: result.errors || []
-        })
-        
-        // 只有在完全成功时才清空文件选择
-        if (!hasErrors) {
-          setFile(null)
-          if (fileInputRef.current) {
-            fileInputRef.current.value = ''
-          }
-        }
-      } else {
+      // 1. 解析文件
+      setUploadProgress(5)
+      const { records, totalRows, skipped } = await parseFile(file)
+      
+      if (records.length === 0) {
         setUploadResult({
           success: false,
-          message: result.error || '上传失败',
-          processed: result.processed || 0,
-          total: result.total || 0,
-          fileRows: result.fileRows || 0,
-          skipped: result.skipped || 0,
-          errors: result.errors || [result.error || '未知错误']
+          message: '文件中没有找到有效的数据行',
+          processed: 0,
+          total: 0,
+          fileRows: totalRows,
+          skipped: skipped,
+          errors: ['文件中没有有效数据']
         })
+        setUploading(false)
+        return
+      }
+
+      console.log(`解析到 ${records.length} 条记录，将分成 ${Math.ceil(records.length / 1000)} 批进行导入`)
+
+      // 2. 分批处理（每批1000条）
+      const BATCH_SIZE = 1000
+      const batches: ParsedRecord[][] = []
+      for (let i = 0; i < records.length; i += BATCH_SIZE) {
+        batches.push(records.slice(i, i + BATCH_SIZE))
+      }
+
+      const totalBatches = batches.length
+      let totalProcessed = 0
+      const allErrors: string[] = []
+
+      // 3. 逐批上传
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i]
+        const batchProgress = Math.floor((i / totalBatches) * 90) + 5 // 5-95% 用于分批上传
+        
+        // 更新进度和批次信息
+        setUploadProgress(batchProgress)
+        setUploadResult({
+          success: false,
+          message: `正在导入第 ${i + 1} / ${totalBatches} 批...`,
+          processed: totalProcessed,
+          total: records.length,
+          fileRows: totalRows,
+          skipped: skipped,
+          errors: allErrors,
+          batchProgress: {
+            current: i + 1,
+            total: totalBatches
+          }
+        })
+        
+        try {
+          const response = await fetch('/api/admin/snh/batch-upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ records: batch }),
+          })
+
+          const result = await response.json()
+
+          if (response.ok) {
+            totalProcessed += result.processed || 0
+            if (result.errors && result.errors.length > 0) {
+              allErrors.push(...result.errors)
+            }
+          } else {
+            // 如果批次失败，记录错误但继续处理下一批
+            allErrors.push(`批次 ${i + 1}/${totalBatches} 失败: ${result.error || '未知错误'}`)
+          }
+        } catch (error) {
+          allErrors.push(`批次 ${i + 1}/${totalBatches} 网络错误: ${error instanceof Error ? error.message : '连接失败'}`)
+        }
+      }
+
+      // 4. 完成
+      setUploadProgress(100)
+      
+      const hasErrors = allErrors.length > 0
+      const successCount = totalProcessed
+      const totalCount = records.length
+      
+      setUploadResult({
+        success: !hasErrors || successCount > 0,
+        message: hasErrors ? 
+          `处理完成，但有 ${allErrors.length} 条记录失败` : 
+          `文件上传成功！处理了 ${successCount} 条记录`,
+        processed: successCount,
+        total: totalCount,
+        fileRows: totalRows,
+        skipped: skipped,
+        errors: allErrors,
+        batchProgress: {
+          current: totalBatches,
+          total: totalBatches
+        }
+      })
+      
+      // 只有在完全成功时才清空文件选择
+      if (!hasErrors) {
+        setFile(null)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
       }
     } catch (error) {
-      clearInterval(progressTimer)
       setUploadProgress(100)
       
       setUploadResult({
         success: false,
-        message: '网络连接失败，请检查网络后重试',
+        message: '文件处理失败',
         processed: 0,
         total: 0,
         errors: [
-          '网络错误: ' + (error instanceof Error ? error.message : '连接超时或服务器无响应'),
+          error instanceof Error ? error.message : '文件解析或上传失败',
           '可能的原因：',
-          '• 网络连接不稳定',
-          '• 服务器暂时不可用',
-          '• 文件过大导致超时'
+          '• 文件格式不正确',
+          '• 文件损坏',
+          '• 网络连接问题'
         ]
       })
     }
@@ -130,7 +274,7 @@ export default function SNHAdminPage() {
     setUploading(false)
   }
 
-  // 重试上传
+  // 重试上传（使用相同的分批导入逻辑）
   const handleRetry = async () => {
     if (!lastUploadedFile && !file) return
     
@@ -140,88 +284,10 @@ export default function SNHAdminPage() {
     
     // 重置结果并重新上传
     setUploadResult(null)
-    setUploading(true)
-    setUploadProgress(0)
+    setFile(fileToRetry)
     
-    const formData = new FormData()
-    formData.append('file', fileToRetry)
-
-    // 模拟进度更新
-    const progressTimer = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev < 85) return prev + Math.random() * 15
-        return prev
-      })
-    }, 500)
-
-    try {
-      const response = await fetch('/api/admin/snh/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      // 清除进度定时器
-      clearInterval(progressTimer)
-      setUploadProgress(100)
-
-      if (response.ok) {
-        const hasErrors = result.errors && result.errors.length > 0
-        const successCount = result.processed || 0
-        const totalCount = result.total || 0
-        
-        setUploadResult({
-          success: !hasErrors || successCount > 0,
-          message: hasErrors ? 
-            `重试完成，但仍有 ${result.errors.length} 条记录失败` : 
-            '重试成功！' + result.message,
-          processed: successCount,
-          total: totalCount,
-          fileRows: result.fileRows,
-          skipped: result.skipped,
-          errors: result.errors || []
-        })
-        
-        // 只有在完全成功时才清空文件选择
-        if (!hasErrors) {
-          setFile(null)
-          setLastUploadedFile(null)
-          if (fileInputRef.current) {
-            fileInputRef.current.value = ''
-          }
-        }
-      } else {
-        setUploadResult({
-          success: false,
-          message: result.error || '重试失败',
-          processed: result.processed || 0,
-          total: result.total || 0,
-          fileRows: result.fileRows || 0,
-          skipped: result.skipped || 0,
-          errors: result.errors || [result.error || '未知错误']
-        })
-      }
-    } catch (error) {
-      clearInterval(progressTimer)
-      setUploadProgress(100)
-      
-      setUploadResult({
-        success: false,
-        message: '重试时网络连接失败',
-        processed: 0,
-        total: 0,
-        errors: [
-          '重试失败: ' + (error instanceof Error ? error.message : '连接超时'),
-          '建议：',
-          '• 检查网络连接',
-          '• 稍后再试',
-          '• 联系技术支持'
-        ]
-      })
-    }
-
-    setUploading(false)
+    // 调用相同的上传函数
+    await handleUpload()
   }
 
   // 清空所有映射
@@ -429,7 +495,18 @@ export default function SNHAdminPage() {
           )}
 
           {uploading && (
-            <Progress value={uploadProgress} className="w-full" />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>导入进度</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="w-full" />
+              {uploadResult?.batchProgress && (
+                <div className="text-xs text-gray-500 text-center">
+                  正在处理批次 {uploadResult.batchProgress.current} / {uploadResult.batchProgress.total}
+                </div>
+              )}
+            </div>
           )}
 
           {uploadResult && (
@@ -473,6 +550,14 @@ export default function SNHAdminPage() {
                             <span className="text-gray-600">跳过行数:</span>
                             <span className="font-medium">{uploadResult.skipped || 0}</span>
                           </div>
+                          {uploadResult.batchProgress && (
+                            <div className="flex justify-between col-span-2">
+                              <span className="text-gray-600">分批导入:</span>
+                              <span className="font-medium text-blue-600">
+                                共 {uploadResult.batchProgress.total} 批（每批1000条）
+                              </span>
+                            </div>
+                          )}
                         </div>
                         
                         {/* 成功率显示 */}
