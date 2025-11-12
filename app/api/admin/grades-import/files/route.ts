@@ -1,13 +1,25 @@
 import { NextResponse } from 'next/server'
-import { readdir, stat } from 'fs/promises'
+import { readdir, stat, mkdir } from 'fs/promises'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { getAllFilesMetadata, filesMetadata } from '../upload/route'
 
-// 文件存储目录
-const UPLOAD_DIR = join(process.cwd(), 'temp_imports', 'grades')
+// 文件存储目录（在无服务器环境使用 /tmp，可配置 FILE_UPLOAD_ROOT 覆盖）
+const UPLOAD_ROOT =
+  process.env.FILE_UPLOAD_ROOT ||
+  (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION ? '/tmp' : process.cwd())
+const UPLOAD_DIR = join(UPLOAD_ROOT, 'temp_imports', 'grades')
+
+async function ensureUploadDir() {
+  if (!existsSync(UPLOAD_DIR)) {
+    await mkdir(UPLOAD_DIR, { recursive: true })
+  }
+}
 
 export async function GET() {
   try {
+    await ensureUploadDir()
+
     // 从内存中获取文件元数据
     let files = getAllFilesMetadata()
     console.log(`获取文件列表: 元数据中有 ${files.length} 个文件`)

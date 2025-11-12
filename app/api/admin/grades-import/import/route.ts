@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { readdir, readFileSync, existsSync, stat } from 'fs'
+import { readdir, readFileSync, existsSync, stat, mkdirSync } from 'fs'
 import { join } from 'path'
 import { promisify } from 'util'
 import { getAllFilesMetadata, filesMetadata } from '../upload/route'
@@ -7,10 +7,19 @@ import { getAllFilesMetadata, filesMetadata } from '../upload/route'
 const readdirAsync = promisify(readdir)
 const statAsync = promisify(stat)
 
-// 文件存储目录
-const UPLOAD_DIR = join(process.cwd(), 'temp_imports', 'grades')
+// 文件存储目录（在无服务器环境使用 /tmp，可配置 FILE_UPLOAD_ROOT 覆盖）
+const UPLOAD_ROOT =
+  process.env.FILE_UPLOAD_ROOT ||
+  (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION ? '/tmp' : process.cwd())
+const UPLOAD_DIR = join(UPLOAD_ROOT, 'temp_imports', 'grades')
 const MAIN_TABLE = 'academic_results'
 const SHADOW_TABLE = 'academic_results_old'
+
+function ensureUploadDir() {
+  if (!existsSync(UPLOAD_DIR)) {
+    mkdirSync(UPLOAD_DIR, { recursive: true })
+  }
+}
 
 // Supabase配置（从环境变量读取）
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASELOCAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sdtarodxdvkeeiaouddo.supabase.co'
@@ -261,6 +270,8 @@ async function rollback(supabase: any): Promise<void> {
 
 export async function POST() {
   try {
+    ensureUploadDir()
+
     // 获取所有文件元数据
     let allFiles = getAllFilesMetadata()
     console.log(`导入API: 元数据中有 ${allFiles.length} 个文件`)
