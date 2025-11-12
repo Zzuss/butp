@@ -154,6 +154,24 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+
+        {/* 成绩导入管理 */}
+        <Link href="/admin/grades-import">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                成绩导入管理
+              </CardTitle>
+              <Database className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-semibold text-blue-700">成绩导入</div>
+              <p className="text-xs text-muted-foreground">
+                使用影子表机制安全导入成绩数据到 academic_results 表
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
       
     </AdminLayout>
