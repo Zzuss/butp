@@ -193,8 +193,8 @@ class ImportWorker {
       })
       .eq('id', fileDetail.id)
 
-    // 下载文件
-    const filePath = await this.downloadFile(fileDetail)
+    // 获取本地文件
+    const filePath = await this.getLocalFile(fileDetail)
     
     // 读取Excel文件
     const workbook = XLSX.readFile(filePath)
@@ -247,88 +247,57 @@ class ImportWorker {
     }
   }
 
-  // 下载文件（智能选择本地或线上）
-  async downloadFile(fileDetail) {
-    const fileName = `${fileDetail.file_id}.xlsx`
-    const filePath = path.join(TEMP_DIR, fileName)
+  // 获取本地文件（文件已通过上传服务存储在ECS）
+  async getLocalFile(fileDetail) {
+    // 尝试多种文件名格式
+    const possibleFiles = [
+      `${fileDetail.file_id}.xlsx`,
+      `${fileDetail.file_id}.xls`,
+      fileDetail.file_name // 如果有原始文件名
+    ]
     
-    // 如果文件已存在，直接返回
-    if (fs.existsSync(filePath)) {
-      logger.info(`文件已存在，跳过下载: ${fileName}`)
-      return filePath
-    }
-    
-    // 从环境变量获取下载源，或使用默认值
-    const downloadSources = process.env.DOWNLOAD_SOURCES 
-      ? process.env.DOWNLOAD_SOURCES.split(',')
-      : ['https://butp.tech', 'http://localhost:3000', 'http://127.0.0.1:3000']
-    
-    const downloadUrls = downloadSources.map(source => 
-      `${source.trim()}/api/admin/grades-import/download/${fileDetail.file_id}`
-    )
-    
-    for (let i = 0; i < downloadUrls.length; i++) {
-      const downloadUrl = downloadUrls[i]
-      try {
-        logger.info(`📥 尝试从源 ${i + 1} 下载文件: ${downloadUrl}`)
-        
-        const response = await axios({
-          method: 'GET',
-          url: downloadUrl,
-          responseType: 'stream',
-          timeout: 15000, // 15秒超时，因为要尝试多个源
-          headers: {
-            'User-Agent': 'ECS-Worker/1.0'
-          }
-        })
-        
-        const writer = fs.createWriteStream(filePath)
-        response.data.pipe(writer)
-        
-        return new Promise((resolve, reject) => {
-          writer.on('finish', () => {
-            logger.info(`✅ 文件下载完成: ${fileName} (源: ${i + 1})`)
-            resolve(filePath)
-          })
-          writer.on('error', (error) => {
-            logger.error(`❌ 文件写入失败: ${fileName}`, error)
-            reject(error)
-          })
-          
-          // 设置超时
-          setTimeout(() => {
-            writer.destroy()
-            reject(new Error('下载超时'))
-          }, 20000)
-        })
-        
-      } catch (error) {
-        logger.warn(`⚠️ 源 ${i + 1} 下载失败: ${error.message}`)
-        
-        // 如果不是最后一个源，继续尝试下一个
-        if (i < downloadUrls.length - 1) {
-          continue
-        }
-        
-        // 所有源都失败了
-        logger.error(`❌ 所有下载源都失败: ${fileName}`)
-        throw new Error(`文件下载失败: 尝试了 ${downloadUrls.length} 个源，都无法下载`)
+    for (const fileName of possibleFiles) {
+      const filePath = path.join(TEMP_DIR, fileName)
+      
+      if (fs.existsSync(filePath)) {
+        logger.info(`✅ 找到本地文件: ${fileName}`)
+        return filePath
       }
     }
+    
+    // 如果找不到文件，记录详细信息
+    logger.error(`❌ 找不到本地文件: ${fileDetail.file_id}`)
+    logger.info(`   查找的文件名: ${possibleFiles.join(', ')}`)
+    logger.info(`   查找目录: ${TEMP_DIR}`)
+    
+    // 列出目录中的所有文件用于调试
+    try {
+      const dirFiles = fs.readdirSync(TEMP_DIR)
+      logger.info(`   目录中的文件: ${dirFiles.join(', ')}`)
+    } catch (error) {
+      logger.error(`   无法读取目录: ${error.message}`)
+    }
+    
+    throw new Error(`找不到文件: ${fileDetail.file_id}`)
   }
 
   // 数据映射
   mapExcelRow(row) {
     return {
       SNH: row.SNH || null,
-      Name: row.Name || null,
+      Semester_Offered: row.Semester_Offered || row.Semester || null,
+      Current_Major: row.Current_Major || row.Major || null,
+      Course_ID: row.Course_ID || row.Course_Code || null,
       Course_Name: row.Course_Name || null,
-      Course_Code: row.Course_Code || null,
-      Credit: row.Credit ? parseFloat(row.Credit) : null,
       Grade: row.Grade || null,
-      Score: row.Score ? parseFloat(row.Score) : null,
-      GPA: row.GPA ? parseFloat(row.GPA) : null,
-      Semester: row.Semester || null,
+      Grade_Remark: row.Grade_Remark || null,
+      Course_Type: row.Course_Type || null,
+      Course_Attribute: row.Course_Attribute || null,
+      Hours: row.Hours || null,
+      Credit: row.Credit ? parseFloat(row.Credit) : null,
+      Offering_Unit: row.Offering_Unit || null,
+      Tags: row.Tags || null,
+      Description: row.Description || null,
       Exam_Type: row.Exam_Type || null,
       Assessment_Method: row['Assessment_Method '] || row.Assessment_Method || null,
       year: row.year ? parseInt(row.year) : null,

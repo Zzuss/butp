@@ -110,7 +110,7 @@ export default function GradesImportPage() {
         const formData = new FormData()
         formData.append('file', file)
 
-        const response = await fetch('/api/admin/grades-import/upload', {
+        const response = await fetch('/api/admin/grades-import/upload-to-ecs', {
           method: 'POST',
           body: formData,
         })
@@ -169,20 +169,25 @@ export default function GradesImportPage() {
         
         // 如果任务完成或失败，停止轮询
         if (task.status === 'completed' || task.status === 'failed') {
+          console.log('🎯 任务状态检测到:', task.status, task)
+          
           if (taskPollingInterval) {
             clearInterval(taskPollingInterval)
             setTaskPollingInterval(null)
           }
           setImporting(false)
           
-          // 成功时显示结果，不自动刷新文件列表
+          // 成功时显示结果，自动刷新文件列表
           if (task.status === 'completed') {
-            console.log('导入成功完成！', {
+            console.log('✅ 导入成功完成！', {
               totalFiles: task.totalFiles,
               totalRecords: task.totalRecords,
               importedRecords: task.importedRecords
             })
-            // 用户可以手动刷新查看结果
+            // 刷新文件列表以清除处理状态
+            await refreshFileList()
+          } else {
+            console.log('❌ 导入失败:', task.errorMessage)
           }
           
           return true // 表示轮询已完成
