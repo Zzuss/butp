@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { Upload, FileSpreadsheet, Trash2, Database, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import AdminLayout from '@/components/admin/AdminLayout'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 
 interface FileInfo {
   id: string
@@ -39,12 +40,23 @@ interface ImportTask {
   }>
 }
 
+interface ImportResult {
+  success: boolean
+  totalFiles: number
+  totalRecords: number
+  importedRecords: number
+  errorMessage?: string
+  completedAt?: string
+}
+
 export default function GradesImportPage() {
   const [files, setFiles] = useState<FileInfo[]>([])
   const [uploading, setUploading] = useState(false)
   const [importing, setImporting] = useState(false)
   const [currentTask, setCurrentTask] = useState<ImportTask | null>(null)
   const [taskPollingInterval, setTaskPollingInterval] = useState<NodeJS.Timeout | null>(null)
+  const [showResultDialog, setShowResultDialog] = useState(false)
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 加载文件列表
@@ -177,15 +189,21 @@ export default function GradesImportPage() {
           }
           setImporting(false)
           
-          // 成功时显示结果，自动刷新文件列表
+          // 显示结果弹窗
+          const result: ImportResult = {
+            success: task.status === 'completed',
+            totalFiles: task.totalFiles,
+            totalRecords: task.totalRecords,
+            importedRecords: task.importedRecords,
+            errorMessage: task.errorMessage,
+            completedAt: task.completedAt
+          }
+          
+          setImportResult(result)
+          setShowResultDialog(true)
+          
           if (task.status === 'completed') {
-            console.log('✅ 导入成功完成！', {
-              totalFiles: task.totalFiles,
-              totalRecords: task.totalRecords,
-              importedRecords: task.importedRecords
-            })
-            // 刷新文件列表以清除处理状态
-            await refreshFileList()
+            console.log('✅ 导入成功完成！', result)
           } else {
             console.log('❌ 导入失败:', task.errorMessage)
           }
@@ -240,7 +258,7 @@ export default function GradesImportPage() {
 
         // 开始智能轮询任务状态
         let pollCount = 0
-        const maxPolls = 60 // 最多轮询60次（约2-5分钟）
+        const maxPolls = 120 // 最多轮询120次（约4-10分钟），给ECS更多处理时间
         
         const smartPoll = async () => {
           pollCount++
@@ -252,19 +270,33 @@ export default function GradesImportPage() {
               setTaskPollingInterval(null)
             }
             if (pollCount >= maxPolls && !isCompleted) {
-              console.log('轮询超时，任务可能仍在处理中')
+              console.log('轮询超时，任务可能仍在ECS后台处理中')
               setImporting(false)
+              
+              // 显示超时提示弹窗
+              const timeoutResult: ImportResult = {
+                success: false,
+                totalFiles: currentTask?.totalFiles || 0,
+                totalRecords: currentTask?.totalRecords || 0,
+                importedRecords: currentTask?.importedRecords || 0,
+                errorMessage: '轮询超时，但任务可能仍在ECS后台处理中。请稍后刷新页面查看最新状态，或联系管理员确认任务状态。'
+              }
+              
+              setImportResult(timeoutResult)
+              setShowResultDialog(true)
             }
             return
           }
           
-          // 动态调整轮询间隔
+          // 动态调整轮询间隔，考虑ECS异步处理特点
           let nextInterval = 3000 // 默认3秒
           
           if (currentTask?.status === 'processing' && currentTask.progress > 0) {
-            nextInterval = 2000 // 处理中：2秒
+            nextInterval = 2000 // 处理中且有进度：2秒
           } else if (currentTask?.status === 'pending') {
-            nextInterval = 5000 // 等待中：5秒
+            nextInterval = pollCount < 10 ? 3000 : 5000 // 等待中：前10次3秒，之后5秒
+          } else if (currentTask?.status === 'processing' && currentTask.progress === 0) {
+            nextInterval = 4000 // 处理中但无进度：4秒
           }
           
           // 重新设置定时器
@@ -284,6 +316,14 @@ export default function GradesImportPage() {
       setImporting(false)
       alert(error instanceof Error ? error.message : '导入失败')
     }
+  }
+
+  // 处理结果弹窗关闭
+  const handleResultDialogClose = async () => {
+    setShowResultDialog(false)
+    setImportResult(null)
+    // 刷新文件列表
+    await loadFileList()
   }
 
   // 清理轮询
@@ -558,7 +598,66 @@ export default function GradesImportPage() {
           </CardContent>
         </Card>
       </div>
+
+{/* 导入结果弹窗 */}
+<Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+  <DialogContent className="sm:max-w-md">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2">
+        {importResult?.success ? (
+          <CheckCircle className="w-5 h-5 text-green-600" />
+        ) : (
+          <XCircle className="w-5 h-5 text-red-600" />
+        )}
+        {importResult?.success ? '导入成功' : '导入失败'}
+      </DialogTitle>
+      <DialogDescription>
+        {importResult?.success 
+          ? '成绩数据已成功导入到数据库' 
+          : '导入过程中发生错误，请检查文件格式或联系管理员'
+        }
+      </DialogDescription>
+    </DialogHeader>
+    
+    {importResult && (
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">处理文件数：</span>
+            <span className="font-medium ml-1">{importResult.totalFiles}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">总记录数：</span>
+            <span className="font-medium ml-1">{importResult.totalRecords}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">成功导入：</span>
+            <span className="font-medium ml-1 text-green-600">{importResult.importedRecords}</span>
+          </div>
+          {importResult.completedAt && (
+            <div>
+              <span className="text-muted-foreground">完成时间：</span>
+              <span className="font-medium ml-1">{formatTime(importResult.completedAt)}</span>
+            </div>
+          )}
+        </div>
+        
+        {importResult.errorMessage && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-800 font-medium">错误详情：</p>
+            <p className="text-sm text-red-700 mt-1">{importResult.errorMessage}</p>
+          </div>
+        )}
+      </div>
+    )}
+    
+    <DialogFooter>
+      <Button onClick={handleResultDialogClose} className="w-full">
+        确定
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
     </AdminLayout>
   )
 }
-

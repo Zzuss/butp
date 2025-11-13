@@ -17,76 +17,42 @@ export async function GET() {
   try {
     let filesFromMemory = []
     
-    // 在Vercel环境下，优先从ECS获取文件列表
-    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION) {
-      console.log('🌐 从ECS获取文件列表...')
+    // 优先从ECS获取文件列表（所有环境）
+    console.log('🌐 从ECS获取文件列表...')
+    
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: `${ECS_UPLOAD_URL}/files`,
+        timeout: 10000
+      })
       
-      try {
-        const response = await axios({
-          method: 'GET',
-          url: `${ECS_UPLOAD_URL}/files`,
-          timeout: 10000
-        })
+      if (response.data.success && response.data.files) {
+        filesFromMemory = response.data.files.map((file: any) => ({
+          id: file.filename.replace(/\.(xlsx|xls)$/, ''),
+          name: file.filename,
+          originalName: file.filename,
+          size: file.size,
+          uploadTime: file.uploadTime
+        }))
         
-        if (response.data.success && response.data.files) {
-          filesFromMemory = response.data.files.map((file: any) => ({
-            id: file.filename.replace(/\.(xlsx|xls)$/, ''),
-            name: file.filename,
-            originalName: file.filename,
-            size: file.size,
-            uploadTime: file.uploadTime
-          }))
-          
-          console.log(`✅ 从ECS获取到 ${filesFromMemory.length} 个文件`)
-        }
-      } catch (ecsError: any) {
-        console.warn('⚠️ 从ECS获取文件列表失败，尝试本地方式:', ecsError.message)
+        console.log(`✅ 从ECS获取到 ${filesFromMemory.length} 个文件`)
       }
+    } catch (ecsError: any) {
+      console.warn('⚠️ 从ECS获取文件列表失败，尝试本地方式:', ecsError.message)
     }
     
-    // 如果ECS获取失败或不在Vercel环境，尝试其他方式
+    // 如果ECS获取失败，记录错误但不回退到本地文件系统
+    // 这确保文件列表始终反映ECS服务器的真实状态
     if (filesFromMemory.length === 0) {
-      // 首先尝试从内存获取文件元数据
-      filesFromMemory = getAllFilesMetadata()
-      
-      // 如果内存中没有文件信息，从文件系统重建
-      if (filesFromMemory.length === 0 && existsSync(UPLOAD_DIR)) {
-        console.log('📁 从本地文件系统重建文件元数据...')
-        
-        try {
-          const files = readdirSync(UPLOAD_DIR)
-          const excelFiles = files.filter(file => 
-            file.endsWith('.xlsx') || file.endsWith('.xls')
-          )
-
-          filesFromMemory = excelFiles.map(fileName => {
-            const filePath = join(UPLOAD_DIR, fileName)
-            const stats = statSync(filePath)
-            
-            // 从文件名提取ID（假设格式为 id.xlsx）
-            const fileId = fileName.replace(/\.(xlsx|xls)$/, '')
-            
-            return {
-              id: fileId,
-              name: fileName,
-              originalName: fileName, // 没有原始名称信息时使用文件名
-              size: stats.size,
-              uploadTime: stats.mtime.toISOString()
-            }
-          })
-          
-          console.log(`📁 从本地文件系统发现 ${filesFromMemory.length} 个文件`)
-        } catch (error) {
-          console.error('❌ 读取本地文件系统失败:', error)
-        }
-      }
+      console.log('📡 ECS服务器上没有文件或连接失败，不使用本地文件')
     }
 
     return NextResponse.json({
       success: true,
       files: filesFromMemory,
       message: filesFromMemory.length === 0 ? '没有找到可导入的文件' : `找到 ${filesFromMemory.length} 个文件`,
-      source: process.env.VERCEL ? 'ECS' : 'Local'
+      source: filesFromMemory.length > 0 && filesFromMemory[0].uploadTime ? 'ECS' : 'Local'
     })
 
   } catch (error) {
