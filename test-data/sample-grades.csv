@@ -1,0 +1,7 @@
+SNH,Semester_Offered,Current_Major,Course_ID,Course_Name,Grade,Grade_Remark,Course_Type,Course_Attribute,Hours,Credit,Offering_Unit,Tags,Description,Exam_Type,Assessment_Method,year
+2021001,2021-1,Computer Science,CS101,Introduction to Programming,A,优秀,必修,专业核心,48,3,计算机学院,编程基础,程序设计基础课程,期末考试,笔试+实验,2021
+2021001,2021-1,Computer Science,MATH101,高等数学,B+,良好,必修,通识基础,64,4,数学学院,数学基础,微积分基础,期末考试,笔试,2021
+2021002,2021-1,Computer Science,CS101,Introduction to Programming,A-,良好,必修,专业核心,48,3,计算机学院,编程基础,程序设计基础课程,期末考试,笔试+实验,2021
+2021002,2021-1,Computer Science,MATH101,高等数学,A,优秀,必修,通识基础,64,4,数学学院,数学基础,微积分基础,期末考试,笔试,2021
+2021003,2021-2,Computer Science,CS102,Data Structures,B,中等,必修,专业核心,48,3,计算机学院,数据结构,算法与数据结构,期末考试,笔试+实验,2021
+2021003,2021-2,Computer Science,PHYS101,大学物理,B+,良好,必修,通识基础,48,3,物理学院,物理基础,力学与电磁学,期末考试,笔试,2021

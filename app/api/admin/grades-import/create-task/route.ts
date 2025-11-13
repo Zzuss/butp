@@ -1,0 +1,178 @@
+import { NextResponse } from 'next/server'
+import { getAllFilesMetadata } from '../upload/route'
+import { createClient } from '@supabase/supabase-js'
+import axios from 'axios'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASELOCAL_URL || process.env.NEXT_PUBLIC_STORAGE_SUPABASE_URL!
+// 优先使用服务角色密钥，如果没有则使用匿名密钥
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                   process.env.NEXT_PUBLIC_SUPABASELOCAL_SERVICE_ROLE_KEY || 
+                   process.env.NEXT_PUBLIC_SUPABASELOCAL_ANON_KEY || 
+                   process.env.NEXT_PUBLIC_STORAGE_SUPABASE_ANON_KEY!
+
+export const maxDuration = 30
+
+export async function POST() {
+  try {
+    // 验证Supabase配置
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Supabase配置缺失:', { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseKey,
+        env: process.env.NODE_ENV 
+      })
+      throw new Error('Supabase配置缺失')
+    }
+    
+    // 检测密钥类型
+    let keyType = 'unknown'
+    try {
+      const payload = JSON.parse(atob(supabaseKey.split('.')[1]))
+      keyType = payload.role || 'unknown'
+    } catch (e) {
+      keyType = 'invalid'
+    }
+    
+    console.log('🔗 Supabase配置:', { 
+      url: supabaseUrl.substring(0, 30) + '...', 
+      keyLength: supabaseKey.length,
+      keyType: keyType
+    })
+    
+    // 如果使用匿名密钥，给出警告
+    if (keyType === 'anon') {
+      console.warn('⚠️ 使用匿名密钥，可能没有足够权限执行数据库操作')
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    // 直接从ECS获取文件列表，避免内部API调用的认证问题
+    console.log('🌐 直接从ECS获取文件列表...')
+    
+    let files = []
+    const ECS_UPLOAD_URL = process.env.ECS_UPLOAD_URL || 'http://39.96.196.67:3001'
+    
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: `${ECS_UPLOAD_URL}/files`,
+        timeout: 10000
+      })
+      
+      if (response.data.success && response.data.files) {
+        files = response.data.files.map((file: any) => ({
+          id: file.filename.replace(/\.(xlsx|xls)$/, ''),
+          name: file.originalName || file.filename, // 优先使用原始文件名
+          originalName: file.originalName || file.filename,
+          size: file.size,
+          uploadTime: file.uploadTime
+        }))
+        
+        console.log(`✅ 从ECS获取到 ${files.length} 个文件`)
+      } else {
+        console.log('📡 ECS服务器上没有文件')
+        files = []
+      }
+    } catch (ecsError: any) {
+      console.error('⚠️ 从ECS获取文件列表失败:', ecsError.message)
+      files = []
+    }
+    
+    if (files.length === 0) {
+      return NextResponse.json(
+        { success: false, message: '没有可导入的文件，请先上传Excel文件' },
+        { status: 400 }
+      )
+    }
+
+    // 创建导入任务
+    console.log('📝 尝试创建导入任务，文件数量:', files.length)
+    
+    const { data: task, error: taskError } = await supabase
+      .from('import_tasks')
+      .insert({
+        total_files: files.length,
+        status: 'pending'
+      })
+      .select()
+      .single()
+
+    if (taskError) {
+      console.error('创建任务失败详情:', {
+        code: taskError.code,
+        message: taskError.message,
+        details: taskError.details,
+        hint: taskError.hint
+      })
+      
+      // 如果是权限问题，提供更友好的错误信息
+      if (taskError.code === '42501' || taskError.message.includes('permission')) {
+        throw new Error(`数据库权限不足，请检查RLS策略。错误: ${taskError.message}`)
+      }
+      
+      throw new Error(`创建任务失败: ${taskError.message}`)
+    }
+    
+    console.log('✅ 任务创建成功，ID:', task.id)
+
+    // 创建文件处理详情
+    const fileDetails = files.map((file: any) => ({
+      task_id: task.id,
+      file_id: file.id,
+      file_name: file.name,
+      status: 'pending'
+    }))
+
+    console.log('📝 尝试创建文件详情，数量:', fileDetails.length)
+    
+    const { error: detailsError } = await supabase
+      .from('import_file_details')
+      .insert(fileDetails)
+
+    if (detailsError) {
+      console.error('创建文件详情失败:', {
+        code: detailsError.code,
+        message: detailsError.message,
+        details: detailsError.details
+      })
+      
+      // 回滚任务
+      console.log('🔄 回滚任务:', task.id)
+      await supabase.from('import_tasks').delete().eq('id', task.id)
+      
+      if (detailsError.code === '42501' || detailsError.message.includes('permission')) {
+        throw new Error(`文件详情权限不足，请检查RLS策略。错误: ${detailsError.message}`)
+      }
+      
+      throw new Error(`创建文件详情失败: ${detailsError.message}`)
+    }
+    
+    console.log('✅ 文件详情创建成功')
+
+    return NextResponse.json({
+      success: true,
+      taskId: task.id,
+      message: `已创建导入任务，包含 ${files.length} 个文件`
+    })
+
+  } catch (error) {
+    console.error('创建导入任务失败:', error)
+    console.error('错误堆栈:', error instanceof Error ? error.stack : '无堆栈信息')
+    console.error('环境信息:', {
+      NODE_ENV: process.env.NODE_ENV,
+      VERCEL_URL: process.env.VERCEL_URL,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey
+    })
+    
+    return NextResponse.json(
+      {
+        success: false,
+        message: '创建导入任务失败',
+        error: error instanceof Error ? error.message : '未知错误',
+        details: error instanceof Error ? error.stack : undefined
+      },
+      { status: 500 }
+    )
+  }
+}

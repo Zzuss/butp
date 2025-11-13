@@ -541,7 +541,11 @@ export async function getStudentInfo(studentHash: string): Promise<{ year: strin
       .limit(1);
 
     if (error) {
-      console.error('查询学生信息时出错:', error);
+      console.error('查询学生信息时出错:', error)
+      console.error('完整错误对象:', JSON.stringify(error, null, 2))
+      console.error('错误代码:', error.code)
+      console.error('错误消息:', error.message)
+      console.error('错误详情:', error.details)
       return null;
     }
 
