@@ -39,13 +39,13 @@ export async function GET() {
           try {
             const stats = await stat(filePath)
             if (stats.isFile() && !filesMetadata.has(fileId)) {
-              // 重建元数据（使用文件名作为显示名）
+              // 重建元数据（使用文件ID作为显示名，因为原始文件名已丢失）
               filesMetadata.set(fileId, {
-                name: fileName,
+                name: `导入文件-${fileId.substring(0, 8)}.xlsx`,
                 size: stats.size,
                 uploadTime: stats.mtime.toISOString(),
               })
-              console.log(`重建元数据: ${fileId} -> ${fileName}`)
+              console.log(`重建元数据: ${fileId} -> 导入文件-${fileId.substring(0, 8)}.xlsx`)
             }
           } catch (err) {
             console.error(`处理文件 ${fileName} 时出错:`, err)

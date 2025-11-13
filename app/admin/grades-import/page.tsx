@@ -17,26 +17,34 @@ interface FileInfo {
   uploadTime: string
 }
 
-interface ImportStatus {
-  phase: string
-  message: string
+interface ImportTask {
+  id: string
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled'
+  totalFiles: number
+  processedFiles: number
+  totalRecords: number
+  importedRecords: number
   progress: number
-}
-
-interface ImportResult {
-  success: boolean
-  message: string
-  importedCount: number
-  totalCount: number
-  errors: string[]
+  errorMessage?: string
+  createdAt: string
+  completedAt?: string
+  files: Array<{
+    id: string
+    fileName: string
+    status: 'pending' | 'processing' | 'completed' | 'failed'
+    recordsCount: number
+    importedCount: number
+    errorMessage?: string
+    processedAt?: string
+  }>
 }
 
 export default function GradesImportPage() {
   const [files, setFiles] = useState<FileInfo[]>([])
   const [uploading, setUploading] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null)
-  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [currentTask, setCurrentTask] = useState<ImportTask | null>(null)
+  const [taskPollingInterval, setTaskPollingInterval] = useState<NodeJS.Timeout | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 加载文件列表
@@ -56,6 +64,35 @@ export default function GradesImportPage() {
     }
   }
 
+  // 刷新文件列表
+  const refreshFileList = async () => {
+    try {
+      console.log('刷新文件列表...')
+      const response = await fetch('/api/admin/grades-import/refresh-files', {
+        method: 'POST'
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const fileList = data.files || []
+        console.log('刷新完成:', fileList.length, '个文件')
+        setFiles(fileList)
+        
+        if (fileList.length > 0) {
+          alert(`发现 ${fileList.length} 个可导入的文件`)
+        } else {
+          alert('没有找到可导入的文件，请先上传Excel文件')
+        }
+      } else {
+        console.error('刷新文件列表失败:', response.status)
+        alert('刷新失败，请重试')
+      }
+    } catch (error) {
+      console.error('刷新文件列表失败:', error)
+      alert('刷新失败，请重试')
+    }
+  }
+
   useEffect(() => {
     loadFileList()
   }, [])
@@ -66,7 +103,7 @@ export default function GradesImportPage() {
     if (selectedFiles.length === 0) return
 
     setUploading(true)
-    setImportResult(null)
+    setCurrentTask(null)
 
     try {
       for (const file of selectedFiles) {
@@ -85,7 +122,7 @@ export default function GradesImportPage() {
       }
 
       // 重新加载文件列表
-      await loadFileList()
+      await refreshFileList()
     } catch (error) {
       alert(error instanceof Error ? error.message : '上传失败')
     } finally {
@@ -120,75 +157,138 @@ export default function GradesImportPage() {
     }
   }
 
-  // 导入到数据库
-  const handleImport = async () => {
-    // 导入前先刷新文件列表，确保同步
-    // 直接从API获取最新文件列表，不依赖状态
-    let currentFiles: FileInfo[] = []
+  // 智能轮询任务状态
+  const pollTaskStatus = async (taskId: string) => {
     try {
-      const response = await fetch('/api/admin/grades-import/files')
-      if (response.ok) {
-        const data = await response.json()
-        currentFiles = data.files || []
-        // 更新状态
-        setFiles(currentFiles)
+      const response = await fetch(`/api/admin/grades-import/task-status/${taskId}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        const task = data.task
+        setCurrentTask(task)
+        
+        // 如果任务完成或失败，停止轮询
+        if (task.status === 'completed' || task.status === 'failed') {
+          if (taskPollingInterval) {
+            clearInterval(taskPollingInterval)
+            setTaskPollingInterval(null)
+          }
+          setImporting(false)
+          
+          // 成功时显示结果，不自动刷新文件列表
+          if (task.status === 'completed') {
+            console.log('导入成功完成！', {
+              totalFiles: task.totalFiles,
+              totalRecords: task.totalRecords,
+              importedRecords: task.importedRecords
+            })
+            // 用户可以手动刷新查看结果
+          }
+          
+          return true // 表示轮询已完成
+        }
+        
+        // 根据任务状态调整轮询间隔
+        if (task.status === 'processing' && task.progress > 0) {
+          // 处理中且有进度，使用较短间隔
+          return false
+        } else if (task.status === 'pending') {
+          // 等待中，使用较长间隔
+          return false
+        }
       }
     } catch (error) {
-      console.error('获取文件列表失败:', error)
+      console.error('轮询任务状态失败:', error)
     }
-    
-    if (currentFiles.length === 0) {
+    return false
+  }
+
+  // 开始导入
+  const handleImport = async () => {
+    if (files.length === 0) {
       alert('请先上传文件')
       return
     }
 
-    if (!confirm(`确定要将 ${currentFiles.length} 个文件导入到数据库吗？此操作将使用影子表机制，导入成功后才会替换现有数据。`)) {
+    if (!confirm(`确定要将 ${files.length} 个文件导入到数据库吗？此操作将使用影子表机制，导入成功后才会替换现有数据。`)) {
       return
     }
 
     setImporting(true)
-    setImportStatus({ phase: '准备导入', message: '正在准备导入数据...', progress: 10 })
-    setImportResult(null)
+    setCurrentTask(null)
 
     try {
-      const response = await fetch('/api/admin/grades-import/import', {
+      // 创建导入任务
+      const response = await fetch('/api/admin/grades-import/create-task', {
         method: 'POST',
       })
 
       const data = await response.json()
 
       if (response.ok && data.success) {
-        setImportResult({
-          success: true,
-          message: data.message || '导入成功',
-          importedCount: data.importedCount || 0,
-          totalCount: data.totalCount || 0,
-          errors: data.errors || [],
+        const taskId = data.taskId
+        
+        // 触发队列处理
+        await fetch('/api/admin/grades-import/trigger-process', {
+          method: 'POST',
         })
-        // 导入成功后清空文件列表
-        await loadFileList()
+
+        // 开始智能轮询任务状态
+        let pollCount = 0
+        const maxPolls = 60 // 最多轮询60次（约2-5分钟）
+        
+        const smartPoll = async () => {
+          pollCount++
+          const isCompleted = await pollTaskStatus(taskId)
+          
+          if (isCompleted || pollCount >= maxPolls) {
+            if (taskPollingInterval) {
+              clearInterval(taskPollingInterval)
+              setTaskPollingInterval(null)
+            }
+            if (pollCount >= maxPolls && !isCompleted) {
+              console.log('轮询超时，任务可能仍在处理中')
+              setImporting(false)
+            }
+            return
+          }
+          
+          // 动态调整轮询间隔
+          let nextInterval = 3000 // 默认3秒
+          
+          if (currentTask?.status === 'processing' && currentTask.progress > 0) {
+            nextInterval = 2000 // 处理中：2秒
+          } else if (currentTask?.status === 'pending') {
+            nextInterval = 5000 // 等待中：5秒
+          }
+          
+          // 重新设置定时器
+          if (taskPollingInterval) {
+            clearInterval(taskPollingInterval)
+          }
+          const newInterval = setTimeout(smartPoll, nextInterval)
+          setTaskPollingInterval(newInterval as any)
+        }
+        
+        // 立即开始轮询
+        await smartPoll()
       } else {
-        setImportResult({
-          success: false,
-          message: data.message || '导入失败',
-          importedCount: data.importedCount || 0,
-          totalCount: data.totalCount || 0,
-          errors: data.errors || [],
-        })
+        throw new Error(data.message || '创建导入任务失败')
       }
     } catch (error) {
-      setImportResult({
-        success: false,
-        message: '网络错误，请重试',
-        importedCount: 0,
-        totalCount: 0,
-        errors: [error instanceof Error ? error.message : '未知错误'],
-      })
-    } finally {
       setImporting(false)
-      setImportStatus(null)
+      alert(error instanceof Error ? error.message : '导入失败')
     }
   }
+
+  // 清理轮询
+  useEffect(() => {
+    return () => {
+      if (taskPollingInterval) {
+        clearInterval(taskPollingInterval)
+      }
+    }
+  }, [taskPollingInterval])
 
   // 格式化文件大小
   const formatFileSize = (bytes: number) => {
@@ -251,17 +351,42 @@ export default function GradesImportPage() {
         {/* 文件列表 */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5" />
-              已上传文件列表 ({files.length})
-            </CardTitle>
-            <CardDescription>
-              已上传的文件将按顺序导入到数据库
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileSpreadsheet className="w-5 h-5" />
+                  已上传文件列表 ({files.length})
+                </CardTitle>
+                <CardDescription>
+                  已上传的文件将按顺序导入到数据库
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshFileList}
+                disabled={uploading || importing}
+                className="flex items-center gap-2"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                刷新列表
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {files.length === 0 ? (
-              <p className="text-sm text-muted-foreground">暂无上传的文件</p>
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground mb-4">暂无上传的文件</p>
+                <Button
+                  variant="outline"
+                  onClick={refreshFileList}
+                  disabled={uploading || importing}
+                  className="flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  检查已上传文件
+                </Button>
+              </div>
             ) : (
               <div className="space-y-2">
                 {files.map((file) => (
@@ -315,59 +440,72 @@ export default function GradesImportPage() {
             </Button>
 
             {/* 导入进度 */}
-            {importStatus && (
-              <div className="space-y-2">
+            {currentTask && (
+              <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium">{importStatus.phase}</span>
+                  <span className="text-sm font-medium">
+                    {currentTask.status === 'pending' && '准备导入...'}
+                    {currentTask.status === 'processing' && '正在导入...'}
+                    {currentTask.status === 'completed' && '导入完成'}
+                    {currentTask.status === 'failed' && '导入失败'}
+                  </span>
                 </div>
-                <p className="text-sm text-muted-foreground">{importStatus.message}</p>
-                <Progress value={importStatus.progress} className="w-full" />
-              </div>
-            )}
-
-            {/* 导入结果 */}
-            {importResult && (
-              <Alert
-                className={
-                  importResult.success
-                    ? 'border-green-200 bg-green-50'
-                    : 'border-red-200 bg-red-50'
-                }
-              >
-                <div className="flex items-start gap-2">
-                  {importResult.success ? (
-                    <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-600 mt-0.5" />
+                
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>文件进度: {currentTask.processedFiles}/{currentTask.totalFiles}</p>
+                  {currentTask.totalRecords > 0 && (
+                    <p>记录进度: {currentTask.importedRecords}/{currentTask.totalRecords}</p>
                   )}
-                  <AlertDescription className="flex-1">
-                    <div className="space-y-2">
-                      <p className="font-medium">{importResult.message}</p>
-                      {importResult.success && (
-                        <div className="text-sm space-y-1">
-                          <p>导入记录数：{importResult.importedCount}/{importResult.totalCount} 条</p>
-                        </div>
-                      )}
-                      {importResult.errors.length > 0 && (
-                        <div>
-                          <p className="font-semibold text-sm">错误信息：</p>
-                          <div className="mt-1 max-h-24 overflow-y-auto">
-                            {importResult.errors.map((error, index) => (
-                              <p
-                                key={index}
-                                className="text-xs text-gray-600 bg-gray-100 p-2 rounded mt-1"
-                              >
-                                {error}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </AlertDescription>
                 </div>
-              </Alert>
+                
+                <Progress value={currentTask.progress} className="w-full" />
+
+                {/* 文件详情 */}
+                {currentTask.files && currentTask.files.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">文件处理状态:</p>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {currentTask.files.map((file) => (
+                        <div key={file.id} className="flex items-center gap-2 text-xs">
+                          {file.status === 'pending' && <Loader2 className="w-3 h-3 text-gray-400" />}
+                          {file.status === 'processing' && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                          {file.status === 'completed' && <CheckCircle className="w-3 h-3 text-green-500" />}
+                          {file.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                          <span className="flex-1 truncate">{file.fileName}</span>
+                          {file.importedCount > 0 && (
+                            <span className="text-gray-500">{file.importedCount}条</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 错误信息 */}
+                {currentTask.errorMessage && (
+                  <Alert className="border-red-200 bg-red-50">
+                    <XCircle className="w-4 h-4 text-red-600" />
+                    <AlertDescription>
+                      <p className="font-medium text-red-800">错误信息:</p>
+                      <p className="text-red-700 text-sm mt-1">{currentTask.errorMessage}</p>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* 成功信息 */}
+                {currentTask.status === 'completed' && (
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <AlertDescription>
+                      <p className="font-medium text-green-800">导入成功!</p>
+                      <p className="text-green-700 text-sm mt-1">
+                        成功导入 {currentTask.importedRecords} 条记录，数据已生效
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
