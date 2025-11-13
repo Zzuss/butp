@@ -114,6 +114,18 @@ export default function GradesImportPage() {
     const selectedFiles = Array.from(event.target.files || [])
     if (selectedFiles.length === 0) return
 
+    // 检查已有文件数量
+    if (files.length >= 4) {
+      const confirmUpload = confirm(`已上传了${files.length}个成绩文件，继续上传可能出错。是否继续？`)
+      if (!confirmUpload) {
+        // 清空文件选择
+        if (event.target) {
+          event.target.value = ''
+        }
+        return
+      }
+    }
+
     setUploading(true)
     setCurrentTask(null)
 
@@ -258,7 +270,7 @@ export default function GradesImportPage() {
 
         // 开始智能轮询任务状态
         let pollCount = 0
-        const maxPolls = 120 // 最多轮询120次（约4-10分钟），给ECS更多处理时间
+        const maxPolls = 60 // 最多轮询60次（约2-5分钟），减少轮询次数
         
         const smartPoll = async () => {
           pollCount++
@@ -289,14 +301,14 @@ export default function GradesImportPage() {
           }
           
           // 动态调整轮询间隔，考虑ECS异步处理特点
-          let nextInterval = 3000 // 默认3秒
+          let nextInterval = 5000 // 默认5秒
           
           if (currentTask?.status === 'processing' && currentTask.progress > 0) {
-            nextInterval = 2000 // 处理中且有进度：2秒
+            nextInterval = 3000 // 处理中且有进度：3秒
           } else if (currentTask?.status === 'pending') {
-            nextInterval = pollCount < 10 ? 3000 : 5000 // 等待中：前10次3秒，之后5秒
+            nextInterval = pollCount < 5 ? 3000 : 8000 // 等待中：前5次3秒，之后8秒
           } else if (currentTask?.status === 'processing' && currentTask.progress === 0) {
-            nextInterval = 4000 // 处理中但无进度：4秒
+            nextInterval = 6000 // 处理中但无进度：6秒
           }
           
           // 重新设置定时器
@@ -400,10 +412,10 @@ export default function GradesImportPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5" />
-                  已上传文件列表 ({files.length})
+                  待导入文件列表 ({files.length})
                 </CardTitle>
                 <CardDescription>
-                  已上传的文件将按顺序导入到数据库
+                  待导入的文件将按顺序导入到数据库
                 </CardDescription>
               </div>
               <Button
@@ -421,7 +433,7 @@ export default function GradesImportPage() {
           <CardContent>
             {files.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground mb-4">暂无上传的文件</p>
+                <p className="text-sm text-muted-foreground mb-4">暂无待导入的文件</p>
                 <Button
                   variant="outline"
                   onClick={refreshFileList}
@@ -429,7 +441,7 @@ export default function GradesImportPage() {
                   className="flex items-center gap-2"
                 >
                   <FileSpreadsheet className="w-4 h-4" />
-                  检查已上传文件
+                  检查待导入文件
                 </Button>
               </div>
             ) : (

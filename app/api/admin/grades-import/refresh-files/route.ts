@@ -31,8 +31,8 @@ export async function POST() {
       if (response.data.success && response.data.files) {
         filesFromECS = response.data.files.map((file: any) => ({
           id: file.filename.replace(/\.(xlsx|xls)$/, ''),
-          name: file.filename,
-          originalName: file.filename,
+          name: file.originalName || file.filename, // 优先使用原始文件名
+          originalName: file.originalName || file.filename,
           size: file.size,
           uploadTime: file.uploadTime
         }))
