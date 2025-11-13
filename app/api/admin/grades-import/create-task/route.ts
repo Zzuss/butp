@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAllFilesMetadata } from '../upload/route'
 import { createClient } from '@supabase/supabase-js'
+import axios from 'axios'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASELOCAL_URL || process.env.NEXT_PUBLIC_STORAGE_SUPABASE_URL!
 // 优先使用服务角色密钥，如果没有则使用匿名密钥
@@ -45,32 +46,37 @@ export async function POST() {
     
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    // 先调用文件列表API获取最新的文件状态
-    let baseUrl = 'http://localhost:3000'
+    // 直接从ECS获取文件列表，避免内部API调用的认证问题
+    console.log('🌐 直接从ECS获取文件列表...')
     
-    // 在Vercel环境中使用正确的URL
-    if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`
-    } else if (process.env.NODE_ENV === 'production') {
-      baseUrl = 'https://butp.tech' // 使用你的实际域名
+    let files = []
+    const ECS_UPLOAD_URL = process.env.ECS_UPLOAD_URL || 'http://39.96.196.67:3001'
+    
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: `${ECS_UPLOAD_URL}/files`,
+        timeout: 10000
+      })
+      
+      if (response.data.success && response.data.files) {
+        files = response.data.files.map((file: any) => ({
+          id: file.filename.replace(/\.(xlsx|xls)$/, ''),
+          name: file.originalName || file.filename, // 优先使用原始文件名
+          originalName: file.originalName || file.filename,
+          size: file.size,
+          uploadTime: file.uploadTime
+        }))
+        
+        console.log(`✅ 从ECS获取到 ${files.length} 个文件`)
+      } else {
+        console.log('📡 ECS服务器上没有文件')
+        files = []
+      }
+    } catch (ecsError: any) {
+      console.error('⚠️ 从ECS获取文件列表失败:', ecsError.message)
+      files = []
     }
-    
-    console.log('🌐 调用文件列表API:', `${baseUrl}/api/admin/grades-import/files`)
-    
-    const filesResponse = await fetch(`${baseUrl}/api/admin/grades-import/files`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-    
-    if (!filesResponse.ok) {
-      console.error('文件列表API调用失败:', filesResponse.status, filesResponse.statusText)
-      throw new Error(`文件列表API调用失败: ${filesResponse.status}`)
-    }
-    
-    const filesData = await filesResponse.json()
-    const files = filesData.success ? filesData.files : []
     
     if (files.length === 0) {
       return NextResponse.json(
