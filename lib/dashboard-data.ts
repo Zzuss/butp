@@ -189,7 +189,7 @@ export function calculateDashboardStats(results: CourseResult[]): DashboardStats
 }
 
 // 获取最近的科目成绩
-export async function getRecentSubjectGrades(results: CourseResult[], limit: number = 6, language: string = 'zh', major?: string, year?: string): Promise<SubjectGrade[]> {
+export async function getRecentSubjectGrades(results: CourseResult[], limit: number = 6, language: string = 'zh', major?: string): Promise<SubjectGrade[]> {
   if (!results || results.length === 0) {
     return [];
   }
@@ -212,7 +212,7 @@ export async function getRecentSubjectGrades(results: CourseResult[], limit: num
     // 如果是英文模式，尝试获取英文翻译
     if (language === 'en') {
       try {
-        courseName = await getCourseNameTranslation(course.course_name, major, year);
+        courseName = await getCourseNameTranslation(course.course_name, major);
       } catch (error) {
         console.error('Error translating course name:', error);
         // 如果翻译失败，使用原中文名称
@@ -467,7 +467,7 @@ export interface RadarChartData {
 }
 
 // 获取所有科目成绩（用于grades页面）
-export async function getSubjectGrades(studentHash: string, language: string = 'zh', major?: string, year?: string) {
+export async function getSubjectGrades(studentHash: string, language: string = 'zh', major?: string) {
   try {
     console.log('开始获取科目成绩，哈希值:', studentHash);
     
@@ -580,7 +580,7 @@ export async function getStudentInfo(studentHash: string): Promise<{ year: strin
 }
 
 // 获取课程名称的英文翻译
-export async function getCourseNameTranslation(courseName: string, major?: string, year?: string): Promise<string> {
+export async function getCourseNameTranslation(courseName: string, major?: string): Promise<string> {
   try {
     // 构建查询条件
     let query = supabase
@@ -591,11 +591,6 @@ export async function getCourseNameTranslation(courseName: string, major?: strin
     // 如果有专业信息，添加到查询条件
     if (major) {
       query = query.eq('Major', major);
-    }
-
-    // 如果有年级信息，添加到查询条件
-    if (year) {
-      query = query.eq('year', year);
     }
 
     const { data, error } = await query.single();

@@ -58,8 +58,7 @@ export const ACADEMIC_RESULTS_FIELDS = [
   'Semester_Offered',
   'Course_Type',
   'Course_Attribute',
-  'Current_Major',
-  'year'
+  'Current_Major'
 ] as const
 
 /**
@@ -75,7 +74,6 @@ export interface AcademicResultRecord {
   Course_Type: string | null
   Course_Attribute: string | null
   Current_Major: string | null
-  year: number | string | null
 }
 
 /**
@@ -141,8 +139,7 @@ export async function queryAcademicResults(studentHash: string): Promise<Academi
       Semester_Offered: record.Semester_Offered || null,
       Course_Type: record.Course_Type || null,
       Course_Attribute: record.Course_Attribute || null,
-      Current_Major: record.Current_Major || null,
-      year: record.year || null
+      Current_Major: record.Current_Major || null
     }))
 
     // 过滤：如果成绩小于60分且课程属性为"任选"，则不计入查询结果
