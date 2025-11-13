@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// 使用硬编码的Supabase配置
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
-
-const supabase = createClient(supabaseUrl, supabaseKey)
+import { supabase } from '@/lib/supabase'
 
 // 课程号与成绩的原始数据缓存
 let originCourseData: Record<string, any> = {};
@@ -32,10 +26,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 从学号前四位提取年份（不限制格式）
-    //const year = parseInt(trimmedStudentNumber.substring(0, 4));
-    const year = 2023;
+    const year = parseInt(trimmedStudentNumber.substring(0, 4));
+    //const year = 2023;
     // 验证年份合理性（2020-2050之间）
-    if (year < 2020 || year > 2050) {
+    if (year < 2018 || year > 2050) {
       return NextResponse.json({ error: 'Invalid year from student number' }, { status: 400 })
     }
 
@@ -189,11 +183,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        studentInfo: {
-          SNH: (predictionsData as any).SNH,
-          major: (predictionsData as any).major || major,
-          year: (predictionsData as any).year || (predictionsData as any).grade || null
-        },
         courseScores
       }
     });

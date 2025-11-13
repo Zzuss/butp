@@ -731,7 +731,7 @@ export default function Analysis() {
     }
   };
 
-  // 加载Original缓存（从student-course-scores API，对标模板）
+  // 加载Original缓存（从source1-scores API，对标模板）
   const loadOriginalScores = async () => {
     if (!user?.userHash) return;
 
@@ -743,7 +743,7 @@ export default function Analysis() {
 
     setLoadingOriginalScores(true);
     try {
-      const response = await fetch('/api/student-course-scores', {
+      const response = await fetch('/api/source1-scores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -973,12 +973,12 @@ export default function Analysis() {
 
 
 
-  // 初始加载时更新GPA门槛值
-  useEffect(() => {
-    if (authLoading) return;
-    
-    loadGPAThresholds();
-  }, [authLoading]);
+  // 初始加载时更新GPA门槛值（暂时不需要，注释掉）
+  // useEffect(() => {
+  //   if (authLoading) return;
+  //   
+  //   loadGPAThresholds();
+  // }, [authLoading]);
 
   // 加载能力数据
   useEffect(() => {

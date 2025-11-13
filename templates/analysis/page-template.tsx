@@ -480,7 +480,7 @@ export default function Analysis() {
     try {
       // 并行获取来源一和来源二数据
       const [source1Response, source2Response] = await Promise.all([
-        fetch('/api/student-course-scores', {
+        fetch('/api/source1-scores', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ studentHash: currentStudent.id })
