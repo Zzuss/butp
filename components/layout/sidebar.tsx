@@ -227,9 +227,6 @@ export function AppSidebar() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{user.name}</p>
               <p className="text-xs text-muted-foreground">学号: {user.userId}</p>
-              {user.userHash && (
-                <p className="text-xs text-muted-foreground">哈希: {user.userHash.substring(0, 12)}...</p>
-              )}
             </div>
           </div>
 
