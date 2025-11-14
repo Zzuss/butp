@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import { SessionData, sessionOptions } from '@/lib/session'
-import { supabase } from '@/lib/supabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
 
 // GET - 检查用户隐私条款同意状态
 export async function GET(request: NextRequest) {
@@ -19,12 +19,27 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+      // 获取 Supabase 客户端
+      const storageSupabase = getStorageSupabase()
+
+      // 尝试获取所有桶的列表
+      const { data: buckets, error: bucketsError } = await storageSupabase.storage.listBuckets()
+      console.log('🗃️ 可用的桶:', buckets?.map(bucket => bucket.name))
+      if (bucketsError) {
+        console.error('❌ 获取桶列表失败:', bucketsError)
+      }
+
       // 获取当前活跃的隐私条款
-      const { data: currentPolicy, error: policyError } = await supabase
+      const { data: currentPolicy, error: policyError } = await storageSupabase
         .from('privacy_policy')
         .select('id, version, effective_date, updated_at')
         .eq('is_active', true)
         .single()
+
+      console.log('🔍 当前隐私条款记录:', {
+        policy: currentPolicy,
+        error: policyError
+      })
 
       if (policyError) {
         console.error('查询当前隐私条款失败:', policyError)
@@ -38,12 +53,17 @@ export async function GET(request: NextRequest) {
       }
 
       // 查询用户是否已同意当前版本的隐私条款
-      const { data: agreementRecord, error: agreementError } = await supabase
+      const { data: agreementRecord, error: agreementError } = await storageSupabase
         .from('user_privacy_agreements')
         .select('id, agreed_at, privacy_policy_id')
         .eq('user_id', session.userHash)
         .eq('privacy_policy_id', currentPolicy.id)
         .single()
+
+      console.log('🔍 用户隐私条款同意记录:', {
+        agreementRecord,
+        error: agreementError
+      })
 
       if (agreementError && agreementError.code !== 'PGRST116') { // PGRST116 = 找不到记录
         console.error('查询用户同意记录失败:', agreementError)
@@ -119,12 +139,27 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // 获取 Supabase 客户端
+      const storageSupabase = getStorageSupabase()
+
+      // 尝试获取所有桶的列表
+      const { data: buckets, error: bucketsError } = await storageSupabase.storage.listBuckets()
+      console.log('🗃️ 可用的桶:', buckets?.map(bucket => bucket.name))
+      if (bucketsError) {
+        console.error('❌ 获取桶列表失败:', bucketsError)
+      }
+
       // 获取当前活跃的隐私条款
-      const { data: currentPolicy, error: policyError } = await supabase
+      const { data: currentPolicy, error: policyError } = await storageSupabase
         .from('privacy_policy')
         .select('id, version')
         .eq('is_active', true)
         .single()
+
+      console.log('🔍 当前隐私条款记录:', {
+        policy: currentPolicy,
+        error: policyError
+      })
 
       if (policyError) {
         console.error('查询当前隐私条款失败:', policyError)
@@ -142,7 +177,7 @@ export async function POST(request: NextRequest) {
       const userAgent = request.headers.get('user-agent') || 'unknown'
 
       // 使用upsert插入或更新用户同意记录
-      const { data: agreementData, error: insertError } = await supabase
+      const { data: agreementData, error: insertError } = await storageSupabase
         .from('user_privacy_agreements')
         .upsert({
           user_id: session.userHash,
@@ -154,6 +189,11 @@ export async function POST(request: NextRequest) {
           onConflict: 'user_id,privacy_policy_id'
         })
         .select()
+
+      console.log('🔍 用户隐私条款同意记录:', {
+        agreementData,
+        error: insertError
+      })
 
       if (insertError) {
         console.error('记录用户同意失败:', insertError)

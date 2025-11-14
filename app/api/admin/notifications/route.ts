@@ -48,15 +48,20 @@ export async function GET(request: NextRequest) {
       .from('system_notifications')
       .select(`
         *,
-        admin_accounts(username, full_name)
+        created_by:admin_accounts!fk_created_by(id, username, full_name)
       `)
       .order('priority', { ascending: false })
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('获取通知失败:', error)
+      console.error('详细错误信息:', JSON.stringify(error, null, 2))
       return NextResponse.json(
-        { error: '获取通知失败' },
+        { 
+          error: '获取通知失败',
+          details: error.message,
+          hint: error.hint
+        },
         { status: 500 }
       )
     }
@@ -122,18 +127,43 @@ export async function POST(request: NextRequest) {
         content,
         type,
         priority,
+        // 如果没有提供开始时间，默认为当前时间
         start_date: start_date || new Date().toISOString(),
         end_date,
-        image_url,
-        created_by: adminId
+        // 确保图片 URL 被正确保存
+        image_url: image_url || null,
+        created_by: adminId,
+        // 根据开始和结束时间设置是否活跃
+        is_active: start_date ? 
+          (!end_date || new Date(start_date) <= new Date() && new Date() <= new Date(end_date)) : 
+          true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single()
 
     if (error) {
       console.error('创建通知失败:', error)
+      console.error('详细错误信息:', JSON.stringify(error, null, 2))
       return NextResponse.json(
-        { error: '创建通知失败' },
+        { 
+          error: '创建通知失败',
+          details: error.message,
+          code: error.code
+        },
+        { status: 500 }
+      )
+    }
+
+    // 额外检查返回的通知
+    if (!notification || !notification.id) {
+      console.error('创建通知后未返回有效ID:', notification)
+      return NextResponse.json(
+        { 
+          error: '创建通知失败',
+          details: '未返回有效的通知ID'
+        },
         { status: 500 }
       )
     }

@@ -1,0 +1,28 @@
+{
+  "name": "butp-ecs-worker",
+  "version": "1.0.0",
+  "description": "阿里云ECS后台处理服务",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop butp-worker",
+    "pm2:restart": "pm2 restart butp-worker",
+    "pm2:logs": "pm2 logs butp-worker"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "xlsx": "^0.18.5",
+    "dotenv": "^16.3.1",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["worker", "queue", "excel", "import"],
+  "author": "Your Name",
+  "license": "MIT"
+}

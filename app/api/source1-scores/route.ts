@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
-// 使用硬编码的Supabase配置
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
-
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-// 课程名称过滤映射表（将简化的课程名映射为正确名称）
-const courseNameFilterMapping: Record<string, string> = {
-  "毛概": "毛泽东思想和中国特色社会主义理论体系概论",
-  "毛概（实践环节）": "毛泽东思想和中国特色社会主义理论体系概论（实践环节）",
-  "习概": "习近平新时代中国特色社会主义思想概论",
-  "习概（实践环节）": "习近平新时代中国特色社会主义思想概论（实践环节）"
-};
+// 课程号与成绩的原始数据缓存
+let originCourseData: Record<string, any> = {};
 
 
 export async function POST(request: NextRequest) {
@@ -38,56 +27,57 @@ export async function POST(request: NextRequest) {
 
     // 从学号前四位提取年份（不限制格式）
     const year = parseInt(trimmedStudentNumber.substring(0, 4));
-    
+    //const year = 2023;
     // 验证年份合理性（2020-2050之间）
-    if (year < 2020 || year > 2050) {
+    if (year < 2018 || year > 2050) {
       return NextResponse.json({ error: 'Invalid year from student number' }, { status: 400 })
     }
 
-    // 1) 确定专业对应的表后缀
-    const majorToTableMapping: Record<string, string> = {
-      '智能科学与技术': 'ai',
-      '电子信息工程': 'ee',
-      '电信工程及管理': 'tewm',
-      '物联网工程': 'iot'
-    };
-
-    if (!major || !(major in majorToTableMapping)) {
-      return NextResponse.json({ error: 'Invalid or unsupported major' }, { status: 400 })
-    }
-
-    const tableSuffix = majorToTableMapping[major];
+   
     
-    // 直接使用从学号提取的年份构建表名
-    const tableName = `Cohort${year}_Predictions_${tableSuffix}`;
     let predictionsData = null;
     let predictionsError = null;
+    let tableName = '';
+    let effectiveYear = year;
+    let lastTriedTable = '';
+    let found = false;
 
     console.log('查询预测数据 - 专业:', major);
     console.log('查询预测数据 - 哈希值:', trimmedHash);
     console.log('查询预测数据 - 学号:', trimmedStudentNumber);
     console.log('查询预测数据 - 提取年份:', year);
-    console.log('查询预测数据 - 表名:', tableName);
-    
-    // 直接查询指定年份的表
-    const result = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('SNH', trimmedHash)
-      .limit(1)
-      .single();
-    
-    if (!result.error && result.data) {
-      predictionsData = result.data;
-      predictionsError = null;
-      console.log('✅ 在表中找到学生数据:', tableName);
-    } else {
-      predictionsError = result.error;
-      console.log('❌ 表中未找到学生:', tableName, result.error?.message || 'No data');
+
+    for (let offset = 0; offset <= 7; offset++) {
+      const currentYear = year + offset;
+      if (currentYear > 2050) break;
+
+      const currentTableName = `Cohort${currentYear}_Predictions_all`;
+      lastTriedTable = currentTableName;
+      console.log('查询预测数据 - 表名:', currentTableName);
+
+      const result = await supabase
+        .from(currentTableName)
+        .select('*')
+        .eq('SNH', trimmedHash)
+        .limit(1)
+        .single();
+
+      if (!result.error && result.data) {
+        predictionsData = result.data;
+        predictionsError = null;
+        tableName = currentTableName;
+        effectiveYear = currentYear;
+        found = true;
+        console.log('✅ 在表中找到学生数据:', currentTableName);
+        break;
+      } else {
+        predictionsError = result.error;
+        console.log('❌ 表中未找到学生:', currentTableName, result.error?.message || 'No data');
+      }
     }
 
     // 2) 检查是否在指定年份的cohort表中找到了学生数据
-    if (predictionsError || !predictionsData) {
+    if (!found || predictionsError || !predictionsData) {
       console.error('❌ 学生预测数据缺失!');
       console.error('📊 在指定年份的cohort表中找不到该学生数据');
       console.error('🔍 尝试的表:', tableName);
@@ -97,13 +87,13 @@ export async function POST(request: NextRequest) {
       console.error('📅 提取年份:', year);
       console.error('💡 可能原因: 学生哈希值不在该年份的预测表中，或专业信息不匹配，或学号年份不正确');
       return NextResponse.json({ 
-        error: `学生预测数据缺失: 在专业 "${major}" 的 ${year} 年预测表中找不到该学生数据`,
+        error: `学生预测数据缺失: 在专业 "${major}" 的 ${year} 年预测表及后续 7 年内找不到该学生数据`,
         details: {
           studentHash: trimmedHash,
           major: major,
           studentNumber: trimmedStudentNumber,
           extractedYear: year,
-          triedTable: tableName,
+          triedTable: lastTriedTable || `Cohort${year}_Predictions_all`,
           suggestion: '请检查学生哈希值、专业信息或学号是否正确'
         }
       }, { status: 404 })
@@ -111,30 +101,31 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ 成功找到学生数据，使用表:', tableName);
 
-    // 2. 创建课程信息查询函数
-    const getCourseInfo = async (courseName: string, year: number, major: string) => {
+    // 2. 创建课程信息查询函数（通过课程号查询）
+    const getCourseInfo = async (courseId: string, year: number, major: string) => {
       try {
         const { data, error } = await supabase
           .from('courses')
-          .select('semester, category, credit')
-          .eq('course_name', courseName)
+          .select('course_name, semester, category, credit')
+          .eq('course_id', courseId)
           .eq('year', year)
           .eq('major', major)
           .limit(1)
           .single();
         
         if (error || !data) {
-          console.log(`未找到课程信息: ${courseName}, 年份: ${year}, 专业: ${major}`);
+          console.log(`未找到课程信息: ${courseId}, 年份: ${year}, 专业: ${major}`);
           return null;
         }
         
         return {
+          courseName: data.course_name,
           semester: data.semester,
           category: data.category,
           credit: data.credit
         };
       } catch (error) {
-        console.log(`查询课程信息失败: ${courseName}`, error);
+        console.log(`查询课程信息失败: ${courseId}`, error);
         return null;
       }
     };
@@ -147,26 +138,32 @@ export async function POST(request: NextRequest) {
       'current_prob1','current_prob2','current_prob3'
     ]);
 
+    // 初始化origin缓存
+    originCourseData = {};
+
     const courseScores = await Promise.all(
       Object.entries(predictionsData)
         .filter(([key]) => !reservedKeys.has(key))
-        .map(async ([originalCourseName, raw]) => {
+        .map(async ([courseId, raw]) => {
           let score: number | null = null;
           if (typeof raw === 'number') score = raw;
           else if (typeof raw === 'string' && raw.trim() !== '' && !isNaN(Number(raw))) score = Number(raw);
 
-          // 先应用过滤映射表，将简化课程名映射为正确名称
-          const filteredCourseName = courseNameFilterMapping[originalCourseName] || originalCourseName;
+          // 将原始数据存储到origin缓存中
+          originCourseData[courseId] = {
+            courseId: courseId,
+            score: score
+          };
           
-          // 使用课程名称、年份、专业查询课程信息
-          const courseInfo = await getCourseInfo(filteredCourseName, year, major);
+          // 使用课程号、年份、专业查询课程信息
+          const courseInfo = await getCourseInfo(courseId, effectiveYear, major);
 
           return {
-            courseName: filteredCourseName, // 使用过滤后的课程名称
+            courseId: courseId, // 使用课程号作为标识
+            courseName: courseInfo?.courseName || courseId, // 使用查询到的课程名称，如果没有则用课程号
             score,
             semester: courseInfo?.semester || null,
             category: courseInfo?.category || null,
-            courseId: null, // 不再使用课程ID
             credit: courseInfo?.credit || 0.1
           };
         })
@@ -199,11 +196,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        studentInfo: {
-          SNH: (predictionsData as any).SNH,
-          major: (predictionsData as any).major || major,
-          year: (predictionsData as any).year || (predictionsData as any).grade || null
-        },
         courseScores
       }
     });

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>调试文件列表</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🔍 文件列表调试工具</h1>
+    
+    <div class="section">
+        <h2>文件列表API测试</h2>
+        <button onclick="checkFiles()">检查文件列表</button>
+        <button onclick="createTask()">创建导入任务</button>
+        <button onclick="clearResults()">清空结果</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://localhost:3000';
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function checkFiles() {
+            try {
+                log('🔍 检查文件列表...');
+                const response = await fetch(`${baseUrl}/api/admin/grades-import/files`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ 文件列表获取成功`, 'success');
+                    log(`📁 找到 ${data.files?.length || 0} 个文件:`);
+                    
+                    if (data.files && data.files.length > 0) {
+                        data.files.forEach((file, index) => {
+                            log(`   ${index + 1}. ${file.name} (${file.id}) - ${(file.size / 1024).toFixed(1)}KB`);
+                        });
+                    } else {
+                        log('   没有找到文件', 'error');
+                    }
+                    
+                    log('<pre>' + JSON.stringify(data, null, 2) + '</pre>');
+                } else {
+                    log(`❌ 文件列表获取失败: ${response.status}`, 'error');
+                    log('<pre>' + JSON.stringify(data, null, 2) + '</pre>');
+                }
+            } catch (error) {
+                log(`❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+        
+        async function createTask() {
+            try {
+                log('📋 创建导入任务...');
+                const response = await fetch(`${baseUrl}/api/admin/grades-import/create-task`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log(`✅ 任务创建成功: ${data.taskId}`, 'success');
+                    log(`📝 ${data.message}`);
+                } else {
+                    log(`❌ 任务创建失败: ${data.message}`, 'error');
+                }
+                
+                log('<pre>' + JSON.stringify(data, null, 2) + '</pre>');
+            } catch (error) {
+                log(`❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 页面加载时自动检查
+        window.onload = function() {
+            log('🚀 页面加载完成，自动检查文件列表...');
+            checkFiles();
+        };
+    </script>
+</body>
+</html>

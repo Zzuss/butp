@@ -197,7 +197,7 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
       return [];
     }
   }
-
+  //这一段代码getSource2Scores目前没有任何用处，是完全的冗余代码，但是以防万一我决定不删掉它。
   /**
    * 获取学生的来源2课程数据（academic_results）
    * @param studentHash 学生哈希值

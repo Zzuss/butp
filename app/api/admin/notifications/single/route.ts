@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
 
 // 验证管理员权限的辅助函数
 function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId?: string } {
@@ -152,6 +153,37 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// 删除通知图片
+async function deleteNotificationImage(fileName: string) {
+  console.log('🗑️ 开始删除通知图片:', fileName)
+  
+  const storageSupabase = getStorageSupabase()
+  const { data, error } = await storageSupabase.storage
+    .from('notification-images')
+    .remove([fileName])
+
+  if (error) {
+    console.error('❌ 通知图片删除失败:', error)
+    throw error
+  }
+
+  // 额外检查文件是否真的被删除
+  const { data: checkData, error: checkError } = await storageSupabase.storage
+    .from('notification-images')
+    .list()
+
+  console.log('[DELETE-SINGLE] 桶中文件列表:', checkData)
+
+  const stillExists = checkData?.some(file => file.name === fileName)
+  
+  if (stillExists) {
+    throw new Error(`文件 ${fileName} 删除失败，仍然存在`)
+  }
+
+  console.log('✅ 通知图片删除成功:', fileName)
+  return data
+}
+
 // DELETE - 删除通知
 export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -169,6 +201,44 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
+    // 获取通知详情，特别是图片URL
+    const { data: notificationData, error: fetchError } = await supabase
+      .from('system_notifications')
+      .select('image_url')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) {
+      console.error('[DELETE-SINGLE] 获取通知详情失败:', fetchError)
+      return NextResponse.json(
+        { 
+          error: '获取通知详情失败',
+          details: fetchError.message,
+          code: fetchError.code
+        },
+        { status: 500 }
+      )
+    }
+
+    // 先删除与该通知关联的所有已读记录
+    const { error: deleteReadsError } = await supabase
+      .from('user_notification_reads')
+      .delete()
+      .eq('notification_id', id)
+
+    if (deleteReadsError) {
+      console.error('[DELETE-SINGLE] 删除已读记录失败:', deleteReadsError)
+      return NextResponse.json(
+        { 
+          error: '删除关联已读记录失败',
+          details: deleteReadsError.message,
+          code: deleteReadsError.code
+        },
+        { status: 500 }
+      )
+    }
+
+    // 删除通知
     const { error } = await supabase
       .from('system_notifications')
       .delete()
@@ -176,14 +246,55 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error('[DELETE-SINGLE] 删除通知失败:', error)
-      return NextResponse.json({ error: '删除通知失败' }, { status: 500 })
+      return NextResponse.json(
+        { 
+          error: '删除通知失败',
+          details: error.message,
+          code: error.code
+        },
+        { status: 500 }
+      )
+    }
+
+    // 如果通知有图片，删除存储中的图片文件
+    if (notificationData.image_url) {
+      console.log('[DELETE-SINGLE] 通知图片URL:', notificationData.image_url)
+
+      // 从 URL 中提取文件名，处理 Supabase 存储的公开 URL
+      const urlParts = notificationData.image_url.split('/')
+      const fileNameIndex = urlParts.findIndex(part => part === 'notification-images') + 1
+      const fileName = fileNameIndex > 0 ? urlParts[fileNameIndex] : urlParts.pop()
+      
+      console.log('[DELETE-SINGLE] 提取的文件名:', fileName)
+
+      if (fileName) {
+        try {
+          // 删除图片文件
+          await deleteNotificationImage(fileName)
+        } catch (catchError) {
+          console.error('[DELETE-SINGLE] 图片删除过程中发生异常:', catchError)
+          // 记录错误，但不阻止通知删除
+          console.warn(`未能删除图片文件: ${fileName}`)
+        }
+      } else {
+        console.warn('[DELETE-SINGLE] 无法从URL提取文件名:', notificationData.image_url)
+      }
     }
 
     console.log('[DELETE-SINGLE] 删除通知成功')
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true, 
+      message: '通知及其已读记录和图片文件删除成功'
+    })
 
   } catch (error) {
     console.error('[DELETE-SINGLE] 删除通知错误:', error)
-    return NextResponse.json({ error: '服务器错误' }, { status: 500 })
+    return NextResponse.json(
+      { 
+        error: '服务器错误',
+        details: error instanceof Error ? error.message : '未知错误'
+      },
+      { status: 500 }
+    )
   }
 }

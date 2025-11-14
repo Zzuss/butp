@@ -25,6 +25,8 @@ import {
   type CourseTypeStats,
   type SemesterTrend
 } from '@/lib/dashboard-data'
+// 导入统一数据源查询函数，用于预加载
+import { queryAcademicResults } from '@/lib/academic__data'
 
 // 导入图表组件
 import { CourseStatsChart } from '@/components/ui/chart'
@@ -110,28 +112,40 @@ export default function DashboardPage() {
     async function loadDashboardData() {
       setIsLoading(true)
       try {
-        // 获取学生成绩数据
+        // 预加载学术成绩数据到统一缓存（方案A：统一数据源）
+        // 这样后续的 getStudentResults 调用可以直接从缓存获取
+        await queryAcademicResults(user!.userHash)
+        console.log('[DEBUG] 预加载学术成绩数据完成')
+        
+        // 获取学生成绩数据（现在会优先从统一缓存获取）
         const results = await getStudentResults(user!.userHash)
+        console.log('[DEBUG] getStudentResults -> count:', Array.isArray(results) ? results.length : 'N/A')
+        console.log('[DEBUG] getStudentResults -> data sample:', Array.isArray(results) && results.length > 0 ? results[0] : results)
         // setCourseResults(results)
         
         // 获取学生信息（年级和专业）
         const info = await getStudentInfo(user!.userHash)
+        console.log('[DEBUG] getStudentInfo ->', info)
         setStudentInfo(info)
         
         // 计算统计数据
         const dashboardStats = calculateDashboardStats(results)
+        console.log('[DEBUG] calculateDashboardStats ->', dashboardStats)
         setStats(dashboardStats)
         
         // 获取最新学期中学分最高的5门课程（用于数据总览显示）
         const topCreditCourses = getLatestSemesterTopCreditCourses(results, 5)
+        console.log('[DEBUG] getLatestSemesterTopCreditCourses ->', topCreditCourses)
         setSubjectGrades(topCreditCourses)
         
         // 获取课程类型统计
         const typeStats = getCourseTypeStats(results)
+        console.log('[DEBUG] getCourseTypeStats ->', typeStats)
         setCourseTypeStats(typeStats)
         
         // 获取学期成绩趋势
         const trends = getSemesterTrends(results)
+        console.log('[DEBUG] getSemesterTrends ->', trends)
         setSemesterTrends(trends)
         
         // 获取未读通知

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getStorageSupabase } from '@/lib/storageSupabase'
 import mammoth from 'mammoth'
 
 interface PrivacyContent {
@@ -12,12 +12,30 @@ interface PrivacyContent {
 // GET - 从Supabase Storage读取隐私条款内容
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 Supabase Storage URL:', process.env.NEXT_PUBLIC_STORAGE_SUPABASE_URL)
+    console.log('🔑 Supabase Storage Anon Key:', process.env.NEXT_PUBLIC_STORAGE_SUPABASE_ANON_KEY ? '✅ 存在' : '❌ 未设置')
+
+    // 获取 Supabase 客户端
+    const storageSupabase = getStorageSupabase()
+
+    // 尝试获取所有桶的列表
+    const { data: buckets, error: bucketsError } = await storageSupabase.storage.listBuckets()
+    console.log('🗃️ 可用的桶:', buckets?.map(bucket => bucket.name))
+    if (bucketsError) {
+      console.error('❌ 获取桶列表失败:', bucketsError)
+    }
+
     // 首先从数据库获取当前活跃的隐私条款信息
-    const { data: policyRecord, error: dbError } = await supabase
+    const { data: policyRecord, error: dbError } = await storageSupabase
       .from('privacy_policy')
       .select('*')
       .eq('is_active', true)
       .single()
+
+    console.log('🔍 隐私条款记录:', {
+      record: policyRecord,
+      error: dbError
+    })
 
     if (dbError && dbError.code !== 'PGRST116') {
       console.error('查询数据库失败:', dbError)
@@ -32,10 +50,20 @@ export async function GET(request: NextRequest) {
       try {
         const storageFileName = policyRecord.file_path.replace('privacy-files/', '')
         
+        console.log('🔍 尝试下载文件:', {
+          bucket: 'privacy-files',
+          fileName: storageFileName
+        })
+
         // 从Supabase Storage下载文件
-        const { data: fileData, error: downloadError } = await supabase.storage
+        const { data: fileData, error: downloadError } = await storageSupabase.storage
           .from('privacy-files')
           .download(storageFileName)
+
+        console.log('📥 文件下载结果:', {
+          fileData: fileData ? `文件大小: ${fileData.size} 字节` : '无文件数据',
+          downloadError
+        })
 
         if (downloadError) {
           console.error('从Storage下载文件失败:', downloadError)

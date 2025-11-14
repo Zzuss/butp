@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 });
     }
 
-    // 1. Get student's major and year from academic_results
+    // 1. Get student's major from academic_results
     const { data: studentInfoData, error: studentInfoError } = await supabase
       .from('academic_results')
-      .select('Current_Major, year')
+      .select('Current_Major')
       .eq('SNH', studentHash)
       .limit(1);
 
@@ -33,19 +33,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student not found or no academic results' }, { status: 404 });
     }
 
-    const { Current_Major: studentMajor, year: studentYear } = studentInfoData[0];
+    const { Current_Major: studentMajor } = studentInfoData[0];
 
-    if (!studentMajor || !studentYear) {
-      return NextResponse.json({ error: 'Student major or year not found' }, { status: 404 });
+    if (!studentMajor) {
+      return NextResponse.json({ error: 'Student major not found' }, { status: 404 });
     }
 
-    // 2. Get all categories and their required credits for the student's major and year from the courses table
+    // 2. Get all categories and their required credits for the student's major from the courses table
     // 🔧 FIX: Get distinct category requirements to avoid duplication
     const { data: requiredCreditsData, error: requiredCreditsError } = await supabase
       .from('courses')
       .select('category, required_total, required_compulsory, required_elective')
       .eq('major', studentMajor)
-      .eq('year', studentYear)
       .not('category', 'is', null); // Ensure category is not null
 
     if (requiredCreditsError) {
@@ -96,10 +95,9 @@ export async function POST(request: NextRequest) {
     
     const { data: courseCategoryMapping, error: courseCategoryMappingError } = await supabase
       .from('courses')
-      .select('course_id, course_name, category, major, year')
+      .select('course_id, course_name, category, major')
       .in('course_id', studentCourseIds)
-      .eq('major', studentMajor)        // 🔧 FIX: 只获取学生对应专业的课程分类
-      .eq('year', studentYear);         // 🔧 FIX: 只获取学生对应年级的课程分类
+      .eq('major', studentMajor);        // 🔧 FIX: 只获取学生对应专业的课程分类
 
     if (courseCategoryMappingError) {
       console.error('Error fetching course category mapping by ID:', courseCategoryMappingError);
@@ -150,7 +148,7 @@ export async function POST(request: NextRequest) {
     const failedMappings = mappingStats.failed;
     const mappingRate = ((successfulMappings / totalCourses) * 100).toFixed(1);
     
-    console.log(`🚀 CourseID-based mapping results for ${studentMajor} ${studentYear}:`);
+    console.log(`🚀 CourseID-based mapping results for ${studentMajor}:`);
     console.log(`   📚 Total student courses: ${totalCourses}`);
     console.log(`   ✅ Perfect CourseID matches: ${mappingStats.exact} (${((mappingStats.exact / totalCourses) * 100).toFixed(1)}%)`);
     console.log(`   ❌ No CourseID mapping: ${failedMappings} (${((failedMappings / totalCourses) * 100).toFixed(1)}%)`);
@@ -209,7 +207,7 @@ export async function POST(request: NextRequest) {
     const totalCategories = graduationRequirements.length;
     const overallGraduationStatus = categoriesMet === totalCategories;
     
-    console.log(`✅ Graduation requirements analysis for ${studentMajor} ${studentYear}:`);
+    console.log(`✅ Graduation requirements analysis for ${studentMajor}:`);
     console.log(`📊 Curriculum categories: ${totalCategories}`);
     graduationRequirements.forEach(req => {
       const status = req.meets_requirement ? '✅' : '❌';

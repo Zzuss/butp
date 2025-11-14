@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
     const now = new Date().toISOString()
     const { data: activeNotifications, error: notificationsError } = await supabase
       .from('system_notifications')
-      .select('*')
+      .select(`
+        *,
+        created_by:admin_accounts!fk_created_by(username, full_name)
+      `)
       .eq('is_active', true)
       .lte('start_date', now)
       .or(`end_date.is.null,end_date.gte.${now}`)
@@ -28,7 +31,11 @@ export async function GET(request: NextRequest) {
     if (notificationsError) {
       console.error('获取通知失败:', notificationsError)
       return NextResponse.json(
-        { error: '获取通知失败' },
+        { 
+          error: '获取通知失败',
+          details: notificationsError.message,
+          hint: notificationsError.hint
+        },
         { status: 500 }
       )
     }
@@ -47,7 +54,10 @@ export async function GET(request: NextRequest) {
     if (readError) {
       console.error('获取已读通知失败:', readError)
       return NextResponse.json(
-        { error: '获取已读通知失败' },
+        { 
+          error: '获取已读通知失败',
+          details: readError.message 
+        },
         { status: 500 }
       )
     }
@@ -66,7 +76,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('获取通知错误:', error)
     return NextResponse.json(
-      { error: '服务器错误' },
+      { 
+        error: '服务器错误',
+        details: error instanceof Error ? error.message : '未知错误'
+      },
       { status: 500 }
     )
   }
