@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // 从学号前四位提取年份（不限制格式）
     const year = parseInt(trimmedStudentNumber.substring(0, 4));
     //const year = 2023;
-    // 验证年份合理性（2020-2050之间）
+    // 验证年份合理性（2018-2050之间）
     if (year < 2018 || year > 2050) {
       return NextResponse.json({ error: 'Invalid year from student number' }, { status: 400 })
     }
@@ -101,35 +101,6 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ 成功找到学生数据，使用表:', tableName);
 
-    // 2. 创建课程信息查询函数（通过课程号查询）
-    const getCourseInfo = async (courseId: string, year: number, major: string) => {
-      try {
-        const { data, error } = await supabase
-          .from('courses')
-          .select('course_name, semester, category, credit')
-          .eq('course_id', courseId)
-          .eq('year', year)
-          .eq('major', major)
-          .limit(1)
-          .single();
-        
-        if (error || !data) {
-          console.log(`未找到课程信息: ${courseId}, 年份: ${year}, 专业: ${major}`);
-          return null;
-        }
-        
-        return {
-          courseName: data.course_name,
-          semester: data.semester,
-          category: data.category,
-          credit: data.credit
-        };
-      } catch (error) {
-        console.log(`查询课程信息失败: ${courseId}`, error);
-        return null;
-      }
-    };
-
     // 3. 构建课程成绩数据（过滤非课程字段，规范数值）
     const reservedKeys = new Set([
       'SNH', 'major', 'year', 'grade', 'count',
@@ -141,33 +112,69 @@ export async function POST(request: NextRequest) {
     // 初始化origin缓存
     originCourseData = {};
 
-    const courseScores = await Promise.all(
-      Object.entries(predictionsData)
-        .filter(([key]) => !reservedKeys.has(key))
-        .map(async ([courseId, raw]) => {
-          let score: number | null = null;
-          if (typeof raw === 'number') score = raw;
-          else if (typeof raw === 'string' && raw.trim() !== '' && !isNaN(Number(raw))) score = Number(raw);
+    const courseIds = Object.keys(predictionsData).filter((key) => !reservedKeys.has(key));
 
-          // 将原始数据存储到origin缓存中
-          originCourseData[courseId] = {
-            courseId: courseId,
-            score: score
-          };
-          
-          // 使用课程号、年份、专业查询课程信息
-          const courseInfo = await getCourseInfo(courseId, effectiveYear, major);
+    type CourseInfo = {
+      courseName: string;
+      semester: number | null;
+      category: string | null;
+      credit: number | null;
+    };
 
-          return {
-            courseId: courseId, // 使用课程号作为标识
-            courseName: courseInfo?.courseName || courseId, // 使用查询到的课程名称，如果没有则用课程号
-            score,
-            semester: courseInfo?.semester || null,
-            category: courseInfo?.category || null,
-            credit: courseInfo?.credit || 0.1
-          };
-        })
-    );
+    const courseInfoMap = new Map<string, CourseInfo>();
+
+    const chunkSize = 80;
+    for (let i = 0; i < courseIds.length; i += chunkSize) {
+      const chunk = courseIds.slice(i, i + chunkSize);
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('course_id, course_name, semester, category, credit')
+          .eq('year', effectiveYear)
+          .eq('major', major)
+          .in('course_id', chunk);
+
+        if (error) {
+          console.log('批量查询课程信息失败:', error);
+          continue;
+        }
+
+        (data || []).forEach((course: any) => {
+          courseInfoMap.set(course.course_id, {
+            courseName: course.course_name || course.course_id,
+            semester: typeof course.semester === 'number' ? course.semester : null,
+            category: course.category || null,
+            credit: typeof course.credit === 'number' ? course.credit : null
+          });
+        });
+      } catch (error) {
+        console.log('批量查询课程信息异常:', error);
+      }
+    }
+
+    const courseScores = courseIds.map((courseId) => {
+      const raw = predictionsData[courseId];
+      let score: number | null = null;
+      if (typeof raw === 'number') score = raw;
+      else if (typeof raw === 'string' && raw.trim() !== '' && !isNaN(Number(raw))) score = Number(raw);
+
+      // 将原始数据存储到origin缓存中
+      originCourseData[courseId] = {
+        courseId: courseId,
+        score: score
+      };
+
+      const courseInfo = courseInfoMap.get(courseId);
+
+      return {
+        courseId: courseId, // 使用课程号作为标识
+        courseName: courseInfo?.courseName || courseId, // 使用查询到的课程名称，如果没有则用课程号
+        score,
+        semester: courseInfo?.semester || null,
+        category: courseInfo?.category || null,
+        credit: courseInfo?.credit ?? 0.1
+      };
+    });
 
     // 对课程成绩进行排序
     courseScores.sort((a, b) => {
