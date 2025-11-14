@@ -46,6 +46,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Profile页面
     'profile.title': '我的信息',
     'profile.description': '管理您的个人信息和设置',
+    'profile.hint': '你可在此界面自行添加个人信息，用于个人轨迹生成。',
     'profile.loading': '正在加载学生信息',
     'profile.awards.title': '获奖记录',
     'profile.awards.description': '您获得的奖项和荣誉',
@@ -777,7 +778,6 @@ const translations: Record<Language, Record<string, string>> = {
     'skills.security.programming': '安全编程',
     'skills.sensor.integration': '传感器集成',
     'skills.wireless.communication': '无线通信',
-    'skills.system.integration': '系统集成',
     'skills.content.creation': '内容创作',
     'skills.user.insight': '用户洞察',
     'skills.creative.planning': '创意策划',
@@ -1016,6 +1016,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Profile页面
     'profile.title': 'My Profile',
     'profile.description': 'Manage your personal information and settings',
+    'profile.hint': 'Add your personal information here to generate your personal trajectory.',
     'profile.loading': 'Loading',
     'profile.awards.title': 'Awards & Honors',
     'profile.awards.description': 'Your achievements and honors',
@@ -1731,7 +1732,6 @@ const translations: Record<Language, Record<string, string>> = {
     'skills.security.programming': 'Security Programming',
     'skills.sensor.integration': 'Sensor Integration',
     'skills.wireless.communication': 'Wireless Communication',
-    'skills.system.integration': 'System Integration',
     'skills.content.creation': 'Content Creation',
     'skills.user.insight': 'User Insight',
     'skills.creative.planning': 'Creative Planning',
@@ -2066,4 +2066,4 @@ export function useLanguage() {
     throw new Error('useLanguage must be used within a LanguageProvider')
   }
   return context
-} 
+}
