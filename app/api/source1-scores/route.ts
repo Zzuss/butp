@@ -144,11 +144,28 @@ export async function POST(request: NextRequest) {
         }
 
         (data || []).forEach((course: any) => {
+          const semesterValue = course.semester;
+          const creditValue = course.credit;
+
+          let normalizedSemester: number | null = null;
+          if (typeof semesterValue === 'number') {
+            normalizedSemester = semesterValue;
+          } else if (typeof semesterValue === 'string' && semesterValue.trim() !== '' && !isNaN(Number(semesterValue))) {
+            normalizedSemester = Number(semesterValue);
+          }
+
+          let normalizedCredit: number | null = null;
+          if (typeof creditValue === 'number') {
+            normalizedCredit = creditValue;
+          } else if (typeof creditValue === 'string' && creditValue.trim() !== '' && !isNaN(Number(creditValue))) {
+            normalizedCredit = Number(creditValue);
+          }
+
           courseInfoMap.set(course.course_id, {
             courseName: course.course_name || course.course_id,
-            semester: typeof course.semester === 'number' ? course.semester : null,
+            semester: normalizedSemester,
             category: course.category || null,
-            credit: typeof course.credit === 'number' ? course.credit : null
+            credit: normalizedCredit
           });
         });
       } catch (error) {
