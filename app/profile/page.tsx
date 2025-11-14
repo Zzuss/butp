@@ -591,7 +591,24 @@ export default function Profile() {
   const handlePaperSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!user?.userHash) return;
+    if (!user?.userHash) {
+      console.error('User hash is missing');
+      return;
+    }
+    
+    if (!user?.userId) {
+      console.error('User ID is missing');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return;
+    }
+    
+    if (!user?.name) {
+      console.error('User name is missing');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return;
+    }
     
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
@@ -1014,6 +1031,14 @@ export default function Profile() {
     const total = parseNumericValue(formData.get("total"));
     let languageScore: LanguageScore;
     
+    // 在编辑模式下，需要获取现有记录的ID
+    let existingScoreId: string | undefined;
+    if (editMode) {
+      const existingScores = await getUserLanguageScores(user.userHash);
+      const existingScore = existingScores.find(score => score.scoreType === selectedScoreType);
+      existingScoreId = existingScore?.id;
+    }
+    
     if (selectedScoreType === "toefl") {
       const reading = parseNumericValue(formData.get("reading"));
       const listening = parseNumericValue(formData.get("listening"));
@@ -1021,6 +1046,7 @@ export default function Profile() {
       const writing = parseNumericValue(formData.get("writing"));
       
       languageScore = {
+        id: existingScoreId,
         scoreType: 'toefl',
         totalScore: total,
         readingScore: reading,
@@ -1043,6 +1069,7 @@ export default function Profile() {
       const speaking = parseNumericValue(formData.get("speaking"));
       
       languageScore = {
+        id: existingScoreId,
         scoreType: 'ielts',
         totalScore: total,
         listeningScore: listening,
@@ -1064,6 +1091,7 @@ export default function Profile() {
       const writing = parseNumericValue(formData.get("writing"));
       
       languageScore = {
+        id: existingScoreId,
         scoreType: 'gre',
         totalScore: total,
         mathScore: math,
@@ -1087,6 +1115,20 @@ export default function Profile() {
       const success = await saveLanguageScore(user.userHash, languageScore);
       
       if (success) {
+        // 重新加载语言成绩数据以确保页面显示最新数据
+        const updatedLanguageScores = await getUserLanguageScores(user.userHash);
+        
+        // 更新本地状态
+        updatedLanguageScores.forEach(score => {
+          if (score.scoreType === 'toefl') {
+            setToeflScore(convertToToeflScore(score));
+          } else if (score.scoreType === 'ielts') {
+            setIeltsScore(convertToIeltsScore(score));
+          } else if (score.scoreType === 'gre') {
+            setGreScore(convertToGreScore(score));
+          }
+        });
+        
         setSaveStatus('success');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } else {

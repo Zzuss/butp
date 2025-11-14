@@ -99,15 +99,57 @@ export async function saveLanguageScore(userHash: string, score: LanguageScore):
       verbal_score: score.verbalScore
     };
 
-    const { error } = await supabase
-      .from('user_language_scores')
-      .upsert(scoreData, {
-        onConflict: 'user_hash,score_type'
-      });
+    if (score.id) {
+      // 更新现有记录
+      const { error } = await supabase
+        .from('user_language_scores')
+        .update(scoreData)
+        .eq('id', score.id)
+        .eq('user_hash', userHash);
 
-    if (error) {
-      console.error('Error saving language score:', error);
-      return false;
+      if (error) {
+        console.error('Error updating language score:', error);
+        return false;
+      }
+    } else {
+      // 先检查是否已存在相同类型的成绩
+      const { data: existingScores, error: fetchError } = await supabase
+        .from('user_language_scores')
+        .select('id')
+        .eq('user_hash', userHash)
+        .eq('score_type', score.scoreType);
+
+      if (fetchError) {
+        console.error('Error checking existing score:', fetchError);
+        return false;
+      }
+
+      if (existingScores && existingScores.length > 0) {
+        // 更新现有记录
+        const { error } = await supabase
+          .from('user_language_scores')
+          .update(scoreData)
+          .eq('id', existingScores[0].id);
+
+        if (error) {
+          console.error('Error updating existing language score:', error);
+          return false;
+        }
+      } else {
+        // 创建新记录
+        const { error } = await supabase
+          .from('user_language_scores')
+          .insert({
+            id: generateUUID(),
+            ...scoreData
+          })
+          .select();
+
+        if (error) {
+          console.error('Error creating language score:', error);
+          return false;
+        }
+      }
     }
 
     return true;
@@ -168,6 +210,7 @@ export async function getUserAwards(userHash: string): Promise<Award[]> {
 export async function saveAward(userHash: string, award: Award): Promise<boolean> {
   try {
     const awardData = {
+      ...(award.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       user_hash: userHash,
       title: award.title,
       organization: award.organization,
@@ -192,7 +235,8 @@ export async function saveAward(userHash: string, award: Award): Promise<boolean
       // 创建新记录
       const { error } = await supabase
         .from('user_awards')
-        .insert(awardData);
+        .insert(awardData)
+        .select();
 
       if (error) {
         console.error('Error creating award:', error);
@@ -258,6 +302,7 @@ export async function getUserInternships(userHash: string): Promise<Internship[]
 export async function saveInternship(userHash: string, internship: Internship): Promise<boolean> {
   try {
     const internshipData = {
+      ...(internship.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       user_hash: userHash,
       title: internship.title,
       company: internship.company,
@@ -282,7 +327,8 @@ export async function saveInternship(userHash: string, internship: Internship): 
       // 创建新记录
       const { error } = await supabase
         .from('user_internships')
-        .insert(internshipData);
+        .insert(internshipData)
+        .select();
 
       if (error) {
         console.error('Error creating internship:', error);
@@ -384,6 +430,7 @@ export async function getUserOtherInfo(userHash: string): Promise<OtherInfo[]> {
 export async function saveOtherInfo(userHash: string, otherInfo: OtherInfo): Promise<boolean> {
   try {
     const infoData = {
+      ...(otherInfo.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       user_hash: userHash,
       category: otherInfo.category,
       content: otherInfo.content,
@@ -406,7 +453,8 @@ export async function saveOtherInfo(userHash: string, otherInfo: OtherInfo): Pro
       // 创建新记录
       const { error } = await supabase
         .from('user_other_info')
-        .insert(infoData);
+        .insert(infoData)
+        .select();
 
       if (error) {
         console.error('Error creating other info:', error);
@@ -514,8 +562,32 @@ export async function getUserPapers(userId: string): Promise<Paper[]> {
   }
 }
 
+// 生成UUID的辅助函数
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 export async function savePaper(userId: string, userName: string, paper: Paper): Promise<boolean> {
   try {
+    // 验证必要参数
+    if (!userId || userId.trim() === '') {
+      console.error('User ID is required for saving paper');
+      return false;
+    }
+    
+    if (!userName || userName.trim() === '') {
+      console.error('User name is required for saving paper');
+      return false;
+    }
+    
+    if (!paper.paper_title || paper.paper_title.trim() === '') {
+      console.error('Paper title is required');
+      return false;
+    }
     // 处理日期格式：如果是月份格式(YYYY-MM)，转换为完整日期格式(YYYY-MM-01)
     let formattedDate = null;
     if (paper.publish_date && paper.publish_date.trim() !== '') {
@@ -528,16 +600,25 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
       }
     }
 
+    // 辅助函数：将空字符串转换为null
+    const emptyToNull = (value: string | undefined | null): string | null => {
+      if (!value || value.trim() === '') {
+        return null;
+      }
+      return value.trim();
+    };
+
     const paperData = {
+      ...(paper.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       paper_title: paper.paper_title,
-      journal_name: paper.journal_name,
-      journal_category: paper.journal_category,
+      journal_name: emptyToNull(paper.journal_name),
+      journal_category: emptyToNull(paper.journal_category),
       bupt_student_id: userId, // 自动填入用户的学号
       full_name: userName, // 自动填入用户的真实姓名
-      class: paper.class,
-      author_type: paper.author_type,
+      class: emptyToNull(paper.class),
+      author_type: emptyToNull(paper.author_type),
       publish_date: formattedDate,
-      note: paper.note
+      note: emptyToNull(paper.note)
     };
 
     if (paper.id) {
@@ -553,10 +634,11 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
         return false;
       }
     } else {
-      // 创建新记录
+      // 创建新记录 - 让数据库自动生成UUID
       const { error } = await supabase
         .from('student_papers')
-        .insert(paperData);
+        .insert(paperData)
+        .select(); // 添加select()来获取插入后的数据，包括生成的UUID
 
       if (error) {
         console.error('Error creating paper:', error);
@@ -637,15 +719,24 @@ export async function savePatent(userId: string, userName: string, patent: Paten
       }
     }
 
+    // 辅助函数：将空字符串转换为null
+    const emptyToNull = (value: string | undefined | null): string | null => {
+      if (!value || value.trim() === '') {
+        return null;
+      }
+      return value.trim();
+    };
+
     const patentData = {
+      ...(patent.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       patent_name: patent.patent_name,
-      patent_number: patent.patent_number,
+      patent_number: emptyToNull(patent.patent_number),
       patent_date: formattedPatentDate,
       bupt_student_id: userId, // 自动填入用户的学号
-      class: patent.class,
+      class: emptyToNull(patent.class),
       full_name: userName, // 自动填入用户的真实姓名
-      category_of_patent_owner: patent.category_of_patent_owner,
-      note: patent.note
+      category_of_patent_owner: emptyToNull(patent.category_of_patent_owner),
+      note: emptyToNull(patent.note)
     };
 
     if (patent.id) {
@@ -661,10 +752,11 @@ export async function savePatent(userId: string, userName: string, patent: Paten
         return false;
       }
     } else {
-      // 创建新记录
+      // 创建新记录 - 让数据库自动生成UUID
       const { error } = await supabase
         .from('student_patents')
-        .insert(patentData);
+        .insert(patentData)
+        .select(); // 添加select()来获取插入后的数据，包括生成的UUID
 
       if (error) {
         console.error('Error creating patent:', error);
