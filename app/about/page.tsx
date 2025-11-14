@@ -68,6 +68,7 @@ export default function AboutPage() {
   const [hoverRating, setHoverRating] = useState<number>(0)
   const [feedback, setFeedback] = useState<string>("")
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false)
+  const [submitting, setSubmitting] = useState<boolean>(false)
   const resetForm = () => {
     setRating(0)
     setHoverRating(0)
@@ -75,19 +76,24 @@ export default function AboutPage() {
     setSubmitSuccess(false)
   }
   const handleSubmitRating = async () => {
-    if (rating === 0) return
+    if (rating === 0 || submitting) return
     // 如果未登录，可考虑要求登录；当前先使用匿名标识写入
     const userHash = user?.userHash || 'ANON'
-    const ok = await submitUserRating(userHash, rating, feedback.trim())
-    if (ok) {
-      setSubmitSuccess(true)
-      setTimeout(() => {
-        setShowRatingModal(false)
-        resetForm()
-      }, 1500)
-    } else {
-      // 简单失败提示
-      alert('提交失败，请稍后重试')
+    try {
+      setSubmitting(true)
+      const ok = await submitUserRating(userHash, rating, feedback.trim())
+      if (ok) {
+        setSubmitSuccess(true)
+        setTimeout(() => {
+          setShowRatingModal(false)
+          resetForm()
+        }, 1500)
+      } else {
+        // 简单失败提示
+        alert('提交失败，请稍后重试')
+      }
+    } finally {
+      setSubmitting(false)
     }
   }
   
@@ -336,17 +342,18 @@ export default function AboutPage() {
 
               <div className="flex items-center justify-end gap-3">
                 <button
-                  onClick={() => { setShowRatingModal(false); resetForm(); }}
+                  onClick={() => { if (!submitting) { setShowRatingModal(false); resetForm(); } }}
+                  disabled={submitting}
                   className="rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
                 >
                   取消
                 </button>
                 <button
                   onClick={handleSubmitRating}
-                  disabled={rating === 0}
-                  className={`rounded-md px-4 py-2 text-white transition-colors ${rating === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+                  disabled={rating === 0 || submitting}
+                  className={`rounded-md px-4 py-2 text-white transition-colors ${rating === 0 || submitting ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
                 >
-                  提交评分
+                  {submitting ? '提交中…' : '提交评分'}
                 </button>
               </div>
 
