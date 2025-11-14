@@ -41,20 +41,19 @@ export async function POST(request: NextRequest) {
     let effectiveYear = year;
     let lastTriedTable = '';
     let found = false;
+    const queryLogs: Array<{ tableName: string; found: boolean; message: string }> = [];
 
     console.log('查询预测数据 - 专业:', major);
     console.log('查询预测数据 - 哈希值:', trimmedHash);
     console.log('查询预测数据 - 学号:', trimmedStudentNumber);
     console.log('查询预测数据 - 提取年份:', year);
 
-    for (let offset = 0; offset <= 7; offset++) {
+    for (let offset = -1; offset <= 7; offset++) {
       const currentYear = year + offset;
       if (currentYear > 2050) break;
 
       const currentTableName = `Cohort${currentYear}_Predictions_all`;
       lastTriedTable = currentTableName;
-      console.log('查询预测数据 - 表名:', currentTableName);
-
       const result = await supabase
         .from(currentTableName)
         .select('*')
@@ -62,17 +61,23 @@ export async function POST(request: NextRequest) {
         .limit(1)
         .single();
 
-      if (!result.error && result.data) {
+      const logEntry = {
+        tableName: currentTableName,
+        found: !result.error && !!result.data,
+        message: !result.error && result.data ? '找到学生数据' : (result.error?.message || 'No data')
+      };
+      queryLogs.push(logEntry);
+      if (logEntry.found) {
+        console.log(`查询表 ${currentTableName} - ✅ ${logEntry.message}`);
         predictionsData = result.data;
         predictionsError = null;
         tableName = currentTableName;
         effectiveYear = currentYear;
         found = true;
-        console.log('✅ 在表中找到学生数据:', currentTableName);
         break;
       } else {
         predictionsError = result.error;
-        console.log('❌ 表中未找到学生:', currentTableName, result.error?.message || 'No data');
+        console.log(`查询表 ${currentTableName} - ❌ ${logEntry.message}`);
       }
     }
 
@@ -82,7 +87,6 @@ export async function POST(request: NextRequest) {
       console.error('📊 在指定年份的cohort表中找不到该学生数据');
       console.error('🔍 尝试的表:', tableName);
       console.error('🔍 查询的哈希值:', trimmedHash);
-      console.error('🎓 专业:', major);
       console.error('📅 学号:', trimmedStudentNumber);
       console.error('📅 提取年份:', year);
       console.error('💡 可能原因: 学生哈希值不在该年份的预测表中，或专业信息不匹配，或学号年份不正确');
@@ -90,11 +94,11 @@ export async function POST(request: NextRequest) {
         error: `学生预测数据缺失: 在专业 "${major}" 的 ${year} 年预测表及后续 7 年内找不到该学生数据`,
         details: {
           studentHash: trimmedHash,
-          major: major,
           studentNumber: trimmedStudentNumber,
           extractedYear: year,
           triedTable: lastTriedTable || `Cohort${year}_Predictions_all`,
-          suggestion: '请检查学生哈希值、专业信息或学号是否正确'
+          suggestion: '请检查学生哈希值、专业信息或学号是否正确',
+          queryLogs
         }
       }, { status: 404 })
     }
@@ -203,7 +207,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        courseScores
+        courseScores,
+        queryLogs
       }
     });
 
