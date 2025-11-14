@@ -2,10 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Mail, Users, GraduationCap, BookOpen, Tag } from "lucide-react"
+import { Mail, Users, GraduationCap, BookOpen, Tag, Heart, Star } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import { useAuth } from "@/contexts/AuthContext"
+import { submitUserRating } from "@/lib/voting-data"
 import VotingPoll from "@/components/voting-poll"
 import VisitorStats from "@/components/analytics/VisitorStats"
+import { useState } from "react"
 
 // 版本号常量 - 固定为1.0版本
 const VERSION = "1.0"
@@ -37,11 +40,11 @@ const students = [
   },
   {
     name: "黄昌澄",
-    note: "负责后端开发与数据库管理"
+    note: "负责后端服务与数据库体系的规划、设计与维护，承担数据性能优化与稳定性保障，确保平台数据安全、可靠、高效运行"
   },
   {
     name: "范智健",
-    note: "负责模型的微调与优化，进行数据处理，数据库运维，以及搭建和调用服务器环境，保障整体系统的高效运行与稳定性"
+    note: "负责模型的微调与优化，进行数据处理，数据库运维。负责网络服务与中转节点的搭建与运维。"
   },
   {
     name: "朱思远",
@@ -59,8 +62,37 @@ const students = [
 
 export default function AboutPage() {
   const { t } = useLanguage()
+  const { user, login } = useAuth()
+  const [showRatingModal, setShowRatingModal] = useState(false)
+  const [rating, setRating] = useState<number>(0)
+  const [hoverRating, setHoverRating] = useState<number>(0)
+  const [feedback, setFeedback] = useState<string>("")
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false)
+  const resetForm = () => {
+    setRating(0)
+    setHoverRating(0)
+    setFeedback("")
+    setSubmitSuccess(false)
+  }
+  const handleSubmitRating = async () => {
+    if (rating === 0) return
+    // 如果未登录，可考虑要求登录；当前先使用匿名标识写入
+    const userHash = user?.userHash || 'ANON'
+    const ok = await submitUserRating(userHash, rating, feedback.trim())
+    if (ok) {
+      setSubmitSuccess(true)
+      setTimeout(() => {
+        setShowRatingModal(false)
+        resetForm()
+      }, 1500)
+    } else {
+      // 简单失败提示
+      alert('提交失败，请稍后重试')
+    }
+  }
   
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6">
       <div className="max-w-6xl mx-auto">
         {/* 页面标题 */}
@@ -124,6 +156,34 @@ export default function AboutPage() {
           </div>
         </div>
 
+        {/* 特别致谢 */}
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <Heart className="h-8 w-8 text-blue-600" />
+            <h2 className="text-3xl font-bold text-blue-900">特别致谢</h2>
+            <Badge variant="outline" className="border-blue-300 text-blue-700">
+              2 位校友
+            </Badge>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[{ name: "白景文", note: "国际学院校友，给予项目支持与帮助" }, { name: "刘双", note: "国际学院校友，给予项目支持与帮助" }].map((person, index) => (
+              <Card key={index} className="border-blue-200 hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <CardTitle className="text-xl">{person.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-3">
+                    <div className="text-gray-600">
+                      <p className="text-sm leading-relaxed">{person.note}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
         {/* 学生开发团队 */}
         <div>
           <div className="flex items-center gap-3 mb-6">
@@ -155,6 +215,27 @@ export default function AboutPage() {
         {/* 网站访问统计（仅保留统计组件） */}
         <div className="mt-16">
           <VisitorStats />
+        </div>
+
+        {/* 平台评分 */}
+        <div className="mt-16">
+          <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-white">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-6 w-6 text-blue-600" />
+                为平台打分
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-blue-700 mb-4">欢迎为 BuTP 评分，并留下你的建议与反馈。</p>
+              <button
+                onClick={() => setShowRatingModal(true)}
+                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
+              >
+                <Star className="h-4 w-4" /> 给平台打分
+              </button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* 投票排行榜 */}
@@ -204,5 +285,81 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
+
+    {/* 评分弹窗 */}
+    {showRatingModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/50" onClick={() => { setShowRatingModal(false); resetForm(); }} />
+        <div className="relative w-full max-w-md mx-4">
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-blue-600" />
+                为平台打分
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm text-blue-800 mb-2">请选择你的评分（1-5 星）：</p>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const value = i + 1
+                    const active = hoverRating ? value <= hoverRating : value <= rating
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onMouseEnter={() => setHoverRating(value)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        onClick={() => setRating(value)}
+                        className="p-1"
+                        aria-label={`${value} 星`}
+                      >
+                        <span className={`text-2xl leading-none ${active ? "text-yellow-400" : "text-gray-300"}`}>
+                          {active ? "★" : "☆"}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-blue-800 mb-2">你的建议（可选）：</p>
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="例如：希望增加更多课程推荐、完善职业路线图等..."
+                  className="w-full min-h-[100px] rounded-md border border-blue-200 bg-blue-50 p-3 text-sm outline-none focus:ring-2 focus:ring-blue-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => { setShowRatingModal(false); resetForm(); }}
+                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSubmitRating}
+                  disabled={rating === 0}
+                  className={`rounded-md px-4 py-2 text-white transition-colors ${rating === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+                >
+                  提交评分
+                </button>
+              </div>
+
+              {submitSuccess && (
+                <div className="mt-3 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+                  感谢你的反馈！我们将持续优化平台体验。
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )}
+    </>
   )
-} 
+}

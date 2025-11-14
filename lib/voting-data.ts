@@ -240,3 +240,52 @@ export const initialVotingOptions = [
   { option_key: 'D', option_text: '导出动态数字人' },
   { option_key: 'E', option_text: '通告栏公示功能' }
 ] 
+
+// 提交用户评分与建议
+export async function submitUserRating(userHash: string, point: number, suggest?: string): Promise<boolean> {
+  try {
+    if (!point || point < 1 || point > 5) {
+      throw new Error('Invalid rating point, must be 1-5')
+    }
+
+    // 查询是否已有当前用户记录
+    const { data: existing, error: readError } = await supabase
+      .from('vote')
+      .select('option, point, suggest')
+      .eq('SNH', userHash)
+      .limit(1)
+      .maybeSingle()
+
+    if (readError && readError.code !== 'PGRST116') {
+      // 读取错误且非空结果错误
+      console.error('读取用户记录失败:', readError.message)
+      return false
+    }
+
+    if (existing) {
+      // 更新评分与建议（不改变已有 option 文本）
+      const { error: updateError } = await supabase
+        .from('vote')
+        .update({ point, suggest: suggest ?? existing.suggest })
+        .eq('SNH', userHash)
+      if (updateError) {
+        console.error('更新评分失败:', updateError.message)
+        return false
+      }
+      return true
+    } else {
+      // 插入新记录（option 可留空字符串或省略）
+      const { error: insertError } = await supabase
+        .from('vote')
+        .insert({ SNH: userHash, point, suggest: suggest ?? '' })
+      if (insertError) {
+        console.error('插入评分失败:', insertError.message)
+        return false
+      }
+      return true
+    }
+  } catch (error) {
+    console.error('提交评分失败:', (error as Error).message)
+    return false
+  }
+}
