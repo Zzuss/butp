@@ -13,20 +13,29 @@ export async function POST(request: NextRequest) {
   try {
     const { studentHash } = await request.json();
 
+    console.log(`🔍 API Request: studentHash="${studentHash}"`);
+
     if (!studentHash) {
+      console.error('❌ No student hash provided');
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 });
     }
 
     // 1. Get student's major and student number from academic_results
+    console.log(`🔍 Querying academic_results for SNH: "${studentHash}"`);
+    
     const { data: studentInfoData, error: studentInfoError } = await supabase
       .from('academic_results')
-      .select('Current_Major, Student_Number')
-      .eq('SNH', studentHash)
+      .select('"Current_Major", "Student_Number"')
+      .eq('"SNH"', studentHash)
       .limit(1);
 
     if (studentInfoError) {
-      console.error('Error fetching student info:', studentInfoError);
-      return NextResponse.json({ error: 'Failed to fetch student info' }, { status: 500 });
+      console.error('❌ Database error fetching student info:', studentInfoError);
+      console.error('   Error details:', JSON.stringify(studentInfoError, null, 2));
+      return NextResponse.json({ 
+        error: 'Failed to fetch student info', 
+        details: studentInfoError.message || 'Database query failed'
+      }, { status: 500 });
     }
 
     if (!studentInfoData || studentInfoData.length === 0) {
@@ -113,13 +122,13 @@ export async function POST(request: NextRequest) {
     // 🚀 UPDATED: Include Course_ID for perfect matching
     const { data: earnedCreditsData, error: earnedCreditsError } = await supabase
       .from('academic_results')
-      .select('Course_ID, Course_Name, Credit, Course_Attribute')
-      .eq('SNH', studentHash)
-      .not('Grade', 'is', null) // Only count courses with a grade
-      .neq('Grade', '不及格') // Exclude failing grades
-      .neq('Grade', '弃修') // Exclude dropped courses
-      .neq('Grade', '免修') // Exclude exempted courses
-      .neq('Grade', '缓考'); // Exclude deferred exams
+      .select('"Course_ID", "Course_Name", "Credit", "Course_Attribute"')
+      .eq('"SNH"', studentHash)
+      .not('"Grade"', 'is', null) // Only count courses with a grade
+      .neq('"Grade"', '不及格') // Exclude failing grades
+      .neq('"Grade"', '弃修') // Exclude dropped courses
+      .neq('"Grade"', '免修') // Exclude exempted courses
+      .neq('"Grade"', '缓考'); // Exclude deferred exams
 
     if (earnedCreditsError) {
       console.error('Error fetching earned credits:', earnedCreditsError);
@@ -277,8 +286,15 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ Unexpected API error:', error);
+    console.error('   Error type:', typeof error);
+    console.error('   Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('   Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    return NextResponse.json({ 
+      error: 'Internal server error', 
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
+    }, { status: 500 });
   }
 }
 
