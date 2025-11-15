@@ -11,21 +11,29 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentHash } = await request.json();
+    const { studentHash, studentNumber } = await request.json();
 
-    console.log(`🔍 API Request: studentHash="${studentHash}"`);
+    console.log(`🔍 API Request: studentHash="${studentHash}", studentNumber="${studentNumber}"`);
 
     if (!studentHash) {
       console.error('❌ No student hash provided');
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 });
     }
 
-    // 1. Get student's major and student number from academic_results
+    if (!studentNumber) {
+      console.error('❌ No student number provided');
+      return NextResponse.json({ error: 'Student number is required' }, { status: 400 });
+    }
+
+    // 🎯 Extract year from student number (first 4 digits)
+    const studentYear = studentNumber.toString().substring(0, 4);
+
+    // 1. Get student's major from academic_results
     console.log(`🔍 Querying academic_results for SNH: "${studentHash}"`);
     
     const { data: studentInfoData, error: studentInfoError } = await supabase
       .from('academic_results')
-      .select('"Current_Major", "Student_Number"')
+      .select('"Current_Major"')
       .eq('"SNH"', studentHash)
       .limit(1);
 
@@ -42,18 +50,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student not found or no academic results' }, { status: 404 });
     }
 
-    const { Current_Major: studentMajor, Student_Number: studentNumber } = studentInfoData[0];
+    const { Current_Major: studentMajor } = studentInfoData[0];
 
     if (!studentMajor) {
       return NextResponse.json({ error: 'Student major not found' }, { status: 404 });
     }
-
-    if (!studentNumber) {
-      return NextResponse.json({ error: 'Student number not found' }, { status: 404 });
-    }
-
-    // 🎯 Extract year from student number (first 4 digits)
-    const studentYear = studentNumber.toString().substring(0, 4);
     
     console.log(`🎓 Student Info: Major="${studentMajor}", Number="${studentNumber}", Year="${studentYear}"`);
 

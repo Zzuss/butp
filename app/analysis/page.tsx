@@ -226,7 +226,10 @@ export default function Analysis() {
       const response = await fetch('/api/graduation-requirements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentHash: user.userHash })
+        body: JSON.stringify({ 
+          studentHash: user.userHash,
+          studentNumber: typeof (user as any)?.studentNumber === 'string' ? (user as any).studentNumber : (user?.userId || '')
+        })
       });
 
       console.log('API response status:', response.status);
@@ -247,7 +250,7 @@ export default function Analysis() {
         // 🔧 NEW: Log unmapped courses and graduation summary
         if (result.data.unmapped_courses && result.data.unmapped_courses.length > 0) {
           console.log('⚠️ Unmapped courses requiring review:', result.data.unmapped_courses.length, 'courses');
-          console.log('Unmapped courses:', result.data.unmapped_courses.map(c => c.Course_Name));
+          console.log('Unmapped courses:', result.data.unmapped_courses.map((c: any) => c.Course_Name));
         }
         
         if (result.data.summary) {
