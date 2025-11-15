@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://sdtarodxdvkeeiaouddo.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASELOCAL_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASELOCAL_ANON_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASELOCAL_URL and NEXT_PUBLIC_SUPABASELOCAL_ANON_KEY.')
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
     
     const { data: requiredCreditsData, error: requiredCreditsError } = await supabase
       .from('courses')
-      .select('category, required_total, required_compulsory, required_elective')
+      .select('course_id, category, required_total, required_compulsory, required_elective')
       .eq('major', studentMajor)
       .eq('year', studentYear)  // 🎯 KEY FIX: Filter by student's year
       .not('category', 'is', null); // Ensure category is not null
@@ -104,9 +108,15 @@ export async function POST(request: NextRequest) {
 
     // 🔧 FIX: Use first occurrence of each category instead of SUM aggregation
     // Each category should have consistent requirements across all courses
+    // 🚫 EXCLUDE "其他类别" from required categories as it's not a formal graduation requirement
     const requiredCreditsByCategory: Record<string, { required_total: number; required_compulsory: number; required_elective: number }> = {};
     requiredCreditsData.forEach(course => {
       const category = course.category;
+      // Skip "其他类别" and "体育基础" as they're not formal graduation requirement categories
+      // "体育基础" should be merged into "体育" category
+      if (category === '其他类别' || category === '体育基础') {
+        return;
+      }
       if (!requiredCreditsByCategory[category]) {
         // Take the first occurrence - all courses in same category should have same requirements
         requiredCreditsByCategory[category] = { 
@@ -225,39 +235,113 @@ export async function POST(request: NextRequest) {
     // 🏃‍♂️ SPECIAL: Handle sports courses with ID range mapping
     console.log(`🏃‍♂️ Checking for sports courses with special ID ranges...`);
     
+    // 🔍 DEBUG: Show all potential sports-related courses in student data
+    const allSportsRelatedCourses = passingCoursesData.filter(course => 
+      course.Course_Name.includes('体育') || 
+      course.Course_Name.includes('健美') || 
+      course.Course_Name.includes('篮球') || 
+      course.Course_Name.includes('足球') || 
+      course.Course_Name.includes('排球') ||
+      course.Course_Name.includes('游泳') ||
+      course.Course_Name.includes('羽毛球') ||
+      course.Course_Name.includes('网球')
+    );
+    
+    if (allSportsRelatedCourses.length > 0) {
+      console.log(`🔍 All sports-related courses found in student data:`);
+      allSportsRelatedCourses.forEach(course => {
+        console.log(`   - "${course.Course_Name}" (ID: ${course.Course_ID || 'missing'}, Credit: ${course.Credit}, Grade: ${course.Grade})`);
+      });
+    } else {
+      console.log(`🔍 No sports-related courses found in student data`);
+    }
+    
+    // 🔍 DEBUG: Show ALL courses with IDs in the sports range
+    const coursesInSportsIdRange = passingCoursesData.filter(course => {
+      const courseId = course.Course_ID;
+      return courseId && (
+        courseId === '3812150010' || 
+        (parseInt(courseId) >= 3812150020 && parseInt(courseId) <= 3812150324)
+      );
+    });
+    
+    if (coursesInSportsIdRange.length > 0) {
+      console.log(`🔍 Courses with sports CourseID range:`);
+      coursesInSportsIdRange.forEach(course => {
+        console.log(`   - "${course.Course_Name}" (ID: ${course.Course_ID}, Credit: ${course.Credit}, Grade: ${course.Grade})`);
+      });
+    }
+    
     // 🏃‍♂️ Create sports course tracking for compulsory/elective distinction
     const sportsCoursesInfo = new Map(); // courseName -> {type: 'compulsory'|'elective', courseId}
+    const processedSportsBasicIds = new Set(); // Track processed sports basic course IDs to avoid duplicates
     
     passingCoursesData.forEach(course => {
       const courseId = course.Course_ID;
       const courseName = course.Course_Name;
       
-      // Skip if already mapped
-      if (courseToCategoryMap.has(courseName)) {
-        return;
-      }
-      
       if (courseId) {
         // 体育基础：3812150010 -> 体育类别的必修学分
         if (courseId === '3812150010') {
+          // 🔧 FORCE OVERRIDE: Always map to "体育" regardless of previous mapping
+          const wasAlreadyMapped = courseToCategoryMap.has(courseName);
+          const previousCategory = wasAlreadyMapped ? courseToCategoryMap.get(courseName) : null;
+          
           courseToCategoryMap.set(courseName, '体育');
           sportsCoursesInfo.set(courseName, { type: 'compulsory', courseId });
-          console.log(`🏃‍♂️ Sports compulsory match: "${courseName}" (ID: ${courseId}) → 体育 (必修)`);
-          mappingStats.exact++;
-          mappingStats.failed--; // 减少失败计数
+          
+          if (wasAlreadyMapped && previousCategory !== '体育') {
+            console.log(`🏃‍♂️ Sports compulsory OVERRIDE: "${courseName}" (ID: ${courseId}) → 体育 (必修) [was: ${previousCategory}]`);
+          } else {
+            console.log(`🏃‍♂️ Sports compulsory match: "${courseName}" (ID: ${courseId}) → 体育 (必修)`);
+          }
+          
+          if (!wasAlreadyMapped) {
+            mappingStats.exact++;
+          }
+        }
+        // 🔍 DEBUG: Check for potential sports courses that might be misidentified
+        else if (courseName.includes('体育') || courseName.includes('健美') || courseName.includes('篮球') || courseName.includes('足球') || courseName.includes('排球')) {
+          console.log(`🔍 Potential sports course NOT matched by ID: "${courseName}" (ID: ${courseId})`);
         }
         // 体育专项课：3812150020~3812150324 -> 体育类别的选修学分
-        else if (courseId >= '3812150020' && courseId <= '3812150324') {
+        else if (parseInt(courseId) >= 3812150020 && parseInt(courseId) <= 3812150324) {
+          // 🔧 FORCE OVERRIDE: Always map to "体育" regardless of previous mapping
+          const wasAlreadyMapped = courseToCategoryMap.has(courseName);
+          const previousCategory = wasAlreadyMapped ? courseToCategoryMap.get(courseName) : null;
+          
           courseToCategoryMap.set(courseName, '体育');
           sportsCoursesInfo.set(courseName, { type: 'elective', courseId });
-          console.log(`🏃‍♂️ Sports elective match: "${courseName}" (ID: ${courseId}) → 体育 (选修)`);
-          mappingStats.exact++;
-          mappingStats.failed--; // 减少失败计数
+          
+          if (wasAlreadyMapped && previousCategory !== '体育') {
+            console.log(`🏃‍♂️ Sports elective OVERRIDE: "${courseName}" (ID: ${courseId}) → 体育 (选修) [was: ${previousCategory}]`);
+          } else {
+            console.log(`🏃‍♂️ Sports elective match: "${courseName}" (ID: ${courseId}) → 体育 (选修)`);
+          }
+          
+          if (!wasAlreadyMapped) {
+            mappingStats.exact++;
+          }
         }
       }
     });
     
     console.log(`🏃‍♂️ Sports courses mapping completed`);
+    
+    // 🔧 Clean up any remaining "体育基础" mappings that might have been created during normal mapping
+    const cleanupCount = Array.from(courseToCategoryMap.entries())
+      .filter(([_, category]) => category === '体育基础')
+      .length;
+    
+    if (cleanupCount > 0) {
+      console.log(`🧹 Cleaning up ${cleanupCount} remaining "体育基础" mappings...`);
+      for (const [courseName, category] of courseToCategoryMap.entries()) {
+        if (category === '体育基础') {
+          courseToCategoryMap.set(courseName, '体育');
+          console.log(`🧹 Cleaned up: "${courseName}" → 体育 [was: 体育基础]`);
+        }
+      }
+    }
     
     // 🏃‍♂️ DEBUG: Show sports courses found
     const sportsCompulsoryCourses = Array.from(sportsCoursesInfo.entries())
@@ -369,13 +453,52 @@ export async function POST(request: NextRequest) {
     });
 
     // 🔧 ENHANCED: Include official curriculum categories and sports, but exclude "其他类别" from main list
+    console.log(`📋 Required categories before filtering:`, Object.keys(requiredCreditsByCategory));
+    console.log(`📋 Earned categories before filtering:`, Object.keys(earnedCreditsByCategory));
+    
+    // 🔍 DEBUG: Show sports category requirements if exists
+    if (requiredCreditsByCategory['体育']) {
+      console.log(`🏃‍♂️ Sports category requirements from database:`, requiredCreditsByCategory['体育']);
+    }
+    if (requiredCreditsByCategory['体育基础']) {
+      console.log(`🏃‍♂️ Sports basic category requirements from database:`, requiredCreditsByCategory['体育基础']);
+    }
+    
     const allCategories = new Set([
-      ...Object.keys(requiredCreditsByCategory),
-      ...Object.keys(earnedCreditsByCategory).filter(category => category !== '其他类别')
+      ...Object.keys(requiredCreditsByCategory).filter(category => category !== '其他类别' && category !== '体育基础'),
+      ...Object.keys(earnedCreditsByCategory).filter(category => category !== '其他类别' && category !== '体育基础')
     ]);
     
+    console.log(`📋 Final categories for graduation requirements:`, Array.from(allCategories));
+    
     const graduationRequirements = Array.from(allCategories).map(category => {
-      const required = requiredCreditsByCategory[category] || { required_total: 0, required_compulsory: 0, required_elective: 0 };
+      let required = requiredCreditsByCategory[category] || { required_total: 0, required_compulsory: 0, required_elective: 0 };
+      
+      // 🏃‍♂️ SPECIAL: Override sports category requirements based on curriculum data
+      if (category === '体育') {
+        // Get sports requirements from original curriculum data
+        const sportsBasicRequirement = requiredCreditsData.find(course => 
+          course.course_id === '3812150010' && course.category === '体育'
+        );
+        const sportsElectiveRequirement = requiredCreditsData.find(course => 
+          course.course_id === '3812150020' && course.category === '体育'
+        );
+        
+        const requiredCompulsory = sportsBasicRequirement ? (sportsBasicRequirement.required_total || 0) : 0;
+        const requiredElective = sportsElectiveRequirement ? (sportsElectiveRequirement.required_total || 0) : 0;
+        
+        // Set sports requirements based on curriculum
+        required = {
+          required_total: requiredCompulsory + requiredElective,
+          required_compulsory: requiredCompulsory,
+          required_elective: requiredElective
+        };
+        
+        console.log(`🏃‍♂️ Sports requirements from curriculum: compulsory=${requiredCompulsory}, elective=${requiredElective}, total=${required.required_total}`);
+        console.log(`🏃‍♂️ Sports basic requirement found:`, sportsBasicRequirement);
+        console.log(`🏃‍♂️ Sports elective requirement found:`, sportsElectiveRequirement);
+      }
+      
       const earned = earnedCreditsByCategory[category] || { 
         earned_credits: 0, 
         earned_compulsory: 0,
