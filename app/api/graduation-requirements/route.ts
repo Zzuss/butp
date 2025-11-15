@@ -225,6 +225,9 @@ export async function POST(request: NextRequest) {
     // 🏃‍♂️ SPECIAL: Handle sports courses with ID range mapping
     console.log(`🏃‍♂️ Checking for sports courses with special ID ranges...`);
     
+    // 🏃‍♂️ Create sports course tracking for compulsory/elective distinction
+    const sportsCoursesInfo = new Map(); // courseName -> {type: 'compulsory'|'elective', courseId}
+    
     passingCoursesData.forEach(course => {
       const courseId = course.Course_ID;
       const courseName = course.Course_Name;
@@ -235,17 +238,19 @@ export async function POST(request: NextRequest) {
       }
       
       if (courseId) {
-        // 体育基础：3812150010
+        // 体育基础：3812150010 -> 体育类别的必修学分
         if (courseId === '3812150010') {
-          courseToCategoryMap.set(courseName, '体育基础');
-          console.log(`🏃‍♂️ Sports basic match: "${courseName}" (ID: ${courseId}) → 体育基础`);
+          courseToCategoryMap.set(courseName, '体育');
+          sportsCoursesInfo.set(courseName, { type: 'compulsory', courseId });
+          console.log(`🏃‍♂️ Sports compulsory match: "${courseName}" (ID: ${courseId}) → 体育 (必修)`);
           mappingStats.exact++;
           mappingStats.failed--; // 减少失败计数
         }
-        // 体育专项课：3812150020~3812150324
+        // 体育专项课：3812150020~3812150324 -> 体育类别的选修学分
         else if (courseId >= '3812150020' && courseId <= '3812150324') {
-          courseToCategoryMap.set(courseName, '体育专项课');
-          console.log(`🏃‍♂️ Sports specialized match: "${courseName}" (ID: ${courseId}) → 体育专项课`);
+          courseToCategoryMap.set(courseName, '体育');
+          sportsCoursesInfo.set(courseName, { type: 'elective', courseId });
+          console.log(`🏃‍♂️ Sports elective match: "${courseName}" (ID: ${courseId}) → 体育 (选修)`);
           mappingStats.exact++;
           mappingStats.failed--; // 减少失败计数
         }
@@ -255,18 +260,18 @@ export async function POST(request: NextRequest) {
     console.log(`🏃‍♂️ Sports courses mapping completed`);
     
     // 🏃‍♂️ DEBUG: Show sports courses found
-    const sportsBasicCourses = passingCoursesData.filter(course => 
-      course.Course_ID === '3812150010' && courseToCategoryMap.has(course.Course_Name)
-    );
-    const sportsSpecializedCourses = passingCoursesData.filter(course => 
-      course.Course_ID && course.Course_ID >= '3812150020' && course.Course_ID <= '3812150324' && courseToCategoryMap.has(course.Course_Name)
-    );
+    const sportsCompulsoryCourses = Array.from(sportsCoursesInfo.entries())
+      .filter(([_, info]) => info.type === 'compulsory')
+      .map(([courseName, _]) => courseName);
+    const sportsElectiveCourses = Array.from(sportsCoursesInfo.entries())
+      .filter(([_, info]) => info.type === 'elective')
+      .map(([courseName, _]) => courseName);
     
-    if (sportsBasicCourses.length > 0) {
-      console.log(`🏃‍♂️ Found ${sportsBasicCourses.length} 体育基础 courses:`, sportsBasicCourses.map(c => c.Course_Name));
+    if (sportsCompulsoryCourses.length > 0) {
+      console.log(`🏃‍♂️ Found ${sportsCompulsoryCourses.length} 体育必修 courses:`, sportsCompulsoryCourses);
     }
-    if (sportsSpecializedCourses.length > 0) {
-      console.log(`🏃‍♂️ Found ${sportsSpecializedCourses.length} 体育专项课 courses:`, sportsSpecializedCourses.map(c => c.Course_Name));
+    if (sportsElectiveCourses.length > 0) {
+      console.log(`🏃‍♂️ Found ${sportsElectiveCourses.length} 体育选修 courses:`, sportsElectiveCourses);
     }
     
     // 📦 FINAL: Handle remaining unmapped courses as "其他类别"
@@ -322,33 +327,78 @@ export async function POST(request: NextRequest) {
       console.log(`   ✅ All courses successfully mapped (including 其他类别)`);
     }
 
-    const earnedCreditsByCategory: Record<string, { earned_credits: number; courses: { Course_Name: string; Credit: number }[] }> = {};
+    const earnedCreditsByCategory: Record<string, { 
+      earned_credits: number; 
+      earned_compulsory: number;
+      earned_elective: number;
+      courses: { Course_Name: string; Credit: number; type?: string }[] 
+    }> = {};
 
-    // 🔧 FIXED: Only count courses that can be mapped to curriculum categories
+    // 🔧 ENHANCED: Count courses with compulsory/elective distinction for sports
     passingCoursesData.forEach(result => {
       const category = courseToCategoryMap.get(result.Course_Name);
       if (category) {
         if (!earnedCreditsByCategory[category]) {
-          earnedCreditsByCategory[category] = { earned_credits: 0, courses: [] };
+          earnedCreditsByCategory[category] = { 
+            earned_credits: 0, 
+            earned_compulsory: 0,
+            earned_elective: 0,
+            courses: [] 
+          };
         }
         const credit = parseFloat(result.Credit);
         if (!isNaN(credit)) {
           // 🔧 FIX: 使用精确的浮点数加法，避免精度误差
           earnedCreditsByCategory[category].earned_credits = Math.round((earnedCreditsByCategory[category].earned_credits + credit) * 10) / 10;
-          earnedCreditsByCategory[category].courses.push({ Course_Name: result.Course_Name, Credit: credit });
+          
+          // 🏃‍♂️ Special handling for sports courses
+          if (category === '体育' && sportsCoursesInfo.has(result.Course_Name)) {
+            const sportsInfo = sportsCoursesInfo.get(result.Course_Name);
+            if (sportsInfo?.type === 'compulsory') {
+              earnedCreditsByCategory[category].earned_compulsory = Math.round((earnedCreditsByCategory[category].earned_compulsory + credit) * 10) / 10;
+              earnedCreditsByCategory[category].courses.push({ Course_Name: result.Course_Name, Credit: credit, type: 'compulsory' });
+            } else if (sportsInfo?.type === 'elective') {
+              earnedCreditsByCategory[category].earned_elective = Math.round((earnedCreditsByCategory[category].earned_elective + credit) * 10) / 10;
+              earnedCreditsByCategory[category].courses.push({ Course_Name: result.Course_Name, Credit: credit, type: 'elective' });
+            }
+          } else {
+            earnedCreditsByCategory[category].courses.push({ Course_Name: result.Course_Name, Credit: credit });
+          }
         }
       }
     });
 
-    // 🔧 ENHANCED: Include both official curriculum categories and special categories (like sports)
+    // 🔧 ENHANCED: Include official curriculum categories and sports, but exclude "其他类别" from main list
     const allCategories = new Set([
       ...Object.keys(requiredCreditsByCategory),
-      ...Object.keys(earnedCreditsByCategory)
+      ...Object.keys(earnedCreditsByCategory).filter(category => category !== '其他类别')
     ]);
     
     const graduationRequirements = Array.from(allCategories).map(category => {
       const required = requiredCreditsByCategory[category] || { required_total: 0, required_compulsory: 0, required_elective: 0 };
-      const earned = earnedCreditsByCategory[category] || { earned_credits: 0, courses: [] };
+      const earned = earnedCreditsByCategory[category] || { 
+        earned_credits: 0, 
+        earned_compulsory: 0,
+        earned_elective: 0,
+        courses: [] 
+      };
+      
+      // 🏃‍♂️ Special handling for sports category
+      if (category === '体育') {
+        return {
+          category,
+          required_total_credits: required.required_total,
+          required_compulsory_credits: required.required_compulsory,
+          required_elective_credits: required.required_elective,
+          credits_already_obtained: earned.earned_credits,
+          compulsory_credits_obtained: earned.earned_compulsory,
+          elective_credits_obtained: earned.earned_elective,
+          courses_taken: earned.courses,
+          meets_requirement: earned.earned_credits >= required.required_total,
+          meets_compulsory_requirement: earned.earned_compulsory >= required.required_compulsory,
+          meets_elective_requirement: earned.earned_elective >= required.required_elective
+        };
+      }
       
       return {
         category,
@@ -372,10 +422,10 @@ export async function POST(request: NextRequest) {
     
     // Separate official curriculum categories from special categories
     const officialCategories = graduationRequirements.filter(req => 
-      req.category !== '体育基础' && req.category !== '体育专项课' && req.category !== '其他类别'
+      req.category !== '体育' && req.category !== '其他类别'
     );
     const specialCategories = graduationRequirements.filter(req => 
-      req.category === '体育基础' || req.category === '体育专项课' || req.category === '其他类别'
+      req.category === '体育'
     );
     
     console.log(`📚 Official curriculum categories: ${officialCategories.length}`);
@@ -387,8 +437,24 @@ export async function POST(request: NextRequest) {
     if (specialCategories.length > 0) {
       console.log(`🎯 Special categories: ${specialCategories.length}`);
       specialCategories.forEach(req => {
-        console.log(`  📋 ${req.category}: ${req.credits_already_obtained} 学分 (${req.courses_taken.length} 门课程)`);
+        if (req.category === '体育') {
+          const sportsReq = req as any; // Type assertion for sports-specific fields
+          console.log(`  🏃‍♂️ ${req.category}: ${req.credits_already_obtained} 学分 (${req.courses_taken.length} 门课程)`);
+          console.log(`    - 必修: ${sportsReq.compulsory_credits_obtained || 0}/${sportsReq.required_compulsory_credits || 0} 学分`);
+          console.log(`    - 选修: ${sportsReq.elective_credits_obtained || 0}/${sportsReq.required_elective_credits || 0} 学分`);
+        } else {
+          console.log(`  📋 ${req.category}: ${req.credits_already_obtained} 学分 (${req.courses_taken.length} 门课程)`);
+        }
       });
+    }
+    
+    // 🔧 Prepare "其他类别" information separately
+    const otherCategoryInfo = earnedCreditsByCategory['其他类别'] || null;
+    
+    // 📦 Show "其他类别" information separately (not included in main graduation requirements)
+    if (otherCategoryInfo && otherCategoryInfo.courses.length > 0) {
+      console.log(`📦 Other category (separate): ${otherCategoryInfo.earned_credits} 学分 (${otherCategoryInfo.courses.length} 门课程)`);
+      console.log(`   Courses: ${otherCategoryInfo.courses.slice(0, 5).map(c => c.Course_Name).join(', ')}${otherCategoryInfo.courses.length > 5 ? '...' : ''}`);
     }
     
     // 🔧 FIX: 修复总学分计算的浮点数精度问题
@@ -396,11 +462,17 @@ export async function POST(request: NextRequest) {
     const totalEarnedCredits = Math.round(graduationRequirements.reduce((sum, req) => sum + req.credits_already_obtained, 0) * 10) / 10;
     console.log(`🎯 Total progress: ${totalEarnedCredits}/${totalRequiredCredits} 学分`);
     console.log(`🏆 Graduation status: ${overallGraduationStatus ? 'ELIGIBLE' : 'NOT YET ELIGIBLE'} (${categoriesMet}/${totalCategories} categories met)`);
-
+    
     return NextResponse.json({ 
       success: true, 
       data: {
         graduation_requirements: graduationRequirements,
+        other_category: otherCategoryInfo ? {
+          category: '其他类别',
+          credits_already_obtained: otherCategoryInfo.earned_credits,
+          courses_taken: otherCategoryInfo.courses,
+          course_count: otherCategoryInfo.courses.length
+        } : null,
         unmapped_courses: unmappedCourses,
         summary: {
           total_categories: totalCategories,
