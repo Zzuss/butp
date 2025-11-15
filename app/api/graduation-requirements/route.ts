@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 });
     }
 
-    // 1. Get student's major from academic_results
+    // 1. Get student's major and student number from academic_results
     const { data: studentInfoData, error: studentInfoError } = await supabase
       .from('academic_results')
-      .select('Current_Major')
+      .select('Current_Major, Student_Number')
       .eq('SNH', studentHash)
       .limit(1);
 
@@ -33,23 +33,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student not found or no academic results' }, { status: 404 });
     }
 
-    const { Current_Major: studentMajor } = studentInfoData[0];
+    const { Current_Major: studentMajor, Student_Number: studentNumber } = studentInfoData[0];
 
     if (!studentMajor) {
       return NextResponse.json({ error: 'Student major not found' }, { status: 404 });
     }
 
-    // 2. Get all categories and their required credits for the student's major from the courses table
-    // 🔧 FIX: Get distinct category requirements to avoid duplication
+    if (!studentNumber) {
+      return NextResponse.json({ error: 'Student number not found' }, { status: 404 });
+    }
+
+    // 🎯 Extract year from student number (first 4 digits)
+    const studentYear = studentNumber.toString().substring(0, 4);
+    
+    console.log(`🎓 Student Info: Major="${studentMajor}", Number="${studentNumber}", Year="${studentYear}"`);
+
+    // 2. Get all categories and their required credits for the student's major and year from the courses table
+    // 🔧 FIX: Add year filtering to get correct curriculum for student's grade
+    console.log(`🔍 Querying courses for Major: "${studentMajor}", Year: "${studentYear}"`);
+    
     const { data: requiredCreditsData, error: requiredCreditsError } = await supabase
       .from('courses')
       .select('category, required_total, required_compulsory, required_elective')
       .eq('major', studentMajor)
+      .eq('year', studentYear)  // 🎯 KEY FIX: Filter by student's year
       .not('category', 'is', null); // Ensure category is not null
 
     if (requiredCreditsError) {
       console.error('Error fetching required credits:', requiredCreditsError);
       return NextResponse.json({ error: 'Failed to fetch required credits' }, { status: 500 });
+    }
+
+    console.log(`📊 Found ${requiredCreditsData.length} course records for Major: "${studentMajor}", Year: "${studentYear}"`);
+    
+    if (requiredCreditsData.length === 0) {
+      console.warn(`⚠️  No courses found for Major: "${studentMajor}", Year: "${studentYear}"`);
+      console.warn(`   This might indicate:`);
+      console.warn(`   1. The major name doesn't match exactly`);
+      console.warn(`   2. The year ${studentYear} curriculum is not in the database`);
+      console.warn(`   3. The courses table doesn't have data for this combination`);
+      
+      // Try to find what years and majors are available
+      const { data: availableData, error: availableError } = await supabase
+        .from('courses')
+        .select('major, year')
+        .not('major', 'is', null)
+        .not('year', 'is', null);
+      
+      if (!availableError && availableData) {
+        const uniqueCombinations = [...new Set(availableData.map(d => `${d.major}-${d.year}`))];
+        console.warn(`   Available Major-Year combinations: ${uniqueCombinations.length}`);
+        uniqueCombinations.forEach(combo => {
+          const [major, year] = combo.split('-');
+          const isMatchingMajor = major === studentMajor;
+          const isMatchingYear = year === studentYear;
+          console.warn(`     ${isMatchingMajor && isMatchingYear ? '✅' : isMatchingMajor ? '🔶' : '❌'} ${combo}${isMatchingMajor && isMatchingYear ? ' (EXACT MATCH)' : isMatchingMajor ? ' (MAJOR MATCH)' : ''}`);
+        });
+      }
     }
 
     // 🔧 FIX: Use first occurrence of each category instead of SUM aggregation
