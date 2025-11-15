@@ -49,6 +49,7 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
   try {
     // 检查所有可能包含学生哈希值的表
     const tables = [
+      'student_number_hash_mapping_rows',
       'academic_results', 
       'cohort_probability',
       'Cohort2023_Predictions_ai',
@@ -58,8 +59,7 @@ export async function isValidStudentHashInDatabase(hash: string): Promise<boolea
       'student_profiles',
       'course_enrollments',
       'grade_records',
-      'student_records',
-      'student_number_hash_mapping_rows'
+      'student_records'
     ];
 
     // 检查是否为本地开发环境

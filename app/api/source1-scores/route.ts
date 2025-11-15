@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // 从学号前四位提取年份（不限制格式）
     const year = parseInt(trimmedStudentNumber.substring(0, 4));
     //const year = 2023;
-    // 验证年份合理性（2020-2050之间）
+    // 验证年份合理性（2018-2050之间）
     if (year < 2018 || year > 2050) {
       return NextResponse.json({ error: 'Invalid year from student number' }, { status: 400 })
     }
@@ -41,20 +41,19 @@ export async function POST(request: NextRequest) {
     let effectiveYear = year;
     let lastTriedTable = '';
     let found = false;
+    const queryLogs: Array<{ tableName: string; found: boolean; message: string }> = [];
 
     console.log('查询预测数据 - 专业:', major);
     console.log('查询预测数据 - 哈希值:', trimmedHash);
     console.log('查询预测数据 - 学号:', trimmedStudentNumber);
     console.log('查询预测数据 - 提取年份:', year);
 
-    for (let offset = 0; offset <= 7; offset++) {
+    for (let offset = -1; offset <= 7; offset++) {
       const currentYear = year + offset;
       if (currentYear > 2050) break;
 
       const currentTableName = `Cohort${currentYear}_Predictions_all`;
       lastTriedTable = currentTableName;
-      console.log('查询预测数据 - 表名:', currentTableName);
-
       const result = await supabase
         .from(currentTableName)
         .select('*')
@@ -62,17 +61,23 @@ export async function POST(request: NextRequest) {
         .limit(1)
         .single();
 
-      if (!result.error && result.data) {
+      const logEntry = {
+        tableName: currentTableName,
+        found: !result.error && !!result.data,
+        message: !result.error && result.data ? '找到学生数据' : (result.error?.message || 'No data')
+      };
+      queryLogs.push(logEntry);
+      if (logEntry.found) {
+        console.log(`查询表 ${currentTableName} - ✅ ${logEntry.message}`);
         predictionsData = result.data;
         predictionsError = null;
         tableName = currentTableName;
         effectiveYear = currentYear;
         found = true;
-        console.log('✅ 在表中找到学生数据:', currentTableName);
         break;
       } else {
         predictionsError = result.error;
-        console.log('❌ 表中未找到学生:', currentTableName, result.error?.message || 'No data');
+        console.log(`查询表 ${currentTableName} - ❌ ${logEntry.message}`);
       }
     }
 
@@ -82,7 +87,6 @@ export async function POST(request: NextRequest) {
       console.error('📊 在指定年份的cohort表中找不到该学生数据');
       console.error('🔍 尝试的表:', tableName);
       console.error('🔍 查询的哈希值:', trimmedHash);
-      console.error('🎓 专业:', major);
       console.error('📅 学号:', trimmedStudentNumber);
       console.error('📅 提取年份:', year);
       console.error('💡 可能原因: 学生哈希值不在该年份的预测表中，或专业信息不匹配，或学号年份不正确');
@@ -90,45 +94,16 @@ export async function POST(request: NextRequest) {
         error: `学生预测数据缺失: 在专业 "${major}" 的 ${year} 年预测表及后续 7 年内找不到该学生数据`,
         details: {
           studentHash: trimmedHash,
-          major: major,
           studentNumber: trimmedStudentNumber,
           extractedYear: year,
           triedTable: lastTriedTable || `Cohort${year}_Predictions_all`,
-          suggestion: '请检查学生哈希值、专业信息或学号是否正确'
+          suggestion: '请检查学生哈希值、专业信息或学号是否正确',
+          queryLogs
         }
       }, { status: 404 })
     }
 
     console.log('✅ 成功找到学生数据，使用表:', tableName);
-
-    // 2. 创建课程信息查询函数（通过课程号查询）
-    const getCourseInfo = async (courseId: string, year: number, major: string) => {
-      try {
-        const { data, error } = await supabase
-          .from('courses')
-          .select('course_name, semester, category, credit')
-          .eq('course_id', courseId)
-          .eq('year', year)
-          .eq('major', major)
-          .limit(1)
-          .single();
-        
-        if (error || !data) {
-          console.log(`未找到课程信息: ${courseId}, 年份: ${year}, 专业: ${major}`);
-          return null;
-        }
-        
-        return {
-          courseName: data.course_name,
-          semester: data.semester,
-          category: data.category,
-          credit: data.credit
-        };
-      } catch (error) {
-        console.log(`查询课程信息失败: ${courseId}`, error);
-        return null;
-      }
-    };
 
     // 3. 构建课程成绩数据（过滤非课程字段，规范数值）
     const reservedKeys = new Set([
@@ -141,33 +116,86 @@ export async function POST(request: NextRequest) {
     // 初始化origin缓存
     originCourseData = {};
 
-    const courseScores = await Promise.all(
-      Object.entries(predictionsData)
-        .filter(([key]) => !reservedKeys.has(key))
-        .map(async ([courseId, raw]) => {
-          let score: number | null = null;
-          if (typeof raw === 'number') score = raw;
-          else if (typeof raw === 'string' && raw.trim() !== '' && !isNaN(Number(raw))) score = Number(raw);
+    const courseIds = Object.keys(predictionsData).filter((key) => !reservedKeys.has(key));
 
-          // 将原始数据存储到origin缓存中
-          originCourseData[courseId] = {
-            courseId: courseId,
-            score: score
-          };
-          
-          // 使用课程号、年份、专业查询课程信息
-          const courseInfo = await getCourseInfo(courseId, effectiveYear, major);
+    type CourseInfo = {
+      courseName: string;
+      semester: number | null;
+      category: string | null;
+      credit: number | null;
+    };
 
-          return {
-            courseId: courseId, // 使用课程号作为标识
-            courseName: courseInfo?.courseName || courseId, // 使用查询到的课程名称，如果没有则用课程号
-            score,
-            semester: courseInfo?.semester || null,
-            category: courseInfo?.category || null,
-            credit: courseInfo?.credit || 0.1
-          };
-        })
-    );
+    const courseInfoMap = new Map<string, CourseInfo>();
+
+    const chunkSize = 80;
+    for (let i = 0; i < courseIds.length; i += chunkSize) {
+      const chunk = courseIds.slice(i, i + chunkSize);
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('course_id, course_name, semester, category, credit')
+          .eq('year', effectiveYear)
+          .eq('major', major)
+          .in('course_id', chunk);
+
+        if (error) {
+          console.log('批量查询课程信息失败:', error);
+          continue;
+        }
+
+        (data || []).forEach((course: any) => {
+          const semesterValue = course.semester;
+          const creditValue = course.credit;
+
+          let normalizedSemester: number | null = null;
+          if (typeof semesterValue === 'number') {
+            normalizedSemester = semesterValue;
+          } else if (typeof semesterValue === 'string' && semesterValue.trim() !== '' && !isNaN(Number(semesterValue))) {
+            normalizedSemester = Number(semesterValue);
+          }
+
+          let normalizedCredit: number | null = null;
+          if (typeof creditValue === 'number') {
+            normalizedCredit = creditValue;
+          } else if (typeof creditValue === 'string' && creditValue.trim() !== '' && !isNaN(Number(creditValue))) {
+            normalizedCredit = Number(creditValue);
+          }
+
+          courseInfoMap.set(course.course_id, {
+            courseName: course.course_name || course.course_id,
+            semester: normalizedSemester,
+            category: course.category || null,
+            credit: normalizedCredit
+          });
+        });
+      } catch (error) {
+        console.log('批量查询课程信息异常:', error);
+      }
+    }
+
+    const courseScores = courseIds.map((courseId) => {
+      const raw = predictionsData[courseId];
+      let score: number | null = null;
+      if (typeof raw === 'number') score = raw;
+      else if (typeof raw === 'string' && raw.trim() !== '' && !isNaN(Number(raw))) score = Number(raw);
+
+      // 将原始数据存储到origin缓存中
+      originCourseData[courseId] = {
+        courseId: courseId,
+        score: score
+      };
+
+      const courseInfo = courseInfoMap.get(courseId);
+
+      return {
+        courseId: courseId, // 使用课程号作为标识
+        courseName: courseInfo?.courseName || courseId, // 使用查询到的课程名称，如果没有则用课程号
+        score,
+        semester: courseInfo?.semester || null,
+        category: courseInfo?.category || null,
+        credit: courseInfo?.credit ?? 0.1
+      };
+    });
 
     // 对课程成绩进行排序
     courseScores.sort((a, b) => {
@@ -196,7 +224,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        courseScores
+        courseScores,
+        queryLogs
       }
     });
 

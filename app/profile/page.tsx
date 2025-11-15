@@ -386,6 +386,7 @@ export default function Profile() {
   
   const handleAwardSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saveStatus === 'saving') return;
     
     if (!user?.userHash) return;
     
@@ -451,6 +452,7 @@ export default function Profile() {
   
   const handleInternshipSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saveStatus === 'saving') return;
     
     if (!user?.userHash) return;
     
@@ -516,6 +518,7 @@ export default function Profile() {
   
   const handleOtherInfoSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saveStatus === 'saving') return;
     
     if (!user?.userHash) return;
     
@@ -590,6 +593,7 @@ export default function Profile() {
   
   const handlePaperSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saveStatus === 'saving') return;
     
     if (!user?.userHash) {
       console.error('User hash is missing');
@@ -702,6 +706,7 @@ export default function Profile() {
   
   const handlePatentSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saveStatus === 'saving') return;
     
     if (!user?.userHash) return;
     
@@ -784,6 +789,7 @@ export default function Profile() {
   };
   
   const handleCompetitionSubmit = async (record: CompetitionRecord) => {
+    if (saveStatus === 'saving') return;
     if (!user?.userId || !user?.name) return;
     
     setSaveStatus('saving');
@@ -908,6 +914,7 @@ export default function Profile() {
   
   // 执行删除操作
   const confirmDelete = async () => {
+    if (saveStatus === 'saving') return;
     if (!user?.userHash) return;
     
     setSaveStatus('saving');
@@ -1395,7 +1402,7 @@ export default function Profile() {
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={handleCancelAdd}>{t('profile.common.cancel')}</Button>
-                  <Button type="submit">{t('profile.common.save')}</Button>
+                  <Button type="submit" disabled={saveStatus === 'saving'}>{t('profile.common.save')}</Button>
                 </div>
               </div>
             </form>
@@ -1464,7 +1471,7 @@ export default function Profile() {
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={handleCancelAward}>{t('profile.common.cancel')}</Button>
-                  <Button type="submit">{t('profile.common.save')}</Button>
+                  <Button type="submit" disabled={saveStatus === 'saving'}>{t('profile.common.save')}</Button>
                 </div>
               </div>
             </form>
@@ -1533,7 +1540,7 @@ export default function Profile() {
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={handleCancelInternship}>{t('profile.common.cancel')}</Button>
-                  <Button type="submit">{t('profile.common.save')}</Button>
+                  <Button type="submit" disabled={saveStatus === 'saving'}>{t('profile.common.save')}</Button>
                 </div>
               </div>
             </form>
@@ -1582,7 +1589,7 @@ export default function Profile() {
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={handleCancelOtherInfo}>{t('profile.common.cancel')}</Button>
-                  <Button type="submit">{t('profile.common.save')}</Button>
+                  <Button type="submit" disabled={saveStatus === 'saving'}>{t('profile.common.save')}</Button>
                 </div>
               </div>
             </form>
@@ -1723,7 +1730,7 @@ export default function Profile() {
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={handleCancelPaper}>取消</Button>
-                  <Button type="submit">保存</Button>
+                  <Button type="submit" disabled={saveStatus === 'saving'}>保存</Button>
                 </div>
               </div>
             </form>
@@ -1844,7 +1851,7 @@ export default function Profile() {
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={handleCancelPatent}>取消</Button>
-                  <Button type="submit">保存</Button>
+                  <Button type="submit" disabled={saveStatus === 'saving'}>保存</Button>
                 </div>
               </div>
             </form>
@@ -1877,7 +1884,7 @@ export default function Profile() {
             </div>
             <div className="flex justify-center gap-3">
               <Button variant="outline" onClick={cancelDelete}>{t('profile.common.cancel')}</Button>
-              <Button variant="destructive" onClick={confirmDelete}>{t('profile.common.delete')}</Button>
+              <Button variant="destructive" onClick={confirmDelete} disabled={saveStatus === 'saving'}>{t('profile.common.delete')}</Button>
             </div>
           </div>
         </div>
@@ -1885,12 +1892,10 @@ export default function Profile() {
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{t('profile.title')}</h1>
-        <p className="text-muted-foreground">
-          {studentInfo 
-            ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-            : t('profile.loading')
-          }
-        </p>
+        <div className="mt-3 flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
+          <span className="text-blue-600">ℹ️</span>
+          <p className="text-blue-800 text-sm">{t('profile.hint')}</p>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

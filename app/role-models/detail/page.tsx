@@ -203,6 +203,33 @@ const positionModels = {
           "LeetCode算法题库",
           "顶会论文阅读 (ICML, NeurIPS, KDD)"
         ]
+      },
+      {
+        id: 21,
+        name: "技术实习生画像(移动端开发)",
+        position: "技术实习生",
+        duration: "3-6个月",
+        location: "北京/深圳/杭州/上海",
+        companies: ["腾讯", "字节跳动", "阿里巴巴", "美团", "滴滴", "哔哩哔哩"],
+        academics: {
+          gpa: "3.4+/4.0",
+          courses: ["移动开发", "数据结构", "操作系统", "软件工程", "UI/UX设计"]
+        },
+        skills: ["iOS/Android", "React Native/Flutter", "移动端性能优化", "接口对接", "问题定位"],
+        requirements: ["掌握至少一种移动端技术栈", "有作品或项目经验", "学习能力强", "良好沟通协作"],
+        benefits: ["移动端工程实践", "导师指导", "作品打磨", "转正机会"],
+        tags: ["技术", "移动端", "iOS/Android", "实习"],
+        description: "移动端技术实习生将参与App开发与优化，掌握跨平台与原生技术，提升性能与用户体验。",
+        rating: 4.7,
+        applications: 820,
+        monthlyPay: "4000-8000元/月",
+        workTime: "周一至周五，弹性工作制",
+        projects: [
+          "参与移动端功能开发",
+          "优化性能与体验",
+          "对接后端接口与数据",
+          "参与跨平台技术实践"
+        ]
       }
     ],
     "阿里巴巴": [
@@ -369,7 +396,95 @@ const positionModels = {
         ]
       }
     ]
-  }
+  },
+  "测试工程师": [
+    {
+      id: 15,
+      name: "测试工程师画像(自动化测试)",
+      position: "测试工程师",
+      location: "北京/深圳/杭州/上海",
+      companies: ["腾讯", "阿里巴巴", "字节跳动", "美团", "京东", "华为", "网易"],
+      academics: {
+        gpa: "3.5+/4.0",
+        courses: ["软件测试", "算法设计", "操作系统", "计算机网络", "编程实践"]
+      },
+      competitions: ["软件测试竞赛", "开源贡献奖", "自动化测试挑战"],
+      internships: ["测试开发实习", "自动化测试实习", "质量保障实习"],
+      englishScores: { toefl: "90+", ielts: "6.0+" },
+      skills: ["自动化测试", "测试用例设计", "CI/CD", "接口测试", "性能测试", "质量保障"],
+      tags: ["测试", "质量保障", "自动化", "工程效能"],
+      description: "测试工程师负责产品质量保障与自动化测试体系建设，提升工程效能与发布质量，确保系统稳定可靠。",
+      rating: 4.6,
+      consultations: 70,
+      salary: { entry: "18-30万", senior: "35-55万", expert: "60-90万+" }
+    }
+  ],
+  "网络安全工程师": [
+    {
+      id: 16,
+      name: "网络安全工程师画像",
+      position: "网络安全工程师",
+      location: "北京/上海/深圳/成都",
+      companies: ["华为", "腾讯", "阿里巴巴", "字节跳动", "百度", "蚂蚁金服"],
+      academics: {
+        gpa: "3.6+/4.0",
+        courses: ["密码学", "网络安全", "系统安全", "渗透测试", "Web安全"]
+      },
+      competitions: ["CTF竞赛", "网络安全大赛", "密码技术竞赛"],
+      internships: ["安全攻防实习", "安全研发实习", "安全合规实习"],
+      englishScores: { toefl: "95+", ielts: "6.5+" },
+      skills: ["渗透测试", "漏洞分析", "安全评估", "逆向工程", "安全编码"],
+      tags: ["安全", "渗透", "密码学", "合规"],
+      description: "网络安全工程师专注于信息安全与攻防研究，构建企业级安全能力，保障数据与系统安全。",
+      rating: 4.7,
+      consultations: 82,
+      salary: { entry: "25-40万", senior: "45-75万", expert: "80-120万+" }
+    }
+  ],
+  "嵌入式工程师": [
+    {
+      id: 17,
+      name: "嵌入式工程师画像",
+      position: "嵌入式工程师",
+      location: "北京/上海/深圳/无锡",
+      companies: ["华为", "小米", "OPPO", "vivo", "蔚来", "理想汽车"],
+      academics: {
+        gpa: "3.6+/4.0",
+        courses: ["嵌入式系统", "数字电路", "通信原理", "C/C++编程", "RTOS"]
+      },
+      competitions: ["电子设计竞赛", "智能硬件大赛", "嵌入式开发挑战"],
+      internships: ["嵌入式开发实习", "硬件调试实习", "驱动开发实习"],
+      englishScores: { toefl: "90+", ielts: "6.0+" },
+      skills: ["C/C++", "RTOS", "驱动开发", "硬件调试", "通信协议"],
+      tags: ["嵌入式", "硬件", "RTOS", "驱动"],
+      description: "嵌入式工程师负责软硬件协同开发与设备级系统实现，注重稳定性与性能优化。",
+      rating: 4.6,
+      consultations: 66,
+      salary: { entry: "22-35万", senior: "40-65万", expert: "70-110万+" }
+    }
+  ],
+  "数据分析师": [
+    {
+      id: 18,
+      name: "数据分析师画像",
+      position: "数据分析师",
+      location: "北京/上海/深圳/杭州",
+      companies: ["美团", "京东", "腾讯", "阿里巴巴", "字节跳动", "滴滴"],
+      academics: {
+        gpa: "3.6+/4.0",
+        courses: ["统计学", "数据分析", "机器学习", "商业分析", "Excel/SQL"]
+      },
+      competitions: ["数据分析大赛", "统计建模竞赛", "BI挑战赛"],
+      internships: ["数据分析实习", "商业分析实习", "BI平台实习"],
+      englishScores: { toefl: "95+", ielts: "6.5+" },
+      skills: ["SQL", "Excel/PowerBI", "Python", "可视化", "业务洞察"],
+      tags: ["数据分析", "统计", "商业分析", "可视化"],
+      description: "数据分析师通过数据洞察驱动业务增长，构建指标体系与分析模型，支持科学决策。",
+      rating: 4.6,
+      consultations: 90,
+      salary: { entry: "20-32万", senior: "35-55万", expert: "60-95万+" }
+    }
+  ]
 }
 
 // 按专业分组的丰富数据结构
@@ -478,6 +593,67 @@ const majorModels = {
         ]
       }
     ]
+  ,
+  "信息安全": [
+    {
+      id: 9,
+      name: "信息安全研究生画像",
+      graduateMajor: "信息安全",
+      location: "北京/上海/西安/成都",
+      academics: {
+        gpa: "3.7+/4.0",
+        courses: ["密码学", "网络安全", "系统安全", "安全工程", "渗透测试"]
+      },
+      competitions: ["CTF竞赛", "网络安全大赛", "密码技术竞赛"],
+      research: ["安全攻防", "密码算法", "系统安全"],
+      englishScores: { toefl: "105+", ielts: "7.0+", gre: "320+" },
+      skills: ["渗透测试", "漏洞分析", "安全评估", "逆向工程", "安全编码"],
+      tags: ["信息安全", "渗透", "密码学", "攻防"],
+      description: "信息安全研究生专注于信息系统安全技术研究，构建攻防能力并推动安全工程实践。",
+      rating: 4.7,
+      consultations: 102
+    }
+  ],
+  "自动化": [
+    {
+      id: 10,
+      name: "自动化研究生画像",
+      graduateMajor: "自动化",
+      location: "北京/上海/深圳/南京",
+      academics: {
+        gpa: "3.7+/4.0",
+        courses: ["控制理论", "自动控制", "信号处理", "嵌入式系统", "机器人技术"]
+      },
+      competitions: ["机器人竞赛", "智能控制挑战", "电子设计竞赛"],
+      research: ["智能控制", "机器人", "工业自动化"],
+      englishScores: { toefl: "102+", ielts: "7.0+", gre: "320+" },
+      skills: ["控制算法", "嵌入式开发", "传感器集成", "系统集成", "仿真建模"],
+      tags: ["自动化", "控制", "机器人", "嵌入式"],
+      description: "自动化研究生聚焦智能控制与系统集成，面向机器人与工业自动化场景。",
+      rating: 4.6,
+      consultations: 90
+    }
+  ],
+  "电子科学与技术": [
+    {
+      id: 11,
+      name: "电子科学与技术研究生画像",
+      graduateMajor: "电子科学与技术",
+      location: "北京/上海/深圳/西安",
+      academics: {
+        gpa: "3.8+/4.0",
+        courses: ["半导体物理", "微电子器件", "数字电路", "射频电路", "集成电路设计"]
+      },
+      competitions: ["集成电路设计大赛", "电子设计竞赛", "芯片创新挑战"],
+      research: ["集成电路", "射频与通信", "系统级芯片"],
+      englishScores: { toefl: "108+", ielts: "7.5+", gre: "325+" },
+      skills: ["IC设计", "PCB设计", "仿真分析", "芯片测试", "硬件调试"],
+      tags: ["电子", "IC", "微电子", "射频"],
+      description: "电子科学与技术研究生专注电子与微电子方向研究，面向芯片与系统级硬件开发。",
+      rating: 4.8,
+      consultations: 110
+    }
+  ]
 }
 
 // 按类别分组的丰富数据结构
