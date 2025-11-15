@@ -58,6 +58,7 @@ export default function Analysis() {
 
   // 新的毕业要求数据状态（从API获取）
   const [graduationRequirementsData, setGraduationRequirementsData] = useState<any[]>([]);
+  const [otherCategoryData, setOtherCategoryData] = useState<any>(null);
   const [loadingGraduationRequirements, setLoadingGraduationRequirements] = useState(false);
 
   // 编辑状态
@@ -245,9 +246,14 @@ export default function Analysis() {
       
       if (result.success && result.data && result.data.graduation_requirements && result.data.graduation_requirements.length > 0) {
         setGraduationRequirementsData(result.data.graduation_requirements);
+        setOtherCategoryData(result.data.other_category || null);
         console.log('Successfully loaded graduation requirements:', result.data.graduation_requirements.length, 'categories');
         
-        // 🔧 NEW: Log unmapped courses and graduation summary
+        // 🔧 NEW: Log other category and unmapped courses
+        if (result.data.other_category) {
+          console.log('📦 Other category loaded:', result.data.other_category.course_count, 'courses,', result.data.other_category.credits_already_obtained, 'credits');
+        }
+        
         if (result.data.unmapped_courses && result.data.unmapped_courses.length > 0) {
           console.log('⚠️ Unmapped courses requiring review:', result.data.unmapped_courses.length, 'courses');
           console.log('Unmapped courses:', result.data.unmapped_courses.map((c: any) => c.Course_Name));
@@ -1435,7 +1441,10 @@ export default function Analysis() {
             <div className="mb-6">
               {/* 毕业要求详细表格 */}
               {graduationRequirementsData.length > 0 ? (
-                <GraduationRequirementsTable graduationRequirements={graduationRequirementsData} />
+                <GraduationRequirementsTable 
+                  graduationRequirements={graduationRequirementsData} 
+                  otherCategory={otherCategoryData}
+                />
               ) : loadingGraduationRequirements ? (
                 <div className="flex justify-center items-center py-8">
                   <div className="text-muted-foreground">正在加载毕业要求数据...</div>

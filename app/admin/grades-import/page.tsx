@@ -14,8 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 interface FileInfo {
   id: string
   name: string
+  originalName?: string
   size: number
   uploadTime: string
+  isDuplicate?: boolean
 }
 
 interface ImportTask {
@@ -59,6 +61,23 @@ export default function GradesImportPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // 检测同名文件
+  const detectDuplicateFiles = (fileList: FileInfo[]) => {
+    const nameCount: { [key: string]: number } = {}
+    
+    // 统计每个文件名出现的次数
+    fileList.forEach(file => {
+      const fileName = file.originalName || file.name
+      nameCount[fileName] = (nameCount[fileName] || 0) + 1
+    })
+    
+    // 标记重复的文件
+    return fileList.map(file => ({
+      ...file,
+      isDuplicate: nameCount[file.originalName || file.name] > 1
+    }))
+  }
+
   // 加载文件列表
   const loadFileList = async () => {
     try {
@@ -67,7 +86,16 @@ export default function GradesImportPage() {
         const data = await response.json()
         const fileList = data.files || []
         console.log('加载文件列表:', fileList.length, '个文件', fileList)
-        setFiles(fileList)
+        
+        // 检测并标记同名文件
+        const filesWithDuplicateCheck = detectDuplicateFiles(fileList)
+        const duplicateCount = filesWithDuplicateCheck.filter(f => f.isDuplicate).length
+        
+        if (duplicateCount > 0) {
+          console.warn(`⚠️ 检测到 ${duplicateCount} 个同名文件`)
+        }
+        
+        setFiles(filesWithDuplicateCheck)
       } else {
         console.error('加载文件列表失败:', response.status, await response.text())
       }
@@ -88,10 +116,20 @@ export default function GradesImportPage() {
         const data = await response.json()
         const fileList = data.files || []
         console.log('刷新完成:', fileList.length, '个文件')
-        setFiles(fileList)
+        
+        // 检测并标记同名文件
+        const filesWithDuplicateCheck = detectDuplicateFiles(fileList)
+        const duplicateCount = filesWithDuplicateCheck.filter(f => f.isDuplicate).length
+        
+        if (duplicateCount > 0) {
+          console.warn(`⚠️ 检测到 ${duplicateCount} 个同名文件`)
+        }
+        
+        setFiles(filesWithDuplicateCheck)
         
         if (fileList.length > 0) {
-          alert(`发现 ${fileList.length} 个可导入的文件`)
+          const duplicateWarning = duplicateCount > 0 ? `\n⚠️ 其中有 ${duplicateCount} 个同名文件，请注意检查` : ''
+          alert(`发现 ${fileList.length} 个可导入的文件${duplicateWarning}`)
         } else {
           alert('没有找到可导入的文件，请先上传Excel文件')
         }
@@ -462,9 +500,19 @@ export default function GradesImportPage() {
                 <CardTitle className="flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5" />
                   待导入文件列表 ({files.length})
+                  {files.filter(f => f.isDuplicate).length > 0 && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      {files.filter(f => f.isDuplicate).length} 个同名
+                    </span>
+                  )}
                 </CardTitle>
                 <CardDescription>
                   待导入的文件将按顺序导入到数据库
+                  {files.filter(f => f.isDuplicate).length > 0 && (
+                    <span className="text-red-600 ml-2">
+                      ⚠️ 检测到同名文件，可能导致数据重复
+                    </span>
+                  )}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -512,13 +560,26 @@ export default function GradesImportPage() {
                 {files.map((file) => (
                   <div
                     key={file.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                    className={`flex items-center justify-between p-3 rounded-md transition-colors ${
+                      file.isDuplicate 
+                        ? 'bg-red-50 border border-red-200 hover:bg-red-100' 
+                        : 'bg-gray-50 hover:bg-gray-100'
+                    }`}
                   >
                     <div className="flex items-center gap-3 flex-1">
-                      <FileSpreadsheet className="w-4 h-4 text-blue-500" />
+                      <FileSpreadsheet className={`w-4 h-4 ${file.isDuplicate ? 'text-red-500' : 'text-blue-500'}`} />
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm font-medium ${file.isDuplicate ? 'text-red-700' : ''}`}>
+                            {file.originalName || file.name}
+                          </p>
+                          {file.isDuplicate && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              同名文件
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-xs ${file.isDuplicate ? 'text-red-600' : 'text-muted-foreground'}`}>
                           {formatFileSize(file.size)} · {formatTime(file.uploadTime)}
                         </p>
                       </div>
