@@ -123,21 +123,51 @@ export async function POST(request: NextRequest) {
     // 🚀 UPDATED: Include Course_ID for perfect matching
     const { data: earnedCreditsData, error: earnedCreditsError } = await supabase
       .from('academic_results')
-      .select('"Course_ID", "Course_Name", "Credit", "Course_Attribute"')
+      .select('"Course_ID", "Course_Name", "Credit", "Course_Attribute", "Grade"')
       .eq('"SNH"', studentHash)
-      .not('"Grade"', 'is', null) // Only count courses with a grade
-      .neq('"Grade"', '不及格') // Exclude failing grades
-      .neq('"Grade"', '弃修') // Exclude dropped courses
-      .neq('"Grade"', '免修') // Exclude exempted courses
-      .neq('"Grade"', '缓考'); // Exclude deferred exams
+      .not('"Grade"', 'is', null); // Get all courses with grades for filtering
 
     if (earnedCreditsError) {
       console.error('Error fetching earned credits:', earnedCreditsError);
       return NextResponse.json({ error: 'Failed to fetch earned credits' }, { status: 500 });
     }
 
+    // 🎯 GRADE FILTERING: Filter out failing and invalid grades
+    console.log(`📊 Total courses with grades: ${earnedCreditsData.length}`);
+    
+    // Function to check if a grade is passing
+    const isPassingGrade = (grade: string): boolean => {
+      if (!grade) return false;
+      
+      // Only check numeric grades (should be >= 60)
+      const numericGrade = parseFloat(grade);
+      if (!isNaN(numericGrade)) {
+        return numericGrade >= 60;
+      }
+      
+      // If grade is not a number, ignore this course (don't include in calculation)
+      return false;
+    };
+    
+    // Filter to only include courses with passing grades (numeric >= 60)
+    const passingCoursesData = earnedCreditsData.filter(course => {
+      const isPassing = isPassingGrade(course.Grade);
+      if (!isPassing) {
+        const numericGrade = parseFloat(course.Grade);
+        if (!isNaN(numericGrade)) {
+          console.log(`❌ Excluding failing course: "${course.Course_Name}" (Grade: ${course.Grade} < 60)`);
+        } else {
+          console.log(`❌ Excluding non-numeric grade: "${course.Course_Name}" (Grade: ${course.Grade})`);
+        }
+      }
+      return isPassing;
+    });
+    
+    console.log(`✅ Courses with passing grades (>=60): ${passingCoursesData.length}`);
+    console.log(`❌ Courses excluded (failing or non-numeric): ${earnedCreditsData.length - passingCoursesData.length}`);
+    
     // 🚀 BRILLIANT SOLUTION: Use CourseID for perfect matching (no name variations needed!)
-    const studentCourseIds = earnedCreditsData
+    const studentCourseIds = passingCoursesData
       .map(c => c.Course_ID)
       .filter(id => id); // Remove any null/undefined IDs
     
@@ -175,7 +205,7 @@ export async function POST(request: NextRequest) {
     
     // Map student courses using CourseID
     const courseToCategoryMap = new Map();
-    earnedCreditsData.forEach(course => {
+    passingCoursesData.forEach(course => {
       const courseId = course.Course_ID;
       const courseName = course.Course_Name;
       
@@ -192,8 +222,80 @@ export async function POST(request: NextRequest) {
       }
     });
     
+    // 🏃‍♂️ SPECIAL: Handle sports courses with ID range mapping
+    console.log(`🏃‍♂️ Checking for sports courses with special ID ranges...`);
+    
+    passingCoursesData.forEach(course => {
+      const courseId = course.Course_ID;
+      const courseName = course.Course_Name;
+      
+      // Skip if already mapped
+      if (courseToCategoryMap.has(courseName)) {
+        return;
+      }
+      
+      if (courseId) {
+        // 体育基础：3812150010
+        if (courseId === '3812150010') {
+          courseToCategoryMap.set(courseName, '体育基础');
+          console.log(`🏃‍♂️ Sports basic match: "${courseName}" (ID: ${courseId}) → 体育基础`);
+          mappingStats.exact++;
+          mappingStats.failed--; // 减少失败计数
+        }
+        // 体育专项课：3812150020~3812150324
+        else if (courseId >= '3812150020' && courseId <= '3812150324') {
+          courseToCategoryMap.set(courseName, '体育专项课');
+          console.log(`🏃‍♂️ Sports specialized match: "${courseName}" (ID: ${courseId}) → 体育专项课`);
+          mappingStats.exact++;
+          mappingStats.failed--; // 减少失败计数
+        }
+      }
+    });
+    
+    console.log(`🏃‍♂️ Sports courses mapping completed`);
+    
+    // 🏃‍♂️ DEBUG: Show sports courses found
+    const sportsBasicCourses = passingCoursesData.filter(course => 
+      course.Course_ID === '3812150010' && courseToCategoryMap.has(course.Course_Name)
+    );
+    const sportsSpecializedCourses = passingCoursesData.filter(course => 
+      course.Course_ID && course.Course_ID >= '3812150020' && course.Course_ID <= '3812150324' && courseToCategoryMap.has(course.Course_Name)
+    );
+    
+    if (sportsBasicCourses.length > 0) {
+      console.log(`🏃‍♂️ Found ${sportsBasicCourses.length} 体育基础 courses:`, sportsBasicCourses.map(c => c.Course_Name));
+    }
+    if (sportsSpecializedCourses.length > 0) {
+      console.log(`🏃‍♂️ Found ${sportsSpecializedCourses.length} 体育专项课 courses:`, sportsSpecializedCourses.map(c => c.Course_Name));
+    }
+    
+    // 📦 FINAL: Handle remaining unmapped courses as "其他类别"
+    console.log(`📦 Checking for remaining unmapped courses...`);
+    
+    const otherCategoryCourses: any[] = [];
+    passingCoursesData.forEach(course => {
+      const courseName = course.Course_Name;
+      
+      // If course is not mapped to any category, add it to "其他类别"
+      if (!courseToCategoryMap.has(courseName)) {
+        courseToCategoryMap.set(courseName, '其他类别');
+        otherCategoryCourses.push(course);
+        console.log(`📦 Other category match: "${courseName}" (ID: ${course.Course_ID || 'missing'}) → 其他类别`);
+        mappingStats.exact++;
+        mappingStats.failed--; // 减少失败计数
+      }
+    });
+    
+    if (otherCategoryCourses.length > 0) {
+      console.log(`📦 Found ${otherCategoryCourses.length} 其他类别 courses:`, otherCategoryCourses.map(c => c.Course_Name));
+    } else {
+      console.log(`📦 No courses need to be categorized as 其他类别`);
+    }
+    
+    console.log(`📦 Other category mapping completed`);
+    
     // 🚀 PERFECT: CourseID-based mapping statistics
-    const totalCourses = earnedCreditsData.length;
+    const totalCourses = passingCoursesData.length;
     const successfulMappings = mappingStats.exact;
     const failedMappings = mappingStats.failed;
     const mappingRate = ((successfulMappings / totalCourses) * 100).toFixed(1);
@@ -206,7 +308,7 @@ export async function POST(request: NextRequest) {
     console.log(`   🏆 Graduation calculation: Based on ${successfulMappings} perfectly mapped courses`);
     
     // Collect unmapped courses for separate reporting
-    const unmappedCourses = earnedCreditsData
+    const unmappedCourses = passingCoursesData
       .filter(course => !courseToCategoryMap.has(course.Course_Name))
       .map(course => ({
         Course_Name: course.Course_Name,
@@ -215,12 +317,15 @@ export async function POST(request: NextRequest) {
     
     if (unmappedCourses.length > 0) {
       console.log(`   ⚠️  Unmapped courses requiring review:`, unmappedCourses.slice(0, 3).map(c => c.Course_Name));
+      console.log(`   📝 Note: This should be 0 after adding 其他类别 mapping`);
+    } else {
+      console.log(`   ✅ All courses successfully mapped (including 其他类别)`);
     }
 
     const earnedCreditsByCategory: Record<string, { earned_credits: number; courses: { Course_Name: string; Credit: number }[] }> = {};
 
     // 🔧 FIXED: Only count courses that can be mapped to curriculum categories
-    earnedCreditsData.forEach(result => {
+    passingCoursesData.forEach(result => {
       const category = courseToCategoryMap.get(result.Course_Name);
       if (category) {
         if (!earnedCreditsByCategory[category]) {
@@ -235,9 +340,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 🔧 FIXED: Only use categories defined in the official curriculum
-    const graduationRequirements = Object.keys(requiredCreditsByCategory).map(category => {
-      const required = requiredCreditsByCategory[category];
+    // 🔧 ENHANCED: Include both official curriculum categories and special categories (like sports)
+    const allCategories = new Set([
+      ...Object.keys(requiredCreditsByCategory),
+      ...Object.keys(earnedCreditsByCategory)
+    ]);
+    
+    const graduationRequirements = Array.from(allCategories).map(category => {
+      const required = requiredCreditsByCategory[category] || { required_total: 0, required_compulsory: 0, required_elective: 0 };
       const earned = earnedCreditsByCategory[category] || { earned_credits: 0, courses: [] };
       
       return {
@@ -258,11 +368,28 @@ export async function POST(request: NextRequest) {
     const overallGraduationStatus = categoriesMet === totalCategories;
     
     console.log(`✅ Graduation requirements analysis for ${studentMajor}:`);
-    console.log(`📊 Curriculum categories: ${totalCategories}`);
-    graduationRequirements.forEach(req => {
+    console.log(`📊 Total categories: ${totalCategories}`);
+    
+    // Separate official curriculum categories from special categories
+    const officialCategories = graduationRequirements.filter(req => 
+      req.category !== '体育基础' && req.category !== '体育专项课' && req.category !== '其他类别'
+    );
+    const specialCategories = graduationRequirements.filter(req => 
+      req.category === '体育基础' || req.category === '体育专项课' || req.category === '其他类别'
+    );
+    
+    console.log(`📚 Official curriculum categories: ${officialCategories.length}`);
+    officialCategories.forEach(req => {
       const status = req.meets_requirement ? '✅' : '❌';
       console.log(`  ${status} ${req.category}: ${req.credits_already_obtained}/${req.required_total_credits} 学分`);
     });
+    
+    if (specialCategories.length > 0) {
+      console.log(`🎯 Special categories: ${specialCategories.length}`);
+      specialCategories.forEach(req => {
+        console.log(`  📋 ${req.category}: ${req.credits_already_obtained} 学分 (${req.courses_taken.length} 门课程)`);
+      });
+    }
     
     // 🔧 FIX: 修复总学分计算的浮点数精度问题
     const totalRequiredCredits = Math.round(graduationRequirements.reduce((sum, req) => sum + req.required_total_credits, 0) * 10) / 10;
