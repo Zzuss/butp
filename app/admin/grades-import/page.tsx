@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { Upload, FileSpreadsheet, Trash2, Database, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Upload, FileSpreadsheet, Trash2, Database, CheckCircle, XCircle, Loader2, RefreshCw } from 'lucide-react'
 import AdminLayout from '@/components/admin/AdminLayout'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 
@@ -270,7 +270,7 @@ export default function GradesImportPage() {
 
         // 开始智能轮询任务状态
         let pollCount = 0
-        const maxPolls = 60 // 最多轮询60次（约2-5分钟），减少轮询次数
+        const maxPolls = 150 // 最多轮询150次（约12-25分钟），给ECS更多处理时间
         
         const smartPoll = async () => {
           pollCount++
@@ -282,16 +282,28 @@ export default function GradesImportPage() {
               setTaskPollingInterval(null)
             }
             if (pollCount >= maxPolls && !isCompleted) {
-              console.log('轮询超时，任务可能仍在ECS后台处理中')
+              console.log('轮询超时，进行最后一次状态检查...')
+              
+              // 超时前最后一次检查任务状态
+              try {
+                const finalCheck = await pollTaskStatus(taskId)
+                if (finalCheck) {
+                  console.log('✅ 最后检查发现任务已完成！')
+                  return // 任务实际已完成，退出轮询
+                }
+              } catch (error) {
+                console.error('最后状态检查失败:', error)
+              }
+              
               setImporting(false)
               
-              // 显示超时提示弹窗
+              // 显示超时提示弹窗，但提供刷新按钮
               const timeoutResult: ImportResult = {
                 success: false,
                 totalFiles: currentTask?.totalFiles || 0,
                 totalRecords: currentTask?.totalRecords || 0,
                 importedRecords: currentTask?.importedRecords || 0,
-                errorMessage: '轮询超时，但任务可能仍在ECS后台处理中。请稍后刷新页面查看最新状态，或联系管理员确认任务状态。'
+                errorMessage: '轮询超时，但导入可能已在后台完成。请点击"刷新文件列表"查看最新状态，或稍后重新检查。'
               }
               
               setImportResult(timeoutResult)
@@ -301,14 +313,14 @@ export default function GradesImportPage() {
           }
           
           // 动态调整轮询间隔，考虑ECS异步处理特点
-          let nextInterval = 5000 // 默认5秒
+          let nextInterval = 12000 // 默认12秒（进一步延长间隔）
           
           if (currentTask?.status === 'processing' && currentTask.progress > 0) {
-            nextInterval = 3000 // 处理中且有进度：3秒
+            nextInterval = 8000 // 处理中且有进度：8秒
           } else if (currentTask?.status === 'pending') {
-            nextInterval = pollCount < 5 ? 3000 : 8000 // 等待中：前5次3秒，之后8秒
+            nextInterval = pollCount < 5 ? 8000 : 15000 // 等待中：前5次8秒，之后15秒
           } else if (currentTask?.status === 'processing' && currentTask.progress === 0) {
-            nextInterval = 6000 // 处理中但无进度：6秒
+            nextInterval = 12000 // 处理中但无进度：12秒
           }
           
           // 重新设置定时器
@@ -327,6 +339,43 @@ export default function GradesImportPage() {
     } catch (error) {
       setImporting(false)
       alert(error instanceof Error ? error.message : '导入失败')
+    }
+  }
+
+  // 手动检查最后任务状态（用于超时后的手动检查）
+  const checkLastTaskStatus = async () => {
+    if (!currentTask?.id) return
+    
+    try {
+      console.log('🔍 手动检查任务状态:', currentTask.id)
+      const response = await fetch(`/api/admin/grades-import/task-status/${currentTask.id}`)
+      const data = await response.json()
+      
+      if (data.success && data.task) {
+        const task = data.task
+        console.log('📊 最新任务状态:', task)
+        
+        if (task.status === 'completed') {
+          console.log('🎉 发现任务已完成！')
+          setCurrentTask(task)
+          
+          const result: ImportResult = {
+            success: true,
+            totalFiles: task.totalFiles,
+            totalRecords: task.totalRecords,
+            importedRecords: task.importedRecords,
+            completedAt: task.completedAt
+          }
+          
+          setImportResult(result)
+          setShowResultDialog(true)
+          setImporting(false)
+        } else {
+          console.log('⏳ 任务仍在处理中:', task.status)
+        }
+      }
+    } catch (error) {
+      console.error('检查任务状态失败:', error)
     }
   }
 
@@ -418,16 +467,30 @@ export default function GradesImportPage() {
                   待导入的文件将按顺序导入到数据库
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={refreshFileList}
-                disabled={uploading || importing}
-                className="flex items-center gap-2"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                刷新列表
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshFileList}
+                  disabled={uploading || importing}
+                  className="flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  刷新列表
+                </Button>
+                
+                {currentTask && !importing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={checkLastTaskStatus}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    检查任务状态
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>

@@ -608,6 +608,28 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
       return value.trim();
     };
 
+    // 辅助函数：处理班级字段，将"X班"格式转换为数字
+    const processClassValue = (classValue: string | undefined | null): number | null => {
+      if (!classValue || classValue.trim() === '') {
+        return null;
+      }
+      
+      const trimmed = classValue.trim();
+      // 如果是"X班"格式，提取数字
+      const match = trimmed.match(/^(\d+)班$/);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+      
+      // 如果是纯数字，直接转换
+      const num = parseInt(trimmed, 10);
+      if (!isNaN(num)) {
+        return num;
+      }
+      
+      return null;
+    };
+
     const paperData = {
       ...(paper.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       paper_title: paper.paper_title,
@@ -615,7 +637,7 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
       journal_category: emptyToNull(paper.journal_category),
       bupt_student_id: userId, // 自动填入用户的学号
       full_name: userName, // 自动填入用户的真实姓名
-      class: emptyToNull(paper.class),
+      class: processClassValue(paper.class),
       author_type: emptyToNull(paper.author_type),
       publish_date: formattedDate,
       note: emptyToNull(paper.note)
@@ -727,13 +749,35 @@ export async function savePatent(userId: string, userName: string, patent: Paten
       return value.trim();
     };
 
+    // 辅助函数：处理班级字段，将"X班"格式转换为数字
+    const processClassValue = (classValue: string | undefined | null): number | null => {
+      if (!classValue || classValue.trim() === '') {
+        return null;
+      }
+      
+      const trimmed = classValue.trim();
+      // 如果是"X班"格式，提取数字
+      const match = trimmed.match(/^(\d+)班$/);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+      
+      // 如果是纯数字，直接转换
+      const num = parseInt(trimmed, 10);
+      if (!isNaN(num)) {
+        return num;
+      }
+      
+      return null;
+    };
+
     const patentData = {
       ...(patent.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       patent_name: patent.patent_name,
       patent_number: emptyToNull(patent.patent_number),
       patent_date: formattedPatentDate,
       bupt_student_id: userId, // 自动填入用户的学号
-      class: emptyToNull(patent.class),
+      class: processClassValue(patent.class),
       full_name: userName, // 自动填入用户的真实姓名
       category_of_patent_owner: emptyToNull(patent.category_of_patent_owner),
       note: emptyToNull(patent.note)

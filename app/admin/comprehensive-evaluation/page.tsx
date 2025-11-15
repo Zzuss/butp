@@ -18,11 +18,11 @@ interface Paper {
   journal_category: string
   bupt_student_id: string
   full_name: string
-  class: string
+  class: string | number
   author_type: string
   publish_date: string
   note?: string
-  score: number
+  score: string | number  // 数据库中是text类型，但可能包含数字字符串
   created_at: string
   updated_at: string
 }
@@ -33,11 +33,11 @@ interface Patent {
   patent_number?: string
   patent_date: string
   bupt_student_id: string
-  class: string
+  class: string | number
   full_name: string
   category_of_patent_owner: string
   note?: string
-  score: number
+  score: string | number  // 数据库中是text类型，但可能包含数字字符串
   created_at: string
   updated_at: string
 }
@@ -93,8 +93,26 @@ export default function ComprehensiveEvaluationPage() {
     }
   }
 
+  // 调试功能：查看数据库中的实际数据
+  const handleDebug = async () => {
+    try {
+      const response = await fetch(`/api/admin/debug-student-data?studentId=${encodeURIComponent(studentId)}`)
+      const debugData = await response.json()
+      console.log('=== 数据库调试信息 ===')
+      console.log('查询学号:', studentId)
+      console.log('最近的论文记录:', debugData.allPapers)
+      console.log('最近的专利记录:', debugData.allPatents)
+      console.log('该学号的论文:', debugData.specificPapers)
+      console.log('该学号的专利:', debugData.specificPatents)
+      alert('调试信息已输出到控制台，请按F12查看')
+    } catch (err) {
+      console.error('调试失败:', err)
+      alert('调试失败，请查看控制台')
+    }
+  }
+
   // 开始编辑分数
-  const startEditScore = (type: 'paper' | 'patent', id: string, currentScore: number) => {
+  const startEditScore = (type: 'paper' | 'patent', id: string, currentScore: string | number) => {
     const key = `${type}-${id}`
     setEditingScores(prev => ({
       ...prev,
@@ -179,6 +197,26 @@ export default function ComprehensiveEvaluationPage() {
     return new Date(dateString).toLocaleDateString('zh-CN')
   }
 
+  // 安全地处理分数显示和转换
+  const formatScore = (score: string | number): string => {
+    if (score === null || score === undefined) return '0'
+    if (typeof score === 'number') return score.toString()
+    if (typeof score === 'string') {
+      const numScore = parseFloat(score)
+      return isNaN(numScore) ? '0' : numScore.toString()
+    }
+    return '0'
+  }
+
+  const parseScore = (score: string | number): number => {
+    if (typeof score === 'number') return score
+    if (typeof score === 'string') {
+      const numScore = parseFloat(score)
+      return isNaN(numScore) ? 0 : numScore
+    }
+    return 0
+  }
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -214,6 +252,13 @@ export default function ComprehensiveEvaluationPage() {
                 className="bg-purple-600 hover:bg-purple-700"
               >
                 {loading ? '搜索中...' : '查询'}
+              </Button>
+              <Button 
+                onClick={handleDebug} 
+                variant="outline"
+                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+              >
+                调试
               </Button>
             </div>
           </CardContent>
@@ -326,7 +371,7 @@ export default function ComprehensiveEvaluationPage() {
                                   />
                                 ) : (
                                   <span className="font-semibold text-blue-600">
-                                    {paper.score}
+                                    {formatScore(paper.score)}
                                   </span>
                                 )}
                               </TableCell>

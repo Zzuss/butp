@@ -1600,7 +1600,7 @@ export default function Profile() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <form ref={paperFormRef} onSubmit={handlePaperSubmit}>
+            <form key={editingPaper?.id || 'new'} ref={paperFormRef} onSubmit={handlePaperSubmit}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">论文标题 *</label>
@@ -1650,13 +1650,16 @@ export default function Profile() {
                 
                 <div>
                   <label className="block text-sm font-medium mb-1">班级</label>
-                  <input 
+                  <select 
                     name="class"
-                    type="text" 
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingPaper?.class || ""}
-                    placeholder="请输入班级"
-                  />
+                    defaultValue={editingPaper?.class ? `${editingPaper.class}班` : ""}
+                  >
+                    <option value="">请选择班级</option>
+                    {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
+                      <option key={num} value={`${num}班`}>{num}班</option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
@@ -1738,7 +1741,7 @@ export default function Profile() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <form ref={patentFormRef} onSubmit={handlePatentSubmit}>
+            <form key={editingPatent?.id || 'new'} ref={patentFormRef} onSubmit={handlePatentSubmit}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">专利名称 *</label>
@@ -1780,13 +1783,16 @@ export default function Profile() {
                 
                 <div>
                   <label className="block text-sm font-medium mb-1">班级</label>
-                  <input 
+                  <select 
                     name="class"
-                    type="text" 
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingPatent?.class || ""}
-                    placeholder="请输入班级"
-                  />
+                    defaultValue={editingPatent?.class ? `${editingPatent.class}班` : ""}
+                  >
+                    <option value="">请选择班级</option>
+                    {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
+                      <option key={num} value={`${num}班`}>{num}班</option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>

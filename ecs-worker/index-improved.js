@@ -1,0 +1,557 @@
+const { createClient } = require('@supabase/supabase-js')
+const XLSX = require('xlsx')
+const fs = require('fs')
+const path = require('path')
+const axios = require('axios')
+const winston = require('winston')
+const cron = require('node-cron')
+require('dotenv').config()
+
+// 配置日志
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' }),
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
+  ]
+})
+
+// Supabase配置
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+// 配置
+const BATCH_SIZE = parseInt(process.env.BATCH_SIZE) || 1000
+const TEMP_DIR = path.join(__dirname, process.env.TEMP_DIR || 'temp')
+const MAX_CONCURRENT_TASKS = parseInt(process.env.MAX_CONCURRENT_TASKS) || 2
+
+// 确保临时目录存在
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true })
+}
+
+if (!fs.existsSync('logs')) {
+  fs.mkdirSync('logs', { recursive: true })
+}
+
+class ImportWorker {
+  constructor() {
+    this.isProcessing = false
+    this.currentTasks = new Set()
+  }
+
+  // 启动工作进程
+  async start() {
+    logger.info('🚀 ECS导入工作进程启动')
+    
+    // 立即检查一次
+    await this.processQueue()
+    
+    // 每30秒检查一次队列
+    cron.schedule('*/30 * * * * *', async () => {
+      if (!this.isProcessing && this.currentTasks.size < MAX_CONCURRENT_TASKS) {
+        await this.processQueue()
+      }
+    })
+
+    // 每小时清理临时文件
+    cron.schedule('0 * * * *', async () => {
+      await this.cleanupTempFiles()
+    })
+
+    logger.info('✅ 定时任务已启动')
+  }
+
+  // 处理队列
+  async processQueue() {
+    if (this.isProcessing) {
+      return
+    }
+
+    try {
+      this.isProcessing = true
+      
+      // 查找待处理的任务
+      const { data: tasks, error } = await supabase
+        .from('import_tasks')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+        .limit(MAX_CONCURRENT_TASKS - this.currentTasks.size)
+
+      if (error) {
+        throw error
+      }
+
+      if (!tasks || tasks.length === 0) {
+        return
+      }
+
+      logger.info(`📋 找到 ${tasks.length} 个待处理任务`)
+
+      // 并发处理任务
+      const promises = tasks.map(task => this.processTask(task))
+      await Promise.all(promises)
+
+    } catch (error) {
+      logger.error('处理队列失败:', error)
+    } finally {
+      this.isProcessing = false
+    }
+  }
+
+  // 处理单个任务
+  async processTask(task) {
+    const taskId = task.id
+    this.currentTasks.add(taskId)
+
+    try {
+      logger.info(`🔄 开始处理任务: ${taskId}`)
+
+      // 标记任务为处理中
+      await supabase
+        .from('import_tasks')
+        .update({ status: 'processing' })
+        .eq('id', taskId)
+
+      // 清空影子表
+      await this.clearShadowTable()
+
+      // 获取任务的文件列表
+      const { data: files, error: filesError } = await supabase
+        .from('import_file_details')
+        .select('*')
+        .eq('task_id', taskId)
+        .eq('status', 'pending')
+
+      if (filesError) {
+        throw filesError
+      }
+
+      if (!files || files.length === 0) {
+        throw new Error('没有找到待处理的文件')
+      }
+
+      let totalRecords = 0
+      let importedRecords = 0
+      let hasErrors = false
+
+      // 处理每个文件
+      for (const file of files) {
+        try {
+          const result = await this.processFile(file)
+          totalRecords += result.totalRecords
+          importedRecords += result.importedRecords
+        } catch (fileError) {
+          logger.error(`处理文件失败: ${file.file_name}`, fileError)
+          hasErrors = true
+          
+          // 标记文件处理失败
+          await supabase
+            .from('import_file_details')
+            .update({
+              status: 'failed',
+              error_message: fileError.message
+            })
+            .eq('id', file.id)
+        }
+      }
+
+      // 完成任务
+      if (hasErrors || importedRecords === 0) {
+        await this.failTask(taskId, totalRecords, importedRecords, '部分文件处理失败')
+      } else {
+        await this.completeTask(taskId, totalRecords, importedRecords)
+      }
+
+    } catch (error) {
+      logger.error(`任务处理失败: ${taskId}`, error)
+      await this.failTask(taskId, 0, 0, error.message)
+    } finally {
+      this.currentTasks.delete(taskId)
+    }
+  }
+
+  // 处理单个文件
+  async processFile(fileDetail) {
+    logger.info(`📄 处理文件: ${fileDetail.file_name}`)
+
+    // 标记文件为处理中
+    await supabase
+      .from('import_file_details')
+      .update({ 
+        status: 'processing',
+        processed_at: new Date().toISOString()
+      })
+      .eq('id', fileDetail.id)
+
+    // 获取本地文件
+    const filePath = await this.getLocalFile(fileDetail)
+    
+    // 读取Excel文件
+    const workbook = XLSX.readFile(filePath)
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    
+    // 使用defval选项来包含空单元格
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+      defval: null, // 空单元格设为null而不是跳过
+      blankrows: false // 跳过完全空白的行
+    })
+
+    if (jsonData.length === 0) {
+      throw new Error('文件中没有数据')
+    }
+
+    // 分析表头字段
+    const firstRow = jsonData[0]
+    const detectedFields = Object.keys(firstRow)
+    logger.info(`📋 检测到的字段 (${detectedFields.length}个): ${detectedFields.join(', ')}`)
+    
+    // 显示字段值示例（帮助理解数据结构）
+    logger.info(`📄 字段值示例:`)
+    detectedFields.forEach(field => {
+      const value = firstRow[field]
+      const displayValue = value !== null && value !== undefined ? 
+        (typeof value === 'string' && value.length > 50 ? value.substring(0, 50) + '...' : value) : 
+        'null/undefined'
+      logger.info(`   ${field}: "${displayValue}"`)
+    })
+    
+    // 检查字段映射情况
+    const mappingReport = this.analyzeFieldMapping(firstRow)
+    logger.info(`🔍 字段映射报告:`)
+    logger.info(`   映射成功的字段: ${JSON.stringify(mappingReport.mappedFields, null, 2)}`)
+    if (mappingReport.unmappedFields !== '无') {
+      logger.warn(`   未映射的字段: ${mappingReport.unmappedFields.join(', ')}`)
+    }
+    
+    // 显示映射失败的字段
+    const failedFields = Object.keys(mappingReport.mappedFields).filter(
+      field => mappingReport.mappedFields[field] === '❌'
+    )
+    if (failedFields.length > 0) {
+      logger.warn(`⚠️ 映射失败的字段: ${failedFields.join(', ')}`)
+      logger.info(`💡 提示: 这些字段在Excel中不存在或字段名不匹配`)
+    }
+
+    // 处理数据
+    const processedData = jsonData.map(row => this.mapExcelRow(row))
+    
+    // 分批导入
+    let importedCount = 0
+    for (let i = 0; i < processedData.length; i += BATCH_SIZE) {
+      const batch = processedData.slice(i, i + BATCH_SIZE)
+      
+      const { error } = await supabase
+        .from('academic_results_old')
+        .insert(batch)
+
+      if (error) {
+        throw new Error(`批次导入失败: ${error.message}`)
+      }
+
+      importedCount += batch.length
+      logger.info(`✅ 批次导入成功: ${importedCount}/${processedData.length}`)
+    }
+
+    // 更新文件状态
+    await supabase
+      .from('import_file_details')
+      .update({
+        status: 'completed',
+        records_count: jsonData.length,
+        imported_count: importedCount
+      })
+      .eq('id', fileDetail.id)
+
+    // 清理临时文件
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+      logger.info(`✅ 删除处理完成的文件: ${path.basename(filePath)}`)
+    }
+
+    // 清理对应的元数据文件
+    const fileId = fileDetail.file_id
+    const metadataPath = path.join(path.dirname(filePath), `${fileId}.meta.json`)
+    if (fs.existsSync(metadataPath)) {
+      fs.unlinkSync(metadataPath)
+      logger.info(`✅ 删除对应的元数据文件: ${fileId}.meta.json`)
+    }
+
+    return {
+      totalRecords: jsonData.length,
+      importedRecords: importedCount
+    }
+  }
+
+  // 获取本地文件（文件已通过上传服务存储在ECS）
+  async getLocalFile(fileDetail) {
+    // 尝试多种文件名格式
+    const possibleFiles = [
+      `${fileDetail.file_id}.xlsx`,
+      `${fileDetail.file_id}.xls`,
+      fileDetail.file_name // 如果有原始文件名
+    ]
+    
+    for (const fileName of possibleFiles) {
+      const filePath = path.join(TEMP_DIR, fileName)
+      
+      if (fs.existsSync(filePath)) {
+        logger.info(`✅ 找到本地文件: ${fileName}`)
+        return filePath
+      }
+    }
+    
+    // 如果找不到文件，记录详细信息
+    logger.error(`❌ 找不到本地文件: ${fileDetail.file_id}`)
+    logger.info(`   查找的文件名: ${possibleFiles.join(', ')}`)
+    logger.info(`   查找目录: ${TEMP_DIR}`)
+    
+    // 列出目录中的所有文件用于调试
+    try {
+      const dirFiles = fs.readdirSync(TEMP_DIR)
+      logger.info(`   目录中的文件: ${dirFiles.join(', ')}`)
+    } catch (error) {
+      logger.error(`   无法读取目录: ${error.message}`)
+    }
+    
+    throw new Error(`找不到文件: ${fileDetail.file_id}`)
+  }
+
+  // 清理和标准化字段名
+  normalizeFieldName(fieldName) {
+    if (!fieldName || typeof fieldName !== 'string') {
+      return null
+    }
+    
+    return fieldName
+      .trim() // 去除首尾空格
+      .replace(/\s+/g, '_') // 将空格替换为下划线
+      .replace(/[^\w]/g, '_') // 将特殊字符替换为下划线
+      .replace(/_+/g, '_') // 合并多个下划线
+      .replace(/^_|_$/g, '') // 去除首尾下划线
+  }
+
+  // 智能字段映射 - 专注于空格处理
+  findFieldValue(row, possibleNames) {
+    // 首先尝试精确匹配
+    for (const name of possibleNames) {
+      if (row.hasOwnProperty(name)) {
+        const value = row[name]
+        // 如果值不是undefined且不是空字符串，就返回（null是有效值）
+        if (value !== undefined && value !== '') {
+          return value
+        }
+      }
+    }
+    
+    // 然后尝试去除空格后的匹配
+    for (const name of possibleNames) {
+      // 查找带空格的字段名
+      const matchingKey = Object.keys(row).find(key => {
+        const trimmedKey = key.trim()
+        return trimmedKey === name
+      })
+      
+      if (matchingKey && row.hasOwnProperty(matchingKey)) {
+        const value = row[matchingKey]
+        if (value !== undefined && value !== '') {
+          logger.debug(`🔧 空格匹配成功: "${matchingKey}" -> ${name}`)
+          return value
+        }
+      }
+    }
+    
+    return null
+  }
+
+  // 检查字段是否存在于Excel数据中
+  checkFieldExists(row, targetField) {
+    // 首先检查精确匹配
+    if (row.hasOwnProperty(targetField)) {
+      return true
+    }
+    
+    // 然后检查去除空格后的匹配
+    const matchingKey = Object.keys(row).find(key => {
+      const trimmedKey = key.trim()
+      return trimmedKey === targetField
+    })
+    
+    return !!matchingKey
+  }
+
+  // 分析字段映射情况
+  analyzeFieldMapping(sampleRow) {
+    const mappedFields = {}
+    const unmappedFields = []
+    
+    // 检查每个目标字段是否能找到映射
+    const targetFields = [
+      'SNH', 'Semester_Offered', 'Current_Major', 'Course_ID', 'Course_Name',
+      'Grade', 'Grade_Remark', 'Course_Type', 'Course_Attribute', 'Hours',
+      'Credit', 'Offering_Unit', 'Tags', 'Description', 'Exam_Type', 'Assessment_Method'
+    ]
+    
+    targetFields.forEach(field => {
+      // 检查字段是否存在于原始Excel数据中（不管值是什么）
+      const fieldExists = this.checkFieldExists(sampleRow, field)
+      if (fieldExists) {
+        mappedFields[field] = '✅'
+      } else {
+        mappedFields[field] = '❌'
+      }
+    })
+    
+    // 检查未映射的原始字段
+    Object.keys(sampleRow).forEach(originalField => {
+      const normalizedField = this.normalizeFieldName(originalField)
+      if (!targetFields.some(target => 
+        this.normalizeFieldName(target) === normalizedField
+      )) {
+        unmappedFields.push(originalField)
+      }
+    })
+    
+    return {
+      mappedFields,
+      unmappedFields: unmappedFields.length > 0 ? unmappedFields : '无'
+    }
+  }
+
+  // 数据映射 - 简化版本，只处理空格问题
+  mapExcelRow(row) {
+    return {
+      SNH: this.findFieldValue(row, ['SNH']),
+      Semester_Offered: this.findFieldValue(row, ['Semester_Offered', 'Semester']),
+      Current_Major: this.findFieldValue(row, ['Current_Major']),
+      Course_ID: this.findFieldValue(row, ['Course_ID']),
+      Course_Name: this.findFieldValue(row, ['Course_Name']),
+      Grade: this.findFieldValue(row, ['Grade']),
+      Grade_Remark: this.findFieldValue(row, ['Grade_Remark']),
+      Course_Type: this.findFieldValue(row, ['Course_Type']),
+      Course_Attribute: this.findFieldValue(row, ['Course_Attribute']),
+      Hours: this.findFieldValue(row, ['Hours']),
+      Credit: (() => {
+        const creditValue = this.findFieldValue(row, ['Credit'])
+        return creditValue !== null && creditValue !== undefined && creditValue !== '' ? parseFloat(creditValue) : null
+      })(),
+      Offering_Unit: this.findFieldValue(row, ['Offering_Unit']),
+      Tags: this.findFieldValue(row, ['Tags']),
+      Description: this.findFieldValue(row, ['Description']),
+      Exam_Type: this.findFieldValue(row, ['Exam_Type']),
+      Assessment_Method: this.findFieldValue(row, ['Assessment_Method'])
+    }
+  }
+
+  // 清空影子表
+  async clearShadowTable() {
+    logger.info('🧹 清空影子表')
+    try {
+      const { error } = await supabase.rpc('truncate_results_old')
+      if (error) {
+        throw error
+      }
+    } catch (error) {
+      // 如果RPC失败，使用DELETE
+      const { error: deleteError } = await supabase
+        .from('academic_results_old')
+        .delete()
+        .neq('SNH', 'dummy_value_that_should_not_exist')
+      
+      if (deleteError) {
+        throw deleteError
+      }
+    }
+  }
+
+  // 完成任务
+  async completeTask(taskId, totalRecords, importedRecords) {
+    logger.info(`🎉 任务完成: ${taskId}`)
+    
+    // 执行原子交换
+    const { error: swapError } = await supabase.rpc('swap_results_with_old')
+    if (swapError) {
+      throw new Error(`原子交换失败: ${swapError.message}`)
+    }
+
+    // 更新任务状态
+    await supabase
+      .from('import_tasks')
+      .update({
+        status: 'completed',
+        total_records: totalRecords,
+        imported_records: importedRecords,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', taskId)
+  }
+
+  // 任务失败
+  async failTask(taskId, totalRecords, importedRecords, errorMessage) {
+    logger.error(`❌ 任务失败: ${taskId} - ${errorMessage}`)
+    
+    // 清空影子表作为回滚
+    await this.clearShadowTable()
+
+    // 更新任务状态
+    await supabase
+      .from('import_tasks')
+      .update({
+        status: 'failed',
+        total_records: totalRecords,
+        imported_records: importedRecords,
+        error_message: errorMessage,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', taskId)
+  }
+
+  // 清理临时文件
+  async cleanupTempFiles() {
+    try {
+      const files = fs.readdirSync(TEMP_DIR)
+      const now = Date.now()
+      const maxAge = 24 * 60 * 60 * 1000 // 24小时
+
+      for (const file of files) {
+        const filePath = path.join(TEMP_DIR, file)
+        const stats = fs.statSync(filePath)
+        
+        if (now - stats.mtime.getTime() > maxAge) {
+          fs.unlinkSync(filePath)
+          logger.info(`🗑️ 清理过期文件: ${file}`)
+        }
+      }
+    } catch (error) {
+      logger.error('清理临时文件失败:', error)
+    }
+  }
+}
+
+// 启动工作进程
+const worker = new ImportWorker()
+worker.start().catch(error => {
+  logger.error('启动工作进程失败:', error)
+  process.exit(1)
+})
+
+// 优雅关闭
+process.on('SIGINT', () => {
+  logger.info('🛑 收到关闭信号，正在优雅关闭...')
+  process.exit(0)
+})
+
+process.on('SIGTERM', () => {
+  logger.info('🛑 收到终止信号，正在优雅关闭...')
+  process.exit(0)
+})
