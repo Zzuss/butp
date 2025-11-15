@@ -51,13 +51,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 获取竞赛信息
+    const { data: competitions, error: competitionsError } = await supabase
+      .from('student_competition_records')
+      .select('*')
+      .eq('bupt_student_id', studentId)
+      .order('created_at', { ascending: false });
+
+    if (competitionsError) {
+      console.error('获取竞赛信息失败:', competitionsError);
+      return NextResponse.json(
+        { error: '获取竞赛信息失败' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       studentId,
       papers: papers || [],
       patents: patents || [],
+      competitions: competitions || [],
       total: {
         papers: papers?.length || 0,
-        patents: patents?.length || 0
+        patents: patents?.length || 0,
+        competitions: competitions?.length || 0
       }
     });
 
@@ -83,14 +100,16 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (!['paper', 'patent'].includes(type)) {
+    if (!['paper', 'patent', 'competition'].includes(type)) {
       return NextResponse.json(
-        { error: 'type 必须是 paper 或 patent' },
+        { error: 'type 必须是 paper、patent 或 competition' },
         { status: 400 }
       );
     }
 
-    const tableName = type === 'paper' ? 'student_papers' : 'student_patents';
+    const tableName = type === 'paper' ? 'student_papers' : 
+                     type === 'patent' ? 'student_patents' : 
+                     'student_competition_records';
     
     const { data, error } = await supabase
       .from(tableName)

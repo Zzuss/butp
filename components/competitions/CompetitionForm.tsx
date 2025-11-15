@@ -233,6 +233,15 @@ export default function CompetitionForm({
     }
   }
 
+  // 判断是否应该显示"视当年情况而定"的提示
+  const shouldShowYearlyDecision = () => {
+    // 只有"北京市大学生科学研究与创业行动计划成果展"的一二三等奖才显示"视当年情况而定"
+    if (selectedCompetition === "北京市大学生科学研究与创业行动计划成果展") {
+      return awardType === 'prize' && ['first_prize', 'second_prize', 'third_prize'].includes(awardValue)
+    }
+    return false
+  }
+
   // 计算预览分数
   const getPreviewScore = () => {
     const currentComp = getCurrentCompetitionData()
@@ -505,7 +514,7 @@ export default function CompetitionForm({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-blue-800">预计加分：</span>
                     <span className="font-semibold text-blue-900">
-                      {getPreviewScore() === 0 ? '加分规则视当年奖项设置情况而定' : `${getPreviewScore()} 分`}
+                      {shouldShowYearlyDecision() ? '加分规则视当年奖项设置情况而定' : `${getPreviewScore()} 分`}
                     </span>
                   </div>
                 </div>

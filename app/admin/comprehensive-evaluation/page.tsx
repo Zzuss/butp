@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { Search, FileText, Award, Edit, Save, X, Check } from 'lucide-react'
+import { Search, FileText, Award, Edit, Save, X, Check, Trophy } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,13 +42,29 @@ interface Patent {
   updated_at: string
 }
 
+interface Competition {
+  id: string
+  competition_region: string
+  competition_level: string
+  competition_name: string
+  bupt_student_id: string
+  full_name: string
+  class: string
+  note: string
+  score: number
+  created_at: string
+  updated_at: string
+}
+
 interface StudentData {
   studentId: string
   papers: Paper[]
   patents: Patent[]
+  competitions: Competition[]
   total: {
     papers: number
     patents: number
+    competitions: number
   }
 }
 
@@ -82,8 +98,8 @@ export default function ComprehensiveEvaluationPage() {
       const data = await response.json()
       setStudentData(data)
       
-      if (data.total.papers === 0 && data.total.patents === 0) {
-        setError('该学号未找到论文或专利信息')
+      if (data.total.papers === 0 && data.total.patents === 0 && data.total.competitions === 0) {
+        setError('该学号未找到论文、专利或竞赛信息')
       }
     } catch (err) {
       console.error('搜索失败:', err)
@@ -112,7 +128,7 @@ export default function ComprehensiveEvaluationPage() {
   }
 
   // 开始编辑分数
-  const startEditScore = (type: 'paper' | 'patent', id: string, currentScore: string | number) => {
+  const startEditScore = (type: 'paper' | 'patent' | 'competition', id: string, currentScore: string | number) => {
     const key = `${type}-${id}`
     setEditingScores(prev => ({
       ...prev,
@@ -121,7 +137,7 @@ export default function ComprehensiveEvaluationPage() {
   }
 
   // 取消编辑分数
-  const cancelEditScore = (type: 'paper' | 'patent', id: string) => {
+  const cancelEditScore = (type: 'paper' | 'patent' | 'competition', id: string) => {
     const key = `${type}-${id}`
     setEditingScores(prev => {
       const newScores = { ...prev }
@@ -131,7 +147,7 @@ export default function ComprehensiveEvaluationPage() {
   }
 
   // 保存分数
-  const saveScore = async (type: 'paper' | 'patent', id: string) => {
+  const saveScore = async (type: 'paper' | 'patent' | 'competition', id: string) => {
     const key = `${type}-${id}`
     const newScore = editingScores[key]
 
@@ -171,9 +187,13 @@ export default function ComprehensiveEvaluationPage() {
           updatedData.papers = updatedData.papers.map(paper => 
             paper.id === id ? { ...paper, score: parseFloat(newScore) } : paper
           )
-        } else {
+        } else if (type === 'patent') {
           updatedData.patents = updatedData.patents.map(patent => 
             patent.id === id ? { ...patent, score: parseFloat(newScore) } : patent
+          )
+        } else if (type === 'competition') {
+          updatedData.competitions = updatedData.competitions.map(competition => 
+            competition.id === id ? { ...competition, score: parseFloat(newScore) } : competition
           )
         }
         setStudentData(updatedData)
@@ -222,7 +242,7 @@ export default function ComprehensiveEvaluationPage() {
       <div className="container mx-auto py-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">综评成绩管理</h1>
-          <p className="text-gray-600">管理学生论文发表和专利申请的综合评价加分</p>
+          <p className="text-gray-600">管理学生论文发表、专利申请和竞赛获奖的综合评价加分</p>
         </div>
 
         {/* 搜索区域 */}
@@ -281,7 +301,7 @@ export default function ComprehensiveEvaluationPage() {
         {studentData && (
           <div className="space-y-6">
             {/* 统计信息 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
@@ -301,6 +321,18 @@ export default function ComprehensiveEvaluationPage() {
                     <div>
                       <p className="text-sm text-gray-600">专利数量</p>
                       <p className="text-2xl font-bold text-green-600">{studentData.total.patents}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-2">
+                    <Trophy className="h-5 w-5 text-orange-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">竞赛数量</p>
+                      <p className="text-2xl font-bold text-orange-600">{studentData.total.competitions}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -508,13 +540,109 @@ export default function ComprehensiveEvaluationPage() {
               </Card>
             )}
 
+            {/* 竞赛信息表格 */}
+            {studentData.competitions.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Trophy className="h-5 w-5 mr-2" />
+                    竞赛获奖信息
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>竞赛名称</TableHead>
+                          <TableHead>竞赛地区</TableHead>
+                          <TableHead>竞赛级别</TableHead>
+                          <TableHead>姓名</TableHead>
+                          <TableHead>班级</TableHead>
+                          <TableHead>备注</TableHead>
+                          <TableHead>分数</TableHead>
+                          <TableHead>操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {studentData.competitions.map((competition) => {
+                          const editKey = `competition-${competition.id}`
+                          const isEditing = editKey in editingScores
+                          
+                          return (
+                            <TableRow key={competition.id}>
+                              <TableCell className="font-medium">{competition.competition_name}</TableCell>
+                              <TableCell>{competition.competition_region}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{competition.competition_level}</Badge>
+                              </TableCell>
+                              <TableCell>{competition.full_name}</TableCell>
+                              <TableCell>{competition.class}</TableCell>
+                              <TableCell>{competition.note || '-'}</TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    className="w-20"
+                                    value={editingScores[editKey]}
+                                    onChange={(e) => setEditingScores(prev => ({
+                                      ...prev,
+                                      [editKey]: e.target.value
+                                    }))}
+                                  />
+                                ) : (
+                                  <span className="font-semibold text-orange-600">
+                                    {competition.score}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => saveScore('competition', competition.id)}
+                                      disabled={loading}
+                                    >
+                                      <Check className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => cancelEditScore('competition', competition.id)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => startEditScore('competition', competition.id, competition.score)}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* 如果没有数据 */}
-            {studentData.total.papers === 0 && studentData.total.patents === 0 && (
+            {studentData.total.papers === 0 && studentData.total.patents === 0 && studentData.total.competitions === 0 && (
               <Card>
                 <CardContent className="text-center py-8">
                   <div className="text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>该学生暂无论文发表或专利申请信息</p>
+                    <p>该学生暂无论文发表、专利申请或竞赛获奖信息</p>
                   </div>
                 </CardContent>
               </Card>
