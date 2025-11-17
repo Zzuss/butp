@@ -148,6 +148,9 @@ export default function Analysis() {
     overseasPercentage: number | null;
   } | null>(null);
 
+  // 预测结果卡片动画状态
+  const [animationStep, setAnimationStep] = useState<number>(-1); // -1表示未开始，0-4表示动画步骤
+
   // 学生信息状态
   const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
   // 原始分数加载重试计数
@@ -1091,6 +1094,32 @@ export default function Analysis() {
     loadGraduationRequirements();
   }, [selectedButton, user, authLoading]);
 
+  // 预测结果卡片动画：当有新的预测结果时启动动画
+  useEffect(() => {
+    if (predictionResult && (predictionResult.domesticPercentage !== null || predictionResult.overseasPercentage !== null)) {
+      // 启动动画，从步骤0开始
+      setAnimationStep(0);
+    }
+  }, [predictionResult]);
+
+  // 预测结果卡片动画：管理动画步骤切换（每0.5秒切换一次）
+  useEffect(() => {
+    if (animationStep < 0 || animationStep >= 4) {
+      // 动画未开始或已完成，保持在最终状态（步骤4，浅蓝色）
+      if (animationStep >= 4) {
+        setAnimationStep(4);
+      }
+      return;
+    }
+
+    // 每0.5秒切换到下一步
+    const timer = setTimeout(() => {
+      setAnimationStep(prev => prev + 1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [animationStep]);
+
 
 
 
@@ -1101,22 +1130,19 @@ export default function Analysis() {
   
   // 下载状态
   const [downloading, setDownloading] = useState(false);
-  const availablePlanYears = [2024, 2023, 2022, 2020];
 
   const resolvePlanYear = () => {
-    // 优先使用 studentInfo.year 的前4位数字
-    const yearStr = (studentInfo?.year || '').toString();
-    const candidate = parseInt(yearStr.slice(0, 4), 10);
-    if (!isNaN(candidate) && availablePlanYears.includes(candidate)) return candidate;
+    const rawStudentNumber =
+      typeof (user as any)?.studentNumber === 'string'
+        ? (user as any).studentNumber
+        : (user?.userId || '').toString();
 
-    // 若不在可用集合，选择不大于 candidate 的最近年份；否则使用最新年份
-    if (!isNaN(candidate)) {
-      const lowerOrEqual = availablePlanYears
-        .filter(y => y <= candidate)
-        .sort((a, b) => b - a)[0];
-      if (lowerOrEqual) return lowerOrEqual;
-    }
-    return availablePlanYears[0]; // 默认最新
+    if (!rawStudentNumber) return null;
+
+    const year = parseInt(rawStudentNumber.trim().slice(0, 4), 10);
+    if (isNaN(year) || year < 2018 || year > 2050) return null;
+
+    return year;
   };
   
   // 下载培养方案处理函数（按年级选择对应PDF）
@@ -1124,6 +1150,11 @@ export default function Analysis() {
     try {
       setDownloading(true);
       const planYear = resolvePlanYear();
+      if (!planYear) {
+        console.error('无法解析有效的培养方案年份，已取消下载');
+        return;
+      }
+      const fileName = `Education_Plan_PDF_${planYear}.pdf`;
       
       // 首先尝试从 Supabase Storage 获取文件列表
       try {
@@ -1131,48 +1162,20 @@ export default function Analysis() {
         
         if (plans.length > 0) {
           // 找到匹配年份的文件
-          let targetPlan = plans.find(plan => plan.year === planYear.toString());
-          
-          // 如果没有找到对应年份，按可用年份从新到旧尝试
-          if (!targetPlan) {
-            for (const y of availablePlanYears) {
-              targetPlan = plans.find(plan => plan.year === y.toString());
-              if (targetPlan) break;
-            }
-          }
-          
+          const targetPlan = plans.find(plan => plan.year === planYear.toString());
           // 如果找到文件，使用 Supabase URL 下载
           if (targetPlan && targetPlan.url) {
             window.open(targetPlan.url, '_blank');
             return;
+          } else {
+            console.error(`Supabase 未找到培养方案文件: ${fileName}`);
           }
         }
       } catch (supabaseError) {
-        console.warn('Supabase Storage 获取失败，尝试本地路径:', supabaseError);
+        console.error('Supabase Storage 获取失败:', supabaseError);
       }
       
-      // 回退方案：使用本地路径（兼容性）
-      const buildUrl = (y: number) => `/Education_Plan_PDF/Education_Plan_PDF_${y}.pdf`;
-      let url = buildUrl(planYear);
-
-      // 先检查对应年级是否存在
-      const head = await fetch(url, { method: 'HEAD' });
-      if (!head.ok) {
-        // 回退：按可用年份从新到旧尝试
-        for (const y of availablePlanYears) {
-          const fallbackUrl = buildUrl(y);
-          const chk = await fetch(fallbackUrl, { method: 'HEAD' });
-          if (chk.ok) { url = fallbackUrl; break; }
-        }
-      }
-
-      // 触发下载或打开
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = url.split('/').pop() || `Education_Plan_PDF_${planYear}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      console.error(`培养方案文件下载失败：Supabase 中未找到 ${fileName}`);
       
     } catch (error) {
       console.error('下载失败:', error);
@@ -1460,13 +1463,16 @@ export default function Analysis() {
           {/* 海外读研分析界面 - 仿照模板设计 */}
           {selectedButton === 'overseas' && (
             <div className="space-y-6">
+              <div className="px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-center text-yellow-800">
+                算法分析数据取样于国际学院毕业生数据
+              </div>
               {/* 目标分数显示 */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
                     <div className="text-center">
                       <p className="text-blue-800 font-medium">
-                        {t('analysis.target.score.minimum')}{' '}
+                        为达到海外读研的目标，未来各科的最低分数为：{' '}
                         <span className="text-blue-600 font-bold">
                           {loadingTargetScores ? '加载中...' : 
                            targetScores && targetScores.target2_score !== null ? 
@@ -1491,19 +1497,17 @@ export default function Analysis() {
               </div>
               
               {/* 预测结果显示框 */}
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className={`p-4 rounded-lg border border-blue-200 transition-colors duration-500 ${
+                animationStep >= 0 && animationStep <= 4
+                  ? (animationStep % 2 === 0 ? 'bg-blue-50' : 'bg-blue-200')
+                  : 'bg-blue-50'
+              }`}>
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
                     <div className="text-center">
                       <p className="text-blue-800 font-medium">
                         {predictionResult ? (
-                          selectedButton === 'overseas' ? (
-                            t('analysis.prediction.result', { current: predictionResult.overseasPercentage || 0, other: predictionResult.domesticPercentage || 0 })
-                          ) : selectedButton === 'domestic' ? (
-                            t('analysis.prediction.result', { current: predictionResult.domesticPercentage || 0, other: predictionResult.overseasPercentage || 0 })
-                          ) : (
-                            t('analysis.prediction.result', { current: predictionResult.overseasPercentage || 0, other: predictionResult.domesticPercentage || 0 })
-                          )
+                          `海外读研新可能性：${predictionResult.overseasPercentage || 0}%，国内读研新可能性：${predictionResult.domesticPercentage || 0}%`
                         ) : (
                           t('analysis.prediction.not.started')
                         )}
@@ -1626,7 +1630,7 @@ export default function Analysis() {
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
                           {!isEditMode && (
-                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">目标成绩</th>
                           )}
                           {isEditMode && (
                             <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
@@ -1832,13 +1836,16 @@ export default function Analysis() {
           {/* 国内读研分析界面 - 仿照模板设计 */}
           {selectedButton === 'domestic' && (
             <div className="space-y-6">
+              <div className="px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-center text-yellow-800">
+                算法分析数据取样于国际学院毕业生数据
+              </div>
               {/* 目标分数显示 */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
                     <div className="text-center">
                       <p className="text-blue-800 font-medium">
-                        {t('analysis.target.score.minimum')}{' '}
+                        为达到国内读研的目标，未来各科的最低分数为：{' '}
                         <span className="text-blue-600 font-bold">
                           {loadingTargetScores ? '加载中...' : 
                            targetScores && targetScores.target1_score !== null ? 
@@ -1863,13 +1870,17 @@ export default function Analysis() {
               </div>
 
               {/* 预测结果显示框 */}
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className={`p-4 rounded-lg border border-blue-200 transition-colors duration-500 ${
+                animationStep >= 0 && animationStep <= 4
+                  ? (animationStep % 2 === 0 ? 'bg-blue-50' : 'bg-blue-200')
+                  : 'bg-blue-50'
+              }`}>
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
                     <div className="text-center">
                       <p className="text-blue-800 font-medium">
                         {predictionResult ? (
-                          t('analysis.prediction.result', { current: predictionResult.domesticPercentage || 0, other: predictionResult.overseasPercentage || 0 })
+                          `国内读研新可能性：${predictionResult.domesticPercentage || 0}%，海外读研新可能性：${predictionResult.overseasPercentage || 0}%`
                         ) : (
                           t('analysis.prediction.not.started')
                         )}
@@ -1991,7 +2002,7 @@ export default function Analysis() {
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">成绩</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">目标成绩</th>
                           {isEditMode && (
                             <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
                               修改成绩
