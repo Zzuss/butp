@@ -280,6 +280,19 @@ export async function POST(request: NextRequest) {
       const courseId = course.Course_ID;
       const courseName = course.Course_Name;
       
+      console.log(`🔍 Processing course: "${courseName}" (ID: ${courseId})`);
+      const currentMapping = courseToCategoryMap.get(courseName);
+      console.log(`🔍 Current mapping for "${courseName}": ${currentMapping || 'none'}`);
+      
+      // 🔍 Special debug for 健美 course
+      if (courseName === '健美' || courseId === '3812150040') {
+        console.log(`🔍 SPECIAL DEBUG for 健美: CourseID=${courseId} (type: ${typeof courseId}), parseInt=${parseInt(courseId)}`);
+        console.log(`🔍 Range check: ${parseInt(courseId)} >= 3812150020 = ${parseInt(courseId) >= 3812150020}`);
+        console.log(`🔍 Range check: ${parseInt(courseId)} <= 3812150324 = ${parseInt(courseId) <= 3812150324}`);
+        console.log(`🔍 Combined check: ${parseInt(courseId) >= 3812150020 && parseInt(courseId) <= 3812150324}`);
+        console.log(`🔍 Will this course match sports elective condition?`);
+      }
+      
       if (courseId) {
         // 体育基础：3812150010 -> 体育类别的必修学分
         if (courseId === '3812150010') {
@@ -303,9 +316,11 @@ export async function POST(request: NextRequest) {
         // 🔍 DEBUG: Check for potential sports courses that might be misidentified
         else if (courseName.includes('体育') || courseName.includes('健美') || courseName.includes('篮球') || courseName.includes('足球') || courseName.includes('排球')) {
           console.log(`🔍 Potential sports course NOT matched by ID: "${courseName}" (ID: ${courseId})`);
+          console.log(`🔍 CourseID ${courseId} parsed as ${parseInt(courseId)}, range check: ${parseInt(courseId) >= 3812150020} && ${parseInt(courseId) <= 3812150324}`);
         }
         // 体育专项课：3812150020~3812150324 -> 体育类别的选修学分
         else if (parseInt(courseId) >= 3812150020 && parseInt(courseId) <= 3812150324) {
+          console.log(`🔍 DEBUG: CourseID ${courseId} (${parseInt(courseId)}) is in sports elective range [3812150020-3812150324]`);
           // 🔧 FORCE OVERRIDE: Always map to "体育" regardless of previous mapping
           const wasAlreadyMapped = courseToCategoryMap.has(courseName);
           const previousCategory = wasAlreadyMapped ? courseToCategoryMap.get(courseName) : null;
@@ -484,8 +499,8 @@ export async function POST(request: NextRequest) {
           course.course_id === '3812150020' && course.category === '体育'
         );
         
-        const requiredCompulsory = sportsBasicRequirement ? (sportsBasicRequirement.required_total || 0) : 0;
-        const requiredElective = sportsElectiveRequirement ? (sportsElectiveRequirement.required_total || 0) : 0;
+        const requiredCompulsory = sportsBasicRequirement ? (sportsBasicRequirement.required_total || 0) : 1; // Default to 1 if not found
+        const requiredElective = sportsElectiveRequirement ? (sportsElectiveRequirement.required_total || 0) : 3; // Default to 3 if not found
         
         // Set sports requirements based on curriculum
         required = {
