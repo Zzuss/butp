@@ -46,13 +46,15 @@ export async function POST(request: NextRequest) {
     
     // 设置会话数据
     const now = Date.now();
-    session.userId = `dev-${userHash.substring(0, 8)}`;
+    // 为示例用户设置模拟学号，确保年级提取功能正常工作
+    const demoStudentNumber = "2023001234"; // 2023级示例学号
+    session.userId = demoStudentNumber; // 使用模拟学号作为userId
     session.userHash = userHash;
-    session.name = `开发用户-${userHash.substring(0, 8)}`;
+    session.name = `示例用户-电子信息工程`;
     session.isCasAuthenticated = true; // 模拟CAS认证完成
     session.isLoggedIn = true; // 直接完成登录
     session.loginTime = now;
-    session.lastActiveTime = now; // 🆕 设置最后活跃时间
+    session.lastActiveTime = now; // 设置最后活跃时间
     
     await session.save();
     
