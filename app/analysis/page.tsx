@@ -1247,19 +1247,26 @@ export default function Analysis() {
              }`}
              onClick={() => handleButtonSelect('overseas')}
            >
-             <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
-               <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-                 <span>{t('analysis.overseas.title')}</span>
+             {selectedButton === 'overseas' ? (
+               <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
+                 <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
+                   <span>{t('analysis.overseas.title')}</span>
+                 </div>
+                 <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
+                   <span className="text-xl text-blue-500 font-medium">
+                     {loadingProbability ? t('analysis.target.score.loading') : 
+                      probabilityData && probabilityData.proba_2 !== null ? 
+                      `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
+                      t('analysis.target.score.no.data')}
+                   </span>
+                 </div>
                </div>
-               <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
-                 <span className="text-base text-blue-500 font-medium">
-                   {loadingProbability ? t('analysis.target.score.loading') : 
-                    probabilityData && probabilityData.proba_2 !== null ? 
-                    `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
-                    t('analysis.target.score.no.data')}
-                 </span>
+             ) : (
+               <div className="flex flex-col items-center justify-center w-full h-full px-2">
+                 <span className="text-center leading-tight">点击文字</span>
+                 <span className="text-center leading-tight mt-1">查询海外读研可能性</span>
                </div>
-             </div>
+             )}
            </Button>
                    <Button
              variant={selectedButton === 'domestic' ? 'default' : 'outline'}
@@ -1270,19 +1277,26 @@ export default function Analysis() {
              }`}
              onClick={() => handleButtonSelect('domestic')}
            >
-             <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
-               <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-                 <span>{t('analysis.domestic.title')}</span>
+             {selectedButton === 'domestic' ? (
+               <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
+                 <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
+                   <span>{t('analysis.domestic.title')}</span>
+                 </div>
+                 <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
+                   <span className="text-xl text-blue-500 font-medium">
+                     {loadingProbability ? t('analysis.target.score.loading') : 
+                      probabilityData && probabilityData.proba_1 !== null ? 
+                      `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
+                      t('analysis.target.score.no.data')}
+                   </span>
+                 </div>
                </div>
-               <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
-                 <span className="text-base text-blue-500 font-medium">
-                   {loadingProbability ? t('analysis.target.score.loading') : 
-                    probabilityData && probabilityData.proba_1 !== null ? 
-                    `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
-                    t('analysis.target.score.no.data')}
-                 </span>
+             ) : (
+               <div className="flex flex-col items-center justify-center w-full h-full px-2">
+                 <span className="text-center leading-tight">点击文字</span>
+                 <span className="text-center leading-tight mt-1">查询国内读研可能性</span>
                </div>
-             </div>
+             )}
            </Button>
         </div>
 
@@ -1468,31 +1482,16 @@ export default function Analysis() {
               </div>
               {/* 目标分数显示 */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex justify-between items-center">
-                  <div className="flex-1">
-                    <div className="text-center">
-                      <p className="text-blue-800 font-medium">
-                        为达到海外读研的目标，未来各科的最低分数为：{' '}
-                        <span className="text-blue-600 font-bold">
-                          {loadingTargetScores ? '加载中...' : 
-                           targetScores && targetScores.target2_score !== null ? 
-                           `${targetScores.target2_score}` : 
-                           '暂无数据'}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                      onClick={loadAllCourseData}
-                      disabled={loadingAllCourseData}
-                    >
-                      {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
-                    </Button>
-                  </div>
+                <div className="text-center">
+                  <p className="text-blue-800 font-medium">
+                    为达到当前可能性的海外读研目标，预估后续科目的最低平均分为：{' '}
+                    <span className="text-blue-600 font-bold">
+                      {loadingTargetScores ? '加载中...' : 
+                       targetScores && targetScores.target2_score !== null ? 
+                       `${targetScores.target2_score}` : 
+                       '暂无数据'}
+                    </span>
+                  </p>
                 </div>
               </div>
               
@@ -1841,31 +1840,16 @@ export default function Analysis() {
               </div>
               {/* 目标分数显示 */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex justify-between items-center">
-                  <div className="flex-1">
-                    <div className="text-center">
-                      <p className="text-blue-800 font-medium">
-                        为达到国内读研的目标，未来各科的最低分数为：{' '}
-                        <span className="text-blue-600 font-bold">
-                          {loadingTargetScores ? '加载中...' : 
-                           targetScores && targetScores.target1_score !== null ? 
-                           `${targetScores.target1_score}` : 
-                           '暂无数据'}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                      onClick={loadAllCourseData}
-                      disabled={loadingAllCourseData}
-                    >
-                      {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
-                    </Button>
-                  </div>
+                <div className="text-center">
+                  <p className="text-blue-800 font-medium">
+                    为达到当前可能性的国内读研目标，预估后续科目的最低平均分为：{' '}
+                    <span className="text-blue-600 font-bold">
+                      {loadingTargetScores ? '加载中...' : 
+                       targetScores && targetScores.target1_score !== null ? 
+                       `${targetScores.target1_score}` : 
+                       '暂无数据'}
+                    </span>
+                  </p>
                 </div>
               </div>
 
