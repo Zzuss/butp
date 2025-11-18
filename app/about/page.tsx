@@ -134,6 +134,32 @@ export default function AboutPage() {
           </CardContent>
         </Card>
 
+        {/* 平台评分 */}
+        <div className="mt-16">
+          <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-white">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-6 w-6 text-blue-600" />
+                为平台打分
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-blue-700 mb-4">欢迎为 BuTP 评分，并留下你的建议与反馈。</p>
+              <button
+                onClick={() => setShowRatingModal(true)}
+                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
+              >
+                <Star className="h-4 w-4" /> 给平台打分
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 投票排行榜 */}
+        <div className="mt-16">
+          <VotingPoll />
+        </div>
+
         {/* 指导老师团队 */}
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-6">
@@ -221,32 +247,6 @@ export default function AboutPage() {
         {/* 网站访问统计（仅保留统计组件） */}
         <div className="mt-16">
           <VisitorStats />
-        </div>
-
-        {/* 平台评分 */}
-        <div className="mt-16">
-          <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-white">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-6 w-6 text-blue-600" />
-                为平台打分
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-blue-700 mb-4">欢迎为 BuTP 评分，并留下你的建议与反馈。</p>
-              <button
-                onClick={() => setShowRatingModal(true)}
-                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
-              >
-                <Star className="h-4 w-4" /> 给平台打分
-              </button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 投票排行榜 */}
-        <div className="mt-16">
-          <VotingPoll />
         </div>
 
         {/* 联系邮箱 */}
