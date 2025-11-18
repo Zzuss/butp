@@ -202,7 +202,7 @@ export default function LoginPage() {
 
   // 示例用户一键登录
   const handleDemoUserLogin = async () => {
-    const demoUserHash = "0dbcd0552538d3169d761a13328b631d28787137bf3cc1717cbd54eb05c22a9e";
+    const demoUserHash = "24b56f91ab67af4531242999abd99e154df308220eb51f08e7c0dfff51d25889";
     
     setLoading(true);
     setError("");
@@ -535,7 +535,7 @@ export default function LoginPage() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    示例用户登录（电子信息工程专业学生）
+                    示例用户登录
                   </div>
                 )}
               </Button>
