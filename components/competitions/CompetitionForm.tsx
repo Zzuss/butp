@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { X, Trophy, Loader2 } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
 
 // 竞赛选项接口
 interface CompetitionOption {
@@ -58,6 +59,7 @@ export default function CompetitionForm({
   studentName,
   loading = false
 }: CompetitionFormProps) {
+  const { t } = useLanguage()
   const [competitionOptions, setCompetitionOptions] = useState<{
     prizeBasedCompetitions: CompetitionOption[]
     rankingBasedCompetitions: CompetitionOption[]
@@ -216,19 +218,19 @@ export default function CompetitionForm({
   const getAwardOptions = () => {
     if (awardType === 'prize') {
       return [
-        { value: 'premier_prize', label: '特等奖' },
-        { value: 'first_prize', label: '一等奖' },
-        { value: 'second_prize', label: '二等奖' },
-        { value: 'third_prize', label: '三等奖' }
+        { value: 'premier_prize', label: t('profile.competitions.award.premier_prize') },
+        { value: 'first_prize', label: t('profile.competitions.award.first_prize') },
+        { value: 'second_prize', label: t('profile.competitions.award.second_prize') },
+        { value: 'third_prize', label: t('profile.competitions.award.third_prize') }
       ]
     } else {
       return [
-        { value: 'ranked_first', label: '第一名' },
-        { value: 'ranked_second', label: '第二名' },
-        { value: 'ranked_third', label: '第三名' },
-        { value: 'ranked_fourth', label: '第四名' },
-        { value: 'ranked_fifth', label: '第五名' },
-        { value: 'ranked_sixth', label: '第六名' }
+        { value: 'ranked_first', label: t('profile.competitions.award.ranked_first') },
+        { value: 'ranked_second', label: t('profile.competitions.award.ranked_second') },
+        { value: 'ranked_third', label: t('profile.competitions.award.ranked_third') },
+        { value: 'ranked_fourth', label: t('profile.competitions.award.ranked_fourth') },
+        { value: 'ranked_fifth', label: t('profile.competitions.award.ranked_fifth') },
+        { value: 'ranked_sixth', label: t('profile.competitions.award.ranked_sixth') }
       ]
     }
   }
@@ -257,11 +259,11 @@ export default function CompetitionForm({
 
     // 验证表单
     const errors: {[key: string]: string} = {}
-    if (!selectedRegion) errors.region = '请选择地区'
-    if (!selectedLevel) errors.level = '请选择级别'
-    if (!selectedCompetition) errors.competition = '请选择竞赛名称'
-    if (!selectedClass) errors.class = '请选择班级'
-    if (!awardValue) errors.award = '请选择获得的奖项或排名'
+    if (!selectedRegion) errors.region = t('profile.competitions.form.error.region')
+    if (!selectedLevel) errors.level = t('profile.competitions.form.error.level')
+    if (!selectedCompetition) errors.competition = t('profile.competitions.form.error.name')
+    if (!selectedClass) errors.class = t('profile.competitions.form.error.class')
+    if (!awardValue) errors.award = t('profile.competitions.form.error.award')
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)
@@ -299,7 +301,7 @@ export default function CompetitionForm({
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Trophy className="h-5 w-5" />
-            {editingRecord ? "编辑竞赛记录" : "添加竞赛记录"}
+            {editingRecord ? t('profile.competitions.form.edit') : t('profile.competitions.form.title')}
           </h3>
           <Button variant="ghost" size="icon" onClick={handleCancel} className="h-8 w-8">
             <X className="h-4 w-4" />
@@ -310,7 +312,7 @@ export default function CompetitionForm({
           <div className="flex items-center justify-center py-8">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span>加载竞赛选项...</span>
+              <span>{t('profile.competitions.form.loading')}</span>
             </div>
           </div>
         ) : (
@@ -318,7 +320,7 @@ export default function CompetitionForm({
             <div className="space-y-4">
               {/* 地区选择 */}
               <div>
-                <label className="block text-sm font-medium mb-1">竞赛地区 *</label>
+                <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.region')}</label>
                 <select 
                   value={selectedRegion}
                   onChange={(e) => {
@@ -329,7 +331,7 @@ export default function CompetitionForm({
                   }}
                   className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.region ? 'border-red-500' : ''}`}
                 >
-                  <option value="">请选择地区</option>
+                  <option value="">{t('profile.competitions.form.region.placeholder')}</option>
                   {getRegionOptions().map(region => (
                     <option key={region} value={region}>{region}</option>
                   ))}
@@ -339,7 +341,7 @@ export default function CompetitionForm({
 
               {/* 级别选择 */}
               <div>
-                <label className="block text-sm font-medium mb-1">竞赛级别 *</label>
+                <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.level')}</label>
                 <select 
                   value={selectedLevel}
                   onChange={(e) => {
@@ -350,7 +352,7 @@ export default function CompetitionForm({
                   className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.level ? 'border-red-500' : ''}`}
                   disabled={!selectedRegion}
                 >
-                  <option value="">请选择级别</option>
+                  <option value="">{t('profile.competitions.form.level.placeholder')}</option>
                   {getLevelOptions().map(level => (
                     <option key={level} value={level}>{level}</option>
                   ))}
@@ -360,7 +362,7 @@ export default function CompetitionForm({
 
               {/* 竞赛名称选择 */}
               <div>
-                <label className="block text-sm font-medium mb-1">竞赛名称 *</label>
+                <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.name')}</label>
                 <select 
                   value={selectedCompetition}
                   onChange={(e) => {
@@ -391,7 +393,7 @@ export default function CompetitionForm({
                   className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.competition ? 'border-red-500' : ''}`}
                   disabled={!selectedLevel}
                 >
-                  <option value="">请选择竞赛名称</option>
+                  <option value="">{t('profile.competitions.form.name.placeholder')}</option>
                   {getCompetitionNameOptions().map(name => (
                     <option key={name} value={name}>{name}</option>
                   ))}
@@ -401,15 +403,15 @@ export default function CompetitionForm({
 
               {/* 班级选择 */}
               <div>
-                <label className="block text-sm font-medium mb-1">班级 *</label>
+                <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.class')}</label>
                 <select 
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
                   className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.class ? 'border-red-500' : ''}`}
                 >
-                  <option value="">请选择班级</option>
+                  <option value="">{t('profile.competitions.form.class.placeholder')}</option>
                   {classOptions.map(className => (
-                    <option key={className} value={className}>{className}</option>
+                    <option key={className} value={className}>{t('profile.common.class.option', { num: parseInt(className) })}</option>
                   ))}
                 </select>
                 {formErrors.class && <p className="text-red-500 text-sm mt-1">{formErrors.class}</p>}
@@ -422,14 +424,14 @@ export default function CompetitionForm({
                 // 如果只有一种类型可用，显示为信息提示而不是选择器
                 if (availableTypes.single) {
                   const singleType = availableTypes.prize ? 'prize' : 'ranking'
-                  const typeLabel = singleType === 'prize' ? '按奖项等级' : '按排名'
+                  const typeLabel = singleType === 'prize' ? t('profile.competitions.form.award.type.prize') : t('profile.competitions.form.award.type.ranking')
                   
                   return (
                     <div>
-                      <label className="block text-sm font-medium mb-1">奖项类型</label>
+                      <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.award.type')}</label>
                       <div className="p-2 bg-blue-50 border border-blue-200 rounded-md">
                         <span className="text-blue-800 text-sm">
-                          该竞赛采用：{typeLabel}
+                          {t('profile.competitions.form.award.type.single', { type: typeLabel })}
                         </span>
                       </div>
                     </div>
@@ -440,7 +442,7 @@ export default function CompetitionForm({
                 if (availableTypes.both) {
                   return (
                     <div>
-                      <label className="block text-sm font-medium mb-1">奖项类型</label>
+                      <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.award.type')}</label>
                       <div className="flex gap-4">
                         <label className="flex items-center">
                           <input
@@ -454,7 +456,7 @@ export default function CompetitionForm({
                             }}
                             className="mr-2"
                           />
-                          按奖项等级
+                          {t('profile.competitions.form.award.type.prize')}
                         </label>
                         <label className="flex items-center">
                           <input
@@ -468,7 +470,7 @@ export default function CompetitionForm({
                             }}
                             className="mr-2"
                           />
-                          按排名
+                          {t('profile.competitions.form.award.type.ranking')}
                         </label>
                       </div>
                     </div>
@@ -478,10 +480,10 @@ export default function CompetitionForm({
                 // 如果都不可用，显示错误提示
                 return (
                   <div>
-                    <label className="block text-sm font-medium mb-1">奖项类型</label>
+                    <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.award.type')}</label>
                     <div className="p-2 bg-red-50 border border-red-200 rounded-md">
                       <span className="text-red-800 text-sm">
-                        该竞赛暂无可用的奖项类型
+                        {t('profile.competitions.form.award.type.none')}
                       </span>
                     </div>
                   </div>
@@ -492,14 +494,14 @@ export default function CompetitionForm({
               {selectedCompetition && (getAvailableAwardTypes().prize || getAvailableAwardTypes().ranking) ? (
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    获得{awardType === 'prize' ? '奖项' : '排名'} *
+                    {awardType === 'prize' ? t('profile.competitions.form.award.label.prize') : t('profile.competitions.form.award.label.ranking')}
                   </label>
                   <select 
                     value={awardValue}
                     onChange={(e) => setAwardValue(e.target.value)}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.award ? 'border-red-500' : ''}`}
                   >
-                    <option value="">请选择{awardType === 'prize' ? '奖项' : '排名'}</option>
+                    <option value="">{awardType === 'prize' ? t('profile.competitions.form.award.placeholder.prize') : t('profile.competitions.form.award.placeholder.ranking')}</option>
                     {getAwardOptions().map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
@@ -512,9 +514,9 @@ export default function CompetitionForm({
               {awardValue && selectedCompetition && (getAvailableAwardTypes().prize || getAvailableAwardTypes().ranking) && (
                 <div className="bg-blue-50 p-3 rounded-md">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-blue-800">预计加分：</span>
+                    <span className="text-sm text-blue-800">{t('profile.competitions.form.preview.label')}</span>
                     <span className="font-semibold text-blue-900">
-                      {shouldShowYearlyDecision() ? '加分规则视当年奖项设置情况而定' : `${getPreviewScore()} 分`}
+                      {shouldShowYearlyDecision() ? t('profile.competitions.form.preview.dependent') : t('profile.competitions.form.preview.points', { score: getPreviewScore() })}
                     </span>
                   </div>
                 </div>
@@ -522,23 +524,23 @@ export default function CompetitionForm({
 
               {/* 备注 */}
               <div>
-                <label className="block text-sm font-medium mb-1">备注</label>
+                <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.note')}</label>
                 <textarea 
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
                   className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                  placeholder="请输入备注信息（可选）"
+                  placeholder={t('profile.competitions.form.note.placeholder')}
                 />
               </div>
               
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={handleCancel}>
-                  取消
+                  {t('profile.competitions.form.cancel')}
                 </Button>
                 <Button type="submit" disabled={loading}>
                   {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  保存
+                  {t('profile.competitions.form.save')}
                 </Button>
               </div>
             </div>
