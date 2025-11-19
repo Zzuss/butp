@@ -1912,10 +1912,7 @@ export default function Profile() {
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{t('profile.title')}</h1>
-        <div className="mt-3 flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
-          <span className="text-blue-600">ℹ️</span>
-          <p className="text-blue-800 text-sm">{t('profile.hint')}</p>
-        </div>
+        <p className="mt-3 text-sm text-gray-500">{t('profile.hint')}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
