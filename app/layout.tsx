@@ -5,7 +5,6 @@ import { AppSidebar } from "@/components/layout/sidebar";
 import { LanguageProvider } from "@/contexts/language-context";
 import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
 import { PageViewTracker } from "@/components/analytics/PageViewTracker";
-import GlobalPdfButton from '@/components/layout/GlobalPdfButton'
 import { SidebarProvider } from "@/contexts/sidebar-context";
 
 export const metadata: Metadata = {
@@ -36,10 +35,7 @@ export default function RootLayout({
                   {children}
                 </main>
 
-                {/* 全局固定导出按钮（右下角） */}
-                <div className="fixed right-6 bottom-6 z-50">
-                  <GlobalPdfButton />
-                </div>
+                {/* 右下角旧版PDF导出按钮已移除，保留侧边栏标准导出 */}
               </div>
             </SidebarProvider>
             <PageViewTracker />
