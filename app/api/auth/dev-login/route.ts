@@ -54,15 +54,15 @@ export async function POST(request: NextRequest) {
         name: '2023级示例用户',
         year: '2023'
       },
-      '0582c53c000705d1b968df56c252bdd6321474f19986bc7f862ed607ca955018': {
-        studentNumber: '2022001234', 
-        name: '2022级示例用户',
-        year: '2022'
-      },
       '118ef2f061483894f93e921653b98d66ec21d3f849e458eda96c25e655fd3a49': {
         studentNumber: '2024001234',
         name: '2024级示例用户', 
         year: '2024'
+      },
+      'f001ad16ec7a0b0934bc1a52c1d3e523e24a35bfced8c6e901fd03c6476cf505': {
+        studentNumber: '2025001234',
+        name: '2025级示例用户',
+        year: '2025'
       }
     };
 

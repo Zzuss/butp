@@ -225,16 +225,16 @@ export default function LoginPage() {
       year: '2023'
     },
     {
-      id: '2022',
-      name: '2022级示例用户',
-      hash: '0582c53c000705d1b968df56c252bdd6321474f19986bc7f862ed607ca955018',
-      year: '2022'
-    },
-    {
       id: '2024',
       name: '2024级示例用户',
       hash: '118ef2f061483894f93e921653b98d66ec21d3f849e458eda96c25e655fd3a49',
       year: '2024'
+    },
+    {
+      id: '2025',
+      name: '2025级示例用户',
+      hash: 'f001ad16ec7a0b0934bc1a52c1d3e523e24a35bfced8c6e901fd03c6476cf505',
+      year: '2025'
     }
   ];
 
