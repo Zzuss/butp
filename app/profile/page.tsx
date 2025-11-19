@@ -265,7 +265,7 @@ export default function Profile() {
   
   // 竞赛记录状态
   const [competitionRecords, setCompetitionRecords] = useState<CompetitionRecord[]>([]);
-  
+
   // 表单引用
   const formRef = useRef<HTMLFormElement>(null);
   const awardFormRef = useRef<HTMLFormElement>(null);
@@ -273,6 +273,26 @@ export default function Profile() {
   const otherInfoFormRef = useRef<HTMLFormElement>(null);
   const paperFormRef = useRef<HTMLFormElement>(null);
   const patentFormRef = useRef<HTMLFormElement>(null);
+
+  const translateJournalCategory = (category: string) => {
+    if (category === 'SCI') return t('profile.papers.form.journal_category.sci')
+    if (category === 'EI') return t('profile.papers.form.journal_category.ei')
+    if (category === 'CSCD') return t('profile.papers.form.journal_category.cscd')
+    if (category === '核心期刊') return t('profile.papers.form.journal_category.core')
+    if (category === '普通期刊') return t('profile.papers.form.journal_category.normal')
+    if (category === '会议论文') return t('profile.papers.form.journal_category.conference')
+    if (category === '其他') return t('profile.papers.form.journal_category.other')
+    return category
+  }
+
+  const translateAuthorType = (type: string) => {
+    if (type === '第一作者') return t('profile.papers.form.author_type.first')
+    if (type === '通讯作者') return t('profile.papers.form.author_type.corresponding')
+    if (type === '独立第一作者') return t('profile.papers.form.author_type.independent.first')
+    if (type === '独立作者') return t('profile.papers.form.author_type.independent')
+    if (type === '其他') return t('profile.papers.form.author_type.other')
+    return type
+  }
   
   // 获取竞赛记录的函数
   const getUserCompetitionRecords = async (userId: string): Promise<CompetitionRecord[]> => {
@@ -1602,7 +1622,7 @@ export default function Profile() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">{editingPaper ? "编辑论文" : "添加论文"}</h3>
+              <h3 className="text-lg font-semibold">{editingPaper ? t('profile.papers.form.edit') : t('profile.papers.form.title')}</h3>
               <Button variant="ghost" size="icon" onClick={handleCancelPaper} className="h-8 w-8">
                 <X className="h-4 w-4" />
               </Button>
@@ -1610,67 +1630,67 @@ export default function Profile() {
             <form key={editingPaper?.id || 'new'} ref={paperFormRef} onSubmit={handlePaperSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">论文标题 *</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.papers.form.paper_title')}</label>
                   <input 
                     name="paper_title"
                     type="text" 
                     required
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${paperErrors.paper_title ? 'border-red-500' : ''}`}
                     defaultValue={editingPaper?.paper_title || ""}
-                    placeholder="请输入论文标题"
+                    placeholder={t('profile.papers.form.paper_title.placeholder')}
                   />
                   {paperErrors.paper_title && (
-                    <p className="text-red-500 text-sm mt-1">{paperErrors.paper_title}</p>
+                    <p className="text-red-500 text-sm mt-1">{t('profile.papers.form.error.paper_title.required')}</p>
                   )}
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">期刊名称</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.papers.form.journal_name')}</label>
                   <input 
                     name="journal_name"
                     type="text" 
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPaper?.journal_name || ""}
-                    placeholder="请输入期刊名称"
+                    placeholder={t('profile.papers.form.journal_name.placeholder')}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">期刊级别</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.papers.form.journal_category')}</label>
                   <select 
                     name="journal_category"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPaper?.journal_category || ""}
                   >
-                    <option value="">请选择期刊级别</option>
-                    <option value="SCI">SCI</option>
-                    <option value="EI">EI</option>
-                    <option value="CSCD">CSCD</option>
-                    <option value="核心期刊">核心期刊</option>
-                    <option value="普通期刊">普通期刊</option>
-                    <option value="会议论文">会议论文</option>
-                    <option value="其他">其他</option>
+                    <option value="">{t('profile.papers.form.journal_category.placeholder')}</option>
+                    <option value="SCI">{t('profile.papers.form.journal_category.sci')}</option>
+                    <option value="EI">{t('profile.papers.form.journal_category.ei')}</option>
+                    <option value="CSCD">{t('profile.papers.form.journal_category.cscd')}</option>
+                    <option value="核心期刊">{t('profile.papers.form.journal_category.core')}</option>
+                    <option value="普通期刊">{t('profile.papers.form.journal_category.normal')}</option>
+                    <option value="会议论文">{t('profile.papers.form.journal_category.conference')}</option>
+                    <option value="其他">{t('profile.papers.form.journal_category.other')}</option>
                   </select>
                 </div>
                 
                 
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">班级</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.common.class')}</label>
                   <select 
                     name="class"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPaper?.class ? `${editingPaper.class}班` : ""}
                   >
-                    <option value="">请选择班级</option>
+                    <option value="">{t('profile.common.class.placeholder')}</option>
                     {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={`${num}班`}>{num}班</option>
+                      <option key={num} value={`${num}班`}>{t('profile.common.class.option', { num })}</option>
                     ))}
                   </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">作者类型</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.papers.form.author_type')}</label>
                   <select 
                     name="author_type"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
@@ -1683,19 +1703,19 @@ export default function Profile() {
                       setPaperAuthorTypeCustom(e.target.value === "其他");
                     }}
                   >
-                    <option value="">请选择作者类型</option>
-                    <option value="第一作者">第一作者</option>
-                    <option value="通讯作者">通讯作者</option>
-                    <option value="独立第一作者">独立第一作者</option>
-                    <option value="独立作者">独立作者</option>
-                    <option value="其他">其他</option>
+                    <option value="">{t('profile.papers.form.author_type.placeholder')}</option>
+                    <option value="第一作者">{t('profile.papers.form.author_type.first')}</option>
+                    <option value="通讯作者">{t('profile.papers.form.author_type.corresponding')}</option>
+                    <option value="独立第一作者">{t('profile.papers.form.author_type.independent.first')}</option>
+                    <option value="独立作者">{t('profile.papers.form.author_type.independent')}</option>
+                    <option value="其他">{t('profile.papers.form.author_type.other')}</option>
                   </select>
                   {paperAuthorTypeCustom && (
                     <div className="mt-2">
                       <input 
                         name="author_type_custom"
                         type="text" 
-                        placeholder="请输入自定义作者类型"
+                        placeholder={t('profile.papers.form.author_type.custom.placeholder')}
                         defaultValue={(() => {
                           const predefinedTypes = ["第一作者", "通讯作者", "独立第一作者", "独立作者"];
                           const authorType = editingPaper?.author_type || "";
@@ -1708,7 +1728,7 @@ export default function Profile() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">发表日期</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.papers.form.publish_date')}</label>
                   <input 
                     name="publish_date"
                     type="month" 
@@ -1718,19 +1738,19 @@ export default function Profile() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">备注</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.common.note')}</label>
                   <textarea 
                     name="note"
                     rows={3}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPaper?.note || ""}
-                    placeholder="请输入备注信息（可选）"
+                    placeholder={t('profile.common.note.placeholder')}
                   />
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={handleCancelPaper}>取消</Button>
-                  <Button type="submit" disabled={saveStatus === 'saving'}>保存</Button>
+                  <Button type="button" variant="outline" onClick={handleCancelPaper}>{t('profile.common.cancel')}</Button>
+                  <Button type="submit" disabled={saveStatus === 'saving'}>{t('profile.common.save')}</Button>
                 </div>
               </div>
             </form>
@@ -1743,7 +1763,7 @@ export default function Profile() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">{editingPatent ? "编辑专利" : "添加专利"}</h3>
+              <h3 className="text-lg font-semibold">{editingPatent ? t('profile.patents.form.edit') : t('profile.patents.form.title')}</h3>
               <Button variant="ghost" size="icon" onClick={handleCancelPatent} className="h-8 w-8">
                 <X className="h-4 w-4" />
               </Button>
@@ -1751,33 +1771,33 @@ export default function Profile() {
             <form key={editingPatent?.id || 'new'} ref={patentFormRef} onSubmit={handlePatentSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">专利名称 *</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.patents.form.patent_name')}</label>
                   <input 
                     name="patent_name"
                     type="text" 
                     required
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${patentErrors.patent_name ? 'border-red-500' : ''}`}
                     defaultValue={editingPatent?.patent_name || ""}
-                    placeholder="请输入专利名称"
+                    placeholder={t('profile.patents.form.patent_name.placeholder')}
                   />
                   {patentErrors.patent_name && (
-                    <p className="text-red-500 text-sm mt-1">{patentErrors.patent_name}</p>
+                    <p className="text-red-500 text-sm mt-1">{t('profile.patents.form.error.patent_name.required')}</p>
                   )}
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">专利号</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.patents.form.patent_number')}</label>
                   <input 
                     name="patent_number"
                     type="text" 
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPatent?.patent_number || ""}
-                    placeholder="请输入专利号"
+                    placeholder={t('profile.patents.form.patent_number.placeholder')}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">申请/授权日期</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.patents.form.patent_date')}</label>
                   <input 
                     name="patent_date"
                     type="month" 
@@ -1789,21 +1809,21 @@ export default function Profile() {
                 
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">班级</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.common.class')}</label>
                   <select 
                     name="class"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPatent?.class ? `${editingPatent.class}班` : ""}
                   >
-                    <option value="">请选择班级</option>
+                    <option value="">{t('profile.common.class.placeholder')}</option>
                     {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={`${num}班`}>{num}班</option>
+                      <option key={num} value={`${num}班`}>{t('profile.common.class.option', { num })}</option>
                     ))}
                   </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">专利权人类别</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.patents.form.owner_category')}</label>
                   <select 
                     name="category_of_patent_owner"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
@@ -1816,17 +1836,17 @@ export default function Profile() {
                       setPatentOwnerCategoryCustom(e.target.value === "其他");
                     }}
                   >
-                    <option value="">请选择专利权人类别</option>
-                    <option value="独立发明人">独立发明人</option>
-                    <option value="第一发明人（多人）">第一发明人（多人）</option>
-                    <option value="其他">其他</option>
+                    <option value="">{t('profile.patents.form.owner_category.placeholder')}</option>
+                    <option value="独立发明人">{t('profile.patents.form.owner_category.independent')}</option>
+                    <option value="第一发明人（多人）">{t('profile.patents.form.owner_category.first.multi')}</option>
+                    <option value="其他">{t('profile.patents.form.owner_category.other')}</option>
                   </select>
                   {patentOwnerCategoryCustom && (
                     <div className="mt-2">
                       <input 
                         name="category_of_patent_owner_custom"
                         type="text" 
-                        placeholder="请输入自定义专利权人类别"
+                        placeholder={t('profile.patents.form.owner_category.custom.placeholder')}
                         defaultValue={(() => {
                           const predefinedCategories = ["独立发明人", "第一发明人（多人）"];
                           const category = editingPatent?.category_of_patent_owner || "";
@@ -1839,19 +1859,19 @@ export default function Profile() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">备注</label>
+                  <label className="block text-sm font-medium mb-1">{t('profile.common.note')}</label>
                   <textarea 
                     name="note"
                     rows={3}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPatent?.note || ""}
-                    placeholder="请输入备注信息（可选）"
+                    placeholder={t('profile.common.note.placeholder')}
                   />
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={handleCancelPatent}>取消</Button>
-                  <Button type="submit" disabled={saveStatus === 'saving'}>保存</Button>
+                  <Button type="button" variant="outline" onClick={handleCancelPatent}>{t('profile.common.cancel')}</Button>
+                  <Button type="submit" disabled={saveStatus === 'saving'}>{t('profile.common.save')}</Button>
                 </div>
               </div>
             </form>
@@ -1872,9 +1892,9 @@ export default function Profile() {
                 {deleteItemType === "award" ? t('profile.common.confirm.delete.award') : 
                  deleteItemType === "internship" ? t('profile.common.confirm.delete.work') :
                  deleteItemType === "other" ? t('profile.common.confirm.delete.other') :
-                 deleteItemType === "paper" ? "您确定要删除这篇论文吗？" :
-                 deleteItemType === "patent" ? "您确定要删除这项专利吗？" :
-                 deleteItemType === "competition" ? "您确定要删除这条竞赛记录吗？" :
+                 deleteItemType === "paper" ? t('profile.common.confirm.delete.paper') :
+                 deleteItemType === "patent" ? t('profile.common.confirm.delete.patent') :
+                 deleteItemType === "competition" ? t('profile.common.confirm.delete.competition') :
                  deleteItemType === "score" && deleteScoreType === "toefl" ? t('profile.common.confirm.delete.toefl') :
                  deleteItemType === "score" && deleteScoreType === "ielts" ? t('profile.common.confirm.delete.ielts') :
                  deleteItemType === "score" && deleteScoreType === "gre" ? t('profile.common.confirm.delete.gre') : 
@@ -1892,10 +1912,7 @@ export default function Profile() {
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{t('profile.title')}</h1>
-        <div className="mt-3 flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
-          <span className="text-blue-600">ℹ️</span>
-          <p className="text-blue-800 text-sm">{t('profile.hint')}</p>
-        </div>
+        <p className="mt-3 text-sm text-gray-500">{t('profile.hint')}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -2005,20 +2022,20 @@ export default function Profile() {
             <CardTitle className="text-base md:text-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                论文发表
+                {t('profile.papers.title')}
               </div>
               <Button size="sm" className="flex items-center gap-2" onClick={handleAddPaper}>
                 <Plus className="h-4 w-4" />
-                添加论文
+                {t('profile.papers.add')}
               </Button>
             </CardTitle>
-            <CardDescription>您可以在这里管理您的论文发表记录</CardDescription>
+            <CardDescription>{t('profile.papers.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {papers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  暂无论文记录，点击上方按钮添加
+                  {t('profile.papers.empty')}
                 </div>
               ) : (
                 <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 ${papers.length > 4 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
@@ -2032,8 +2049,8 @@ export default function Profile() {
                           <h4 className="font-semibold text-base">{paper.paper_title}</h4>
                           {paper.journal_name && <p className="text-sm text-muted-foreground">{paper.journal_name}</p>}
                           <div className="flex gap-2 text-xs text-muted-foreground mt-1">
-                            {paper.journal_category && <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded">{paper.journal_category}</span>}
-                            {paper.author_type && <span className="bg-green-100 text-green-600 px-2 py-1 rounded">{paper.author_type}</span>}
+                            {paper.journal_category && <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded">{translateJournalCategory(paper.journal_category)}</span>}
+                            {paper.author_type && <span className="bg-green-100 text-green-600 px-2 py-1 rounded">{translateAuthorType(paper.author_type)}</span>}
                           </div>
                           {paper.publish_date && <p className="text-xs text-muted-foreground mt-1">{paper.publish_date}</p>}
                         </div>
@@ -2060,20 +2077,20 @@ export default function Profile() {
             <CardTitle className="text-base md:text-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                专利申请
+                {t('profile.patents.title')}
               </div>
               <Button size="sm" className="flex items-center gap-2" onClick={handleAddPatent}>
                 <Plus className="h-4 w-4" />
-                添加专利
+                {t('profile.patents.add')}
               </Button>
             </CardTitle>
-            <CardDescription>您可以在这里管理您的专利申请记录</CardDescription>
+            <CardDescription>{t('profile.patents.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {patents.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  暂无专利记录，点击上方按钮添加
+                  {t('profile.patents.empty')}
                 </div>
               ) : (
                 <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 ${patents.length > 4 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
@@ -2085,7 +2102,7 @@ export default function Profile() {
                         </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-base">{patent.patent_name}</h4>
-                          {patent.patent_number && <p className="text-sm text-muted-foreground">专利号：{patent.patent_number}</p>}
+                          {patent.patent_number && <p className="text-sm text-muted-foreground">{t('profile.patents.patent_number.label')}{patent.patent_number}</p>}
                           <div className="flex gap-2 text-xs text-muted-foreground mt-1">
                             {patent.category_of_patent_owner && <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded">{patent.category_of_patent_owner}</span>}
                           </div>
@@ -2114,20 +2131,20 @@ export default function Profile() {
             <CardTitle className="text-base md:text-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Trophy className="h-5 w-5" />
-                竞赛获奖
+                {t('profile.competitions.title')}
               </div>
               <Button size="sm" className="flex items-center gap-2" onClick={handleAddCompetition}>
                 <Plus className="h-4 w-4" />
-                添加竞赛记录
+                {t('profile.competitions.add')}
               </Button>
             </CardTitle>
-            <CardDescription>您可以在这里管理您的竞赛获奖记录</CardDescription>
+            <CardDescription>{t('profile.competitions.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {competitionRecords.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  暂无竞赛记录，点击上方按钮添加
+                  {t('profile.competitions.empty')}
                 </div>
               ) : (
                 <div className={`grid gap-4 sm:grid-cols-1 md:grid-cols-2 ${competitionRecords.length > 4 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
@@ -2143,9 +2160,9 @@ export default function Profile() {
                           <div className="flex gap-2 text-xs text-muted-foreground mt-1">
                             <span className="bg-orange-100 text-orange-600 px-2 py-1 rounded">{record.class}</span>
                             {record.score === 0 ? (
-                              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded">视当年情况而定</span>
+                              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded">{t('profile.competitions.score.dependent')}</span>
                             ) : (
-                              <span className="bg-green-100 text-green-600 px-2 py-1 rounded">+{record.score}分</span>
+                              <span className="bg-green-100 text-green-600 px-2 py-1 rounded">{t('profile.competitions.score.plus', { score: record.score })}</span>
                             )}
                           </div>
                         </div>
@@ -2327,6 +2344,8 @@ export default function Profile() {
         </Card>
       </div>
       
+      
+
       {/* 竞赛记录表单 */}
       <CompetitionForm
         isOpen={showCompetitionForm}
