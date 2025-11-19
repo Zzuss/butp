@@ -1206,10 +1206,18 @@ export default function Analysis() {
           <div>
             <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
             <p className="text-muted-foreground">
-              {studentInfo 
-                ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-                : t('analysis.loading')
-              }
+              {(() => {
+                const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+                  ? (user as any).studentNumber 
+                  : (user?.userId || '').toString();
+                const trimmedStudentNumber = studentNumber.toString().trim();
+                const year = parseInt(trimmedStudentNumber.substring(0, 4));
+                const displayYear = !isNaN(year) && year >= 2018 && year <= 2050 ? year : null;
+                
+                return studentInfo 
+                  ? `${displayYear || studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+                  : t('analysis.loading');
+              })()}
             </p>
           </div>
 
@@ -1494,7 +1502,7 @@ export default function Analysis() {
                       </p>
                     </div>
                   </div>
-                  <div className="ml-4">
+                  <div className="ml-4 hidden">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1867,7 +1875,7 @@ export default function Analysis() {
                       </p>
                     </div>
                   </div>
-                  <div className="ml-4">
+                  <div className="ml-4 hidden">
                     <Button
                       variant="outline"
                       size="sm"
