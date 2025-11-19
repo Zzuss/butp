@@ -1247,20 +1247,23 @@ export default function Analysis() {
              }`}
            onClick={() => handleButtonSelect('overseas')}
           >
-            <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
-               <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-                 <span>{t('analysis.overseas.title')}</span>
+            <div className={`grid ${selectedButton === 'overseas' ? 'grid-rows-2 md:grid-cols-2' : 'grid-rows-2'} w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto`}>
+               <div className={`flex items-center justify-center border-b ${selectedButton === 'overseas' ? 'md:border-b-0 md:border-r' : ''} border-gray-300`}>
+                 <span className={selectedButton === 'overseas' ? 'text-[12px] md:text-base' : ''}>{t('analysis.overseas.title')}</span>
                </div>
-               <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
-                 <span className="text-base text-blue-500 font-medium">
-                   {loadingProbability ? t('analysis.target.score.loading') : 
-                    probabilityData && probabilityData.proba_2 !== null ? 
-                    `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
-                    t('analysis.target.score.no.data')}
-                 </span>
-               </div>
-               <div className="col-span-2 hidden md:flex items-center justify-center text-[10px] text-gray-500">
-                 {t('analysis.click.query.possibility')}
+               <div className="flex items-center justify-center">
+                 {selectedButton === 'overseas' ? (
+                   <span className={`${loadingProbability || (probabilityData && probabilityData.proba_2 !== null) ? 'text-[12px] md:text-base' : 'text-[8px] md:text-[12px]'} text-blue-500 font-medium`}>
+                     {loadingProbability ? t('analysis.target.score.loading') : 
+                      probabilityData && probabilityData.proba_2 !== null ? 
+                      `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
+                      t('analysis.target.score.no.data')}
+                   </span>
+                 ) : (
+                   <span className="text-[11px] text-gray-600 font-medium">
+                     点击按钮查看预测
+                   </span>
+                 )}
                </div>
              </div>
           </Button>
@@ -1273,20 +1276,23 @@ export default function Analysis() {
              }`}
             onClick={() => handleButtonSelect('domestic')}
           >
-             <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
-               <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-                 <span>{t('analysis.domestic.title')}</span>
+             <div className={`grid ${selectedButton === 'domestic' ? 'grid-rows-2 md:grid-cols-2' : 'grid-rows-2'} w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto`}>
+               <div className={`flex items-center justify-center border-b ${selectedButton === 'domestic' ? 'md:border-b-0 md:border-r' : ''} border-gray-300`}>
+                 <span className={selectedButton === 'domestic' ? 'text-[12px] md:text-base' : ''}>{t('analysis.domestic.title')}</span>
                </div>
-               <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
-                 <span className="text-base text-blue-500 font-medium">
-                   {loadingProbability ? t('analysis.target.score.loading') : 
-                    probabilityData && probabilityData.proba_1 !== null ? 
-                    `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
-                    t('analysis.target.score.no.data')}
-                 </span>
-               </div>
-               <div className="col-span-2 hidden md:flex items-center justify-center text-[10px] text-gray-500">
-                 {t('analysis.click.query.possibility')}
+               <div className="flex items-center justify-center">
+                 {selectedButton === 'domestic' ? (
+                   <span className={`${loadingProbability || (probabilityData && probabilityData.proba_1 !== null) ? 'text-[12px] md:text-base' : 'text-[8px] md:text-[12px]'} text-blue-500 font-medium`}>
+                     {loadingProbability ? t('analysis.target.score.loading') : 
+                      probabilityData && probabilityData.proba_1 !== null ? 
+                      `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
+                      t('analysis.target.score.no.data')}
+                   </span>
+                 ) : (
+                   <span className="text-[11px] text-gray-600 font-medium">
+                     点击按钮查看预测
+                   </span>
+                 )}
                </div>
              </div>
           </Button>

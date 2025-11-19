@@ -101,7 +101,8 @@ export async function POST(request: NextRequest) {
       '院级双创课': '创新课程',
       '其他': '基础学科'
     };
-
+    
+    //感觉下面这个课号映射表没什么用，后期给优化删掉
     // 课程名称到课程编号的映射表（四个专业完整版）
     const courseNameToIdMapping: Record<string, string> = {
       // ===== 政治理论课程 =====
