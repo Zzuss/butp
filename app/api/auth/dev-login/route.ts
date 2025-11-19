@@ -46,11 +46,36 @@ export async function POST(request: NextRequest) {
     
     // 设置会话数据
     const now = Date.now();
-    // 为示例用户设置模拟学号，确保年级提取功能正常工作
-    const demoStudentNumber = "2023001234"; // 2023级示例学号
-    session.userId = demoStudentNumber; // 使用模拟学号作为userId
+    
+    // 🎯 根据哈希值映射对应的虚拟学号和用户信息
+    const demoUserMappings: Record<string, { studentNumber: string; name: string; year: string }> = {
+      '24b56f91ab67af4531242999abd99e154df308220eb51f08e7c0dfff51d25889': {
+        studentNumber: '2023001234',
+        name: '2023级示例用户-电子信息工程',
+        year: '2023'
+      },
+      '0582c53c000705d1b968df56c252bdd6321474f19986bc7f862ed607ca955018': {
+        studentNumber: '2022001234', 
+        name: '2022级示例用户-电子信息工程',
+        year: '2022'
+      },
+      '118ef2f061483894f93e921653b98d66ec21d3f849e458eda96c25e655fd3a49': {
+        studentNumber: '2024001234',
+        name: '2024级示例用户-电子信息工程', 
+        year: '2024'
+      }
+    };
+
+    // 获取对应的用户信息，如果没有找到则使用默认的2023级
+    const userInfo = demoUserMappings[userHash] || {
+      studentNumber: '2023001234',
+      name: `示例用户-${userHash.substring(0, 8)}`,
+      year: '2023'
+    };
+
+    session.userId = userInfo.studentNumber; // 使用对应年级的模拟学号作为userId
     session.userHash = userHash;
-    session.name = `示例用户-电子信息工程`;
+    session.name = userInfo.name;
     session.isCasAuthenticated = true; // 模拟CAS认证完成
     session.isLoggedIn = true; // 直接完成登录
     session.loginTime = now;

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertCircle, User, Hash, Copy, Code, LogOut, Shield } from "lucide-react"
+import { AlertCircle, User, Hash, Copy, Code, LogOut, Shield, ChevronDown } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { trackUserAction } from "@/lib/analytics"
 import Link from "next/link"
@@ -19,7 +19,23 @@ export default function LoginPage() {
   const [hashValue, setHashValue] = useState("")
   const [hashValidating, setHashValidating] = useState(false)
   const [isDevMode, setIsDevMode] = useState(false)
-  
+  const [selectedDemoUser, setSelectedDemoUser] = useState('2023') // 默认选择2023级
+  const [showDemoUserDropdown, setShowDemoUserDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDemoUserDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // 检查是否为开发环境
   useEffect(() => {
@@ -200,10 +216,36 @@ export default function LoginPage() {
     }
   }
 
-  // 示例用户一键登录
+  // 示例用户数据
+  const demoUsers = [
+    {
+      id: '2023',
+      name: '2023级示例用户',
+      hash: '24b56f91ab67af4531242999abd99e154df308220eb51f08e7c0dfff51d25889',
+      year: '2023',
+      description: '电子信息工程专业'
+    },
+    {
+      id: '2022',
+      name: '2022级示例用户',
+      hash: '0582c53c000705d1b968df56c252bdd6321474f19986bc7f862ed607ca955018',
+      year: '2022',
+      description: '电子信息工程专业'
+    },
+    {
+      id: '2024',
+      name: '2024级示例用户',
+      hash: '118ef2f061483894f93e921653b98d66ec21d3f849e458eda96c25e655fd3a49',
+      year: '2024',
+      description: '电子信息工程专业'
+    }
+  ];
+
+  // 示例用户登录
   const handleDemoUserLogin = async () => {
-    const demoUserHash = "24b56f91ab67af4531242999abd99e154df308220eb51f08e7c0dfff51d25889";
-    
+    const selectedUser = demoUsers.find(user => user.id === selectedDemoUser);
+    if (!selectedUser) return;
+
     setLoading(true);
     setError("");
 
@@ -213,7 +255,7 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userHash: demoUserHash }),
+        body: JSON.stringify({ userHash: selectedUser.hash }),
         credentials: 'include'
       });
 
@@ -521,24 +563,65 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <Button
-                onClick={handleDemoUserLogin}
-                disabled={loading}
-                variant="outline"
-                className="w-full border-green-300 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-400"
-              >
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                    登录中...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    示例用户登录
-                  </div>
-                )}
-              </Button>
+              {/* 示例用户选择 */}
+              <div className="space-y-3">
+                {/* 年级选择下拉菜单 */}
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowDemoUserDropdown(!showDemoUserDropdown)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <span className="text-gray-700">
+                      {demoUsers.find(user => user.id === selectedDemoUser)?.name || '选择年级'}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showDemoUserDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {showDemoUserDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                      {demoUsers.map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedDemoUser(user.id);
+                            setShowDemoUserDropdown(false);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${
+                            selectedDemoUser === user.id ? 'bg-green-50 text-green-700' : 'text-gray-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{user.name}</span>
+                            <span className="text-xs text-gray-500">{user.description}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 示例用户登录按钮 */}
+                <Button
+                  onClick={handleDemoUserLogin}
+                  disabled={loading}
+                  variant="outline"
+                  className="w-full border-green-300 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-400"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                      登录中...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      示例用户登录
+                    </div>
+                  )}
+                </Button>
+              </div>
 
               <div className="text-center">
                 <p className="text-xs text-gray-500">
