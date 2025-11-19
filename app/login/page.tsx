@@ -222,22 +222,19 @@ export default function LoginPage() {
       id: '2023',
       name: '2023级示例用户',
       hash: '24b56f91ab67af4531242999abd99e154df308220eb51f08e7c0dfff51d25889',
-      year: '2023',
-      description: '电子信息工程专业'
+      year: '2023'
     },
     {
       id: '2022',
       name: '2022级示例用户',
       hash: '0582c53c000705d1b968df56c252bdd6321474f19986bc7f862ed607ca955018',
-      year: '2022',
-      description: '电子信息工程专业'
+      year: '2022'
     },
     {
       id: '2024',
       name: '2024级示例用户',
       hash: '118ef2f061483894f93e921653b98d66ec21d3f849e458eda96c25e655fd3a49',
-      year: '2024',
-      description: '电子信息工程专业'
+      year: '2024'
     }
   ];
 
@@ -592,10 +589,7 @@ export default function LoginPage() {
                             selectedDemoUser === user.id ? 'bg-green-50 text-green-700' : 'text-gray-700'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span>{user.name}</span>
-                            <span className="text-xs text-gray-500">{user.description}</span>
-                          </div>
+                          <span>{user.name}</span>
                         </button>
                       ))}
                     </div>

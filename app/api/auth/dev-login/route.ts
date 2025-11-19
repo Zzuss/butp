@@ -51,17 +51,17 @@ export async function POST(request: NextRequest) {
     const demoUserMappings: Record<string, { studentNumber: string; name: string; year: string }> = {
       '24b56f91ab67af4531242999abd99e154df308220eb51f08e7c0dfff51d25889': {
         studentNumber: '2023001234',
-        name: '2023级示例用户-电子信息工程',
+        name: '2023级示例用户',
         year: '2023'
       },
       '0582c53c000705d1b968df56c252bdd6321474f19986bc7f862ed607ca955018': {
         studentNumber: '2022001234', 
-        name: '2022级示例用户-电子信息工程',
+        name: '2022级示例用户',
         year: '2022'
       },
       '118ef2f061483894f93e921653b98d66ec21d3f849e458eda96c25e655fd3a49': {
         studentNumber: '2024001234',
-        name: '2024级示例用户-电子信息工程', 
+        name: '2024级示例用户', 
         year: '2024'
       }
     };
