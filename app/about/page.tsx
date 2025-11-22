@@ -7,7 +7,6 @@ import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/contexts/AuthContext"
 import { submitUserRating } from "@/lib/voting-data"
 import VotingPoll from "@/components/voting-poll"
-import VisitorStats from "@/components/analytics/VisitorStats"
 import { useState } from "react"
 
 // 版本号常量 - 固定为1.0版本
@@ -194,12 +193,12 @@ export default function AboutPage() {
             <Heart className="h-8 w-8 text-blue-600" />
             <h2 className="text-3xl font-bold text-blue-900">特别致谢</h2>
             <Badge variant="outline" className="border-blue-300 text-blue-700">
-              2 位校友
+              3 位校友
             </Badge>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[{ name: "白景文", note: "国际学院校友，给予项目支持与帮助" }, { name: "刘双", note: "国际学院校友，给予项目支持与帮助" }].map((person, index) => (
+            {[{ name: "白景文", note: "国际学院校友，给予项目支持与帮助" }, { name: "刘双", note: "国际学院校友，给予项目支持与帮助" }, { name: "杨烨翰", note: "国际学院校友，给予项目支持与帮助" }].map((person, index) => (
               <Card key={index} className="border-blue-200 hover:shadow-lg transition-shadow duration-300">
                 <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                   <CardTitle className="text-xl">{person.name}</CardTitle>
@@ -244,10 +243,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* 网站访问统计（仅保留统计组件） */}
-        <div className="mt-16">
-          <VisitorStats />
-        </div>
 
         {/* 联系邮箱 */}
         <div className="mt-16 text-center">

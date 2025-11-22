@@ -1206,10 +1206,18 @@ export default function Analysis() {
           <div>
             <h1 className="text-3xl font-bold">{t('analysis.title')}</h1>
             <p className="text-muted-foreground">
-              {studentInfo 
-                ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-                : t('analysis.loading')
-              }
+              {(() => {
+                const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+                  ? (user as any).studentNumber 
+                  : (user?.userId || '').toString();
+                const trimmedStudentNumber = studentNumber.toString().trim();
+                const year = parseInt(trimmedStudentNumber.substring(0, 4));
+                const displayYear = !isNaN(year) && year >= 2018 && year <= 2050 ? year : null;
+                
+                return studentInfo 
+                  ? `${displayYear || studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+                  : t('analysis.loading');
+              })()}
             </p>
           </div>
 
@@ -1245,29 +1253,28 @@ export default function Analysis() {
                  ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
                  : 'hover:scale-95'
              }`}
-             onClick={() => handleButtonSelect('overseas')}
-           >
-             {selectedButton === 'overseas' ? (
-               <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
-                 <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-                   <span>{t('analysis.overseas.title')}</span>
-                 </div>
-                 <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
-                   <span className="text-xl text-blue-500 font-medium">
+           onClick={() => handleButtonSelect('overseas')}
+          >
+            <div className={`grid ${selectedButton === 'overseas' ? 'grid-rows-2 md:grid-cols-2' : 'grid-rows-2'} w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto`}>
+               <div className={`flex items-center justify-center border-b ${selectedButton === 'overseas' ? 'md:border-b-0 md:border-r' : ''} border-gray-300`}>
+                 <span className={selectedButton === 'overseas' ? 'text-[12px] md:text-base' : ''}>{t('analysis.overseas.title')}</span>
+               </div>
+               <div className="flex items-center justify-center">
+                 {selectedButton === 'overseas' ? (
+                   <span className={`${loadingProbability || (probabilityData && probabilityData.proba_2 !== null) ? 'text-[12px] md:text-base' : 'text-[8px] md:text-[12px]'} text-blue-500 font-medium`}>
                      {loadingProbability ? t('analysis.target.score.loading') : 
                       probabilityData && probabilityData.proba_2 !== null ? 
                       `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
                       t('analysis.target.score.no.data')}
                    </span>
-                 </div>
+                 ) : (
+                   <span className="text-[11px] text-gray-600 font-medium">
+                     点击按钮查看预测
+                   </span>
+                 )}
                </div>
-             ) : (
-               <div className="flex flex-col items-center justify-center w-full h-full px-2">
-                 <span className="text-center leading-tight">点击文字</span>
-                 <span className="text-center leading-tight mt-1">查询海外读研可能性</span>
-               </div>
-             )}
-           </Button>
+             </div>
+          </Button>
                    <Button
              variant={selectedButton === 'domestic' ? 'default' : 'outline'}
              className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
@@ -1275,29 +1282,28 @@ export default function Analysis() {
                  ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
                  : 'hover:scale-95'
              }`}
-             onClick={() => handleButtonSelect('domestic')}
-           >
-             {selectedButton === 'domestic' ? (
-               <div className="grid grid-rows-2 md:grid-cols-2 w-4/5 h-4/5 mx-auto my-auto">
-                 <div className="flex items-end md:items-center justify-center border-b md:border-b-0 md:border-r border-gray-300 pb-2 md:pb-0">
-                   <span>{t('analysis.domestic.title')}</span>
-                 </div>
-                 <div className="flex items-end md:items-center justify-center pb-2 md:pb-0">
-                   <span className="text-xl text-blue-500 font-medium">
+            onClick={() => handleButtonSelect('domestic')}
+          >
+             <div className={`grid ${selectedButton === 'domestic' ? 'grid-rows-2 md:grid-cols-2' : 'grid-rows-2'} w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto`}>
+               <div className={`flex items-center justify-center border-b ${selectedButton === 'domestic' ? 'md:border-b-0 md:border-r' : ''} border-gray-300`}>
+                 <span className={selectedButton === 'domestic' ? 'text-[12px] md:text-base' : ''}>{t('analysis.domestic.title')}</span>
+               </div>
+               <div className="flex items-center justify-center">
+                 {selectedButton === 'domestic' ? (
+                   <span className={`${loadingProbability || (probabilityData && probabilityData.proba_1 !== null) ? 'text-[12px] md:text-base' : 'text-[8px] md:text-[12px]'} text-blue-500 font-medium`}>
                      {loadingProbability ? t('analysis.target.score.loading') : 
                       probabilityData && probabilityData.proba_1 !== null ? 
                       `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
                       t('analysis.target.score.no.data')}
                    </span>
-                 </div>
+                 ) : (
+                   <span className="text-[11px] text-gray-600 font-medium">
+                     点击按钮查看预测
+                   </span>
+                 )}
                </div>
-             ) : (
-               <div className="flex flex-col items-center justify-center w-full h-full px-2">
-                 <span className="text-center leading-tight">点击文字</span>
-                 <span className="text-center leading-tight mt-1">查询国内读研可能性</span>
-               </div>
-             )}
-           </Button>
+             </div>
+          </Button>
         </div>
 
         <div className="analysis-content">
@@ -1478,20 +1484,35 @@ export default function Analysis() {
           {selectedButton === 'overseas' && (
             <div className="space-y-6">
               <div className="px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-center text-yellow-800">
-                算法分析数据取样于国际学院毕业生数据
+                {t('analysis.disclaimer.sample')}
               </div>
               {/* 目标分数显示 */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-center">
-                  <p className="text-blue-800 font-medium">
-                    为达到当前可能性的海外读研目标，预估后续科目的最低平均分为：{' '}
-                    <span className="text-blue-600 font-bold">
-                      {loadingTargetScores ? '加载中...' : 
-                       targetScores && targetScores.target2_score !== null ? 
-                       `${targetScores.target2_score}` : 
-                       '暂无数据'}
-                    </span>
-                  </p>
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="text-center">
+                      <p className="text-blue-800 font-medium">
+                        {t('analysis.overseas.minimum.text')}{' '}
+                        <span className="text-blue-600 font-bold">
+                          {loadingTargetScores ? t('analysis.target.score.loading') : 
+                           targetScores && targetScores.target2_score !== null ? 
+                           `${targetScores.target2_score}` : 
+                           t('analysis.target.score.no.data')}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-4 hidden">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={loadAllCourseData}
+                      disabled={loadingAllCourseData}
+                    >
+                      {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
+                    </Button>
+                  </div>
                 </div>
               </div>
               
@@ -1836,20 +1857,35 @@ export default function Analysis() {
           {selectedButton === 'domestic' && (
             <div className="space-y-6">
               <div className="px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-center text-yellow-800">
-                算法分析数据取样于国际学院毕业生数据
+                {t('analysis.disclaimer.sample')}
               </div>
               {/* 目标分数显示 */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-center">
-                  <p className="text-blue-800 font-medium">
-                    为达到当前可能性的国内读研目标，预估后续科目的最低平均分为：{' '}
-                    <span className="text-blue-600 font-bold">
-                      {loadingTargetScores ? '加载中...' : 
-                       targetScores && targetScores.target1_score !== null ? 
-                       `${targetScores.target1_score}` : 
-                       '暂无数据'}
-                    </span>
-                  </p>
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="text-center">
+                      <p className="text-blue-800 font-medium">
+                        {t('analysis.domestic.minimum.text')}{' '}
+                        <span className="text-blue-600 font-bold">
+                          {loadingTargetScores ? t('analysis.target.score.loading') : 
+                           targetScores && targetScores.target1_score !== null ? 
+                           `${targetScores.target1_score}` : 
+                           t('analysis.target.score.no.data')}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-4 hidden">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={loadAllCourseData}
+                      disabled={loadingAllCourseData}
+                    >
+                      {loadingAllCourseData ? t('analysis.target.score.loading') : t('analysis.view.all.courses')}
+                    </Button>
+                  </div>
                 </div>
               </div>
 

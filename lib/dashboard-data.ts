@@ -503,23 +503,71 @@ export async function getSubjectGrades(studentHash: string, language: string = '
   }
 }
 
-// 获取雷达图数据
+// 获取雷达图数据（已废弃，保留接口兼容性）
 export async function getRadarChartData(courseName: string): Promise<RadarChartData | null> {
+  // 此函数已不再使用，返回 null
+  console.warn('getRadarChartData 函数已废弃，请使用 getCourseRadarData 函数')
+  return null
+}
+
+// 获取课程雷达图数据（18维度，从 Courses_Rada 表查询）
+export async function getCourseRadarData(
+  courseId: string, 
+  year: string, 
+  major: string
+): Promise<number[] | null> {
   try {
-    // 这里可以根据需要实现具体的雷达图数据逻辑
-    // 暂时返回模拟数据，包含更多维度的评估
-    return {
-      subject: courseName,
-      knowledge: Math.floor(Math.random() * 30) + 70,      // 知识掌握 70-100
-      application: Math.floor(Math.random() * 30) + 70,    // 应用能力 70-100
-      analysis: Math.floor(Math.random() * 30) + 70,       // 分析能力 70-100
-      synthesis: Math.floor(Math.random() * 30) + 70,      // 综合能力 70-100
-      evaluation: Math.floor(Math.random() * 30) + 70,     // 评价能力 70-100
-      fullMark: 100
+    // 验证参数
+    if (!courseId || !year || !major) {
+      console.error('缺少必要参数:', { courseId, year, major });
+      return null;
     }
+
+    // 构建查询字段：C1~C18
+    const fields = Array.from({ length: 18 }, (_, i) => `"C${i + 1}"`).join(', ');
+    
+    console.log('查询课程雷达图数据:', { courseId, year, major });
+    
+    const { data, error } = await supabase
+      .from('Courses_Rada')
+      .select(fields)
+      .eq('course_id', courseId)
+      .eq('year', year)
+      .eq('major', major)
+      .limit(1);
+
+    if (error) {
+      console.error('查询课程雷达图数据时出错:', error);
+      console.error('完整错误对象:', JSON.stringify(error, null, 2));
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      console.log('未找到课程雷达图数据:', { courseId, year, major });
+      return null;
+    }
+
+    const record = data[0];
+    console.log('成功获取课程雷达图数据');
+    
+    // 提取 C1~C18 数据，保留三位小数再乘100
+    const radarData: number[] = [];
+    for (let i = 1; i <= 18; i++) {
+      const fieldName = `C${i}` as keyof typeof record;
+      const value = record[fieldName];
+      if (value !== null && value !== undefined) {
+        // 保留三位小数再乘100
+        const processedValue = Math.round((parseFloat(String(value)) * 100) * 1000) / 1000;
+        radarData.push(processedValue);
+      } else {
+        radarData.push(0);
+      }
+    }
+
+    return radarData;
   } catch (error) {
-    console.error('Error getting radar chart data:', error)
-    return null
+    console.error('获取课程雷达图数据时发生异常:', error);
+    return null;
   }
 }
 

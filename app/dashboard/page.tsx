@@ -193,10 +193,18 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
           <p className="text-muted-foreground">
-            {studentInfo 
-              ? `${studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-              : t('dashboard.description', { name: user?.name || '' })
-            }
+            {(() => {
+              const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+                ? (user as any).studentNumber 
+                : (user?.userId || '').toString();
+              const trimmedStudentNumber = studentNumber.toString().trim();
+              const year = parseInt(trimmedStudentNumber.substring(0, 4));
+              const displayYear = !isNaN(year) && year >= 2018 && year <= 2050 ? year : null;
+              
+              return studentInfo 
+                ? `${displayYear || studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+                : t('dashboard.description', { name: user?.name || '' });
+            })()}
           </p>
         </div>
         

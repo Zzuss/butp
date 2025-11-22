@@ -9,11 +9,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
     }
 
-    // 从cohort_probability表中查询数据
+    const trimmedStudentNumber = studentId.toString().trim();
+    // 从学号前四位提取年份
+    const year = parseInt(trimmedStudentNumber.substring(0, 4));
+    
+    // 验证年份合理性
+    if (isNaN(year) || year < 2018 || year > 2050) {
+      return NextResponse.json({ error: 'Invalid year from student number' }, { status: 400 })
+    }
+
+    const tableName = `Cohort${year}_Predictions_all`;
+
+    // 从Cohort${Year}_Predictions_all表中查询数据
     const { data, error } = await supabase
-      .from('cohort_probability')
-      .select('"proba_1", "proba_2", "year"')
-      .eq('"SNH"', studentId)
+      .from(tableName)
+      .select('current_prob1, current_prob2')
+      .eq('SNH', studentId)
       .single()
 
     if (error) {
@@ -26,9 +37,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      proba_1: data.proba_1,
-      proba_2: data.proba_2,
-      year: data.year
+      proba_1: data.current_prob1,
+      proba_2: data.current_prob2,
+      year: year
     })
 
   } catch (error) {

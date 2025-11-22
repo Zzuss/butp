@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getSubjectGrades, getRadarChartData } from "@/lib/dashboard-data"
+import { getSubjectGrades, getCourseRadarData, getStudentInfo } from "@/lib/dashboard-data"
 import { useAuth } from "@/contexts/AuthContext"
 import { useLanguage } from "@/contexts/language-context"
-import { RadarChart } from "@/components/ui/radar-chart"
+import { CoursesRadarChart } from "@/components/ui/courses-radar-chart"
 import { CourseResult } from '@/lib/dashboard-data'
 
 import Link from 'next/link'
@@ -20,6 +20,7 @@ export default function AllGrades() {
   const [radarData, setRadarData] = useState<number[] | null>(null)
   const [loadingRadar, setLoadingRadar] = useState(false)
   const [selectedCourseName, setSelectedCourseName] = useState<string>('')
+  const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
 
   const closeModal = () => {
     setShowModal(false)
@@ -40,26 +41,23 @@ export default function AllGrades() {
       const { getSubjectGrades, getStudentInfo, getCourseNameTranslation } = await import('@/lib/dashboard-data')
       
       // 获取学生信息（年级和专业）
-      const studentInfo = await getStudentInfo(studentId)
+      const info = await getStudentInfo(studentId)
+      setStudentInfo(info) // 保存学生信息，用于后续查询雷达图数据
       
       // 获取所有成绩（已包含排序逻辑）
-      const results = await getSubjectGrades(studentId)
+      let results = await getSubjectGrades(studentId)
       
       if (results && results.length > 0) {
         // 如果是英文模式，需要翻译课程名称
         if (language === 'en') {
           try {
-            // 获取学生信息用于翻译
-            const studentInfo = await getStudentInfo(studentId)
-            
             // 翻译所有课程名称
             const translatedResults = await Promise.all(
               results.map(async (course) => {
                 try {
                   const englishName = await getCourseNameTranslation(
                     course.course_name,
-                    studentInfo?.major,
-                    studentInfo?.year
+                    info?.major
                   )
                   return {
                     ...course,
@@ -75,7 +73,7 @@ export default function AllGrades() {
             results = translatedResults
           } catch (error) {
             console.error('批量翻译课程名称失败:', error)
-            // 如果批量翻译失败，保持原数据
+            // 如果翻译失败，保持原数据
           }
         }
         
@@ -105,38 +103,63 @@ export default function AllGrades() {
     // 选择新行
     setSelectedRow(index)
     
-    // 如果有课程ID，获取雷达图数据
-    if (grades[index]?.course_id) {
-      setLoadingRadar(true)
-      setShowModal(true)
-      setRadarData(null) // 清空之前的数据
-      setSelectedCourseName(grades[index].course_name) // 设置课程名称
-      try {
-        const data = await getRadarChartData(grades[index].course_id!)
-        if (data) {
-          // 转换RadarChartData为RadarChart组件期望的格式
-          const chartData = [
-            data.knowledge,
-            data.application,
-            data.analysis,
-            data.synthesis,
-            data.evaluation
-          ]
-          setRadarData(chartData)
-        } else {
-          setRadarData(null)
-        }
-      } catch (_error) {
-        console.error('Failed to load radar chart data:', _error)
-        setRadarData(null)
-      } finally {
-        setLoadingRadar(false)
-      }
-    } else {
-      // 没有课程ID时仍然高亮，但不显示模态框
-      setShowModal(false)
+    // 显示模态框并获取雷达图数据
+    setLoadingRadar(true)
+    setShowModal(true)
+    setRadarData(null) // 清空之前的数据
+    setSelectedCourseName(grades[index].course_name) // 设置课程名称
+    
+    // 检查必要信息
+    const courseId = grades[index]?.course_id
+    if (!courseId) {
+      console.error('缺少课程ID，无法查询雷达图数据')
       setRadarData(null)
-      setSelectedCourseName('')
+      setLoadingRadar(false)
+      return
+    }
+    
+    // 检查是否有学生信息（major）
+    if (!studentInfo?.major || !user) {
+      console.error('缺少学生信息，无法查询雷达图数据')
+      setRadarData(null)
+      setLoadingRadar(false)
+      return
+    }
+    
+    // 从学号提取年份（前四位）
+    const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+      ? (user as any).studentNumber 
+      : (user?.userId || '').toString()
+    const trimmedStudentNumber = studentNumber.toString().trim()
+    const yearNumber = parseInt(trimmedStudentNumber.substring(0, 4))
+    const year = isNaN(yearNumber) ? '' : yearNumber.toString()
+    
+    if (!year) {
+      console.error('无法从学号提取年份:', studentNumber)
+      setRadarData(null)
+      setLoadingRadar(false)
+      return
+    }
+    
+    try {
+      // 使用新的数据获取函数（courseId, year, major）
+      const data = await getCourseRadarData(
+        courseId,
+        year,
+        studentInfo.major
+      )
+      
+      if (data && data.length === 18) {
+        setRadarData(data)
+      } else {
+        console.error('获取的雷达图数据格式不正确:', data)
+        setRadarData(null)
+      }
+    } catch (_error) {
+      console.error('Failed to load radar chart data:', _error)
+      setRadarData(null)
+    } finally {
+      setLoadingRadar(false)
     }
   }
 
@@ -238,7 +261,7 @@ export default function AllGrades() {
       {/* 悬浮窗 */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeModal}>
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">{selectedCourseName}</h3>
               <button 
@@ -249,24 +272,35 @@ export default function AllGrades() {
               </button>
             </div>
             
-            <div className="flex justify-center">
-              {loadingRadar ? (
-                <div className="flex items-center justify-center h-48">
-                  <div className="text-muted-foreground">加载中...</div>
+            <div className="flex gap-6">
+              {/* 左侧：雷达图 */}
+              <div className="flex-1 flex justify-center">
+                {loadingRadar ? (
+                  <div className="flex items-center justify-center h-96">
+                    <div className="text-muted-foreground">加载中...</div>
+                  </div>
+                ) : radarData ? (
+                  <CoursesRadarChart data={radarData} />
+                ) : (
+                  <div className="flex items-center justify-center h-96">
+                    <div className="text-muted-foreground">暂无数据</div>
+                  </div>
+                )}
+              </div>
+              
+              {/* 右侧：标签说明 */}
+              <div className="w-64 flex-shrink-0">
+                <div className="bg-gray-50 rounded-lg p-4 h-full">
+                  <h4 className="text-sm font-semibold mb-3 text-gray-700">维度说明</h4>
+                  <div className="space-y-1.5 text-sm">
+                    {Array.from({ length: 18 }, (_, i) => (
+                      <div key={i} className="text-gray-600">
+                        C{i + 1}：第{String(i + 1).padStart(2, '0')}个标签数据
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ) : radarData ? (
-                <RadarChart 
-                  data={radarData} 
-                  labels={language === 'en' 
-                    ? ['Knowledge', 'Application', 'Analysis', 'Synthesis', 'Evaluation']
-                    : ['知识掌握', '应用能力', '分析能力', '综合能力', '评价能力']
-                  } 
-                />
-              ) : (
-                <div className="flex items-center justify-center h-48">
-                  <div className="text-muted-foreground">暂无数据</div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

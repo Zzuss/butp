@@ -9,73 +9,99 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student hash is required' }, { status: 400 })
     }
 
+    if (!studentNumber) {
+      return NextResponse.json({ error: 'Student number is required' }, { status: 400 })
+    }
+
     const trimmedHash = studentHash.trim();
+    const trimmedStudentNumber = studentNumber.toString().trim();
 
     if (!/^[a-f0-9]{64}$/i.test(trimmedHash)) {
       return NextResponse.json({ error: 'Invalid hash format' }, { status: 400 })
     }
 
-    // 使用统一的 Supabase 客户端
-
-    // 专业到后缀映射
-    const majorToSuffix: Record<string, string> = {
-      '智能科学与技术': 'ai',
-      '电子信息工程': 'ee',
-      '电信工程及管理': 'tewm',
-      '物联网工程': 'iot'
-    };
-
-    if (!major || !(major in majorToSuffix)) {
-      return NextResponse.json({ error: 'Invalid or unsupported major' }, { status: 400 })
+    // 从学号前四位提取年份（不限制格式）
+    const year = parseInt(trimmedStudentNumber.substring(0, 4));
+    // 验证年份合理性（2018-2050之间）
+    if (year < 2018 || year > 2050) {
+      return NextResponse.json({ error: 'Invalid year from student number' }, { status: 400 })
     }
 
-    // 从学号中提取年份（前四位），构造动态表名 Cohort{YYYY}_Predictions_{suffix}
-    let cohortYear: number | null = null;
-    if (typeof studentNumber === 'string' && studentNumber.trim().length >= 4) {
-      const yearCandidate = parseInt(studentNumber.trim().slice(0, 4), 10)
-      if (!Number.isNaN(yearCandidate) && yearCandidate >= 2000 && yearCandidate <= 2100) {
-        cohortYear = yearCandidate
+    let predictionsData = null;
+    let predictionsError = null;
+    let tableName = '';
+    let effectiveYear = year;
+    let lastTriedTable = '';
+    let found = false;
+    const queryLogs: Array<{ tableName: string; found: boolean; message: string }> = [];
+
+    console.log('查询目标分数 - 专业:', major);
+    console.log('查询目标分数 - 哈希值:', trimmedHash);
+    console.log('查询目标分数 - 学号:', trimmedStudentNumber);
+    console.log('查询目标分数 - 提取年份:', year);
+
+    // 在 year-1 到 year+7 范围内查找 Cohort{currentYear}_Predictions_all 表
+    for (let offset = -1; offset <= 7; offset++) {
+      const currentYear = year + offset;
+      if (currentYear > 2050) break;
+
+      const currentTableName = `Cohort${currentYear}_Predictions_all`;
+      lastTriedTable = currentTableName;
+      const result = await supabase
+        .from(currentTableName)
+        .select('target1_min_required_score, target2_min_required_score')
+        .eq('SNH', trimmedHash)
+        .limit(1)
+        .single();
+
+      const logEntry = {
+        tableName: currentTableName,
+        found: !result.error && !!result.data,
+        message: !result.error && result.data ? '找到学生数据' : (result.error?.message || 'No data')
+      };
+      queryLogs.push(logEntry);
+      if (logEntry.found) {
+        console.log(`查询表 ${currentTableName} - ✅ ${logEntry.message}`);
+        predictionsData = result.data;
+        predictionsError = null;
+        tableName = currentTableName;
+        effectiveYear = currentYear;
+        found = true;
+        break;
+      } else {
+        predictionsError = result.error;
+        console.log(`查询表 ${currentTableName} - ❌ ${logEntry.message}`);
       }
     }
 
-    // 回退：如果学号不可用或无法解析年份，默认使用 2023
-    if (!cohortYear) {
-      cohortYear = 2023
-    }
-
-    const suffix = majorToSuffix[major]
-    const tableName = `Cohort${cohortYear}_Predictions_${suffix}`
-
-    // 按专业对应表查询目标分数
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('target1_min_required_score, target2_min_required_score')
-      .eq('SNH', trimmedHash)
-      .limit(1);
-
-    if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json({ error: 'Failed to fetch target scores' }, { status: 500 })
-    }
-
-    if (!data || data.length === 0) {
+    // 检查是否找到了学生数据
+    if (!found || predictionsError || !predictionsData) {
+      console.error('❌ 学生目标分数数据缺失!');
+      console.error('📊 在指定年份的cohort表中找不到该学生数据');
+      console.error('🔍 尝试的表:', tableName);
+      console.error('🔍 查询的哈希值:', trimmedHash);
+      console.error('📅 学号:', trimmedStudentNumber);
+      console.error('📅 提取年份:', year);
+      console.error('💡 可能原因: 学生哈希值不在该年份的预测表中，或专业信息不匹配，或学号年份不正确');
       return NextResponse.json({ 
-        success: true, 
+        success: true,
         data: {
           target1_score: null,
           target2_score: null
-        }
+        },
+        queryLogs
       });
     }
 
-    const result = data[0];
+    console.log('✅ 成功找到学生目标分数数据，使用表:', tableName);
 
     return NextResponse.json({
       success: true,
       data: {
-        target1_score: result.target1_min_required_score,
-        target2_score: result.target2_min_required_score
-      }
+        target1_score: predictionsData.target1_min_required_score,
+        target2_score: predictionsData.target2_min_required_score
+      },
+      queryLogs
     });
 
   } catch (error) {
