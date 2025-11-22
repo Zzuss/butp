@@ -432,13 +432,27 @@ export async function POST(request: NextRequest) {
             const sportsInfo = sportsCoursesInfo.get(result.Course_Name);
             if (sportsInfo?.type === 'compulsory') {
               earnedCreditsByCategory[category].earned_compulsory = Math.round((earnedCreditsByCategory[category].earned_compulsory + credit) * 10) / 10;
-              earnedCreditsByCategory[category].courses.push({ Course_Name: result.Course_Name, Credit: credit, type: 'compulsory' });
+              earnedCreditsByCategory[category].courses.push({ 
+                Course_Name: result.Course_Name, 
+                Credit: credit, 
+                Course_Attribute: result.Course_Attribute,
+                type: 'compulsory' 
+              } as any);
             } else if (sportsInfo?.type === 'elective') {
               earnedCreditsByCategory[category].earned_elective = Math.round((earnedCreditsByCategory[category].earned_elective + credit) * 10) / 10;
-              earnedCreditsByCategory[category].courses.push({ Course_Name: result.Course_Name, Credit: credit, type: 'elective' });
+              earnedCreditsByCategory[category].courses.push({ 
+                Course_Name: result.Course_Name, 
+                Credit: credit, 
+                Course_Attribute: result.Course_Attribute,
+                type: 'elective' 
+              } as any);
             }
           } else {
-            earnedCreditsByCategory[category].courses.push({ Course_Name: result.Course_Name, Credit: credit });
+            earnedCreditsByCategory[category].courses.push({ 
+              Course_Name: result.Course_Name, 
+              Credit: credit,
+              Course_Attribute: result.Course_Attribute
+            } as any);
           }
         }
       }
@@ -512,7 +526,8 @@ export async function POST(request: NextRequest) {
           courses_taken: earned.courses,
           meets_requirement: earned.earned_credits >= required.required_total,
           meets_compulsory_requirement: earned.earned_compulsory >= required.required_compulsory,
-          meets_elective_requirement: earned.earned_elective >= required.required_elective
+          meets_elective_requirement: earned.earned_elective >= required.required_elective,
+          is_completed: earned.earned_credits >= required.required_total  // 🎨 NEW: For green highlighting
         };
       }
       
@@ -524,7 +539,8 @@ export async function POST(request: NextRequest) {
         credits_already_obtained: earned.earned_credits,
         courses_taken: earned.courses,
         // 🔧 NEW: Add graduation status for this category
-        meets_requirement: earned.earned_credits >= required.required_total
+        meets_requirement: earned.earned_credits >= required.required_total,
+        is_completed: earned.earned_credits >= required.required_total  // 🎨 NEW: For green highlighting
       };
     });
 

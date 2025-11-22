@@ -52,9 +52,9 @@ interface SimpleAuthContextType {
 const SimpleAuthContext = createContext<SimpleAuthContextType | undefined>(undefined)
 
 export const students = [
-  { id: "2023213592", name: "学生 A", class: "通信工程专业" },
-  { id: "2024213472", name: "学生 B", class: "计算机科学与技术专业" },
-  { id: "2023213043", name: "学生 C", class: "软件工程专业" },
+  { id: "demo001", name: "示例学生1", class: "示例专业" },
+  { id: "demo002", name: "示例学生2", class: "示例专业" },
+  { id: "demo003", name: "示例学生3", class: "示例专业" },
   { id: "teststudent1", name: "测试学生1", class: "电信工程及管理" },
   { id: "teststudent2", name: "测试学生2", class: "电信工程及管理" },
   { id: "teststudent3", name: "测试学生3", class: "电信工程及管理" },
