@@ -89,9 +89,9 @@ Uses React's built-in state management with custom Context:
 The application uses a custom React Context-based authentication system:
 
 ### Student Accounts
-- **2023213592**: 学生 A (通信工程专业)
-- **2024213472**: 学生 B (计算机科学与技术专业)  
-- **2023213043**: 学生 C (软件工程专业)
+- **demo001**: 示例学生1 (示例专业)
+- **demo002**: 示例学生2 (示例专业)  
+- **demo003**: 示例学生3 (示例专业)
 
 ### Authentication Flow
 1. Users visit `/` and are redirected to `/login`

@@ -9,6 +9,8 @@ import { useLanguage } from '@/contexts/language-context';
 interface CourseDetail {
   Course_Name: string;
   Credit: number;
+  Course_Attribute?: string;
+  type?: string;
 }
 
 interface GraduationRequirement {
@@ -20,6 +22,8 @@ interface GraduationRequirement {
   courses_taken: CourseDetail[];
   compulsory_credits_obtained?: number;
   elective_credits_obtained?: number;
+  is_completed?: boolean;
+  meets_requirement?: boolean;
 }
 
 interface OtherCategory {
@@ -62,8 +66,14 @@ const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = 
         </TableHeader>
         <TableBody>
           {graduationRequirements.map((req, index) => (
-            <TableRow key={index}>
-              <TableCell className="font-medium">{req.category}</TableCell>
+            <TableRow 
+              key={index}
+              className={req.is_completed ? "bg-green-50 border-green-200" : ""}
+            >
+              <TableCell className={`font-medium ${req.is_completed ? "text-green-800" : ""}`}>
+                {req.is_completed && <span className="mr-2">✅</span>}
+                {req.category}
+              </TableCell>
               <TableCell>{req.required_total_credits}</TableCell>
               <TableCell>
                 {req.category === '体育' && req.compulsory_credits_obtained !== undefined ? (
@@ -139,6 +149,7 @@ const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = 
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('analysis.graduation.courseName')}</TableHead>
+                    <TableHead>课程属性</TableHead>
                     <TableHead className="text-right">{t('analysis.graduation.credit')}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -146,6 +157,17 @@ const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = 
                   {selectedCategoryDetails.map((course, idx) => (
                     <TableRow key={idx}>
                       <TableCell>{course.Course_Name}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          course.Course_Attribute === '必修' ? 'bg-red-100 text-red-800' :
+                          course.Course_Attribute === '选修' ? 'bg-blue-100 text-blue-800' :
+                          course.Course_Attribute === '任选' ? 'bg-gray-100 text-gray-800' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {course.Course_Attribute || '未知'}
+                          {course.type && ` (${course.type === 'compulsory' ? '必修' : '选修'})`}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right">{course.Credit}</TableCell>
                     </TableRow>
                   ))}
