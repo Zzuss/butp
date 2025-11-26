@@ -81,13 +81,21 @@ export default function Analysis() {
   } | null>(null);
   const [loadingProbability, setLoadingProbability] = useState(false);
   
+  // 当前概率值（用于计算提高百分比）
+  const [current_proba1, setCurrent_proba1] = useState<number | null>(null);
+  const [current_proba2, setCurrent_proba2] = useState<number | null>(null);
+  
   // Original缓存状态
   const [originalScoresCache, setOriginalScoresCache] = useState<Record<string, any>>({});
   const [loadingOriginalScores, setLoadingOriginalScores] = useState(false);
   
-  // Modified缓存状态
-  const [modifiedScoresCache, setModifiedScoresCache] = useState<Record<string, any>>({});
-  const [loadingModifiedScores, setLoadingModifiedScores] = useState(false);
+  // Modified1缓存状态（海外读研界面）
+  const [modified1ScoresCache, setModified1ScoresCache] = useState<Record<string, any>>({});
+  const [loadingModified1Scores, setLoadingModified1Scores] = useState(false);
+  
+  // Modified2缓存状态（国内读研界面）
+  const [modified2ScoresCache, setModified2ScoresCache] = useState<Record<string, any>>({});
+  const [loadingModified2Scores, setLoadingModified2Scores] = useState(false);
   
   // Source2缓存状态
   const [source2ScoresCache, setSource2ScoresCache] = useState<Record<string, any>>({});
@@ -396,14 +404,43 @@ export default function Analysis() {
         setShowEditModal(false);
       }, 3000);
       
-      // 初始化modified缓存（如果还没有的话）
-      if (user?.userHash && !modifiedScoresCache[user.userHash]) {
+      // 初始化modified缓存（如果还没有的话）- 根据 selectedButton 初始化对应的缓存
+      if (user?.userHash) {
         const originalScores = getOriginalScores();
         if (originalScores.length > 0) {
-          setModifiedScoresCache(prev => ({
-            ...prev,
-            [user.userHash]: JSON.parse(JSON.stringify(originalScores)) // 深拷贝原始数据
-          }));
+          if (selectedButton === 'overseas' && !modified1ScoresCache[user.userHash]) {
+            // 复制original数据，过滤掉没有成绩的课程
+            const scoresWithGrades = originalScores.filter((course: any) => 
+              course.score !== null && course.score !== undefined
+            );
+            const copiedScores = JSON.parse(JSON.stringify(scoresWithGrades));
+            // 如果targetScores已加载，将所有成绩设置为target2_score
+            if (targetScores && targetScores.target2_score !== null && targetScores.target2_score !== undefined) {
+              copiedScores.forEach((course: any) => {
+                course.score = targetScores.target2_score;
+              });
+            }
+            setModified1ScoresCache(prev => ({
+              ...prev,
+              [user.userHash]: copiedScores
+            }));
+          } else if (selectedButton === 'domestic' && !modified2ScoresCache[user.userHash]) {
+            // 复制original数据，过滤掉没有成绩的课程
+            const scoresWithGrades = originalScores.filter((course: any) => 
+              course.score !== null && course.score !== undefined
+            );
+            const copiedScores = JSON.parse(JSON.stringify(scoresWithGrades));
+            // 如果targetScores已加载，将所有成绩设置为target1_score
+            if (targetScores && targetScores.target1_score !== null && targetScores.target1_score !== undefined) {
+              copiedScores.forEach((course: any) => {
+                course.score = targetScores.target1_score;
+              });
+            }
+            setModified2ScoresCache(prev => ({
+              ...prev,
+              [user.userHash]: copiedScores
+            }));
+          }
         }
       }
       
@@ -428,20 +465,36 @@ export default function Analysis() {
     // 允许用户输入任意内容，包括多位小数
     if (!user?.userHash) return;
     
-    // 更新modified缓存
-    setModifiedScoresCache(prev => {
-      const currentModifiedScores = prev[user.userHash] || [];
-      const updatedScores = currentModifiedScores.map((course: any) => 
-        course.courseName === courseName 
-          ? { ...course, score: newScore }
-          : course
-      );
-      
-      return {
-        ...prev,
-        [user.userHash]: updatedScores
-      };
-    });
+    // 根据 selectedButton 更新对应的缓存
+    if (selectedButton === 'overseas') {
+      setModified1ScoresCache(prev => {
+        const currentModifiedScores = prev[user.userHash] || [];
+        const updatedScores = currentModifiedScores.map((course: any) => 
+          course.courseName === courseName 
+            ? { ...course, score: newScore }
+            : course
+        );
+        
+        return {
+          ...prev,
+          [user.userHash]: updatedScores
+        };
+      });
+    } else if (selectedButton === 'domestic') {
+      setModified2ScoresCache(prev => {
+        const currentModifiedScores = prev[user.userHash] || [];
+        const updatedScores = currentModifiedScores.map((course: any) => 
+          course.courseName === courseName 
+            ? { ...course, score: newScore }
+            : course
+        );
+        
+        return {
+          ...prev,
+          [user.userHash]: updatedScores
+        };
+      });
+    }
   };
 
   // 处理成绩输入完成（失去焦点或按回车）
@@ -453,29 +506,13 @@ export default function Analysis() {
       // 输入完成后保留一位小数
       const roundedScore = Math.round(score * 10) / 10;
       
-      setModifiedScoresCache(prev => {
-        const currentModifiedScores = prev[user.userHash] || [];
-        const updatedScores = currentModifiedScores.map((course: any) => 
-          course.courseName === courseName 
-            ? { ...course, score: roundedScore }
-            : course
-        );
-        
-        return {
-          ...prev,
-          [user.userHash]: updatedScores
-        };
-      });
-    } else {
-      // 如果输入无效，恢复原始成绩
-      const originalScores = getOriginalScores();
-      const originalCourse = originalScores.find((course: any) => course.courseName === courseName);
-      if (originalCourse && originalCourse.score !== null) {
-        setModifiedScoresCache(prev => {
+      // 根据 selectedButton 更新对应的缓存
+      if (selectedButton === 'overseas') {
+        setModified1ScoresCache(prev => {
           const currentModifiedScores = prev[user.userHash] || [];
           const updatedScores = currentModifiedScores.map((course: any) => 
             course.courseName === courseName 
-              ? { ...course, score: originalCourse.score }
+              ? { ...course, score: roundedScore }
               : course
           );
           
@@ -484,6 +521,56 @@ export default function Analysis() {
             [user.userHash]: updatedScores
           };
         });
+      } else if (selectedButton === 'domestic') {
+        setModified2ScoresCache(prev => {
+          const currentModifiedScores = prev[user.userHash] || [];
+          const updatedScores = currentModifiedScores.map((course: any) => 
+            course.courseName === courseName 
+              ? { ...course, score: roundedScore }
+              : course
+          );
+          
+          return {
+            ...prev,
+            [user.userHash]: updatedScores
+          };
+        });
+      }
+    } else {
+      // 如果输入无效，恢复原始成绩
+      const originalScores = getOriginalScores();
+      const originalCourse = originalScores.find((course: any) => course.courseName === courseName);
+      if (originalCourse && originalCourse.score !== null) {
+        // 根据 selectedButton 更新对应的缓存
+        if (selectedButton === 'overseas') {
+          setModified1ScoresCache(prev => {
+            const currentModifiedScores = prev[user.userHash] || [];
+            const updatedScores = currentModifiedScores.map((course: any) => 
+              course.courseName === courseName 
+                ? { ...course, score: originalCourse.score }
+                : course
+            );
+            
+            return {
+              ...prev,
+              [user.userHash]: updatedScores
+            };
+          });
+        } else if (selectedButton === 'domestic') {
+          setModified2ScoresCache(prev => {
+            const currentModifiedScores = prev[user.userHash] || [];
+            const updatedScores = currentModifiedScores.map((course: any) => 
+              course.courseName === courseName 
+                ? { ...course, score: originalCourse.score }
+                : course
+            );
+            
+            return {
+              ...prev,
+              [user.userHash]: updatedScores
+            };
+          });
+        }
       }
     }
   };
@@ -503,11 +590,18 @@ export default function Analysis() {
       score: typeof course.score === 'string' ? parseFloat(course.score) : course.score
     }));
     
-    // 1. 同步到modified表 - 更新modified缓存
-    setModifiedScoresCache(prev => ({
-      ...prev,
-      [user.userHash]: updatedScores
-    }));
+    // 1. 同步到modified表 - 根据 selectedButton 更新对应的缓存
+    if (selectedButton === 'overseas') {
+      setModified1ScoresCache(prev => ({
+        ...prev,
+        [user.userHash]: updatedScores
+      }));
+    } else if (selectedButton === 'domestic') {
+      setModified2ScoresCache(prev => ({
+        ...prev,
+        [user.userHash]: updatedScores
+      }));
+    }
     
     // 2. 同步到总表 - 调用all-course-data API生成新的总表
     setLoadingFeatures(true);
@@ -716,14 +810,26 @@ export default function Analysis() {
 
   // 加载概率数据（按钮旁百分比），来自 cohort_probability 表
   const loadProbabilityData = async () => {
-    if (!user?.userHash) return;
+    if (!user?.userHash || !user?.userId) return;
 
     setLoadingProbability(true);
     try {
+      // 使用 userHash 和 userId（学号），与 source1-scores API 保持一致
+      const studentHash = user.userHash;
+      const studentNumber = typeof (user as any)?.studentNumber === 'string' ? (user as any).studentNumber : (user?.userId || '');
+      if (!studentNumber) {
+        console.error('❌ 无法获取学号，无法加载概率数据');
+        setLoadingProbability(false);
+        return;
+      }
+      
       const response = await fetch('/api/probability-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId: user.userHash })
+        body: JSON.stringify({ 
+          studentHash: studentHash,
+          studentNumber: studentNumber
+        })
       });
 
       if (response.ok) {
@@ -733,14 +839,61 @@ export default function Analysis() {
           proba_2: typeof data.proba_2 === 'number' ? data.proba_2 : null,
           year: typeof data.year === 'number' ? data.year : null
         });
+        // 保存当前概率值用于计算提高百分比
+        setCurrent_proba1(typeof data.proba_1 === 'number' ? data.proba_1 : null);
+        setCurrent_proba2(typeof data.proba_2 === 'number' ? data.proba_2 : null);
       } else {
         setProbabilityData(null);
+        setCurrent_proba1(null);
+        setCurrent_proba2(null);
       }
     } catch (error) {
       setProbabilityData(null);
+      setCurrent_proba1(null);
+      setCurrent_proba2(null);
     } finally {
       setLoadingProbability(false);
     }
+  };
+
+  // 辅助函数：将modified缓存中所有课程的成绩设置为目标分数
+  const applyTargetScoresToModified = () => {
+    if (!user?.userHash) return;
+    
+    // 直接操作modified1和modified2缓存，而不是从original读取
+    setModified1ScoresCache(prev => {
+      const currentModified1 = prev[user.userHash];
+      if (!currentModified1 || currentModified1.length === 0) return prev;
+      if (!targetScores || targetScores.target2_score === null || targetScores.target2_score === undefined) return prev;
+      
+      // 更新modified1：所有成绩设置为target2_score（海外读研）
+      const updatedModified1 = currentModified1.map((course: any) => ({
+        ...course,
+        score: targetScores.target2_score
+      }));
+      console.log('Modified1 scores set to target2_score:', targetScores.target2_score);
+      return {
+        ...prev,
+        [user.userHash]: updatedModified1
+      };
+    });
+
+    setModified2ScoresCache(prev => {
+      const currentModified2 = prev[user.userHash];
+      if (!currentModified2 || currentModified2.length === 0) return prev;
+      if (!targetScores || targetScores.target1_score === null || targetScores.target1_score === undefined) return prev;
+      
+      // 更新modified2：所有成绩设置为target1_score（国内读研）
+      const updatedModified2 = currentModified2.map((course: any) => ({
+        ...course,
+        score: targetScores.target1_score
+      }));
+      console.log('Modified2 scores set to target1_score:', targetScores.target1_score);
+      return {
+        ...prev,
+        [user.userHash]: updatedModified2
+      };
+    });
   };
 
   // 加载Original缓存（从source1-scores API，对标模板）
@@ -781,14 +934,25 @@ export default function Analysis() {
           // 等待缓存更新完成
           await new Promise(resolve => setTimeout(resolve, 0));
           
-          // 初始化modified缓存（复制original数据）
-          setModifiedScoresCache(prev => ({
+          // 初始化modified1和modified2缓存（复制original数据，过滤掉没有成绩的课程）
+          const scoresWithGrades = originalScores.filter((course: any) => 
+            course.score !== null && course.score !== undefined
+          );
+          setModified1ScoresCache(prev => ({
             ...prev,
-            [user.userHash]: JSON.parse(JSON.stringify(originalScores)) // 深拷贝
+            [user.userHash]: JSON.parse(JSON.stringify(scoresWithGrades)) // 深拷贝，只包含有成绩的课程
+          }));
+          setModified2ScoresCache(prev => ({
+            ...prev,
+            [user.userHash]: JSON.parse(JSON.stringify(scoresWithGrades)) // 深拷贝，只包含有成绩的课程
           }));
           
           console.log('Original scores loaded and cached:', originalScores.length, 'courses');
-          console.log('Modified cache initialized with original data');
+          console.log('Modified1 and Modified2 cache initialized with original data');
+          
+          // 注意：不在loadOriginalScores内部调用applyTargetScoresToModified
+          // 因为这会导致状态更新冲突，让useEffect来处理目标分数的应用
+          
           return originalScores;
         } else {
           console.log('No original scores found');
@@ -854,19 +1018,35 @@ export default function Analysis() {
     }
   };
 
-  // 获取Modified缓存数据
+  // 获取Modified缓存数据（根据当前选择的按钮返回对应的缓存）
   const getModifiedScores = () => {
     if (!user?.userHash) return [];
     
-    // 检查modified缓存
-    if (modifiedScoresCache[user.userHash]) {
-      console.log('Using cached modified scores');
-      return modifiedScoresCache[user.userHash];
+    // 根据 selectedButton 决定使用哪个缓存
+    // overseas -> modified1, domestic -> modified2
+    let targetCache: Record<string, any> = {};
+    let cacheName = '';
+    
+    if (selectedButton === 'overseas') {
+      targetCache = modified1ScoresCache;
+      cacheName = 'modified1';
+    } else if (selectedButton === 'domestic') {
+      targetCache = modified2ScoresCache;
+      cacheName = 'modified2';
+    } else {
+      // 如果没有选择按钮，默认返回空数组
+      return [];
+    }
+    
+    // 检查对应的modified缓存
+    if (targetCache[user.userHash]) {
+      console.log(`Using cached ${cacheName} scores`);
+      return targetCache[user.userHash];
     }
     
     // 如果没有modified缓存，返回original缓存（作为初始值）
     if (originalScoresCache[user.userHash]) {
-      console.log('No modified cache, using original scores as initial value');
+      console.log(`No ${cacheName} cache, using original scores as initial value`);
       return originalScoresCache[user.userHash];
     }
     
@@ -902,15 +1082,24 @@ export default function Analysis() {
     return [];
   };
 
-  // 更新Modified缓存数据
+  // 更新Modified缓存数据（根据当前选择的按钮更新对应的缓存）
   const updateModifiedScores = (newScores: any[]) => {
     if (!user?.userHash) return;
     
-    setModifiedScoresCache(prev => ({
-      ...prev,
-      [user.userHash]: JSON.parse(JSON.stringify(newScores)) // 深拷贝
-    }));
-    console.log('Modified cache updated with', newScores.length, 'courses');
+    // 根据 selectedButton 决定更新哪个缓存
+    if (selectedButton === 'overseas') {
+      setModified1ScoresCache(prev => ({
+        ...prev,
+        [user.userHash]: JSON.parse(JSON.stringify(newScores)) // 深拷贝
+      }));
+      console.log('Modified1 cache updated with', newScores.length, 'courses');
+    } else if (selectedButton === 'domestic') {
+      setModified2ScoresCache(prev => ({
+        ...prev,
+        [user.userHash]: JSON.parse(JSON.stringify(newScores)) // 深拷贝
+      }));
+      console.log('Modified2 cache updated with', newScores.length, 'courses');
+    }
   };
 
   // 加载所有课程数据
@@ -1009,10 +1198,61 @@ export default function Analysis() {
     loadTargetScores();
   }, [user?.userHash, authLoading, studentInfo?.major]);
 
+  // 当targetScores和original缓存都加载完成后，初始化modified缓存并应用目标分数
+  // 使用ref来跟踪是否已经应用过目标分数，避免无限循环
+  const targetScoresAppliedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user?.userHash) return;
+    if (!targetScores) return;
+    if (!originalScoresCache[user.userHash]) return; // 确保original已加载
+
+    // 如果已经为当前userHash应用过目标分数，不再重复应用
+    const cacheKey = `${user.userHash}-${targetScores.target1_score}-${targetScores.target2_score}`;
+    if (targetScoresAppliedRef.current === cacheKey) return;
+
+    // 检查modified1和modified2是否已初始化
+    const modified1Exists = modified1ScoresCache[user.userHash];
+    const modified2Exists = modified2ScoresCache[user.userHash];
+
+    // 如果modified缓存未初始化，先从original初始化
+    if (!modified1Exists && !modified2Exists) {
+      const originalScores = originalScoresCache[user.userHash];
+      const scoresWithGrades = originalScores.filter((course: any) => 
+        course.score !== null && course.score !== undefined
+      );
+      const copiedScores = JSON.parse(JSON.stringify(scoresWithGrades));
+      
+      // 初始化modified1和modified2缓存
+      setModified1ScoresCache(prev => ({
+        ...prev,
+        [user.userHash]: JSON.parse(JSON.stringify(copiedScores))
+      }));
+      setModified2ScoresCache(prev => ({
+        ...prev,
+        [user.userHash]: JSON.parse(JSON.stringify(copiedScores))
+      }));
+      
+      // 等待状态更新后应用目标分数（使用setTimeout确保状态更新完成）
+      setTimeout(() => {
+        applyTargetScoresToModified();
+        targetScoresAppliedRef.current = cacheKey;
+      }, 0);
+      return;
+    }
+
+    // 如果已初始化，应用目标分数
+    if (modified1Exists || modified2Exists) {
+      applyTargetScoresToModified();
+      targetScoresAppliedRef.current = cacheKey;
+    }
+    // 只依赖必要的值，避免对象引用导致的重复渲染
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetScores, user?.userHash, originalScoresCache]);
+
   // 加载按钮旁概率数据（增加轻量重试，最多5次，每次500ms）
   useEffect(() => {
     if (authLoading) return;
-    if (!user?.userHash) return;
+    if (!user?.userHash || !user?.userId) return;
 
     // 如果已经有数据，不再重试
     if (probabilityData) return;
@@ -1031,36 +1271,62 @@ export default function Analysis() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [user?.userHash, authLoading]);
+  }, [user?.userHash, user?.userId, authLoading]);
 
-  // 加载Original缓存
+  // 加载Original缓存（添加ref防止重复加载）
+  const originalLoadedRef = useRef<string | null>(null);
   useEffect(() => {
     if (authLoading) return;
     if (!user?.userHash) return;
 
+    // 如果已经加载过该用户的original数据，不再重复加载
+    const cacheKey = `${user.userHash}-${studentInfo?.major || 'no-major'}`;
+    if (originalLoadedRef.current === cacheKey) return;
+    
+    // 如果缓存中已有数据且专业匹配，标记为已加载
+    if (originalScoresCache[user.userHash] && studentInfo?.major) {
+      originalLoadedRef.current = cacheKey;
+      return;
+    }
+
     // 只有当 studentInfo.major 可用时，才触发加载；否则等待并重试
     if (studentInfo?.major) {
-      loadOriginalScores();
+      loadOriginalScores().then(() => {
+        originalLoadedRef.current = cacheKey;
+      });
     } else {
       // 简单重试：最多重试 5 次，每次延迟 500ms
       if (originalRetryRef.current < 5) {
         originalRetryRef.current += 1;
         const timer = setTimeout(() => {
-          // 触发一次重新渲染以再次进入 effect 判断
-          setStudentInfo((prev) => prev);
+          // 不通过setState触发重新渲染，而是依赖studentInfo的自动更新
+          // 移除 setStudentInfo((prev) => prev) 以避免不必要的渲染
         }, 500);
         return () => clearTimeout(timer);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.userHash, authLoading, studentInfo?.major]);
 
-  // 加载Source2缓存
+  // 加载Source2缓存（添加ref防止重复加载）
+  const source2LoadedRef = useRef<string | null>(null);
   useEffect(() => {
     if (authLoading) return;
+    if (!user?.userHash) return;
     
-    if (user?.userHash) {
-      loadSource2Scores();
+    // 如果已经加载过该用户的source2数据，不再重复加载
+    if (source2LoadedRef.current === user.userHash) return;
+    
+    // 如果缓存中已有数据，标记为已加载
+    if (source2ScoresCache[user.userHash]) {
+      source2LoadedRef.current = user.userHash;
+      return;
     }
+    
+    loadSource2Scores().then(() => {
+      source2LoadedRef.current = user.userHash;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.userHash, authLoading]);
 
   // 加载学生信息
@@ -1247,60 +1513,34 @@ export default function Analysis() {
             </span>
           </Button>
                    <Button
-             variant={selectedButton === 'overseas' ? 'default' : 'outline'}
-             className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
-               selectedButton === 'overseas' 
-                 ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-                 : 'hover:scale-95'
-             }`}
+             variant="outline"
+             className="h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden hover:scale-95"
            onClick={() => handleButtonSelect('overseas')}
           >
-            <div className={`grid ${selectedButton === 'overseas' ? 'grid-rows-2 md:grid-cols-2' : 'grid-rows-2'} w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto`}>
-               <div className={`flex items-center justify-center border-b ${selectedButton === 'overseas' ? 'md:border-b-0 md:border-r' : ''} border-gray-300`}>
-                 <span className={selectedButton === 'overseas' ? 'text-[12px] md:text-base' : ''}>{t('analysis.overseas.title')}</span>
+            <div className="grid grid-rows-2 w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto">
+               <div className="flex items-center justify-center border-b border-gray-300">
+                 <span>{t('analysis.overseas.title')}</span>
                </div>
                <div className="flex items-center justify-center">
-                 {selectedButton === 'overseas' ? (
-                   <span className={`${loadingProbability || (probabilityData && probabilityData.proba_2 !== null) ? 'text-[12px] md:text-base' : 'text-[8px] md:text-[12px]'} text-blue-500 font-medium`}>
-                     {loadingProbability ? t('analysis.target.score.loading') : 
-                      probabilityData && probabilityData.proba_2 !== null ? 
-                      `${(probabilityData.proba_2 * 100).toFixed(1)}%` : 
-                      t('analysis.target.score.no.data')}
-                   </span>
-                 ) : (
-                   <span className="text-[11px] text-gray-600 font-medium">
-                     点击按钮查看预测
-                   </span>
-                 )}
+                 <span className="text-[11px] text-gray-600 font-medium">
+                   点击按钮查看预测
+                 </span>
                </div>
              </div>
           </Button>
                    <Button
-             variant={selectedButton === 'domestic' ? 'default' : 'outline'}
-             className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
-               selectedButton === 'domestic' 
-                 ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-                 : 'hover:scale-95'
-             }`}
+             variant="outline"
+             className="h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden hover:scale-95"
             onClick={() => handleButtonSelect('domestic')}
           >
-             <div className={`grid ${selectedButton === 'domestic' ? 'grid-rows-2 md:grid-cols-2' : 'grid-rows-2'} w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto`}>
-               <div className={`flex items-center justify-center border-b ${selectedButton === 'domestic' ? 'md:border-b-0 md:border-r' : ''} border-gray-300`}>
-                 <span className={selectedButton === 'domestic' ? 'text-[12px] md:text-base' : ''}>{t('analysis.domestic.title')}</span>
+             <div className="grid grid-rows-2 w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto">
+               <div className="flex items-center justify-center border-b border-gray-300">
+                 <span>{t('analysis.domestic.title')}</span>
                </div>
                <div className="flex items-center justify-center">
-                 {selectedButton === 'domestic' ? (
-                   <span className={`${loadingProbability || (probabilityData && probabilityData.proba_1 !== null) ? 'text-[12px] md:text-base' : 'text-[8px] md:text-[12px]'} text-blue-500 font-medium`}>
-                     {loadingProbability ? t('analysis.target.score.loading') : 
-                      probabilityData && probabilityData.proba_1 !== null ? 
-                      `${(probabilityData.proba_1 * 100).toFixed(1)}%` : 
-                      t('analysis.target.score.no.data')}
-                   </span>
-                 ) : (
-                   <span className="text-[11px] text-gray-600 font-medium">
-                     点击按钮查看预测
-                   </span>
-                 )}
+                 <span className="text-[11px] text-gray-600 font-medium">
+                   点击按钮查看预测
+                 </span>
                </div>
              </div>
           </Button>
@@ -1492,7 +1732,7 @@ export default function Analysis() {
                   <div className="flex-1">
                     <div className="text-center">
                       <p className="text-blue-800 font-medium">
-                        {t('analysis.overseas.minimum.text')}{' '}
+                        为达到海外读研目标，预估后续科目的最低平均分为{' '}
                         <span className="text-blue-600 font-bold">
                           {loadingTargetScores ? t('analysis.target.score.loading') : 
                            targetScores && targetScores.target2_score !== null ? 
@@ -1526,9 +1766,37 @@ export default function Analysis() {
                   <div className="flex-1">
                     <div className="text-center">
                       <p className="text-blue-800 font-medium">
-                        {predictionResult ? (
-                          `海外读研新可能性：${predictionResult.overseasPercentage || 0}%，国内读研新可能性：${predictionResult.domesticPercentage || 0}%`
-                        ) : (
+                        {predictionResult ? (() => {
+                          // 计算提高的百分比（海外读研界面，使用 current_proba2）
+                          try {
+                            if (current_proba2 === null) {
+                              console.error('❌ 可能性计算出错（海外读研界面）：current_proba2 为 null，无法计算提高百分比');
+                              return '可能性计算出错';
+                            }
+                            if (predictionResult.overseasPercentage === null || predictionResult.overseasPercentage === undefined) {
+                              console.error('❌ 可能性计算出错（海外读研界面）：predictionResult.overseasPercentage 为 null 或 undefined');
+                              return '可能性计算出错';
+                            }
+                            const improvement = (predictionResult.overseasPercentage || 0) - (current_proba2 * 100);
+                            if (improvement > 0) {
+                              return `新百分比与之前相比提高${improvement.toFixed(1)}%`;
+                            } else if (improvement < 0) {
+                              return `新百分比与之前相比降低${Math.abs(improvement).toFixed(1)}%`;
+                            } else {
+                              return `新百分比与之前相比提高0.0%`;
+                            }
+                          } catch (error) {
+                            console.error('❌ 可能性计算出错（海外读研界面）：', error);
+                            if (error instanceof Error) {
+                              console.error('❌ 错误详情：', {
+                                message: error.message,
+                                stack: error.stack,
+                                name: error.name
+                              });
+                            }
+                            return '可能性计算出错';
+                          }
+                        })() : (
                           t('analysis.prediction.not.started')
                         )}
                       </p>
@@ -1546,7 +1814,7 @@ export default function Analysis() {
                   {/* 手机端布局 - 上下排列 */}
                   <div className="flex flex-col space-y-4 md:hidden">
                     <div>
-                      <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_2 !== null ? `${(probabilityData.proba_2 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
+                      <CardTitle className="text-lg font-medium">为达到海外读研的目标，推荐的各科目成绩如下：</CardTitle>
                       <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                     </div>
                     <div className="flex flex-col space-y-3">
@@ -1593,7 +1861,7 @@ export default function Analysis() {
                   {/* PC端布局 - 保持原有的左右排列 */}
                   <div className="hidden md:flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-lg font-medium">{t('analysis.overseas.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_2 !== null ? `${(probabilityData.proba_2 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
+                      <CardTitle className="text-lg font-medium">为达到海外读研的目标，推荐的各科目成绩如下：</CardTitle>
                       <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                     </div>
                     <div className="flex-1 flex justify-center items-center gap-4">
@@ -1865,7 +2133,7 @@ export default function Analysis() {
                   <div className="flex-1">
                     <div className="text-center">
                       <p className="text-blue-800 font-medium">
-                        {t('analysis.domestic.minimum.text')}{' '}
+                        为达到国内读研目标，预估后续科目的最低平均分为{' '}
                         <span className="text-blue-600 font-bold">
                           {loadingTargetScores ? t('analysis.target.score.loading') : 
                            targetScores && targetScores.target1_score !== null ? 
@@ -1899,9 +2167,37 @@ export default function Analysis() {
                   <div className="flex-1">
                     <div className="text-center">
                       <p className="text-blue-800 font-medium">
-                        {predictionResult ? (
-                          `国内读研新可能性：${predictionResult.domesticPercentage || 0}%，海外读研新可能性：${predictionResult.overseasPercentage || 0}%`
-                        ) : (
+                        {predictionResult ? (() => {
+                          // 计算提高的百分比（国内读研界面，使用 current_proba1）
+                          try {
+                            if (current_proba1 === null) {
+                              console.error('❌ 可能性计算出错（国内读研界面）：current_proba1 为 null，无法计算提高百分比');
+                              return '可能性计算出错';
+                            }
+                            if (predictionResult.domesticPercentage === null || predictionResult.domesticPercentage === undefined) {
+                              console.error('❌ 可能性计算出错（国内读研界面）：predictionResult.domesticPercentage 为 null 或 undefined');
+                              return '可能性计算出错';
+                            }
+                            const improvement = (predictionResult.domesticPercentage || 0) - (current_proba1 * 100);
+                            if (improvement > 0) {
+                              return `新百分比与之前相比提高${improvement.toFixed(1)}%`;
+                            } else if (improvement < 0) {
+                              return `新百分比与之前相比降低${Math.abs(improvement).toFixed(1)}%`;
+                            } else {
+                              return `新百分比与之前相比提高0.0%`;
+                            }
+                          } catch (error) {
+                            console.error('❌ 可能性计算出错（国内读研界面）：', error);
+                            if (error instanceof Error) {
+                              console.error('❌ 错误详情：', {
+                                message: error.message,
+                                stack: error.stack,
+                                name: error.name
+                              });
+                            }
+                            return '可能性计算出错';
+                          }
+                        })() : (
                           t('analysis.prediction.not.started')
                         )}
                       </p>
@@ -1919,7 +2215,7 @@ export default function Analysis() {
                   {/* 手机端布局 - 上下排列 */}
                   <div className="flex flex-col space-y-4 md:hidden">
                     <div>
-                      <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_1 !== null ? `${(probabilityData.proba_1 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
+                      <CardTitle className="text-lg font-medium">为达到国内读研的目标，推荐的各科目成绩如下：</CardTitle>
                       <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                     </div>
                     <div className="flex flex-col space-y-3">
@@ -1966,7 +2262,7 @@ export default function Analysis() {
                   {/* PC端布局 - 保持原有的左右排列 */}
                   <div className="hidden md:flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-lg font-medium">{t('analysis.domestic.target', { score: loadingProbability ? t('analysis.target.score.loading') : (probabilityData && probabilityData.proba_1 !== null ? `${(probabilityData.proba_1 * 100).toFixed(1)}%` : t('analysis.target.score.no.data')) })}</CardTitle>
+                      <CardTitle className="text-lg font-medium">为达到国内读研的目标，推荐的各科目成绩如下：</CardTitle>
                       <CardDescription>{t('analysis.course.recommendation')}</CardDescription>
                     </div>
                     <div className="flex-1 flex justify-center items-center gap-4">

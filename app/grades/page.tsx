@@ -272,7 +272,57 @@ export default function AllGrades() {
               </button>
             </div>
             
-            <div className="flex gap-6">
+            {/* 手机版布局：雷达图在上，标签在下分两列 */}
+            <div className="flex flex-col gap-4 md:hidden">
+              {/* 雷达图 - 上方居中 */}
+              <div className="flex justify-center">
+                {loadingRadar ? (
+                  <div className="flex items-center justify-center h-64 w-full">
+                    <div className="text-muted-foreground">加载中...</div>
+                  </div>
+                ) : radarData ? (
+                  <CoursesRadarChart data={radarData} />
+                ) : (
+                  <div className="flex items-center justify-center h-64 w-full">
+                    <div className="text-muted-foreground">暂无数据</div>
+                  </div>
+                )}
+              </div>
+              
+              {/* 标签说明 - 下方分左右两列 */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-sm font-semibold mb-3 text-gray-700 text-center">维度说明</h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                  {[
+                    '科学、数学和工程原理',
+                    '问题分析',
+                    '分析工具和技术',
+                    '技术文献',
+                    '设计',
+                    '综合/系统方法',
+                    '可持续发展',
+                    '职业道德',
+                    '风险',
+                    '安全',
+                    '平等、多样性和包容性(EDI)',
+                    '实践和工作坊技能',
+                    '材料、设备、技术和工艺',
+                    '质量管理',
+                    '工程与项目管理',
+                    '团队合作',
+                    '沟通',
+                    '终身学习'
+                  ].map((label, i) => (
+                    <div key={i} className="text-gray-600">
+                      C{i + 1}：{label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 电脑版布局：雷达图在左，标签在右 */}
+            <div className="hidden md:flex gap-6">
               {/* 左侧：雷达图 */}
               <div className="flex-1 flex justify-center">
                 {loadingRadar ? (
@@ -293,9 +343,28 @@ export default function AllGrades() {
                 <div className="bg-gray-50 rounded-lg p-4 h-full">
                   <h4 className="text-sm font-semibold mb-3 text-gray-700">维度说明</h4>
                   <div className="space-y-1.5 text-sm">
-                    {Array.from({ length: 18 }, (_, i) => (
+                    {[
+                      '科学、数学和工程原理',
+                      '问题分析',
+                      '分析工具和技术',
+                      '技术文献',
+                      '设计',
+                      '综合/系统方法',
+                      '可持续发展',
+                      '职业道德',
+                      '风险',
+                      '安全',
+                      '平等、多样性和包容性(EDI)',
+                      '实践和工作坊技能',
+                      '材料、设备、技术和工艺',
+                      '质量管理',
+                      '工程与项目管理',
+                      '团队合作',
+                      '沟通',
+                      '终身学习'
+                    ].map((label, i) => (
                       <div key={i} className="text-gray-600">
-                        C{i + 1}：第{String(i + 1).padStart(2, '0')}个标签数据
+                        C{i + 1}：{label}
                       </div>
                     ))}
                   </div>
