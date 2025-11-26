@@ -135,6 +135,11 @@ interface CompetitionRecord {
   colorIndex: number;
   award_type?: 'prize' | 'ranking';
   award_value?: string;
+  competition_type?: 'individual' | 'team';
+  team_leader_is_bupt?: boolean;
+  is_main_member?: boolean;
+  main_members_count?: number;
+  coefficient?: number;
 }
 
 export default function Profile() {
@@ -265,6 +270,10 @@ export default function Profile() {
   
   // 竞赛记录状态
   const [competitionRecords, setCompetitionRecords] = useState<CompetitionRecord[]>([]);
+  
+  // 学生审核状态
+  const [approvalStatus, setApprovalStatus] = useState<string>('pending');
+  const [isLocked, setIsLocked] = useState<boolean>(false);
 
   // 表单引用
   const formRef = useRef<HTMLFormElement>(null);
@@ -313,6 +322,24 @@ export default function Profile() {
     }
   }
 
+  // 获取学生审核状态的函数
+  const getStudentApprovalStatus = async (studentId: string) => {
+    try {
+      const response = await fetch(`/api/student-approval-status?studentId=${studentId}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setApprovalStatus(result.data.approval_status)
+        setIsLocked(result.data.is_locked)
+      }
+    } catch (error) {
+      console.error('获取学生审核状态失败:', error)
+      // 默认为未锁定状态
+      setApprovalStatus('pending')
+      setIsLocked(false)
+    }
+  }
+
   // 加载学生信息和用户个人资料数据
   useEffect(() => {
     if (authLoading) return;
@@ -338,6 +365,11 @@ export default function Profile() {
           getUserPatents(user.userId),
           getUserCompetitionRecords(user.userId)
         ]);
+
+        // 获取学生审核状态
+        if (user.userId) {
+          await getStudentApprovalStatus(user.userId);
+        }
         
         setStudentInfo(info);
         
@@ -586,6 +618,10 @@ export default function Profile() {
   
   // 添加论文处理函数
   const handleAddPaper = () => {
+    if (isLocked) {
+      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      return;
+    }
     setEditingPaper(null);
     setPaperErrors({});
     setPaperAuthorTypeCustom(false);
@@ -593,6 +629,10 @@ export default function Profile() {
   };
   
   const handleEditPaper = (paper: PaperLocal) => {
+    if (isLocked) {
+      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      return;
+    }
     setEditingPaper(paper);
     setPaperErrors({});
     // 检查是否需要显示自定义输入框
@@ -699,6 +739,10 @@ export default function Profile() {
   
   // 添加专利处理函数
   const handleAddPatent = () => {
+    if (isLocked) {
+      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      return;
+    }
     setEditingPatent(null);
     setPatentErrors({});
     setPatentOwnerCategoryCustom(false);
@@ -706,6 +750,10 @@ export default function Profile() {
   };
   
   const handleEditPatent = (patent: PatentLocal) => {
+    if (isLocked) {
+      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      return;
+    }
     setEditingPatent(patent);
     setPatentErrors({});
     // 检查是否需要显示自定义输入框
@@ -794,11 +842,19 @@ export default function Profile() {
   
   // 添加竞赛处理函数
   const handleAddCompetition = () => {
+    if (isLocked) {
+      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      return;
+    }
     setEditingCompetition(null);
     setShowCompetitionForm(true);
   };
   
   const handleEditCompetition = (competition: CompetitionRecord) => {
+    if (isLocked) {
+      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      return;
+    }
     setEditingCompetition(competition);
     setShowCompetitionForm(true);
   };
@@ -824,6 +880,11 @@ export default function Profile() {
         class: record.class,
         award_type: (record as any).award_type,
         award_value: (record as any).award_value,
+        competition_type: record.competition_type,
+        team_leader_is_bupt: record.team_leader_is_bupt,
+        is_main_member: record.is_main_member,
+        main_members_count: record.main_members_count,
+        coefficient: record.coefficient,
         note: record.note
       };
       
@@ -1227,6 +1288,24 @@ export default function Profile() {
   return (
     <div className="p-6 relative">
       <StatusAlert />
+      
+      {/* 锁定状态提示 */}
+      {isLocked && (
+        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+              <Shield className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-orange-800">推免资格已锁定</h3>
+              <p className="text-sm text-orange-700 mt-1">
+                您的推免资格已通过审核，所有保研相关信息（论文、专利、竞赛记录）已被锁定，无法进行修改。
+                如需修改，请联系管理员。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {showScoreForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 mx-4">
@@ -2023,8 +2102,21 @@ export default function Profile() {
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 {t('profile.papers.title')}
+                <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
+                  保研相关
+                </span>
+                {isLocked && (
+                  <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
+                    已锁定
+                  </span>
+                )}
               </div>
-              <Button size="sm" className="flex items-center gap-2" onClick={handleAddPaper}>
+              <Button 
+                size="sm" 
+                className="flex items-center gap-2" 
+                onClick={handleAddPaper}
+                disabled={isLocked}
+              >
                 <Plus className="h-4 w-4" />
                 {t('profile.papers.add')}
               </Button>
@@ -2055,12 +2147,18 @@ export default function Profile() {
                           {paper.publish_date && <p className="text-xs text-muted-foreground mt-1">{paper.publish_date}</p>}
                         </div>
                         <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditPaper(paper)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("paper", index, paper.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {isLocked ? (
+                            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">已锁定</span>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditPaper(paper)}>
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("paper", index, paper.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                       {paper.note && <p className="text-sm mt-2 pl-16 text-muted-foreground">{paper.note}</p>}
@@ -2078,8 +2176,21 @@ export default function Profile() {
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
                 {t('profile.patents.title')}
+                <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
+                  保研相关
+                </span>
+                {isLocked && (
+                  <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
+                    已锁定
+                  </span>
+                )}
               </div>
-              <Button size="sm" className="flex items-center gap-2" onClick={handleAddPatent}>
+              <Button 
+                size="sm" 
+                className="flex items-center gap-2" 
+                onClick={handleAddPatent}
+                disabled={isLocked}
+              >
                 <Plus className="h-4 w-4" />
                 {t('profile.patents.add')}
               </Button>
@@ -2109,12 +2220,18 @@ export default function Profile() {
                           {patent.patent_date && <p className="text-xs text-muted-foreground mt-1">{patent.patent_date}</p>}
                         </div>
                         <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditPatent(patent)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("patent", index, patent.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {isLocked ? (
+                            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">已锁定</span>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditPatent(patent)}>
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("patent", index, patent.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                       {patent.note && <p className="text-sm mt-2 pl-16 text-muted-foreground">{patent.note}</p>}
@@ -2132,8 +2249,21 @@ export default function Profile() {
               <div className="flex items-center gap-2">
                 <Trophy className="h-5 w-5" />
                 {t('profile.competitions.title')}
+                <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
+                  保研相关
+                </span>
+                {isLocked && (
+                  <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
+                    已锁定
+                  </span>
+                )}
               </div>
-              <Button size="sm" className="flex items-center gap-2" onClick={handleAddCompetition}>
+              <Button 
+                size="sm" 
+                className="flex items-center gap-2" 
+                onClick={handleAddCompetition}
+                disabled={isLocked}
+              >
                 <Plus className="h-4 w-4" />
                 {t('profile.competitions.add')}
               </Button>
@@ -2167,12 +2297,18 @@ export default function Profile() {
                           </div>
                         </div>
                         <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditCompetition(record)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("competition", index, record.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {isLocked ? (
+                            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">已锁定</span>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditCompetition(record)}>
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("competition", index, record.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                       {record.note && <p className="text-sm mt-2 pl-16 text-muted-foreground">{record.note}</p>}

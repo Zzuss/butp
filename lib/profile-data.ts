@@ -513,6 +513,7 @@ export interface Paper {
   publish_date?: string;
   note?: string;
   colorIndex: number;
+  defense_status?: 'pending' | 'passed'; // 答辩状态
 }
 
 // 专利接口
@@ -554,6 +555,7 @@ export async function getUserPapers(userId: string): Promise<Paper[]> {
       author_type: paper.author_type,
       publish_date: paper.publish_date,
       note: paper.note,
+      defense_status: paper.defense_status || 'pending', // 答辩状态，默认为待答辩
       colorIndex: Math.floor(Math.random() * 10) // 随机分配颜色索引
     })) || [];
   } catch (error) {
@@ -588,15 +590,29 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
       console.error('Paper title is required');
       return false;
     }
-    // 处理日期格式：如果是月份格式(YYYY-MM)，转换为完整日期格式(YYYY-MM-01)
+    // 处理日期格式：数据库现在支持年月格式
     let formattedDate = null;
     if (paper.publish_date && paper.publish_date.trim() !== '') {
       const dateValue = paper.publish_date.trim();
-      // 检查是否为月份格式 (YYYY-MM)
+      // 验证日期格式
       if (/^\d{4}-\d{2}$/.test(dateValue)) {
-        formattedDate = `${dateValue}-01`; // 添加第一天
-      } else {
+        // 月份格式，直接使用
         formattedDate = dateValue;
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        // 如果是完整日期，提取年月部分
+        formattedDate = dateValue.substring(0, 7); // 提取 YYYY-MM
+      } else {
+        // 其他格式尝试解析并提取年月
+        try {
+          const date = new Date(dateValue);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            formattedDate = `${year}-${month}`;
+          }
+        } catch {
+          formattedDate = null; // 无效日期设为null
+        }
       }
     }
 
@@ -729,15 +745,29 @@ export async function getUserPatents(userId: string): Promise<Patent[]> {
 
 export async function savePatent(userId: string, userName: string, patent: Patent): Promise<boolean> {
   try {
-    // 处理日期格式：如果是月份格式(YYYY-MM)，转换为完整日期格式(YYYY-MM-01)
+    // 处理日期格式：数据库现在支持年月格式
     let formattedPatentDate = null;
     if (patent.patent_date && patent.patent_date.trim() !== '') {
       const dateValue = patent.patent_date.trim();
-      // 检查是否为月份格式 (YYYY-MM)
+      // 验证日期格式
       if (/^\d{4}-\d{2}$/.test(dateValue)) {
-        formattedPatentDate = `${dateValue}-01`; // 添加第一天
-      } else {
+        // 月份格式，直接使用
         formattedPatentDate = dateValue;
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        // 如果是完整日期，提取年月部分
+        formattedPatentDate = dateValue.substring(0, 7); // 提取 YYYY-MM
+      } else {
+        // 其他格式尝试解析并提取年月
+        try {
+          const date = new Date(dateValue);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            formattedPatentDate = `${year}-${month}`;
+          }
+        } catch {
+          formattedPatentDate = null; // 无效日期设为null
+        }
       }
     }
 

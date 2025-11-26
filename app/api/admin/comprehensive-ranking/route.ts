@@ -25,14 +25,15 @@ interface ComprehensiveRanking {
 // 生成综测排名表
 export async function POST(request: NextRequest) {
   try {
-    console.log('开始生成综测排名表...');
+    console.log('开始生成推免排名表...');
     
     const startTime = Date.now();
+    const TIMEOUT_MS = 8000; // 8秒超时保护，留2秒缓冲
     
-    // 1. 获取所有智育成绩数据
+    // 1. 获取所有智育成绩数据（只查询必要字段）
     const { data: academicScores, error: academicError } = await supabase
       .from('academic_scores')
-      .select('*');
+      .select('bupt_student_id, full_name, programme, class, weighted_average, programme_rank, programme_total');
 
     if (academicError) {
       console.error('获取智育成绩失败:', academicError);
@@ -59,6 +60,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: '获取德育加分失败', details: moralError.message },
         { status: 500 }
+      );
+    }
+
+    // 检查超时 - 第一次检查
+    if (Date.now() - startTime > TIMEOUT_MS) {
+      return NextResponse.json(
+        { error: '数据量过大，处理超时。建议联系管理员优化数据或分批处理' },
+        { status: 408 }
       );
     }
 
@@ -99,6 +108,14 @@ export async function POST(request: NextRequest) {
       }
       programmeGroups.get(programme)!.push(student);
     });
+
+    // 检查超时 - 第二次检查
+    if (Date.now() - startTime > TIMEOUT_MS) {
+      return NextResponse.json(
+        { error: '数据量过大，处理超时。建议联系管理员优化数据或分批处理' },
+        { status: 408 }
+      );
+    }
 
     // 6. 为每个专业计算排名
     const finalRankings: ComprehensiveRanking[] = [];

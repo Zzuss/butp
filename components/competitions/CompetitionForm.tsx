@@ -38,6 +38,11 @@ interface CompetitionRecord {
   colorIndex: number
   award_type?: 'prize' | 'ranking'
   award_value?: string
+  competition_type?: 'individual' | 'team'
+  team_leader_is_bupt?: boolean
+  is_main_member?: boolean
+  main_members_count?: number
+  coefficient?: number
 }
 
 interface CompetitionFormProps {
@@ -77,6 +82,12 @@ export default function CompetitionForm({
   const [note, setNote] = useState("")
   const [formLoading, setFormLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({})
+  
+  // 新增团体竞赛相关状态
+  const [competitionType, setCompetitionType] = useState<'individual' | 'team'>('individual')
+  const [teamLeaderIsBupt, setTeamLeaderIsBupt] = useState<boolean | null>(null)
+  const [isMainMember, setIsMainMember] = useState<boolean | null>(null)
+  const [mainMembersCount, setMainMembersCount] = useState<number>(1)
 
   // 生成班级选项（1-24班）
   const classOptions = Array.from({ length: 24 }, (_, i) => `${i + 1}班`)
@@ -98,6 +109,10 @@ export default function CompetitionForm({
       setNote(editingRecord.note || "")
       setAwardType(editingRecord.award_type || 'prize')
       setAwardValue(editingRecord.award_value || "")
+      setCompetitionType(editingRecord.competition_type || 'individual')
+      setTeamLeaderIsBupt(editingRecord.team_leader_is_bupt ?? null)
+      setIsMainMember(editingRecord.is_main_member ?? null)
+      setMainMembersCount(editingRecord.main_members_count || 1)
     } else {
       resetForm()
     }
@@ -130,6 +145,10 @@ export default function CompetitionForm({
     setAwardValue("")
     setNote("")
     setFormErrors({})
+    setCompetitionType('individual')
+    setTeamLeaderIsBupt(null)
+    setIsMainMember(null)
+    setMainMembersCount(1)
   }
 
   // 获取当前选择的竞赛数据（根据奖项类型从对应表查询）
@@ -244,13 +263,47 @@ export default function CompetitionForm({
     return false
   }
 
+  // 计算系数
+  const calculateCoefficient = () => {
+    // 排名类竞赛始终使用系数1（不支持团体模式）
+    if (isRankingCompetition()) return 1
+    
+    if (competitionType === 'individual') return 1
+    if (competitionType === 'team' && mainMembersCount >= 1 && mainMembersCount <= 6) {
+      return 1 + (mainMembersCount - 1) * 0.6
+    }
+    return 1
+  }
+
   // 计算预览分数
   const getPreviewScore = () => {
     const currentComp = getCurrentCompetitionData()
     if (!currentComp || !awardValue) return null
     
-    const score = (currentComp as any)[awardValue]
-    return score || 0
+    const baseScore = (currentComp as any)[awardValue] || 0
+    const coefficient = calculateCoefficient()
+    return Math.round(baseScore * coefficient * 100) / 100 // 保留两位小数
+  }
+
+  // 检查当前竞赛是否为排名类竞赛（排名类竞赛不支持团体模式）
+  const isRankingCompetition = () => {
+    if (!selectedRegion || !selectedLevel || !selectedCompetition) return false
+    
+    // 检查该竞赛是否存在于排名表中
+    return competitionOptions.rankingBasedCompetitions.some(comp => 
+      comp.region === selectedRegion && 
+      comp.level === selectedLevel && 
+      comp.name === selectedCompetition
+    )
+  }
+
+  // 检查团体竞赛是否符合加分要求
+  const isTeamCompetitionValid = () => {
+    if (competitionType === 'individual') return true
+    if (competitionType === 'team') {
+      return teamLeaderIsBupt === true || isMainMember === true
+    }
+    return false
   }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -264,6 +317,22 @@ export default function CompetitionForm({
     if (!selectedCompetition) errors.competition = t('profile.competitions.form.error.name')
     if (!selectedClass) errors.class = t('profile.competitions.form.error.class')
     if (!awardValue) errors.award = t('profile.competitions.form.error.award')
+    
+    // 团体竞赛验证
+    if (competitionType === 'team') {
+      if (teamLeaderIsBupt === null) {
+        errors.teamLeader = '请选择团体负责人是否为北京邮电大学学生'
+      }
+      if (isMainMember === null) {
+        errors.mainMember = '请选择学生本人是否为参赛团队的主力队员'
+      }
+      if (teamLeaderIsBupt === false && isMainMember === false) {
+        errors.teamRequirement = '不符合加分要求：团体负责人必须为北京邮电大学学生或学生本人必须为主力队员'
+      }
+      if (mainMembersCount < 1 || mainMembersCount > 6) {
+        errors.membersCount = '主力队员人数必须在1-6人之间'
+      }
+    }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)
@@ -282,7 +351,12 @@ export default function CompetitionForm({
       score: getPreviewScore() || 0,
       colorIndex: editingRecord?.colorIndex || Math.floor(Math.random() * 10),
       award_type: awardType,
-      award_value: awardValue
+      award_value: awardValue,
+      competition_type: competitionType,
+      team_leader_is_bupt: competitionType === 'team' ? (teamLeaderIsBupt ?? undefined) : undefined,
+      is_main_member: competitionType === 'team' ? (isMainMember ?? undefined) : undefined,
+      main_members_count: competitionType === 'team' ? mainMembersCount : undefined,
+      coefficient: calculateCoefficient()
     }
 
     await onSubmit(record)
@@ -385,6 +459,11 @@ export default function CompetitionForm({
                           setAwardType('prize')
                         } else if (!updatedPrizeAvailable && updatedRankingAvailable) {
                           setAwardType('ranking')
+                          // 排名类竞赛自动设置为个人模式
+                          setCompetitionType('individual')
+                          setTeamLeaderIsBupt(null)
+                          setIsMainMember(null)
+                          setMainMembersCount(1)
                         }
                         // 如果两种都可用或都不可用，保持当前选择
                       }, 0)
@@ -416,6 +495,167 @@ export default function CompetitionForm({
                 </select>
                 {formErrors.class && <p className="text-red-500 text-sm mt-1">{formErrors.class}</p>}
               </div>
+
+              {/* 竞赛类型选择 */}
+              {selectedCompetition && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">竞赛类型</label>
+                  {isRankingCompetition() ? (
+                    // 排名类竞赛只显示个人模式
+                    <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="competitionType"
+                          value="individual"
+                          checked={true}
+                          disabled={true}
+                          className="mr-2"
+                        />
+                        <span className="text-blue-800 font-medium">个人竞赛获奖</span>
+                      </div>
+                      <p className="text-blue-700 text-sm mt-2">
+                        <strong>排名类竞赛</strong> - 此竞赛按排名计分，仅支持个人参赛模式
+                      </p>
+                    </div>
+                  ) : (
+                    // 奖项类竞赛显示个人/团体选择
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="competitionType"
+                          value="individual"
+                          checked={competitionType === 'individual'}
+                          onChange={(e) => {
+                            setCompetitionType(e.target.value as 'individual')
+                            // 重置团体相关状态
+                            setTeamLeaderIsBupt(null)
+                            setIsMainMember(null)
+                            setMainMembersCount(1)
+                          }}
+                          className="mr-2"
+                        />
+                        个人竞赛获奖
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="competitionType"
+                          value="team"
+                          checked={competitionType === 'team'}
+                          onChange={(e) => {
+                            setCompetitionType(e.target.value as 'team')
+                          }}
+                          className="mr-2"
+                        />
+                        团体竞赛获奖
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 团体竞赛相关选项 */}
+              {competitionType === 'team' && (
+                <>
+                  {/* 团体负责人是否为北邮学生 */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">团体负责人是否为北京邮电大学学生</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="teamLeaderIsBupt"
+                          value="true"
+                          checked={teamLeaderIsBupt === true}
+                          onChange={() => setTeamLeaderIsBupt(true)}
+                          className="mr-2"
+                        />
+                        是
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="teamLeaderIsBupt"
+                          value="false"
+                          checked={teamLeaderIsBupt === false}
+                          onChange={() => setTeamLeaderIsBupt(false)}
+                          className="mr-2"
+                        />
+                        否
+                      </label>
+                    </div>
+                    {formErrors.teamLeader && <p className="text-red-500 text-sm mt-1">{formErrors.teamLeader}</p>}
+                  </div>
+
+                  {/* 学生本人是否为主力队员 */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">学生本人是否为参赛团队的主力队员（即团队前六名成员）</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="isMainMember"
+                          value="true"
+                          checked={isMainMember === true}
+                          onChange={() => setIsMainMember(true)}
+                          className="mr-2"
+                        />
+                        是
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="isMainMember"
+                          value="false"
+                          checked={isMainMember === false}
+                          onChange={() => setIsMainMember(false)}
+                          className="mr-2"
+                        />
+                        否
+                      </label>
+                    </div>
+                    {formErrors.mainMember && <p className="text-red-500 text-sm mt-1">{formErrors.mainMember}</p>}
+                  </div>
+
+                  {/* 主力队员人数 */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">参赛团队主力队员人数（1-6人）</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="6"
+                      value={mainMembersCount}
+                      onChange={(e) => setMainMembersCount(parseInt(e.target.value) || 1)}
+                      className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.membersCount ? 'border-red-500' : ''}`}
+                      placeholder="请输入主力队员人数"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      系数计算：1 + (主力队员人数 - 1) × 0.6 = {calculateCoefficient().toFixed(1)}
+                    </p>
+                    {formErrors.membersCount && <p className="text-red-500 text-sm mt-1">{formErrors.membersCount}</p>}
+                  </div>
+
+                  {/* 加分要求验证提示 */}
+                  {teamLeaderIsBupt === false && isMainMember === false && (
+                    <div className="bg-red-50 p-3 rounded-md border border-red-200">
+                      <p className="text-red-800 text-sm font-medium">
+                        ⚠️ 不符合加分要求
+                      </p>
+                      <p className="text-red-700 text-sm mt-1">
+                        团体负责人必须为北京邮电大学学生，或学生本人必须为参赛团队的主力队员（前六名成员）。
+                      </p>
+                    </div>
+                  )}
+                  
+                  {formErrors.teamRequirement && (
+                    <div className="bg-red-50 p-3 rounded-md border border-red-200">
+                      <p className="text-red-800 text-sm">{formErrors.teamRequirement}</p>
+                    </div>
+                  )}
+                </>
+              )}
 
               {/* 奖项类型选择 */}
               {selectedCompetition && (() => {
@@ -516,7 +756,7 @@ export default function CompetitionForm({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-blue-800">{t('profile.competitions.form.preview.label')}</span>
                     <span className="font-semibold text-blue-900">
-                      {shouldShowYearlyDecision() ? t('profile.competitions.form.preview.dependent') : t('profile.competitions.form.preview.points', { score: getPreviewScore() })}
+                      {shouldShowYearlyDecision() ? t('profile.competitions.form.preview.dependent') : t('profile.competitions.form.preview.points', { score: getPreviewScore() || 0 })}
                     </span>
                   </div>
                 </div>

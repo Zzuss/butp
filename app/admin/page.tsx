@@ -137,19 +137,19 @@ export default function AdminPage() {
           </Card>
         </Link>
 
-        {/* 综评成绩管理 */}
+        {/* 成绩推免页面 */}
         <Link href="/admin/comprehensive-evaluation">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                综评成绩管理
+                成绩推免页面
               </CardTitle>
               <Award className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg font-semibold text-purple-700">综评管理</div>
+              <div className="text-lg font-semibold text-purple-700">推免管理</div>
               <p className="text-xs text-muted-foreground">
-                管理学生论文、专利的综合评价加分
+                管理学生加分记录审核和推免资格
               </p>
             </CardContent>
           </Card>
