@@ -1764,42 +1764,55 @@ export default function Analysis() {
               }`}>
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
-                    <div className="text-center">
-                      <p className="text-blue-800 font-medium">
-                        {predictionResult ? (() => {
-                          // 计算提高的百分比（海外读研界面，使用 current_proba2）
-                          try {
-                            if (current_proba2 === null) {
-                              console.error('❌ 可能性计算出错（海外读研界面）：current_proba2 为 null，无法计算提高百分比');
-                              return '可能性计算出错';
-                            }
-                            if (predictionResult.overseasPercentage === null || predictionResult.overseasPercentage === undefined) {
-                              console.error('❌ 可能性计算出错（海外读研界面）：predictionResult.overseasPercentage 为 null 或 undefined');
-                              return '可能性计算出错';
-                            }
-                            const improvement = (predictionResult.overseasPercentage || 0) - (current_proba2 * 100);
-                            if (improvement > 0) {
-                              return `新百分比与之前相比提高${improvement.toFixed(1)}%`;
-                            } else if (improvement < 0) {
-                              return `新百分比与之前相比降低${Math.abs(improvement).toFixed(1)}%`;
-                            } else {
-                              return `新百分比与之前相比提高0.0%`;
-                            }
-                          } catch (error) {
-                            console.error('❌ 可能性计算出错（海外读研界面）：', error);
-                            if (error instanceof Error) {
-                              console.error('❌ 错误详情：', {
-                                message: error.message,
-                                stack: error.stack,
-                                name: error.name
-                              });
-                            }
-                            return '可能性计算出错';
+                    <div className="text-center space-y-2">
+                      {predictionResult ? (() => {
+                        try {
+                          // 计算海外读研百分比变化
+                          const overseasImprovement = current_proba2 !== null && predictionResult.overseasPercentage !== null && predictionResult.overseasPercentage !== undefined
+                            ? (predictionResult.overseasPercentage - (current_proba2 * 100))
+                            : null;
+                          
+                          // 计算国内读研百分比变化
+                          const domesticImprovement = current_proba1 !== null && predictionResult.domesticPercentage !== null && predictionResult.domesticPercentage !== undefined
+                            ? (predictionResult.domesticPercentage - (current_proba1 * 100))
+                            : null;
+                          
+                          return (
+                            <>
+                              <p className="text-blue-800 font-medium">
+                                {overseasImprovement !== null ? (
+                                  overseasImprovement > 0
+                                    ? `海外读研新百分比与之前相比提高${overseasImprovement.toFixed(1)}%`
+                                    : overseasImprovement < 0
+                                    ? `海外读研新百分比与之前相比下降${Math.abs(overseasImprovement).toFixed(1)}%`
+                                    : `海外读研新百分比与之前相比提高0.0%`
+                                ) : '海外读研百分比计算中...'}
+                              </p>
+                              <p className="text-blue-800 font-medium">
+                                {domesticImprovement !== null ? (
+                                  domesticImprovement > 0
+                                    ? `国内读研新百分比与之前相比提高${domesticImprovement.toFixed(1)}%`
+                                    : domesticImprovement < 0
+                                    ? `国内读研新百分比与之前相比下降${Math.abs(domesticImprovement).toFixed(1)}%`
+                                    : `国内读研新百分比与之前相比提高0.0%`
+                                ) : '国内读研百分比计算中...'}
+                              </p>
+                            </>
+                          );
+                        } catch (error) {
+                          console.error('❌ 可能性计算出错（海外读研界面）：', error);
+                          if (error instanceof Error) {
+                            console.error('❌ 错误详情：', {
+                              message: error.message,
+                              stack: error.stack,
+                              name: error.name
+                            });
                           }
-                        })() : (
-                          t('analysis.prediction.not.started')
-                        )}
-                      </p>
+                          return <p className="text-blue-800 font-medium">可能性计算出错</p>;
+                        }
+                      })() : (
+                        <p className="text-blue-800 font-medium">{t('analysis.prediction.not.started')}</p>
+                      )}
                     </div>
                   </div>
                   <div className="ml-4">
@@ -2165,42 +2178,55 @@ export default function Analysis() {
               }`}>
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
-                    <div className="text-center">
-                      <p className="text-blue-800 font-medium">
-                        {predictionResult ? (() => {
-                          // 计算提高的百分比（国内读研界面，使用 current_proba1）
-                          try {
-                            if (current_proba1 === null) {
-                              console.error('❌ 可能性计算出错（国内读研界面）：current_proba1 为 null，无法计算提高百分比');
-                              return '可能性计算出错';
-                            }
-                            if (predictionResult.domesticPercentage === null || predictionResult.domesticPercentage === undefined) {
-                              console.error('❌ 可能性计算出错（国内读研界面）：predictionResult.domesticPercentage 为 null 或 undefined');
-                              return '可能性计算出错';
-                            }
-                            const improvement = (predictionResult.domesticPercentage || 0) - (current_proba1 * 100);
-                            if (improvement > 0) {
-                              return `新百分比与之前相比提高${improvement.toFixed(1)}%`;
-                            } else if (improvement < 0) {
-                              return `新百分比与之前相比降低${Math.abs(improvement).toFixed(1)}%`;
-                            } else {
-                              return `新百分比与之前相比提高0.0%`;
-                            }
-                          } catch (error) {
-                            console.error('❌ 可能性计算出错（国内读研界面）：', error);
-                            if (error instanceof Error) {
-                              console.error('❌ 错误详情：', {
-                                message: error.message,
-                                stack: error.stack,
-                                name: error.name
-                              });
-                            }
-                            return '可能性计算出错';
+                    <div className="text-center space-y-2">
+                      {predictionResult ? (() => {
+                        try {
+                          // 计算海外读研百分比变化
+                          const overseasImprovement = current_proba2 !== null && predictionResult.overseasPercentage !== null && predictionResult.overseasPercentage !== undefined
+                            ? (predictionResult.overseasPercentage - (current_proba2 * 100))
+                            : null;
+                          
+                          // 计算国内读研百分比变化
+                          const domesticImprovement = current_proba1 !== null && predictionResult.domesticPercentage !== null && predictionResult.domesticPercentage !== undefined
+                            ? (predictionResult.domesticPercentage - (current_proba1 * 100))
+                            : null;
+                          
+                          return (
+                            <>
+                              <p className="text-blue-800 font-medium">
+                                {overseasImprovement !== null ? (
+                                  overseasImprovement > 0
+                                    ? `海外读研新百分比与之前相比提高${overseasImprovement.toFixed(1)}%`
+                                    : overseasImprovement < 0
+                                    ? `海外读研新百分比与之前相比下降${Math.abs(overseasImprovement).toFixed(1)}%`
+                                    : `海外读研新百分比与之前相比提高0.0%`
+                                ) : '海外读研百分比计算中...'}
+                              </p>
+                              <p className="text-blue-800 font-medium">
+                                {domesticImprovement !== null ? (
+                                  domesticImprovement > 0
+                                    ? `国内读研新百分比与之前相比提高${domesticImprovement.toFixed(1)}%`
+                                    : domesticImprovement < 0
+                                    ? `国内读研新百分比与之前相比下降${Math.abs(domesticImprovement).toFixed(1)}%`
+                                    : `国内读研新百分比与之前相比提高0.0%`
+                                ) : '国内读研百分比计算中...'}
+                              </p>
+                            </>
+                          );
+                        } catch (error) {
+                          console.error('❌ 可能性计算出错（国内读研界面）：', error);
+                          if (error instanceof Error) {
+                            console.error('❌ 错误详情：', {
+                              message: error.message,
+                              stack: error.stack,
+                              name: error.name
+                            });
                           }
-                        })() : (
-                          t('analysis.prediction.not.started')
-                        )}
-                      </p>
+                          return <p className="text-blue-800 font-medium">可能性计算出错</p>;
+                        }
+                      })() : (
+                        <p className="text-blue-800 font-medium">{t('analysis.prediction.not.started')}</p>
+                      )}
                     </div>
                   </div>
                   <div className="ml-4">
