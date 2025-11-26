@@ -362,6 +362,11 @@ export default function GradeRecommendationPage() {
   // 简单备份相关状态
   const [backupStatus, setBackupStatus] = useState<any>(null)
   const [backupLoading, setBackupLoading] = useState(false)
+
+  // 专业过滤器相关状态
+  const [academicProgrammeFilter, setAcademicProgrammeFilter] = useState<string>('智能科学与技术')
+  const [rankingProgrammeFilter, setRankingProgrammeFilter] = useState<string>('智能科学与技术')
+  const [availableProgrammes, setAvailableProgrammes] = useState<string[]>([])
   
   // 审核相关状态已在上面定义
 
@@ -795,7 +800,7 @@ export default function GradeRecommendationPage() {
   // 加载智育成绩
   const loadAcademicScores = async () => {
     try {
-      const response = await fetch('/api/admin/academic-scores?limit=20')
+      const response = await fetch('/api/admin/academic-scores?limit=200')
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -803,7 +808,9 @@ export default function GradeRecommendationPage() {
       }
 
       const result = await response.json()
-      setAcademicScores(result.data || [])
+      const academicData = result.data || []
+      setAcademicScores(academicData)
+      updateAvailableProgrammes(academicData)
     } catch (err) {
       console.error('获取智育成绩失败:', err)
       setError(err instanceof Error ? err.message : '获取智育成绩失败')
@@ -856,7 +863,7 @@ export default function GradeRecommendationPage() {
   // 加载推免排名
   const loadRankings = async () => {
     try {
-      const response = await fetch('/api/admin/comprehensive-ranking?topN=20')
+      const response = await fetch('/api/admin/comprehensive-ranking?topN=100')
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -864,7 +871,9 @@ export default function GradeRecommendationPage() {
       }
 
       const result = await response.json()
-      setComprehensiveRankings(result.data || [])
+      const rankingData = result.data || []
+      setComprehensiveRankings(rankingData)
+      updateAvailableProgrammes(rankingData)
     } catch (err) {
       console.error('获取推免排名失败:', err)
       setError(err instanceof Error ? err.message : '获取推免排名失败')
@@ -1067,6 +1076,22 @@ export default function GradeRecommendationPage() {
       setBackupLoading(false)
     }
   }
+
+  // 更新可用专业列表
+  const updateAvailableProgrammes = (data: any[]) => {
+    const programmes = [...new Set(data.map(item => item.programme).filter(Boolean))]
+    setAvailableProgrammes(programmes.sort())
+  }
+
+  // 过滤智育成绩数据 - 始终按专业过滤
+  const filteredAcademicScores = academicScores
+    .filter(score => score.programme === academicProgrammeFilter)
+    .slice(0, 10)
+
+  // 过滤推免排名数据 - 始终按专业过滤
+  const filteredRankings = comprehensiveRankings
+    .filter(ranking => ranking.programme === rankingProgrammeFilter)
+    .slice(0, 10)
 
   // 开始编辑分数
   const startEditScore = (type: 'paper' | 'patent' | 'competition', id: string, currentScore: string | number) => {
@@ -2459,11 +2484,34 @@ export default function GradeRecommendationPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <BookOpen className="h-5 w-5 mr-2" />
-                智育成绩表
+                智育成绩表 - 前10名
                 <Badge variant="outline" className="ml-2">
-                  显示 {academicScores.length} 条记录
+                  显示 {filteredAcademicScores.length} 条记录
+                  {academicProgrammeFilter && ` (${academicProgrammeFilter})`}
                 </Badge>
+                {availableProgrammes.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {availableProgrammes.length} 个专业
+                  </Badge>
+                )}
               </CardTitle>
+              {/* 专业过滤器 */}
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">专业选择：</label>
+                  <select
+                    value={academicProgrammeFilter}
+                    onChange={(e) => setAcademicProgrammeFilter(e.target.value)}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {availableProgrammes.map(programme => (
+                      <option key={programme} value={programme}>
+                        {programme}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -2481,7 +2529,7 @@ export default function GradeRecommendationPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {academicScores.map((score, index) => (
+                    {filteredAcademicScores.map((score, index) => (
                       <TableRow key={score.id || index}>
                         <TableCell className="font-medium">{score.bupt_student_id}</TableCell>
                         <TableCell>{score.full_name}</TableCell>
@@ -2502,11 +2550,15 @@ export default function GradeRecommendationPage() {
                   </TableBody>
                 </Table>
               </div>
-              {academicScores.length === 0 && (
+              {academicScores.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   暂无智育成绩数据，请先导入智育成绩
                 </div>
-              )}
+              ) : filteredAcademicScores.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  当前专业 "{academicProgrammeFilter}" 暂无数据
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         )}
@@ -2517,11 +2569,29 @@ export default function GradeRecommendationPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Trophy className="h-5 w-5 mr-2" />
-                推免排名表 - 前20名
+                推免排名表 - 前10名
                 <Badge variant="outline" className="ml-2">
-                  显示前 {comprehensiveRankings.length} 名
+                  显示 {filteredRankings.length} 条记录
+                  {rankingProgrammeFilter && ` (${rankingProgrammeFilter})`}
                 </Badge>
               </CardTitle>
+              {/* 专业过滤器 */}
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">专业选择：</label>
+                  <select
+                    value={rankingProgrammeFilter}
+                    onChange={(e) => setRankingProgrammeFilter(e.target.value)}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    {availableProgrammes.map(programme => (
+                      <option key={programme} value={programme}>
+                        {programme}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -2540,7 +2610,7 @@ export default function GradeRecommendationPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {comprehensiveRankings.map((ranking, index) => (
+                    {filteredRankings.map((ranking, index) => (
                       <TableRow key={ranking.id || index}>
                         <TableCell>
                           <div className="flex items-center">
@@ -2581,11 +2651,15 @@ export default function GradeRecommendationPage() {
                   </TableBody>
                 </Table>
               </div>
-              {comprehensiveRankings.length === 0 && (
+              {comprehensiveRankings.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   暂无推免排名数据，请先生成推免排名
                 </div>
-              )}
+              ) : filteredRankings.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  当前专业 "{rankingProgrammeFilter}" 暂无数据
+                </div>
+              ) : null}
               
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <h4 className="font-semibold mb-2">综测计算规则：</h4>
