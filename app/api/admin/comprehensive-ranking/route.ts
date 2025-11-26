@@ -73,15 +73,27 @@ export async function POST(request: NextRequest) {
 
     // 3. 创建德育加分映射表
     const moralScoreMap = new Map<string, number>();
+    console.log('德育总表数据数量:', moralScores?.length || 0);
     moralScores?.forEach(score => {
+      console.log('德育记录:', score.bupt_student_id, score.total_score);
       moralScoreMap.set(score.bupt_student_id, score.total_score || 0);
     });
+    console.log('德育映射表大小:', moralScoreMap.size);
 
     // 4. 合并智育成绩和德育加分，计算综合成绩
     const comprehensiveData: ComprehensiveRanking[] = academicScores.map(academic => {
       const practicePoints = moralScoreMap.get(academic.bupt_student_id) || 0;
       const academicTotal = academic.weighted_average || 0;
       const comprehensiveTotal = academicTotal + practicePoints;
+      
+      // 调试特定学生
+      if (academic.bupt_student_id === '2021109') {
+        console.log('=== 调试学生 2021109 ===');
+        console.log('智育成绩:', academicTotal);
+        console.log('德育加分:', practicePoints);
+        console.log('综合成绩:', comprehensiveTotal);
+        console.log('德育映射表中是否存在:', moralScoreMap.has(academic.bupt_student_id));
+      }
 
       return {
         bupt_student_id: academic.bupt_student_id,

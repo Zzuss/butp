@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { Search, FileText, Award, Edit, Save, X, Check, Trophy, BookOpen, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Search, FileText, Award, Edit, Save, X, Check, Trophy, BookOpen, CheckCircle, XCircle, Clock, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -214,6 +214,112 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
   })
 }
 
+// 解析德育总表文件（支持CSV和Excel）
+const parseMoralEducationFile = async (file: File): Promise<any[]> => {
+  return new Promise((resolve, reject) => {
+    console.log('开始解析德育总表文件:', file.name, '大小:', file.size, '类型:', file.type)
+    
+    const reader = new FileReader()
+    
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result
+        if (!data) {
+          reject(new Error('文件读取结果为空'))
+          return
+        }
+        
+        let workbook: XLSX.WorkBook
+        
+        if (file.name.endsWith('.csv')) {
+          workbook = XLSX.read(data, { type: 'binary' })
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+          workbook = XLSX.read(data, { type: 'array' })
+        } else {
+          reject(new Error('不支持的文件格式，请上传CSV或Excel文件'))
+          return
+        }
+        
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        
+        if (!worksheet) {
+          reject(new Error('工作表为空'))
+          return
+        }
+        
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+        
+        if (jsonData.length < 2) {
+          reject(new Error('文件内容为空或格式不正确，至少需要表头和一行数据'))
+          return
+        }
+        
+        const headers = jsonData[0] as string[]
+        const rows = jsonData.slice(1)
+        
+        // 德育总表字段映射
+        const moralFieldMapping: { [key: string]: string } = {
+          '学号': 'bupt_student_id',
+          'BUPT Student ID': 'bupt_student_id',
+          '姓名': 'full_name',
+          'Full Name': 'full_name',
+          '班级': 'class',
+          'Class': 'class',
+          '论文分数': 'paper_score',
+          'Paper Score': 'paper_score',
+          '专利分数': 'patent_score',
+          'Patent Score': 'patent_score',
+          '竞赛分数': 'competition_score',
+          'Competition Score': 'competition_score',
+          '论文专利总分': 'paper_patent_total',
+          'Paper Patent Total': 'paper_patent_total',
+          '德育总分': 'total_score',
+          'Total Score': 'total_score'
+        }
+        
+        const parsedData = rows.map((row: unknown) => {
+          const rowArray = row as any[]
+          const obj: any = {}
+          headers.forEach((header, index) => {
+            if (header && header.trim()) {
+              const trimmedHeader = header.trim()
+              const dbFieldName = moralFieldMapping[trimmedHeader] || trimmedHeader
+              obj[dbFieldName] = rowArray[index]
+            }
+          })
+          return obj
+        }).filter(row => {
+          const hasStudentId = row.bupt_student_id && row.bupt_student_id.toString().trim()
+          return hasStudentId
+        })
+        
+        console.log('德育总表解析完成，有效数据行数:', parsedData.length)
+        
+        if (parsedData.length === 0) {
+          reject(new Error('没有找到有效的数据行，请检查文件格式和学号字段'))
+          return
+        }
+        
+        resolve(parsedData)
+      } catch (error) {
+        console.error('德育总表文件解析错误:', error)
+        reject(new Error('文件解析失败: ' + (error instanceof Error ? error.message : '未知错误')))
+      }
+    }
+    
+    reader.onerror = () => {
+      reject(new Error('文件读取失败'))
+    }
+    
+    if (file.name.endsWith('.csv')) {
+      reader.readAsBinaryString(file)
+    } else {
+      reader.readAsArrayBuffer(file)
+    }
+  })
+}
+
 export default function GradeRecommendationPage() {
   const [studentId, setStudentId] = useState('')
   const [studentData, setStudentData] = useState<StudentData | null>(null)
@@ -246,6 +352,16 @@ export default function GradeRecommendationPage() {
   const [comprehensiveRankings, setComprehensiveRankings] = useState<any[]>([])
   const [showRankingTable, setShowRankingTable] = useState(false)
   const [rankingGenerateLoading, setRankingGenerateLoading] = useState(false)
+
+  // 德育总表导入相关状态
+  const [moralImportLoading, setMoralImportLoading] = useState(false)
+  const [moralImportMode, setMoralImportMode] = useState<'append' | 'replace'>('append')
+  const [validationResult, setValidationResult] = useState<any>(null)
+  const [showValidationResult, setShowValidationResult] = useState(false)
+
+  // 简单备份相关状态
+  const [backupStatus, setBackupStatus] = useState<any>(null)
+  const [backupLoading, setBackupLoading] = useState(false)
   
   // 审核相关状态已在上面定义
 
@@ -790,6 +906,168 @@ export default function GradeRecommendationPage() {
     }
   }
 
+  // 德育总表导入（文件上传）
+  const handleMoralImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setMoralImportLoading(true)
+    setError('')
+    setSuccess('')
+    setValidationResult(null)
+    setShowValidationResult(false)
+
+    try {
+      // 解析上传的文件
+      const parsedData = await parseMoralEducationFile(file)
+      
+      if (!parsedData || parsedData.length === 0) {
+        throw new Error('文件解析失败或文件为空')
+      }
+
+      // 先验证数据
+      const validateResponse = await fetch('/api/admin/import-moral-education-scores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          moralScores: parsedData,
+          validateOnly: true
+        })
+      })
+
+      const validateResult = await validateResponse.json()
+      setValidationResult(validateResult.validation)
+      setShowValidationResult(true)
+
+      if (!validateResult.validation.isValid) {
+        setError('数据验证失败，请查看详细信息并修正后重新上传')
+        return
+      }
+
+      // 如果验证通过，询问用户是否继续导入
+      if (window.confirm(`数据验证通过！\n有效记录: ${validateResult.validation.validRecords.length} 条\n${validateResult.validation.warnings.length > 0 ? `警告: ${validateResult.validation.warnings.length} 条\n` : ''}是否继续导入？`)) {
+        // 执行实际导入
+        const importResponse = await fetch('/api/admin/import-moral-education-scores', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            moralScores: parsedData,
+            replaceExisting: moralImportMode === 'replace'
+          })
+        })
+
+        if (!importResponse.ok) {
+          const errorData = await importResponse.json()
+          throw new Error(errorData.error || '导入德育总表失败')
+        }
+
+        const result = await importResponse.json()
+        setSuccess(`德育总表导入成功！处理了 ${result.summary.validRecords} 条有效记录`)
+        
+        // 如果德育总表正在显示，隐藏它以便用户重新加载
+        if (showScoreTable) {
+          setShowScoreTable(false)
+        }
+        
+        setTimeout(() => setSuccess(''), 5000)
+      }
+    } catch (err) {
+      console.error('导入失败:', err)
+      setError(err instanceof Error ? err.message : '导入德育总表失败')
+    } finally {
+      setMoralImportLoading(false)
+      // 清空文件输入
+      if (event.target) {
+        event.target.value = ''
+      }
+    }
+  }
+
+  // 获取备份状态
+  const loadBackupStatus = async () => {
+    setBackupLoading(true)
+    try {
+      const response = await fetch('/api/admin/moral-education-backup')
+      if (!response.ok) {
+        throw new Error('获取备份状态失败')
+      }
+      const result = await response.json()
+      setBackupStatus(result)
+    } catch (err) {
+      console.error('获取备份状态失败:', err)
+      setError('获取备份状态失败')
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  // 创建备份
+  const handleCreateBackup = async () => {
+    if (!window.confirm('确定要创建当前德育总表的备份吗？\n\n这将覆盖之前的备份数据。')) {
+      return
+    }
+
+    setBackupLoading(true)
+    try {
+      const response = await fetch('/api/admin/moral-education-backup', {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('创建备份失败')
+      }
+
+      const result = await response.json()
+      setSuccess(`备份创建成功！备份了 ${result.backupCount} 条记录`)
+      await loadBackupStatus()
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('创建备份失败:', err)
+      setError('创建备份失败')
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  // 回退到备份
+  const handleRollback = async () => {
+    if (!window.confirm('确定要回退到备份数据吗？\n\n⚠️ 当前德育总表数据将被完全替换，此操作不可撤销！')) {
+      return
+    }
+
+    setBackupLoading(true)
+    try {
+      const response = await fetch('/api/admin/moral-education-backup', {
+        method: 'PUT'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '回退失败')
+      }
+
+      const result = await response.json()
+      setSuccess(`${result.message}！恢复了 ${result.restoredCount} 条记录`)
+      
+      // 刷新备份状态和德育总表
+      await loadBackupStatus()
+      if (showScoreTable) {
+        setShowScoreTable(false)
+      }
+      
+      setTimeout(() => setSuccess(''), 5000)
+    } catch (err) {
+      console.error('回退失败:', err)
+      setError(err instanceof Error ? err.message : '回退失败')
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
   // 开始编辑分数
   const startEditScore = (type: 'paper' | 'patent' | 'competition', id: string, currentScore: string | number) => {
     const key = `${type}-${id}`
@@ -1172,6 +1450,81 @@ export default function GradeRecommendationPage() {
               </Button>
             </div>
             
+            {/* 德育总表导入管理 */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="mb-3">
+                <Label className="text-sm font-medium text-orange-700">德育总表导入：</Label>
+                <div className="flex gap-4 mt-1">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="moralImportMode"
+                      value="append"
+                      checked={moralImportMode === 'append'}
+                      onChange={(e) => setMoralImportMode(e.target.value as 'append' | 'replace')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">追加模式</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="moralImportMode"
+                      value="replace"
+                      checked={moralImportMode === 'replace'}
+                      onChange={(e) => setMoralImportMode(e.target.value as 'append' | 'replace')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">替换模式</span>
+                  </label>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {moralImportMode === 'append' ? (
+                    <span>• 相同学号的学生数据会被更新，不同学号会新增</span>
+                  ) : (
+                    <span className="text-red-600">• ⚠️ 将清空所有现有德育总表数据，然后导入新数据（不可恢复）</span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <label className="flex items-center cursor-pointer bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded">
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleMoralImport}
+                    disabled={moralImportLoading}
+                    className="hidden"
+                  />
+                  {moralImportLoading ? '导入中...' : '导入德育总表'}
+                </label>
+                <Button 
+                  onClick={handleCreateBackup}
+                  variant="outline"
+                  disabled={backupLoading}
+                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                >
+                  {backupLoading ? '创建中...' : '创建备份'}
+                </Button>
+                <Button 
+                  onClick={handleRollback}
+                  variant="outline"
+                  disabled={backupLoading}
+                  className="border-red-500 text-red-600 hover:bg-red-50"
+                >
+                  {backupLoading ? '回退中...' : '回退到备份'}
+                </Button>
+                <Button 
+                  onClick={loadBackupStatus}
+                  variant="outline"
+                  disabled={backupLoading}
+                  className="border-gray-500 text-gray-600 hover:bg-gray-50"
+                >
+                  查看备份状态
+                </Button>
+              </div>
+            </div>
+            
             {/* 智育成绩管理 */}
             <div className="mt-4 pt-4 border-t">
               <div className="mb-3">
@@ -1270,6 +1623,136 @@ export default function GradeRecommendationPage() {
           <Alert className="mb-6 border-green-200 bg-green-50">
             <AlertDescription className="text-green-800">{success}</AlertDescription>
           </Alert>
+        )}
+
+        {/* 德育总表导入验证结果 */}
+        {showValidationResult && validationResult && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className={`flex items-center ${validationResult.isValid ? 'text-green-700' : 'text-red-700'}`}>
+                {validationResult.isValid ? <CheckCircle className="h-5 w-5 mr-2" /> : <XCircle className="h-5 w-5 mr-2" />}
+                数据验证结果
+                <Button 
+                  onClick={() => setShowValidationResult(false)}
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* 统计信息 */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-blue-50 p-3 rounded">
+                    <div className="text-sm text-blue-600">总记录数</div>
+                    <div className="text-lg font-semibold text-blue-800">{validationResult.validRecords.length + validationResult.invalidRecords.length}</div>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded">
+                    <div className="text-sm text-green-600">有效记录</div>
+                    <div className="text-lg font-semibold text-green-800">{validationResult.validRecords.length}</div>
+                  </div>
+                  <div className="bg-red-50 p-3 rounded">
+                    <div className="text-sm text-red-600">无效记录</div>
+                    <div className="text-lg font-semibold text-red-800">{validationResult.invalidRecords.length}</div>
+                  </div>
+                  <div className="bg-yellow-50 p-3 rounded">
+                    <div className="text-sm text-yellow-600">警告数</div>
+                    <div className="text-lg font-semibold text-yellow-800">{validationResult.warnings.length}</div>
+                  </div>
+                </div>
+
+                {/* 错误信息 */}
+                {validationResult.errors.length > 0 && (
+                  <div className="bg-red-50 p-4 rounded">
+                    <h4 className="font-semibold text-red-800 mb-2">错误信息：</h4>
+                    <ul className="list-disc list-inside space-y-1">
+                      {validationResult.errors.map((error: string, index: number) => (
+                        <li key={index} className="text-sm text-red-700">{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 警告信息 */}
+                {validationResult.warnings.length > 0 && (
+                  <div className="bg-yellow-50 p-4 rounded">
+                    <h4 className="font-semibold text-yellow-800 mb-2">警告信息：</h4>
+                    <ul className="list-disc list-inside space-y-1">
+                      {validationResult.warnings.map((warning: string, index: number) => (
+                        <li key={index} className="text-sm text-yellow-700">{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 无效记录详情 */}
+                {validationResult.invalidRecords.length > 0 && (
+                  <div className="bg-gray-50 p-4 rounded">
+                    <h4 className="font-semibold text-gray-800 mb-2">无效记录详情：</h4>
+                    <div className="max-h-40 overflow-y-auto">
+                      {validationResult.invalidRecords.map((record: any, index: number) => (
+                        <div key={index} className="text-sm text-gray-700 mb-2 p-2 bg-white rounded">
+                          <div className="font-medium">第{record._rowNumber}行: {record.bupt_student_id || '无学号'} - {record.full_name || '无姓名'}</div>
+                          <div className="text-red-600 text-xs mt-1">
+                            {record._errors?.join('; ')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 备份状态显示 */}
+        {backupStatus && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <RotateCcw className="h-5 w-5 mr-2" />
+                德育总表备份状态
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-blue-600 mb-1">当前数据</div>
+                  <div className="text-2xl font-bold text-blue-800">{backupStatus.currentCount}</div>
+                  <div className="text-xs text-blue-600">条记录</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-green-600 mb-1">备份数据</div>
+                  <div className="text-2xl font-bold text-green-800">{backupStatus.backupCount}</div>
+                  <div className="text-xs text-green-600">条记录</div>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    备份状态: {backupStatus.hasBackup ? (
+                      <span className="text-green-600 font-medium">✓ 有可用备份</span>
+                    ) : (
+                      <span className="text-orange-600 font-medium">⚠ 暂无备份</span>
+                    )}
+                  </div>
+                  <Button 
+                    onClick={loadBackupStatus}
+                    variant="ghost"
+                    size="sm"
+                    disabled={backupLoading}
+                  >
+                    刷新状态
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* 学生信息展示 */}
