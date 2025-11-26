@@ -66,15 +66,46 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 获取学生整体审核状态
+    const { data: approvalData, error: approvalError } = await supabase
+      .from('student_approvals')
+      .select('approval_status')
+      .eq('bupt_student_id', studentId)
+      .single();
+
+    // 如果没有审核记录，默认为pending状态
+    let overallApprovalStatus = 'pending';
+    if (!approvalError && approvalData) {
+      overallApprovalStatus = approvalData.approval_status;
+    }
+
+    // 为每个记录添加默认的审核状态和答辩状态（如果数据库中没有该字段）
+    const papersWithStatus = (papers || []).map(paper => ({
+      ...paper,
+      approval_status: paper.approval_status || 'pending',
+      defense_status: paper.defense_status || 'pending'
+    }));
+
+    const patentsWithStatus = (patents || []).map(patent => ({
+      ...patent,
+      approval_status: patent.approval_status || 'pending'
+    }));
+
+    const competitionsWithStatus = (competitions || []).map(competition => ({
+      ...competition,
+      approval_status: competition.approval_status || 'pending'
+    }));
+
     return NextResponse.json({
       studentId,
-      papers: papers || [],
-      patents: patents || [],
-      competitions: competitions || [],
+      papers: papersWithStatus,
+      patents: patentsWithStatus,
+      competitions: competitionsWithStatus,
+      overall_approval_status: overallApprovalStatus,
       total: {
-        papers: papers?.length || 0,
-        patents: patents?.length || 0,
-        competitions: competitions?.length || 0
+        papers: papersWithStatus.length,
+        patents: patentsWithStatus.length,
+        competitions: competitionsWithStatus.length
       }
     });
 

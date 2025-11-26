@@ -57,7 +57,13 @@ export async function POST(req: NextRequest) {
       class: studentClass,
       award_type, // 'prize' 或 'ranking'
       award_value, // 具体获得的奖项或排名
-      note
+      note,
+      // 新增团体竞赛字段
+      competition_type, // 'individual' 或 'team'
+      team_leader_is_bupt, // boolean
+      is_main_member, // boolean
+      main_members_count, // number
+      coefficient // number
     } = body
 
     console.log('📝 添加竞赛记录:', {
@@ -66,7 +72,13 @@ export async function POST(req: NextRequest) {
       competition_name,
       bupt_student_id,
       award_type,
-      award_value
+      award_value,
+      competition_type,
+      team_leader_is_bupt,
+      is_main_member,
+      main_members_count,
+      coefficient: coefficient,
+      coefficient_type: typeof coefficient
     })
 
     // 验证必填字段
@@ -81,6 +93,15 @@ export async function POST(req: NextRequest) {
     // 根据奖项类型查询对应的分数
     let score = 0
     let scoreQuery
+    // 排名类竞赛不应用系数，始终为1
+    const finalCoefficient = award_type === 'ranking' ? 1 : (Number(coefficient) || 1)
+    console.log('🔢 系数计算:', {
+      award_type,
+      original_coefficient: coefficient,
+      parsed_coefficient: Number(coefficient),
+      final_coefficient: finalCoefficient,
+      is_ranking: award_type === 'ranking'
+    })
     
     if (award_type === 'prize') {
       // 查询奖项等级加分表
@@ -112,7 +133,9 @@ export async function POST(req: NextRequest) {
       // 如果查询失败，设置分数为0（表示需要根据当年情况确定）
       score = 0
     } else {
-      score = scoreQuery.data?.[award_value] || 0
+      const baseScore = Number(scoreQuery.data?.[award_value]) || 0
+      // 应用系数计算最终分数
+      score = Math.round(baseScore * finalCoefficient * 100) / 100 // 保留两位小数
     }
 
     // 插入竞赛记录
@@ -126,7 +149,13 @@ export async function POST(req: NextRequest) {
         full_name,
         class: studentClass,
         note: note || '',
-        score
+        score,
+        // 新增字段
+        competition_type: award_type === 'ranking' ? 'individual' : (competition_type || 'individual'),
+        team_leader_is_bupt: (award_type === 'ranking' || competition_type !== 'team') ? null : team_leader_is_bupt,
+        is_main_member: (award_type === 'ranking' || competition_type !== 'team') ? null : is_main_member,
+        main_members_count: (award_type === 'ranking' || competition_type !== 'team') ? null : main_members_count,
+        coefficient: finalCoefficient
       })
       .select()
       .single()
