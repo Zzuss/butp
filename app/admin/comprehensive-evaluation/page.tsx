@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import * as XLSX from 'xlsx'
 import AdminLayout from '@/components/admin/AdminLayout'
 
 interface Paper {
@@ -86,6 +87,131 @@ interface ComprehensiveScore {
   total_score: number
   created_at: string
   updated_at: string
+}
+
+// 解析智育成绩文件（支持CSV和Excel）
+const parseAcademicFile = async (file: File): Promise<any[]> => {
+  return new Promise((resolve, reject) => {
+    console.log('开始解析文件:', file.name, '大小:', file.size, '类型:', file.type)
+    
+    const reader = new FileReader()
+    
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result
+        if (!data) {
+          reject(new Error('文件读取结果为空'))
+          return
+        }
+        
+        console.log('文件读取成功，数据长度:', typeof data === 'string' ? data.length : (data as ArrayBuffer).byteLength)
+        
+        let workbook: XLSX.WorkBook
+        
+        if (file.name.endsWith('.csv')) {
+          // 处理CSV文件
+          workbook = XLSX.read(data, { type: 'binary' })
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+          // 处理Excel文件
+          workbook = XLSX.read(data, { type: 'array' })
+        } else {
+          reject(new Error('不支持的文件格式，请上传CSV或Excel文件'))
+          return
+        }
+        
+        console.log('工作簿解析成功，工作表数量:', workbook.SheetNames.length)
+        console.log('工作表名称:', workbook.SheetNames)
+        
+        // 获取第一个工作表
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        
+        if (!worksheet) {
+          reject(new Error('工作表为空'))
+          return
+        }
+        
+        // 转换为JSON数组
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+        console.log('JSON数据行数:', jsonData.length)
+        console.log('前3行数据:', jsonData.slice(0, 3))
+        
+        if (jsonData.length < 2) {
+          reject(new Error('文件内容为空或格式不正确，至少需要表头和一行数据'))
+          return
+        }
+        
+        // 获取表头
+        const headers = jsonData[0] as string[]
+        console.log('表头:', headers)
+        
+        const rows = jsonData.slice(1)
+        
+        // 字段映射表：英文表头 -> 数据库字段名
+        const fieldMapping: { [key: string]: string } = {
+          'BUPT Student ID': 'bupt_student_id',
+          'Full name': 'full_name',
+          'School': 'school',
+          'Campus': 'campus',
+          'Programme': 'programme',
+          'Class': 'class',
+          'Degree Category': 'degree_category',
+          'Total Diet': 'total_diet',
+          'Total Credits': 'total_credits',
+          'Taken Credits': 'taken_credits',
+          'Untaken Credits': 'untaken_credits',
+          'Weighted Average': 'weighted_average',
+          'GPA': 'gpa',
+          'Pragramme Rank': 'programme_rank',
+          'Programme Total': 'programme_total'
+        }
+        
+        // 转换为对象数组
+        const parsedData = rows.map((row: unknown) => {
+          const rowArray = row as any[]
+          const obj: any = {}
+          headers.forEach((header, index) => {
+            if (header && header.trim()) {
+              const trimmedHeader = header.trim()
+              // 使用映射表转换字段名，如果没有映射则保持原名
+              const dbFieldName = fieldMapping[trimmedHeader] || trimmedHeader
+              obj[dbFieldName] = rowArray[index]
+            }
+          })
+          return obj
+        }).filter(row => {
+          // 检查是否有学号字段
+          const hasStudentId = row.bupt_student_id && row.bupt_student_id.toString().trim()
+          console.log('行数据:', row, '有学号:', hasStudentId)
+          return hasStudentId
+        })
+        
+        console.log('解析完成，有效数据行数:', parsedData.length)
+        console.log('解析后的数据示例:', parsedData.slice(0, 2))
+        
+        if (parsedData.length === 0) {
+          reject(new Error('没有找到有效的数据行，请检查文件格式和bupt_student_id字段'))
+          return
+        }
+        
+        resolve(parsedData)
+      } catch (error) {
+        console.error('文件解析错误:', error)
+        reject(new Error('文件解析失败: ' + (error instanceof Error ? error.message : '未知错误')))
+      }
+    }
+    
+    reader.onerror = () => {
+      console.error('文件读取错误')
+      reject(new Error('文件读取失败'))
+    }
+    
+    if (file.name.endsWith('.csv')) {
+      reader.readAsBinaryString(file)
+    } else {
+      reader.readAsArrayBuffer(file)
+    }
+  })
 }
 
 export default function GradeRecommendationPage() {
@@ -510,24 +636,12 @@ export default function GradeRecommendationPage() {
     setSuccess('')
 
     try {
-      // 这里应该解析CSV/Excel文件，暂时用示例数据
-      const formData = new FormData()
-      formData.append('file', file)
-
-      // 实际项目中需要先解析文件内容，然后发送JSON数据
-      // 这里简化处理，假设有解析后的数据
-      const sampleData = [
-        {
-          bupt_student_id: '2021001',
-          full_name: '张三',
-          programme: '计算机科学与技术',
-          class: '计科2101',
-          weighted_average: 85.5,
-          gpa: 3.8,
-          programme_rank: 5,
-          programme_total: 120
-        }
-      ]
+      // 解析上传的文件
+      const parsedData = await parseAcademicFile(file)
+      
+      if (!parsedData || parsedData.length === 0) {
+        throw new Error('文件解析失败或文件为空')
+      }
 
       const response = await fetch('/api/admin/academic-scores', {
         method: 'POST',
@@ -535,7 +649,7 @@ export default function GradeRecommendationPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          academicScores: sampleData,
+          academicScores: parsedData,
           replaceExisting: importMode === 'replace'
         })
       })

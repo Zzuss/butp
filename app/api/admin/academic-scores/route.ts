@@ -19,6 +19,7 @@ interface AcademicScore {
   total_diet?: number;
   total_credits?: number;
   taken_credits?: number;
+  untaken_credits?: number;
   weighted_average?: number;
   gpa?: number;
   programme_rank?: number | null;
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
       total_diet: parseInt(score.total_diet) || 0,
       total_credits: parseFloat(score.total_credits) || 0,
       taken_credits: parseFloat(score.taken_credits) || 0,
+      untaken_credits: parseFloat(score.untaken_credits) || 0,
       weighted_average: parseFloat(score.weighted_average) || 0,
       gpa: parseFloat(score.gpa) || 0,
       programme_rank: parseInt(score.programme_rank) || null,
@@ -202,12 +204,12 @@ export async function GET(request: NextRequest) {
 
       // 生成CSV格式
       const BOM = '\uFEFF'; // UTF-8 BOM
-      const csvHeader = 'id,bupt_student_id,full_name,school,campus,programme,class,degree_category,total_diet,total_credits,taken_credits,weighted_average,gpa,programme_rank,programme_total,created_at,updated_at\n';
+      const csvHeader = 'id,bupt_student_id,full_name,school,campus,programme,class,degree_category,total_diet,total_credits,taken_credits,untaken_credits,weighted_average,gpa,programme_rank,programme_total,created_at,updated_at\n';
       const csvRows = scores?.map(score => {
         const createdAt = score.created_at ? new Date(score.created_at).toISOString() : '';
         const updatedAt = score.updated_at ? new Date(score.updated_at).toISOString() : '';
         
-        return `${score.id || ''},${score.bupt_student_id || ''},${score.full_name || ''},${score.school || ''},${score.campus || ''},${score.programme || ''},${score.class || ''},${score.degree_category || ''},${score.total_diet || 0},${score.total_credits || 0},${score.taken_credits || 0},${score.weighted_average || 0},${score.gpa || 0},${score.programme_rank || ''},${score.programme_total || ''},${createdAt},${updatedAt}`;
+        return `${score.id || ''},${score.bupt_student_id || ''},${score.full_name || ''},${score.school || ''},${score.campus || ''},${score.programme || ''},${score.class || ''},${score.degree_category || ''},${score.total_diet || 0},${score.total_credits || 0},${score.taken_credits || 0},${score.untaken_credits || 0},${score.weighted_average || 0},${score.gpa || 0},${score.programme_rank || ''},${score.programme_total || ''},${createdAt},${updatedAt}`;
       }).join('\n') || '';
 
       const csvContent = BOM + csvHeader + csvRows;
