@@ -956,9 +956,11 @@ export default function Analysis() {
 
   // 加载概率数据（按钮旁百分比），来自 cohortxxxx_predictions_all 表
   const loadProbabilityData = async () => {
+    console.log('1.进入loadProbabilityData函数');
     if (!user?.userHash || !user?.userId) return;
-
+    console.log('2.user?.userHash 和 user?.userId 存在，继续执行');
     setLoadingProbability(true);
+    console.log('3.设置loadingProbability为true');
     try {
       // 使用 userHash 和 userId（学号），与 source1-scores API 保持一致
       const studentHash = user.userHash;
@@ -968,7 +970,7 @@ export default function Analysis() {
         setLoadingProbability(false);
         return;
       }
-      
+      console.log('4.studentNumber和哈希存在，继续执行');
       const response = await fetch('/api/probability-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -977,28 +979,33 @@ export default function Analysis() {
           studentNumber: studentNumber
         })
       });
-
+      console.log('5.调用API查询概率接口，继续执行');
       if (response.ok) {
+        console.log('6.API查询概率接口成功，继续执行');
         const data = await response.json();
         setProbabilityData({
-          proba_1: typeof data.proba_1 === 'number' ? data.proba_1 : null,
-          proba_2: typeof data.proba_2 === 'number' ? data.proba_2 : null,
-          year: typeof data.year === 'number' ? data.year : null
+          proba_1: !isNaN(Number(data.proba_1)) ? Number(data.proba_1) : null,
+          proba_2: !isNaN(Number(data.proba_2)) ? Number(data.proba_2) : null,
+          year: !isNaN(Number(data.year)) ? Number(data.year) : null
         });
+        console.log('6.1.设置probabilityData：', {proba_1:Number(data.proba_1),proba_2:Number(data.proba_2)});
         // 保存当前概率值用于计算提高百分比
-        setCurrent_proba1(typeof data.proba_1 === 'number' ? data.proba_1 : null);
-        setCurrent_proba2(typeof data.proba_2 === 'number' ? data.proba_2 : null);
+        setCurrent_proba1(!isNaN(Number(data.proba_1)) ? Number(data.proba_1) : null);
+        setCurrent_proba2(!isNaN(Number(data.proba_2)) ? Number(data.proba_2) : null);
+        console.log('7.设置current:', {current_proba1:current_proba1,current_proba2:current_proba2});
       } else {
+        console.log('7.API查询概率接口失败，继续执行');
         setProbabilityData(null);
         setCurrent_proba1(null);
         setCurrent_proba2(null);
       }
-      console.log('获取到的当前概率值:', {current_proba1: current_proba1, current_proba2: current_proba2});
     } catch (error) {
+      console.log('7.接口报错error，继续执行');
       setProbabilityData(null);
       setCurrent_proba1(null);
       setCurrent_proba2(null);
     } finally {
+      console.log('8.设置loadingProbability为false，继续执行');
       setLoadingProbability(false);
     }
   };
@@ -1406,7 +1413,7 @@ export default function Analysis() {
 
     // 首次尝试
     loadProbabilityData();
-
+    console.log('首次尝试获取到的当前概率值:', {current_proba1: current_proba1, current_proba2: current_proba2});
     // 若没有数据且未超过重试次数，安排下次重试
     if (probabilityRetryRef.current < 5) {
       const timer = setTimeout(() => {
@@ -1414,6 +1421,7 @@ export default function Analysis() {
         if (!probabilityData) {
           probabilityRetryRef.current += 1;
           loadProbabilityData();
+          console.log('重复尝试获取到的当前概率值:', {current_proba1: current_proba1, current_proba2: current_proba2});
         }
       }, 500);
       return () => clearTimeout(timer);
@@ -1924,14 +1932,14 @@ export default function Analysis() {
                             "predictionResult.domesticPercentage": predictionResult?.domesticPercentage,
                           });
                           const overseasImprovement = current_proba2 !== null && predictionResult.overseasPercentage !== null && predictionResult.overseasPercentage !== undefined
-                            //? (predictionResult.overseasPercentage - (0.5 * 100))
-                            ? 50.2
+                            ? (predictionResult.overseasPercentage - (0.5 * 100))
+                            //? 50.2
                             : null;
                           
                           // 计算国内读研百分比变化
                           const domesticImprovement = current_proba1 !== null && predictionResult.domesticPercentage !== null && predictionResult.domesticPercentage !== undefined
-                            //? (predictionResult.domesticPercentage - (0.5 * 100))
-                            ? 50.1
+                            ? (predictionResult.domesticPercentage - (0.5 * 100))
+                            //? 50.1
                             : null;
                           
                           return (
