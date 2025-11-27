@@ -1915,12 +1915,12 @@ export default function Analysis() {
                         try {
                           // 计算海外读研百分比变化
                           const overseasImprovement = current_proba2 !== null && predictionResult.overseasPercentage !== null && predictionResult.overseasPercentage !== undefined
-                            ? (predictionResult.overseasPercentage - (current_proba2 * 100))
+                            ? (predictionResult.overseasPercentage - (0.5 * 100))
                             : null;
                           
                           // 计算国内读研百分比变化
                           const domesticImprovement = current_proba1 !== null && predictionResult.domesticPercentage !== null && predictionResult.domesticPercentage !== undefined
-                            ? (predictionResult.domesticPercentage - (current_proba1 * 100))
+                            ? (predictionResult.domesticPercentage - (0.5 * 100))
                             : null;
                           
                           return (
