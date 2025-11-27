@@ -15,16 +15,20 @@ const VERSION = "1.0"
 // 团队成员数据
 const teachers = [
   {
-    name: "A老师",
-    note: "项目指导老师，负责整体架构设计"
+    name: "王菡",
+    note: "国际学院副院长"
   },
   {
-    name: "B老师", 
-    note: "技术顾问，负责前端开发指导"
+    name: "赵帅",
+    note: "国际学院副院长"
   },
   {
-    name: "C老师",
-    note: "产品顾问，负责用户体验设计"
+    name: "李玚",
+    note: "国际学院副书记"
+  },
+  {
+    name: "刘书昌",
+    note: "国际学院教辅"
   }
 ];
 
@@ -160,7 +164,7 @@ export default function AboutPage() {
         </div>
 
         {/* 指导老师团队 */}
-        <div className="mb-12">
+        <div className="mt-24 mb-12">
           <div className="flex items-center gap-3 mb-6">
             <GraduationCap className="h-8 w-8 text-blue-600" />
             <h2 className="text-3xl font-bold text-blue-900">指导老师</h2>
