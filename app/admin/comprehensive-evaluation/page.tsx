@@ -141,14 +141,54 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
           return
         }
         
-        // 获取表头
-        const headers = jsonData[0] as string[]
-        console.log('表头:', headers)
+        // 检测并处理合并表头
+        let headers: string[] = []
+        let dataStartRow = 1
         
-        const rows = jsonData.slice(1)
+        // 检查是否有合并表头（前两行）
+        const firstRow = jsonData[0] as any[]
+        const secondRow = jsonData[1] as any[]
         
-        // 字段映射表：英文表头 -> 数据库字段名
+        console.log('第一行:', firstRow)
+        console.log('第二行:', secondRow)
+        
+        // 如果第一行有很多空值，可能是合并表头，使用第二行作为表头
+        const firstRowEmptyCount = firstRow.filter(cell => !cell || cell.toString().trim() === '').length
+        const firstRowTotalCount = firstRow.length
+        
+        if (firstRowEmptyCount > firstRowTotalCount * 0.5 && secondRow && secondRow.length > 0) {
+          // 第一行空值过多，可能是合并表头，使用第二行
+          headers = secondRow.map(cell => cell ? cell.toString() : '')
+          dataStartRow = 2
+          console.log('检测到合并表头，使用第二行作为表头:', headers)
+        } else {
+          // 使用第一行作为表头
+          headers = firstRow.map(cell => cell ? cell.toString() : '')
+          dataStartRow = 1
+          console.log('使用第一行作为表头:', headers)
+        }
+        
+        const rows = jsonData.slice(dataStartRow)
+        
+        // 字段映射表：中文/英文表头 -> 数据库字段名
         const fieldMapping: { [key: string]: string } = {
+          // 中文表头映射
+          '学号': 'bupt_student_id',
+          '姓名': 'full_name',
+          '上课院系': 'school',
+          '学生校区': 'campus',
+          '专业名称': 'programme',
+          '班级名称': 'class',
+          '培养层次': 'degree_category',
+          '所修总门数': 'total_diet',
+          '所修总学分': 'total_credits',
+          '所得学分': 'taken_credits',
+          '未得学分': 'untaken_credits',
+          '加权均分': 'weighted_average',
+          '平均学分绩点': 'gpa',
+          '专业排名': 'programme_rank',
+          '专业排名总人数': 'programme_total',
+          // 英文表头映射（保持向后兼容）
           'BUPT Student ID': 'bupt_student_id',
           'Full name': 'full_name',
           'School': 'school',
@@ -172,9 +212,11 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
           const obj: any = {}
           headers.forEach((header, index) => {
             if (header && header.trim()) {
-              const trimmedHeader = header.trim()
+              // 清理表头：只去除首尾空格
+              const cleanedHeader = header.trim()
+              
               // 使用映射表转换字段名，如果没有映射则保持原名
-              const dbFieldName = fieldMapping[trimmedHeader] || trimmedHeader
+              const dbFieldName = fieldMapping[cleanedHeader] || cleanedHeader
               obj[dbFieldName] = rowArray[index]
             }
           })
@@ -255,26 +297,54 @@ const parseMoralEducationFile = async (file: File): Promise<any[]> => {
           return
         }
         
-        const headers = jsonData[0] as string[]
-        const rows = jsonData.slice(1)
+        // 检测并处理合并表头
+        let headers: string[] = []
+        let dataStartRow = 1
+        
+        // 检查是否有合并表头（前两行）
+        const firstRow = jsonData[0] as any[]
+        const secondRow = jsonData[1] as any[]
+        
+        console.log('德育表第一行:', firstRow)
+        console.log('德育表第二行:', secondRow)
+        
+        // 如果第一行有很多空值，可能是合并表头，使用第二行作为表头
+        const firstRowEmptyCount = firstRow.filter(cell => !cell || cell.toString().trim() === '').length
+        const firstRowTotalCount = firstRow.length
+        
+        if (firstRowEmptyCount > firstRowTotalCount * 0.5 && secondRow && secondRow.length > 0) {
+          // 第一行空值过多，可能是合并表头，使用第二行
+          headers = secondRow.map(cell => cell ? cell.toString() : '')
+          dataStartRow = 2
+          console.log('德育表检测到合并表头，使用第二行作为表头:', headers)
+        } else {
+          // 使用第一行作为表头
+          headers = firstRow.map(cell => cell ? cell.toString() : '')
+          dataStartRow = 1
+          console.log('德育表使用第一行作为表头:', headers)
+        }
+        
+        const rows = jsonData.slice(dataStartRow)
         
         // 德育总表字段映射
         const moralFieldMapping: { [key: string]: string } = {
+          // 中文表头映射
           '学号': 'bupt_student_id',
-          'BUPT Student ID': 'bupt_student_id',
           '姓名': 'full_name',
-          'Full Name': 'full_name',
           '班级': 'class',
-          'Class': 'class',
           '论文分数': 'paper_score',
-          'Paper Score': 'paper_score',
           '专利分数': 'patent_score',
-          'Patent Score': 'patent_score',
           '竞赛分数': 'competition_score',
+          '论文+专利小计': 'paper_patent_total',
+          '总加分': 'total_score',
+          // 英文表头映射（保持向后兼容）
+          'BUPT Student ID': 'bupt_student_id',
+          'Full Name': 'full_name',
+          'Class': 'class',
+          'Paper Score': 'paper_score',
+          'Patent Score': 'patent_score',
           'Competition Score': 'competition_score',
-          '论文专利总分': 'paper_patent_total',
           'Paper Patent Total': 'paper_patent_total',
-          '德育总分': 'total_score',
           'Total Score': 'total_score'
         }
         
@@ -346,7 +416,7 @@ export default function GradeRecommendationPage() {
   const [academicScores, setAcademicScores] = useState<any[]>([])
   const [showAcademicTable, setShowAcademicTable] = useState(false)
   const [academicImportLoading, setAcademicImportLoading] = useState(false)
-  const [importMode, setImportMode] = useState<'append' | 'replace'>('append')
+  const [importMode, setImportMode] = useState<'append' | 'replace'>('replace')
   
   // 推免排名相关状态
   const [comprehensiveRankings, setComprehensiveRankings] = useState<any[]>([])
@@ -355,7 +425,7 @@ export default function GradeRecommendationPage() {
 
   // 德育总表导入相关状态
   const [moralImportLoading, setMoralImportLoading] = useState(false)
-  const [moralImportMode, setMoralImportMode] = useState<'append' | 'replace'>('append')
+  const [moralImportMode, setMoralImportMode] = useState<'append' | 'replace'>('replace')
   const [validationResult, setValidationResult] = useState<any>(null)
   const [showValidationResult, setShowValidationResult] = useState(false)
   const [clearMoralTableLoading, setClearMoralTableLoading] = useState(false)
@@ -913,6 +983,34 @@ export default function GradeRecommendationPage() {
     } catch (err) {
       console.error('导出失败:', err)
       setError('导出推免排名失败')
+    }
+  }
+
+  // 导出推免排名Excel
+  const handleExportRankingExcel = async () => {
+    try {
+      const response = await fetch('/api/admin/export-comprehensive-ranking-excel?topN=100')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '导出失败')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `推免排名_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      setSuccess('推免排名Excel导出成功')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('Excel导出失败:', err)
+      setError('导出推免排名Excel失败')
     }
   }
 
@@ -1591,20 +1689,6 @@ export default function GradeRecommendationPage() {
               >
                 {loading ? '搜索中...' : '查询'}
               </Button>
-              <Button 
-                onClick={handleExportMoralScores} 
-                variant="outline"
-                className="border-purple-500 text-purple-600 hover:bg-purple-50"
-              >
-                导出CSV
-              </Button>
-              <Button 
-                onClick={handleExportMoralScoresExcel} 
-                variant="outline"
-                className="border-green-500 text-green-600 hover:bg-green-50"
-              >
-                导出Excel
-              </Button>
             </div>
             
             {/* 德育总表导入管理 */}
@@ -1633,14 +1717,26 @@ export default function GradeRecommendationPage() {
                       className="mr-2"
                     />
                     <span className="text-sm">替换模式</span>
+                    <Badge variant="outline" className="ml-2 text-xs">推荐</Badge>
                   </label>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   {moralImportMode === 'append' ? (
                     <span>• 相同学号的学生数据会被更新，不同学号会新增</span>
                   ) : (
-                    <span className="text-red-600">• ⚠️ 将清空所有现有德育总表数据，然后导入新数据（不可恢复）</span>
+                    <span className="text-blue-600">• 🔄 将清空所有现有德育总表数据，然后导入新数据（推荐用于当年推免计算）</span>
                   )}
+                </div>
+              </div>
+              
+              <div className="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <h4 className="text-sm font-medium text-orange-800 mb-2">📋 支持的表头格式</h4>
+                <div className="text-xs text-orange-700 space-y-1">
+                  <p><strong>支持中文表头：</strong>学号、姓名、班级、论文分数、专利分数、竞赛分数、论文+专利小计、总加分</p>
+                  <p><strong>文件格式：</strong>支持 .csv、.xlsx、.xls 格式</p>
+                  <p><strong>表头格式：</strong>🔄 自动识别合并表头，支持第一行或第二行作为表头</p>
+                  <p><strong>容错处理：</strong>✨ 自动去除表头两侧的多余空格</p>
+                  <p><strong>注意：</strong>数据行必须在表头行之后</p>
                 </div>
               </div>
               
@@ -1655,6 +1751,20 @@ export default function GradeRecommendationPage() {
                   />
                   {moralImportLoading ? '导入中...' : '导入德育总表'}
                 </label>
+                <Button 
+                  onClick={handleExportMoralScores} 
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                >
+                  导出德育表CSV
+                </Button>
+                <Button 
+                  onClick={handleExportMoralScoresExcel} 
+                  variant="outline"
+                  className="border-green-500 text-green-600 hover:bg-green-50"
+                >
+                  导出德育表Excel
+                </Button>
                 <Button 
                   onClick={handleCreateBackup}
                   variant="outline"
@@ -1697,7 +1807,6 @@ export default function GradeRecommendationPage() {
                       className="mr-2"
                     />
                     <span className="text-sm">追加/更新模式</span>
-                    <Badge variant="outline" className="ml-2 text-xs">推荐</Badge>
                   </label>
                   <label className="flex items-center">
                     <input
@@ -1709,15 +1818,26 @@ export default function GradeRecommendationPage() {
                       className="mr-2"
                     />
                     <span className="text-sm">替换模式</span>
-                    <Badge variant="destructive" className="ml-2 text-xs">谨慎</Badge>
+                    <Badge variant="outline" className="ml-2 text-xs">推荐</Badge>
                   </label>
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
                   {importMode === 'append' ? (
                     <span>• 相同学号的学生数据会被更新，不同学号会新增，不会删除现有其他数据</span>
                   ) : (
-                    <span className="text-red-600">• ⚠️ 将清空所有现有数据，然后导入新数据（不可恢复）</span>
+                    <span className="text-blue-600">• 🔄 将清空所有现有数据，然后导入新数据（推荐用于当年推免计算）</span>
                   )}
+                </div>
+              </div>
+              
+              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="text-sm font-medium text-blue-800 mb-2">📋 支持的表头格式</h4>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <p><strong>支持中文表头：</strong>学号、姓名、上课院系、学生校区、专业名称、班级名称、培养层次、所修总门数、所修总学分、所得学分、未得学分、加权均分、平均学分绩点、专业排名、专业排名总人数</p>
+                  <p><strong>文件格式：</strong>支持 .csv、.xlsx、.xls 格式</p>
+                  <p><strong>表头格式：</strong>🔄 自动识别合并表头，支持第一行或第二行作为表头</p>
+                  <p><strong>容错处理：</strong>✨ 自动去除表头两侧的多余空格</p>
+                  <p><strong>注意：</strong>数据行必须在表头行之后</p>
                 </div>
               </div>
               
@@ -1761,9 +1881,16 @@ export default function GradeRecommendationPage() {
               <Button 
                 onClick={handleExportRanking} 
                 variant="outline"
-                className="border-red-500 text-red-600 hover:bg-red-50"
+                className="border-purple-500 text-purple-600 hover:bg-purple-50"
               >
                 导出推免排名CSV
+              </Button>
+              <Button 
+                onClick={handleExportRankingExcel} 
+                variant="outline"
+                className="border-green-500 text-green-600 hover:bg-green-50"
+              >
+                导出推免排名Excel
               </Button>
             </div>
           </CardContent>
