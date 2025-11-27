@@ -1914,13 +1914,23 @@ export default function Analysis() {
                       {predictionResult ? (() => {
                         try {
                           // 计算海外读研百分比变化
+                          console.log('当前百分比相关值:', {
+                            current_proba2: current_proba2,
+                            "predictionResult?.overseasPercentage": predictionResult?.overseasPercentage,
+                            "predictionResult.overseasPercentage": predictionResult?.overseasPercentage,
+                            current_proba1: current_proba1,
+                            "predictionResult?.domesticPercentage": predictionResult?.domesticPercentage,
+                            "predictionResult.domesticPercentage": predictionResult?.domesticPercentage,
+                          });
                           const overseasImprovement = current_proba2 !== null && predictionResult.overseasPercentage !== null && predictionResult.overseasPercentage !== undefined
-                            ? (predictionResult.overseasPercentage - (0.5 * 100))
+                            //? (predictionResult.overseasPercentage - (0.5 * 100))
+                            ? 50.2
                             : null;
                           
                           // 计算国内读研百分比变化
                           const domesticImprovement = current_proba1 !== null && predictionResult.domesticPercentage !== null && predictionResult.domesticPercentage !== undefined
-                            ? (predictionResult.domesticPercentage - (0.5 * 100))
+                            //? (predictionResult.domesticPercentage - (0.5 * 100))
+                            ? 50.1
                             : null;
                           
                           return (
