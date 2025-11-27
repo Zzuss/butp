@@ -1885,7 +1885,7 @@ export default function RoleModels() {
           <h1 className="text-3xl font-bold">{t('rolemodels.title')}</h1>
           <p className="text-muted-foreground">{t('rolemodels.description')}</p>
           <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            注：当前界面展示的“职业模型”等信息为临时虚拟生成，后续将基于校友真实经历持续补充与完善。
+            {t('rolemodels.disclaimer.virtual')}
           </div>
         </div>
         {/* <div className="flex-shrink-0">
@@ -1899,7 +1899,7 @@ export default function RoleModels() {
           <h1 className="text-3xl font-bold">{t('rolemodels.title')}</h1>
           <p className="text-muted-foreground">{t('rolemodels.description')}</p>
           <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            注：当前界面展示的“职业模型”等信息为临时虚拟生成，后续将基于校友真实经历持续补充与完善。
+            {t('rolemodels.disclaimer.virtual')}
           </div>
         </div>
         {/* <div className="flex justify-center">

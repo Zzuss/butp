@@ -1523,7 +1523,7 @@ export default function Analysis() {
                </div>
                <div className="flex items-center justify-center">
                  <span className="text-[11px] text-gray-600 font-medium">
-                   点击按钮查看预测
+                   {t('analysis.predict.click.hint')}
                  </span>
                </div>
              </div>
@@ -1539,7 +1539,7 @@ export default function Analysis() {
                </div>
                <div className="flex items-center justify-center">
                  <span className="text-[11px] text-gray-600 font-medium">
-                   点击按钮查看预测
+                   {t('analysis.predict.click.hint')}
                  </span>
                </div>
              </div>

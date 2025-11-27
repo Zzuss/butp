@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { FileText } from 'lucide-react'
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 export default function PreserveLayoutPdfButton({
   getUrl = () => (typeof window !== 'undefined' ? window.location.href : '/'),
@@ -16,6 +19,7 @@ export default function PreserveLayoutPdfButton({
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [filename, setFilename] = useState<string>('')
+  const [open, setOpen] = useState(false)
 
   const handleExport = async () => {
     // 临时记录集合与恢复函数需要在 try/catch 外部可见，以便在异常路径恢复样式
@@ -824,6 +828,11 @@ export default function PreserveLayoutPdfButton({
     }
   }
 
+  const handleConfirmAndExport = async () => {
+    setOpen(false)
+    await handleExport()
+  }
+
   // Download preview blob with current filename
   const downloadPreview = () => {
     if (!previewBlob) return
@@ -869,25 +878,42 @@ export default function PreserveLayoutPdfButton({
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <Button onClick={handleExport} disabled={isLoading} size="sm">
-          {isLoading ? '导出中...' : '导出 PDF'}
-        </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button
+            disabled={isLoading}
+            size="sm"
+            variant="ghost"
+            className="w-full flex items-center gap-2 justify-start"
+          >
+            <FileText className="h-4 w-4" />
+            {isLoading ? '导出中...' : '导出PDF'}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>选择尺寸</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Select value={paperSizeKey} onValueChange={setPaperSizeKey}>
+              <SelectTrigger>
+                <SelectValue placeholder="请选择纸张尺寸" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
+                <SelectItem value="A3">A3 (297 × 420 mm)</SelectItem>
+                <SelectItem value="Letter">Letter (8.5 × 11 in)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
+            <Button onClick={handleConfirmAndExport} disabled={isLoading}>开始导出</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <select
-          value={paperSizeKey}
-          onChange={e => setPaperSizeKey(e.target.value)}
-          className="border px-2 py-1 text-sm bg-white"
-          aria-label="选择纸张大小"
-          style={{ minWidth: 120 }}
-        >
-          <option value="A4">A4 (210 × 297 mm)</option>
-          <option value="A3">A3 (297 × 420 mm)</option>
-          <option value="Letter">Letter (8.5 × 11 in)</option>
-        </select>
-      </div>
-
-      {/* Preview Modal */}
+      
       {previewUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={closePreview} />
@@ -921,5 +947,3 @@ export default function PreserveLayoutPdfButton({
     </>
   )
 }
-
-
