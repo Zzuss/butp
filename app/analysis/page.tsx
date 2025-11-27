@@ -749,25 +749,48 @@ export default function Analysis() {
             });
             
             // 更灵活的数据解析：尝试多种可能的数据结构
+            console.log('🔍 开始解析概率数据...');
             let probabilities: number[] | null = null;
             
             if (predictionData.success && predictionData.data) {
+              console.log('✅ predictionData.success 为 true，开始解析数据');
               // 尝试标准的 probabilities 数组格式
               if (Array.isArray(predictionData.data.probabilities)) {
                 probabilities = predictionData.data.probabilities;
+                console.log('✅ 找到标准格式的 probabilities 数组:', probabilities);
               }
               // 如果直接返回数组
               else if (Array.isArray(predictionData.data)) {
                 probabilities = predictionData.data;
+                console.log('✅ 找到直接数组格式:', probabilities);
               }
               // 如果 probabilities 是对象，尝试提取值
               else if (predictionData.data.probabilities && typeof predictionData.data.probabilities === 'object') {
                 probabilities = Object.values(predictionData.data.probabilities) as number[];
+                console.log('✅ 从对象中提取 probabilities:', probabilities);
+              } else {
+                console.warn('⚠️ 无法解析 probabilities 数据:', {
+                  hasData: !!predictionData.data,
+                  dataKeys: predictionData.data ? Object.keys(predictionData.data) : [],
+                  probabilitiesType: typeof predictionData.data?.probabilities,
+                  isArray: Array.isArray(predictionData.data?.probabilities)
+                });
               }
+            } else {
+              console.warn('⚠️ predictionData 格式不正确:', {
+                success: predictionData.success,
+                hasData: !!predictionData.data
+              });
             }
             
+            console.log('🔍 解析结果 - probabilities:', probabilities);
+            console.log('🔍 解析结果 - probabilities 是否为数组:', Array.isArray(probabilities));
+            console.log('🔍 解析结果 - probabilities 长度:', probabilities?.length);
+            
             if (probabilities && probabilities.length >= 2) {
+              console.log('✅✅✅ 进入设置预测结果的分支，probabilities 有效且长度 >= 2');
               console.log('📈 概率数组:', probabilities);
+              console.log('📈 概率数组长度:', probabilities.length);
               // 业务约定：第一个百分比→国内读研，第二个百分比→海外读研，第三个舍弃
               const domesticPct = Number((probabilities[0] * 100).toFixed(1))  // 第一个百分比
               const overseasPct = Number((probabilities[1] * 100).toFixed(1)) // 第二个百分比
@@ -778,27 +801,39 @@ export default function Analysis() {
                 domesticPercentage: domesticPct,
                 overseasPercentage: overseasPct
               };
-              console.log('🔄 准备设置预测结果状态:', newPredictionResult);
+              console.log('🔄 准备设置预测结果状态:', JSON.stringify(newPredictionResult));
               
-              // 先设置 loadingFeatures 为 false，然后设置预测结果
-              // 这样确保 UI 能正确响应状态变化
-              console.log('🔄 步骤1: 设置 loadingFeatures 为 false');
-              setLoadingFeatures(false);
-              
-              console.log('🔄 步骤2: 设置 predictionResult');
-              setPredictionResult(newPredictionResult);
-              
-              console.log('✅ 预测结果已更新到状态:', {
-                domesticPercentage: newPredictionResult.domesticPercentage,
-                overseasPercentage: newPredictionResult.overseasPercentage,
-                loadingFeatures: false
-              });
-              
-              // 额外验证：检查状态是否正确设置
-              setTimeout(() => {
-                console.log('🔍 状态验证 - predictionResult 应该是:', newPredictionResult);
-                console.log('🔍 状态验证 - loadingFeatures 应该是: false');
-              }, 100);
+              try {
+                // 先设置 loadingFeatures 为 false，然后设置预测结果
+                // 这样确保 UI 能正确响应状态变化
+                console.log('🔄 步骤1: 设置 loadingFeatures 为 false');
+                setLoadingFeatures(false);
+                console.log('✅ 步骤1完成: loadingFeatures 已设置为 false');
+                
+                console.log('🔄 步骤2: 设置 predictionResult，值:', JSON.stringify(newPredictionResult));
+                setPredictionResult(newPredictionResult);
+                console.log('✅ 步骤2完成: predictionResult 状态已更新');
+                
+                // 双重确认日志
+                console.log('✅✅✅ 预测结果已更新到状态:', {
+                  domesticPercentage: newPredictionResult.domesticPercentage,
+                  overseasPercentage: newPredictionResult.overseasPercentage,
+                  loadingFeatures: false
+                });
+                
+                // 额外验证：检查状态是否正确设置
+                setTimeout(() => {
+                  console.log('🔍 状态验证 - predictionResult 应该是:', JSON.stringify(newPredictionResult));
+                  console.log('🔍 状态验证 - loadingFeatures 应该是: false');
+                }, 100);
+              } catch (error) {
+                console.error('❌ 设置状态时发生错误:', error);
+                if (error instanceof Error) {
+                  console.error('❌ 错误详情:', error.message, error.stack);
+                }
+                // 即使出错也要设置 loadingFeatures 为 false
+                setLoadingFeatures(false);
+              }
             } else {
               console.error('❌ 预测API返回数据格式错误或数据不完整:', {
                 success: predictionData.success,
