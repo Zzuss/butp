@@ -577,12 +577,17 @@ export default function Analysis() {
 
   // 处理确认修改
   const handleConfirmModification = async () => {
-    if (!user?.userHash) return;
+    console.log('🚀 handleConfirmModification 开始执行');
+    if (!user?.userHash) {
+      console.error('❌ 用户未登录，无法执行修改');
+      return;
+    }
     
 
     
     // 获取当前的修改数据
     const currentModifiedScores = getModifiedScores();
+    console.log('📝 当前修改的成绩数据:', currentModifiedScores.length, '门课程');
     
     // 确保所有成绩都是数字类型
     const updatedScores = currentModifiedScores.map((course: any) => ({
@@ -604,12 +609,16 @@ export default function Analysis() {
     }
     
     // 2. 同步到总表 - 调用all-course-data API生成新的总表
+    console.log('⏳ 设置 loadingFeatures 为 true');
     setLoadingFeatures(true);
     try {
       // 获取来源2数据
+      console.log('📥 开始加载来源2数据...');
       const source2Scores = await loadSource2Scores();
+      console.log('✅ 来源2数据加载完成，共', source2Scores.length, '门课程');
       
       // 调用all-course-data API，传入修改后的成绩
+      console.log('🔄 开始调用 all-course-data API...');
       const response = await fetch('/api/all-course-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -623,11 +632,19 @@ export default function Analysis() {
         })
       });
 
+      console.log('📡 all-course-data API响应状态:', response.status, response.ok);
+
       if (response.ok) {
         const data = await response.json();
         console.log('✅ all-course-data API调用成功:', data);
+        console.log('📊 all-course-data 返回的数据结构:', {
+          hasData: !!data.data,
+          hasAllCourses: !!data.data?.allCourses,
+          allCoursesLength: data.data?.allCourses?.length || 0
+        });
         
         // 3. 重新计算特征值 - 使用新的总表数据
+        console.log('🔄 开始调用 calculate-features API...');
         const featureResponse = await fetch('/api/calculate-features', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -636,9 +653,17 @@ export default function Analysis() {
           })
         });
 
+        console.log('📡 calculate-features API响应状态:', featureResponse.status, featureResponse.ok);
+
         if (featureResponse.ok) {
           const featureData = await featureResponse.json();
           console.log('✅ 特征值计算成功:', featureData);
+          console.log('📊 特征值数据结构:', {
+            success: featureData.success,
+            hasData: !!featureData.data,
+            hasFeatureValues: !!featureData.data?.featureValues,
+            featureValuesKeys: featureData.data?.featureValues ? Object.keys(featureData.data.featureValues) : []
+          });
           setCalculatedFeatures(featureData.data.featureValues);
           
           // 4. 调用预测API - 使用计算出的特征值进行预测
@@ -700,6 +725,7 @@ export default function Analysis() {
           
           console.log('📊 英文特征值:', englishFeatureValues);
           
+          console.log('🔄 开始调用预测API...');
           const predictionResponse = await fetch('/api/proba-predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -708,39 +734,94 @@ export default function Analysis() {
             })
           });
 
+          console.log('📡 预测API响应状态:', predictionResponse.status, predictionResponse.ok);
+
           if (predictionResponse.ok) {
             const predictionData = await predictionResponse.json();
-            if (predictionData.success && predictionData.data && Array.isArray(predictionData.data.probabilities)) {
-              const probabilities: number[] = predictionData.data.probabilities
+            console.log('✅ 预测API返回数据:', predictionData);
+            console.log('📊 预测数据详情:', {
+              success: predictionData.success,
+              hasData: !!predictionData.data,
+              hasProbabilities: !!predictionData.data?.probabilities,
+              probabilitiesType: Array.isArray(predictionData.data?.probabilities) ? 'array' : typeof predictionData.data?.probabilities,
+              probabilitiesLength: Array.isArray(predictionData.data?.probabilities) ? predictionData.data.probabilities.length : 'N/A',
+              fullResponse: JSON.stringify(predictionData, null, 2)
+            });
+            
+            // 更灵活的数据解析：尝试多种可能的数据结构
+            let probabilities: number[] | null = null;
+            
+            if (predictionData.success && predictionData.data) {
+              // 尝试标准的 probabilities 数组格式
+              if (Array.isArray(predictionData.data.probabilities)) {
+                probabilities = predictionData.data.probabilities;
+              }
+              // 如果直接返回数组
+              else if (Array.isArray(predictionData.data)) {
+                probabilities = predictionData.data;
+              }
+              // 如果 probabilities 是对象，尝试提取值
+              else if (predictionData.data.probabilities && typeof predictionData.data.probabilities === 'object') {
+                probabilities = Object.values(predictionData.data.probabilities) as number[];
+              }
+            }
+            
+            if (probabilities && probabilities.length >= 2) {
+              console.log('📈 概率数组:', probabilities);
               // 业务约定：第一个百分比→国内读研，第二个百分比→海外读研，第三个舍弃
               const domesticPct = Number((probabilities[0] * 100).toFixed(1))  // 第一个百分比
               const overseasPct = Number((probabilities[1] * 100).toFixed(1)) // 第二个百分比
+              console.log('✅ 计算后的百分比:', { domesticPct, overseasPct });
               setPredictionResult({
                 domesticPercentage: domesticPct,
                 overseasPercentage: overseasPct
               })
+              console.log('✅ 预测结果已更新到状态');
             } else {
-              console.error('❌ 预测API返回数据格式错误:', predictionData);
+              console.error('❌ 预测API返回数据格式错误或数据不完整:', {
+                success: predictionData.success,
+                hasData: !!predictionData.data,
+                hasProbabilities: !!predictionData.data?.probabilities,
+                probabilitiesIsArray: Array.isArray(predictionData.data?.probabilities),
+                probabilitiesLength: probabilities ? probabilities.length : 0,
+                fullData: JSON.stringify(predictionData, null, 2)
+              });
               setPredictionResult(null);
             }
           } else {
             const errorText = await predictionResponse.text();
-            console.error('❌ 预测API调用失败:', predictionResponse.status, errorText);
+            console.error('❌ 预测API调用失败:', {
+              status: predictionResponse.status,
+              statusText: predictionResponse.statusText,
+              errorText: errorText
+            });
             setPredictionResult(null);
           }
+          } else {
+            const errorText = await featureResponse.text();
+            console.error('❌ 特征值计算API调用失败:', featureResponse.status, errorText);
+            console.error('❌ 特征值计算API错误详情:', {
+              status: featureResponse.status,
+              statusText: featureResponse.statusText,
+              errorText: errorText
+            });
+          }
         } else {
-          const errorText = await featureResponse.text();
-          console.error('❌ 特征值计算API调用失败:', featureResponse.status, errorText);
+          const errorText = await response.text();
+          console.error('❌ all-course-data API调用失败:', response.status, errorText);
+          console.error('❌ all-course-data API错误详情:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText: errorText,
+            requestData: {
+              studentHash: user.userHash,
+              modifiedScoresCount: updatedScores.length,
+              source2ScoresCount: source2Scores.length
+            }
+          });
         }
-      } else {
-        const errorText = await response.text();
-        console.error('❌ all-course-data API调用失败:', response.status, errorText);
-        console.error('❌ 请求数据:', {
-          studentHash: user.userHash,
-          modifiedScoresCount: updatedScores.length,
-          source2ScoresCount: source2Scores.length
-        });
-      }
+        
+        console.log('✅ 所有API调用流程已完成');
     } catch (error) {
       console.error('❌ handleConfirmModification执行过程中发生错误:', error);
       if (error instanceof Error) {
@@ -753,11 +834,15 @@ export default function Analysis() {
         console.error('❌ 未知错误类型:', error);
       }
     } finally {
+      console.log('✅ 执行 finally 块，设置 loadingFeatures 为 false');
       setLoadingFeatures(false);
+      console.log('✅ loadingFeatures 已设置为 false');
     }
     
     // 退出编辑模式
+    console.log('✅ 退出编辑模式');
     setIsEditMode(false);
+    console.log('✅ handleConfirmModification 执行完成');
   };
 
   // 加载目标分数（带缓存）
