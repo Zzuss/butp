@@ -42,14 +42,10 @@ export async function GET(request: NextRequest) {
     if (format === 'csv') {
       // 生成CSV格式，添加BOM以确保Excel正确识别UTF-8编码
       const BOM = '\uFEFF'; // UTF-8 BOM
-      // 包含数据库表的所有字段
-      const csvHeader = 'id,bupt_student_id,class,full_name,paper_score,patent_score,competition_score,paper_patent_total,total_score,created_at,updated_at\n';
+      // 使用中文表头
+      const csvHeader = '学号,姓名,班级,论文分数,专利分数,竞赛分数,论文+专利小计,总加分\n';
       const csvRows = scores?.map(score => {
-        // 格式化日期时间
-        const createdAt = score.created_at ? new Date(score.created_at).toISOString() : '';
-        const updatedAt = score.updated_at ? new Date(score.updated_at).toISOString() : '';
-        
-        return `${score.id || ''},${score.bupt_student_id || ''},${score.class || ''},${score.full_name || ''},${score.paper_score || 0},${score.patent_score || 0},${score.competition_score || 0},${score.paper_patent_total || 0},${score.total_score || 0},${createdAt},${updatedAt}`;
+        return `${score.bupt_student_id || ''},${score.full_name || ''},${score.class || ''},${score.paper_score || 0},${score.patent_score || 0},${score.competition_score || 0},${score.paper_patent_total || 0},${score.total_score || 0}`;
       }).join('\n') || '';
 
       const csvContent = BOM + csvHeader + csvRows;

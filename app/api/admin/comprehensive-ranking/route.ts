@@ -252,14 +252,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: '获取综测排名失败' }, { status: 500 });
       }
 
-      // 生成CSV格式
+      // 生成CSV格式，使用中文表头
       const BOM = '\uFEFF'; // UTF-8 BOM
-      const csvHeader = 'id,bupt_student_id,full_name,programme,class,academic_weighted_average,programme_rank,programme_total,practice_extra_points,academic_practice_total,overall_rank,overall_rank_percentage,created_at,updated_at\n';
+      const csvHeader = '学号,姓名,专业名称,班级名称,专业成绩加权均分,专业成绩排名,专业排名总人数,实践活动加分,专业综合成绩,专业综合排名,专业综合排名百分比\n';
       const csvRows = rankings?.map(ranking => {
-        const createdAt = ranking.created_at ? new Date(ranking.created_at).toISOString() : '';
-        const updatedAt = ranking.updated_at ? new Date(ranking.updated_at).toISOString() : '';
-        
-        return `${ranking.id || ''},${ranking.bupt_student_id || ''},${ranking.full_name || ''},${ranking.programme || ''},${ranking.class || ''},${ranking.academic_weighted_average || 0},${ranking.programme_rank || ''},${ranking.programme_total || ''},${ranking.practice_extra_points || 0},${ranking.academic_practice_total || 0},${ranking.overall_rank || ''},${ranking.overall_rank_percentage || ''},${createdAt},${updatedAt}`;
+        return `${ranking.bupt_student_id || ''},${ranking.full_name || ''},${ranking.programme || ''},${ranking.class || ''},${ranking.academic_weighted_average || 0},${ranking.programme_rank || ''},${ranking.programme_total || ''},${ranking.practice_extra_points || 0},${ranking.academic_practice_total || 0},${ranking.overall_rank || ''},${ranking.overall_rank_percentage || ''}`;
       }).join('\n') || '';
 
       const csvContent = BOM + csvHeader + csvRows;

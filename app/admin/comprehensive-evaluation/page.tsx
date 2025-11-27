@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { Search, FileText, Award, Edit, Save, X, Check, Trophy, BookOpen, CheckCircle, XCircle, Clock, RotateCcw } from 'lucide-react'
+import { Search, FileText, Award, Edit, Save, X, Check, Trophy, BookOpen, CheckCircle, XCircle, Clock, RotateCcw, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -141,14 +141,54 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
           return
         }
         
-        // 获取表头
-        const headers = jsonData[0] as string[]
-        console.log('表头:', headers)
+        // 检测并处理合并表头
+        let headers: string[] = []
+        let dataStartRow = 1
         
-        const rows = jsonData.slice(1)
+        // 检查是否有合并表头（前两行）
+        const firstRow = jsonData[0] as any[]
+        const secondRow = jsonData[1] as any[]
         
-        // 字段映射表：英文表头 -> 数据库字段名
+        console.log('第一行:', firstRow)
+        console.log('第二行:', secondRow)
+        
+        // 如果第一行有很多空值，可能是合并表头，使用第二行作为表头
+        const firstRowEmptyCount = firstRow.filter(cell => !cell || cell.toString().trim() === '').length
+        const firstRowTotalCount = firstRow.length
+        
+        if (firstRowEmptyCount > firstRowTotalCount * 0.5 && secondRow && secondRow.length > 0) {
+          // 第一行空值过多，可能是合并表头，使用第二行
+          headers = secondRow.map(cell => cell ? cell.toString() : '')
+          dataStartRow = 2
+          console.log('检测到合并表头，使用第二行作为表头:', headers)
+        } else {
+          // 使用第一行作为表头
+          headers = firstRow.map(cell => cell ? cell.toString() : '')
+          dataStartRow = 1
+          console.log('使用第一行作为表头:', headers)
+        }
+        
+        const rows = jsonData.slice(dataStartRow)
+        
+        // 字段映射表：中文/英文表头 -> 数据库字段名
         const fieldMapping: { [key: string]: string } = {
+          // 中文表头映射
+          '学号': 'bupt_student_id',
+          '姓名': 'full_name',
+          '上课院系': 'school',
+          '学生校区': 'campus',
+          '专业名称': 'programme',
+          '班级名称': 'class',
+          '培养层次': 'degree_category',
+          '所修总门数': 'total_diet',
+          '所修总学分': 'total_credits',
+          '所得学分': 'taken_credits',
+          '未得学分': 'untaken_credits',
+          '加权均分': 'weighted_average',
+          '平均学分绩点': 'gpa',
+          '专业排名': 'programme_rank',
+          '专业排名总人数': 'programme_total',
+          // 英文表头映射（保持向后兼容）
           'BUPT Student ID': 'bupt_student_id',
           'Full name': 'full_name',
           'School': 'school',
@@ -172,9 +212,11 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
           const obj: any = {}
           headers.forEach((header, index) => {
             if (header && header.trim()) {
-              const trimmedHeader = header.trim()
+              // 清理表头：只去除首尾空格
+              const cleanedHeader = header.trim()
+              
               // 使用映射表转换字段名，如果没有映射则保持原名
-              const dbFieldName = fieldMapping[trimmedHeader] || trimmedHeader
+              const dbFieldName = fieldMapping[cleanedHeader] || cleanedHeader
               obj[dbFieldName] = rowArray[index]
             }
           })
@@ -255,26 +297,54 @@ const parseMoralEducationFile = async (file: File): Promise<any[]> => {
           return
         }
         
-        const headers = jsonData[0] as string[]
-        const rows = jsonData.slice(1)
+        // 检测并处理合并表头
+        let headers: string[] = []
+        let dataStartRow = 1
+        
+        // 检查是否有合并表头（前两行）
+        const firstRow = jsonData[0] as any[]
+        const secondRow = jsonData[1] as any[]
+        
+        console.log('德育表第一行:', firstRow)
+        console.log('德育表第二行:', secondRow)
+        
+        // 如果第一行有很多空值，可能是合并表头，使用第二行作为表头
+        const firstRowEmptyCount = firstRow.filter(cell => !cell || cell.toString().trim() === '').length
+        const firstRowTotalCount = firstRow.length
+        
+        if (firstRowEmptyCount > firstRowTotalCount * 0.5 && secondRow && secondRow.length > 0) {
+          // 第一行空值过多，可能是合并表头，使用第二行
+          headers = secondRow.map(cell => cell ? cell.toString() : '')
+          dataStartRow = 2
+          console.log('德育表检测到合并表头，使用第二行作为表头:', headers)
+        } else {
+          // 使用第一行作为表头
+          headers = firstRow.map(cell => cell ? cell.toString() : '')
+          dataStartRow = 1
+          console.log('德育表使用第一行作为表头:', headers)
+        }
+        
+        const rows = jsonData.slice(dataStartRow)
         
         // 德育总表字段映射
         const moralFieldMapping: { [key: string]: string } = {
+          // 中文表头映射
           '学号': 'bupt_student_id',
-          'BUPT Student ID': 'bupt_student_id',
           '姓名': 'full_name',
-          'Full Name': 'full_name',
           '班级': 'class',
-          'Class': 'class',
           '论文分数': 'paper_score',
-          'Paper Score': 'paper_score',
           '专利分数': 'patent_score',
-          'Patent Score': 'patent_score',
           '竞赛分数': 'competition_score',
+          '论文+专利小计': 'paper_patent_total',
+          '总加分': 'total_score',
+          // 英文表头映射（保持向后兼容）
+          'BUPT Student ID': 'bupt_student_id',
+          'Full Name': 'full_name',
+          'Class': 'class',
+          'Paper Score': 'paper_score',
+          'Patent Score': 'patent_score',
           'Competition Score': 'competition_score',
-          '论文专利总分': 'paper_patent_total',
           'Paper Patent Total': 'paper_patent_total',
-          '德育总分': 'total_score',
           'Total Score': 'total_score'
         }
         
@@ -346,7 +416,7 @@ export default function GradeRecommendationPage() {
   const [academicScores, setAcademicScores] = useState<any[]>([])
   const [showAcademicTable, setShowAcademicTable] = useState(false)
   const [academicImportLoading, setAcademicImportLoading] = useState(false)
-  const [importMode, setImportMode] = useState<'append' | 'replace'>('append')
+  const [importMode, setImportMode] = useState<'append' | 'replace'>('replace')
   
   // 推免排名相关状态
   const [comprehensiveRankings, setComprehensiveRankings] = useState<any[]>([])
@@ -355,13 +425,19 @@ export default function GradeRecommendationPage() {
 
   // 德育总表导入相关状态
   const [moralImportLoading, setMoralImportLoading] = useState(false)
-  const [moralImportMode, setMoralImportMode] = useState<'append' | 'replace'>('append')
+  const [moralImportMode, setMoralImportMode] = useState<'append' | 'replace'>('replace')
   const [validationResult, setValidationResult] = useState<any>(null)
   const [showValidationResult, setShowValidationResult] = useState(false)
+  const [clearMoralTableLoading, setClearMoralTableLoading] = useState(false)
 
   // 简单备份相关状态
   const [backupStatus, setBackupStatus] = useState<any>(null)
   const [backupLoading, setBackupLoading] = useState(false)
+
+  // 专业过滤器相关状态
+  const [academicProgrammeFilter, setAcademicProgrammeFilter] = useState<string>('智能科学与技术')
+  const [rankingProgrammeFilter, setRankingProgrammeFilter] = useState<string>('智能科学与技术')
+  const [availableProgrammes, setAvailableProgrammes] = useState<string[]>([])
   
   // 审核相关状态已在上面定义
 
@@ -795,7 +871,7 @@ export default function GradeRecommendationPage() {
   // 加载智育成绩
   const loadAcademicScores = async () => {
     try {
-      const response = await fetch('/api/admin/academic-scores?limit=20')
+      const response = await fetch('/api/admin/academic-scores?limit=200')
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -803,7 +879,9 @@ export default function GradeRecommendationPage() {
       }
 
       const result = await response.json()
-      setAcademicScores(result.data || [])
+      const academicData = result.data || []
+      setAcademicScores(academicData)
+      updateAvailableProgrammes(academicData)
     } catch (err) {
       console.error('获取智育成绩失败:', err)
       setError(err instanceof Error ? err.message : '获取智育成绩失败')
@@ -856,7 +934,7 @@ export default function GradeRecommendationPage() {
   // 加载推免排名
   const loadRankings = async () => {
     try {
-      const response = await fetch('/api/admin/comprehensive-ranking?topN=20')
+      const response = await fetch('/api/admin/comprehensive-ranking?topN=100')
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -864,7 +942,9 @@ export default function GradeRecommendationPage() {
       }
 
       const result = await response.json()
-      setComprehensiveRankings(result.data || [])
+      const rankingData = result.data || []
+      setComprehensiveRankings(rankingData)
+      updateAvailableProgrammes(rankingData)
     } catch (err) {
       console.error('获取推免排名失败:', err)
       setError(err instanceof Error ? err.message : '获取推免排名失败')
@@ -903,6 +983,34 @@ export default function GradeRecommendationPage() {
     } catch (err) {
       console.error('导出失败:', err)
       setError('导出推免排名失败')
+    }
+  }
+
+  // 导出推免排名Excel
+  const handleExportRankingExcel = async () => {
+    try {
+      const response = await fetch('/api/admin/export-comprehensive-ranking-excel?topN=100')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '导出失败')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `推免排名_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      setSuccess('推免排名Excel导出成功')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('Excel导出失败:', err)
+      setError('导出推免排名Excel失败')
     }
   }
 
@@ -1067,6 +1175,65 @@ export default function GradeRecommendationPage() {
       setBackupLoading(false)
     }
   }
+
+  // 清空德育总表
+  const handleClearMoralTable = async () => {
+    if (!window.confirm('⚠️ 确定要清空德育总表吗？\n\n此操作将删除所有德育总表数据，建议先创建备份！\n\n此操作不可撤销，请谨慎操作！')) {
+      return
+    }
+
+    // 二次确认
+    if (!window.confirm('⚠️ 最后确认：真的要清空德育总表吗？\n\n所有学生的德育加分数据都将被删除！')) {
+      return
+    }
+
+    setClearMoralTableLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await fetch('/api/admin/clear-moral-table', {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '清空德育总表失败')
+      }
+
+      const result = await response.json()
+      setSuccess(`德育总表清空成功！已删除 ${result.deletedCount} 条记录`)
+      
+      // 如果德育总表正在显示，隐藏它
+      if (showScoreTable) {
+        setShowScoreTable(false)
+        setComprehensiveScores([])
+      }
+      
+      setTimeout(() => setSuccess(''), 5000)
+    } catch (err) {
+      console.error('清空德育总表失败:', err)
+      setError(err instanceof Error ? err.message : '清空德育总表失败')
+    } finally {
+      setClearMoralTableLoading(false)
+    }
+  }
+
+  // 更新可用专业列表
+  const updateAvailableProgrammes = (data: any[]) => {
+    const programmes = [...new Set(data.map(item => item.programme).filter(Boolean))]
+    setAvailableProgrammes(programmes.sort())
+  }
+
+  // 过滤智育成绩数据 - 始终按专业过滤
+  const filteredAcademicScores = academicScores
+    .filter(score => score.programme === academicProgrammeFilter)
+    .slice(0, 10)
+
+  // 过滤推免排名数据 - 始终按专业过滤
+  const filteredRankings = comprehensiveRankings
+    .filter(ranking => ranking.programme === rankingProgrammeFilter)
+    .slice(0, 10)
 
   // 开始编辑分数
   const startEditScore = (type: 'paper' | 'patent' | 'competition', id: string, currentScore: string | number) => {
@@ -1281,6 +1448,61 @@ export default function GradeRecommendationPage() {
     }
   }
 
+  // 删除单条记录
+  const handleDeleteRecord = async (type: 'paper' | 'patent' | 'competition', id: string, title: string) => {
+    if (!window.confirm(`确定要删除这条${type === 'paper' ? '论文' : type === 'patent' ? '专利' : '竞赛'}记录吗？\n\n标题：${title}\n\n此操作不可撤销！`)) {
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await fetch('/api/admin/delete-record', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          id
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '删除记录失败')
+      }
+
+      const result = await response.json()
+      
+      // 更新本地数据
+      if (studentData) {
+        const updatedData = { ...studentData }
+        if (type === 'paper') {
+          updatedData.papers = updatedData.papers.filter(paper => paper.id !== id)
+          updatedData.total.papers = updatedData.papers.length
+        } else if (type === 'patent') {
+          updatedData.patents = updatedData.patents.filter(patent => patent.id !== id)
+          updatedData.total.patents = updatedData.patents.length
+        } else if (type === 'competition') {
+          updatedData.competitions = updatedData.competitions.filter(competition => competition.id !== id)
+          updatedData.total.competitions = updatedData.competitions.length
+        }
+        setStudentData(updatedData)
+      }
+
+      setSuccess(`${type === 'paper' ? '论文' : type === 'patent' ? '专利' : '竞赛'}记录删除成功`)
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('删除记录失败:', err)
+      setError(err instanceof Error ? err.message : '删除记录失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // 审核学生整体状态
   const handleApproveStudent = async (studentId: string, status: 'approved' | 'rejected' | 'pending') => {
     // 如果是审核通过，需要先检查所有加分记录是否都已审核通过
@@ -1392,6 +1614,53 @@ export default function GradeRecommendationPage() {
           <p className="text-gray-600">管理学生论文发表、专利申请和竞赛获奖的加分记录审核，设置学生推免资格</p>
         </div>
 
+        {/* 重要提醒：德育总表数据管理 */}
+        <Card className="mb-6 border-red-200 bg-red-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center text-red-700">
+              <Trophy className="h-5 w-5 mr-2" />
+              ⚠️ 重要提醒：德育总表数据管理
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="bg-white p-4 rounded-lg border border-red-200">
+              <div className="mb-3">
+                <p className="text-sm text-red-800 mb-2">
+                  <strong>必须定期清理德育总表数据！</strong>过时的数据会影响推免排名计算的准确性。
+                </p>
+                <p className="text-xs text-gray-600 mb-3">
+                  建议在每学期开始时清空上学期的旧数据，然后导入新的德育加分数据。
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  onClick={handleClearMoralTable}
+                  variant="destructive"
+                  disabled={clearMoralTableLoading}
+                  className="bg-red-600 hover:bg-red-700 text-white font-medium"
+                >
+                  {clearMoralTableLoading ? '清空中...' : '🗑️ 清空德育总表'}
+                </Button>
+                <Button 
+                  onClick={handleCreateBackup}
+                  variant="outline"
+                  disabled={backupLoading}
+                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                >
+                  {backupLoading ? '创建中...' : '💾 创建备份'}
+                </Button>
+                <Button 
+                  onClick={handleShowScoreTable} 
+                  variant="outline"
+                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                >
+                  {showScoreTable ? '隐藏德育总表' : '📈 查看德育总表'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* 搜索区域 */}
         <Card className="mb-6">
           <CardHeader>
@@ -1419,34 +1688,6 @@ export default function GradeRecommendationPage() {
                 className="bg-purple-600 hover:bg-purple-700"
               >
                 {loading ? '搜索中...' : '查询'}
-              </Button>
-              <Button 
-                onClick={handleDebug} 
-                variant="outline"
-                className="border-orange-500 text-orange-600 hover:bg-orange-50"
-              >
-                调试
-              </Button>
-              <Button 
-                onClick={handleShowScoreTable} 
-                variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-              >
-                {showScoreTable ? '隐藏德育总表' : '查看德育总表'}
-              </Button>
-              <Button 
-                onClick={handleExportMoralScores} 
-                variant="outline"
-                className="border-purple-500 text-purple-600 hover:bg-purple-50"
-              >
-                导出CSV
-              </Button>
-              <Button 
-                onClick={handleExportMoralScoresExcel} 
-                variant="outline"
-                className="border-green-500 text-green-600 hover:bg-green-50"
-              >
-                导出Excel
               </Button>
             </div>
             
@@ -1476,14 +1717,26 @@ export default function GradeRecommendationPage() {
                       className="mr-2"
                     />
                     <span className="text-sm">替换模式</span>
+                    <Badge variant="outline" className="ml-2 text-xs">推荐</Badge>
                   </label>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   {moralImportMode === 'append' ? (
                     <span>• 相同学号的学生数据会被更新，不同学号会新增</span>
                   ) : (
-                    <span className="text-red-600">• ⚠️ 将清空所有现有德育总表数据，然后导入新数据（不可恢复）</span>
+                    <span className="text-blue-600">• 🔄 将清空所有现有德育总表数据，然后导入新数据（推荐用于当年推免计算）</span>
                   )}
+                </div>
+              </div>
+              
+              <div className="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <h4 className="text-sm font-medium text-orange-800 mb-2">📋 支持的表头格式</h4>
+                <div className="text-xs text-orange-700 space-y-1">
+                  <p><strong>支持中文表头：</strong>学号、姓名、班级、论文分数、专利分数、竞赛分数、论文+专利小计、总加分</p>
+                  <p><strong>文件格式：</strong>支持 .csv、.xlsx、.xls 格式</p>
+                  <p><strong>表头格式：</strong>🔄 自动识别合并表头，支持第一行或第二行作为表头</p>
+                  <p><strong>容错处理：</strong>✨ 自动去除表头两侧的多余空格</p>
+                  <p><strong>注意：</strong>数据行必须在表头行之后</p>
                 </div>
               </div>
               
@@ -1498,6 +1751,20 @@ export default function GradeRecommendationPage() {
                   />
                   {moralImportLoading ? '导入中...' : '导入德育总表'}
                 </label>
+                <Button 
+                  onClick={handleExportMoralScores} 
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                >
+                  导出德育表CSV
+                </Button>
+                <Button 
+                  onClick={handleExportMoralScoresExcel} 
+                  variant="outline"
+                  className="border-green-500 text-green-600 hover:bg-green-50"
+                >
+                  导出德育表Excel
+                </Button>
                 <Button 
                   onClick={handleCreateBackup}
                   variant="outline"
@@ -1540,7 +1807,6 @@ export default function GradeRecommendationPage() {
                       className="mr-2"
                     />
                     <span className="text-sm">追加/更新模式</span>
-                    <Badge variant="outline" className="ml-2 text-xs">推荐</Badge>
                   </label>
                   <label className="flex items-center">
                     <input
@@ -1552,15 +1818,26 @@ export default function GradeRecommendationPage() {
                       className="mr-2"
                     />
                     <span className="text-sm">替换模式</span>
-                    <Badge variant="destructive" className="ml-2 text-xs">谨慎</Badge>
+                    <Badge variant="outline" className="ml-2 text-xs">推荐</Badge>
                   </label>
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
                   {importMode === 'append' ? (
                     <span>• 相同学号的学生数据会被更新，不同学号会新增，不会删除现有其他数据</span>
                   ) : (
-                    <span className="text-red-600">• ⚠️ 将清空所有现有数据，然后导入新数据（不可恢复）</span>
+                    <span className="text-blue-600">• 🔄 将清空所有现有数据，然后导入新数据（推荐用于当年推免计算）</span>
                   )}
+                </div>
+              </div>
+              
+              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="text-sm font-medium text-blue-800 mb-2">📋 支持的表头格式</h4>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <p><strong>支持中文表头：</strong>学号、姓名、上课院系、学生校区、专业名称、班级名称、培养层次、所修总门数、所修总学分、所得学分、未得学分、加权均分、平均学分绩点、专业排名、专业排名总人数</p>
+                  <p><strong>文件格式：</strong>支持 .csv、.xlsx、.xls 格式</p>
+                  <p><strong>表头格式：</strong>🔄 自动识别合并表头，支持第一行或第二行作为表头</p>
+                  <p><strong>容错处理：</strong>✨ 自动去除表头两侧的多余空格</p>
+                  <p><strong>注意：</strong>数据行必须在表头行之后</p>
                 </div>
               </div>
               
@@ -1604,9 +1881,16 @@ export default function GradeRecommendationPage() {
               <Button 
                 onClick={handleExportRanking} 
                 variant="outline"
-                className="border-red-500 text-red-600 hover:bg-red-50"
+                className="border-purple-500 text-purple-600 hover:bg-purple-50"
               >
                 导出推免排名CSV
+              </Button>
+              <Button 
+                onClick={handleExportRankingExcel} 
+                variant="outline"
+                className="border-green-500 text-green-600 hover:bg-green-50"
+              >
+                导出推免排名Excel
               </Button>
             </div>
           </CardContent>
@@ -2038,6 +2322,16 @@ export default function GradeRecommendationPage() {
                                           <Clock className="h-3 w-3" />
                                         </Button>
                                       )}
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleDeleteRecord('paper', paper.id, paper.paper_title)}
+                                        disabled={loading}
+                                        variant="outline"
+                                        className="border-red-500 text-red-600 hover:bg-red-50"
+                                        title="删除论文记录"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
                                     </>
                                   )}
                                 </div>
@@ -2180,6 +2474,16 @@ export default function GradeRecommendationPage() {
                                           <Clock className="h-3 w-3" />
                                         </Button>
                                       )}
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleDeleteRecord('patent', patent.id, patent.patent_name)}
+                                        disabled={loading}
+                                        variant="outline"
+                                        className="border-red-500 text-red-600 hover:bg-red-50"
+                                        title="删除专利记录"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
                                     </>
                                   )}
                                 </div>
@@ -2324,6 +2628,16 @@ export default function GradeRecommendationPage() {
                                           <Clock className="h-3 w-3" />
                                         </Button>
                                       )}
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleDeleteRecord('competition', competition.id, competition.competition_name)}
+                                        disabled={loading}
+                                        variant="outline"
+                                        className="border-red-500 text-red-600 hover:bg-red-50"
+                                        title="删除竞赛记录"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
                                     </>
                                   )}
                                 </div>
@@ -2459,11 +2773,34 @@ export default function GradeRecommendationPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <BookOpen className="h-5 w-5 mr-2" />
-                智育成绩表
+                智育成绩表 - 前10名
                 <Badge variant="outline" className="ml-2">
-                  显示 {academicScores.length} 条记录
+                  显示 {filteredAcademicScores.length} 条记录
+                  {academicProgrammeFilter && ` (${academicProgrammeFilter})`}
                 </Badge>
+                {availableProgrammes.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {availableProgrammes.length} 个专业
+                  </Badge>
+                )}
               </CardTitle>
+              {/* 专业过滤器 */}
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">专业选择：</label>
+                  <select
+                    value={academicProgrammeFilter}
+                    onChange={(e) => setAcademicProgrammeFilter(e.target.value)}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {availableProgrammes.map(programme => (
+                      <option key={programme} value={programme}>
+                        {programme}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -2481,7 +2818,7 @@ export default function GradeRecommendationPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {academicScores.map((score, index) => (
+                    {filteredAcademicScores.map((score, index) => (
                       <TableRow key={score.id || index}>
                         <TableCell className="font-medium">{score.bupt_student_id}</TableCell>
                         <TableCell>{score.full_name}</TableCell>
@@ -2502,11 +2839,15 @@ export default function GradeRecommendationPage() {
                   </TableBody>
                 </Table>
               </div>
-              {academicScores.length === 0 && (
+              {academicScores.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   暂无智育成绩数据，请先导入智育成绩
                 </div>
-              )}
+              ) : filteredAcademicScores.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  当前专业 "{academicProgrammeFilter}" 暂无数据
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         )}
@@ -2517,11 +2858,29 @@ export default function GradeRecommendationPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Trophy className="h-5 w-5 mr-2" />
-                推免排名表 - 前20名
+                推免排名表 - 前10名
                 <Badge variant="outline" className="ml-2">
-                  显示前 {comprehensiveRankings.length} 名
+                  显示 {filteredRankings.length} 条记录
+                  {rankingProgrammeFilter && ` (${rankingProgrammeFilter})`}
                 </Badge>
               </CardTitle>
+              {/* 专业过滤器 */}
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">专业选择：</label>
+                  <select
+                    value={rankingProgrammeFilter}
+                    onChange={(e) => setRankingProgrammeFilter(e.target.value)}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    {availableProgrammes.map(programme => (
+                      <option key={programme} value={programme}>
+                        {programme}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -2540,7 +2899,7 @@ export default function GradeRecommendationPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {comprehensiveRankings.map((ranking, index) => (
+                    {filteredRankings.map((ranking, index) => (
                       <TableRow key={ranking.id || index}>
                         <TableCell>
                           <div className="flex items-center">
@@ -2581,11 +2940,15 @@ export default function GradeRecommendationPage() {
                   </TableBody>
                 </Table>
               </div>
-              {comprehensiveRankings.length === 0 && (
+              {comprehensiveRankings.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   暂无推免排名数据，请先生成推免排名
                 </div>
-              )}
+              ) : filteredRankings.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  当前专业 "{rankingProgrammeFilter}" 暂无数据
+                </div>
+              ) : null}
               
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <h4 className="font-semibold mb-2">综测计算规则：</h4>

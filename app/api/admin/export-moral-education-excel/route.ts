@@ -39,44 +39,38 @@ export async function GET(request: NextRequest) {
 
     // 如果没有数据，创建空的Excel文件
     let excelData: Array<{
-      'id': string;
-      'bupt_student_id': string;
-      'class': string;
-      'full_name': string;
-      'paper_score': number;
-      'patent_score': number;
-      'competition_score': number;
-      'paper_patent_total': number;
-      'total_score': number;
-      'created_at': string;
-      'updated_at': string;
+      '学号': string;
+      '姓名': string;
+      '班级': string;
+      '论文分数': number;
+      '专利分数': number;
+      '竞赛分数': number;
+      '论文+专利小计': number;
+      '总加分': number;
     }>;
     
     if (!scores || scores.length === 0) {
       console.log('没有德育总表数据，生成空Excel文件');
       excelData = [];
     } else {
-      // 准备Excel数据，与CSV格式保持一致
+      // 准备Excel数据，使用中文表头
       excelData = scores.map((score) => ({
-        'id': score.id || '',
-        'bupt_student_id': score.bupt_student_id || '',
-        'class': score.class || '',
-        'full_name': score.full_name || '',
-        'paper_score': score.paper_score || 0,
-        'patent_score': score.patent_score || 0,
-        'competition_score': score.competition_score || 0,
-        'paper_patent_total': score.paper_patent_total || 0,
-        'total_score': score.total_score || 0,
-        'created_at': score.created_at ? new Date(score.created_at).toISOString() : '',
-        'updated_at': score.updated_at ? new Date(score.updated_at).toISOString() : ''
+        '学号': score.bupt_student_id || '',
+        '姓名': score.full_name || '',
+        '班级': score.class || '',
+        '论文分数': score.paper_score || 0,
+        '专利分数': score.patent_score || 0,
+        '竞赛分数': score.competition_score || 0,
+        '论文+专利小计': score.paper_patent_total || 0,
+        '总加分': score.total_score || 0
       }));
     }
 
     // 创建工作簿
     const workbook = XLSX.utils.book_new();
 
-    // 定义表头
-    const headers = ['id', 'bupt_student_id', 'class', 'full_name', 'paper_score', 'patent_score', 'competition_score', 'paper_patent_total', 'total_score', 'created_at', 'updated_at'];
+    // 定义中文表头
+    const headers = ['学号', '姓名', '班级', '论文分数', '专利分数', '竞赛分数', '论文+专利小计', '总加分'];
     
     // 创建工作表，确保始终有表头
     let worksheet;
@@ -90,17 +84,14 @@ export async function GET(request: NextRequest) {
 
     // 设置列宽
     const colWidths = [
-      { wch: 36 }, // id
-      { wch: 12 }, // bupt_student_id
-      { wch: 8 },  // class
-      { wch: 10 }, // full_name
-      { wch: 10 }, // paper_score
-      { wch: 10 }, // patent_score
-      { wch: 12 }, // competition_score
-      { wch: 15 }, // paper_patent_total
-      { wch: 10 }, // total_score
-      { wch: 20 }, // created_at
-      { wch: 20 }, // updated_at
+      { wch: 12 }, // 学号
+      { wch: 10 }, // 姓名
+      { wch: 15 }, // 班级
+      { wch: 12 }, // 论文分数
+      { wch: 12 }, // 专利分数
+      { wch: 12 }, // 竞赛分数
+      { wch: 15 }, // 论文+专利小计
+      { wch: 12 }, // 总加分
     ];
     worksheet['!cols'] = colWidths;
 
