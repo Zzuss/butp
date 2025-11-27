@@ -1925,7 +1925,7 @@ export default function Analysis() {
                     <table className="w-full border-collapse border border-gray-200">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">序号</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
@@ -2009,7 +2009,7 @@ export default function Analysis() {
                                           return Number(score); // 如果没有修改，显示原始成绩
                                         })()}
                                         min={60}
-                                        max={90}
+                                        max={98}
                                         step={1}
                                         onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
                                         className="w-full"
@@ -2339,12 +2339,14 @@ export default function Analysis() {
                     <table className="w-full border-collapse border border-gray-200">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">排名</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">序号</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学期</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">课程名称</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">类别</th>
                           <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">学分</th>
-                          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">目标成绩</th>
+                          {!isEditMode && (
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">目标成绩</th>
+                          )}
                           {isEditMode && (
                             <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">
                               修改成绩
@@ -2413,7 +2415,7 @@ export default function Analysis() {
                                           return Number(score); // 如果没有修改，显示原始成绩
                                         })()}
                                         min={60}
-                                        max={90}
+                                        max={98}
                                         step={1}
                                         onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
                                         className="w-full"
