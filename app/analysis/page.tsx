@@ -1914,6 +1914,8 @@ export default function Analysis() {
                       {predictionResult ? (() => {
                         try {
                           // 计算海外读研百分比变化
+                            setCurrent_proba1(0.51);  // 国内读研原始概率硬编码为50%
+                            setCurrent_proba2(0.52);  // 海外读研原始概率硬编码为50%
                           console.log('当前百分比相关值:', {
                             current_proba2: current_proba2,
                             "predictionResult?.overseasPercentage": predictionResult?.overseasPercentage,
