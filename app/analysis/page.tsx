@@ -954,7 +954,7 @@ export default function Analysis() {
     }
   };
 
-  // 加载概率数据（按钮旁百分比），来自 cohort_probability 表
+  // 加载概率数据（按钮旁百分比），来自 cohortxxxx_predictions_all 表
   const loadProbabilityData = async () => {
     if (!user?.userHash || !user?.userId) return;
 
@@ -993,6 +993,7 @@ export default function Analysis() {
         setCurrent_proba1(null);
         setCurrent_proba2(null);
       }
+      console.log('获取到的当前概率值:', {current_proba1: current_proba1, current_proba2: current_proba2});
     } catch (error) {
       setProbabilityData(null);
       setCurrent_proba1(null);
@@ -1914,8 +1915,6 @@ export default function Analysis() {
                       {predictionResult ? (() => {
                         try {
                           // 计算海外读研百分比变化
-                            setCurrent_proba1(0.51);  // 国内读研原始概率硬编码为50%
-                            setCurrent_proba2(0.52);  // 海外读研原始概率硬编码为50%
                           console.log('当前百分比相关值:', {
                             current_proba2: current_proba2,
                             "predictionResult?.overseasPercentage": predictionResult?.overseasPercentage,
