@@ -772,11 +772,33 @@ export default function Analysis() {
               const domesticPct = Number((probabilities[0] * 100).toFixed(1))  // 第一个百分比
               const overseasPct = Number((probabilities[1] * 100).toFixed(1)) // 第二个百分比
               console.log('✅ 计算后的百分比:', { domesticPct, overseasPct });
-              setPredictionResult({
+              
+              // 立即更新预测结果状态
+              const newPredictionResult = {
                 domesticPercentage: domesticPct,
                 overseasPercentage: overseasPct
-              })
-              console.log('✅ 预测结果已更新到状态');
+              };
+              console.log('🔄 准备设置预测结果状态:', newPredictionResult);
+              
+              // 先设置 loadingFeatures 为 false，然后设置预测结果
+              // 这样确保 UI 能正确响应状态变化
+              console.log('🔄 步骤1: 设置 loadingFeatures 为 false');
+              setLoadingFeatures(false);
+              
+              console.log('🔄 步骤2: 设置 predictionResult');
+              setPredictionResult(newPredictionResult);
+              
+              console.log('✅ 预测结果已更新到状态:', {
+                domesticPercentage: newPredictionResult.domesticPercentage,
+                overseasPercentage: newPredictionResult.overseasPercentage,
+                loadingFeatures: false
+              });
+              
+              // 额外验证：检查状态是否正确设置
+              setTimeout(() => {
+                console.log('🔍 状态验证 - predictionResult 应该是:', newPredictionResult);
+                console.log('🔍 状态验证 - loadingFeatures 应该是: false');
+              }, 100);
             } else {
               console.error('❌ 预测API返回数据格式错误或数据不完整:', {
                 success: predictionData.success,
@@ -787,6 +809,8 @@ export default function Analysis() {
                 fullData: JSON.stringify(predictionData, null, 2)
               });
               setPredictionResult(null);
+              // 即使数据格式错误，也要停止 loading
+              setLoadingFeatures(false);
             }
           } else {
             const errorText = await predictionResponse.text();
@@ -796,6 +820,8 @@ export default function Analysis() {
               errorText: errorText
             });
             setPredictionResult(null);
+            // API 调用失败，也要停止 loading
+            setLoadingFeatures(false);
           }
           } else {
             const errorText = await featureResponse.text();
