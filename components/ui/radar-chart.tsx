@@ -27,6 +27,7 @@ export function RadarChart({
   modalContents = []
 }: RadarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const scaleFactor = 11
   const [showModal, setShowModal] = useState(false)
   const [selectedModalContent, setSelectedModalContent] = useState<{
     title: string
@@ -91,9 +92,8 @@ export function RadarChart({
     ctx.beginPath()
     for (let i = 0; i < data.length; i++) {
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2
-      // 调整数值映射比例：数值10到第二个多边形，15到第三个，20到第四个
-      // 第二个多边形是半径的2/5，所以调整系数为 (2/5) / (10/100) = 4
-      const normalizedValue = Math.min((data[i] / 100) * 4, 1)
+      // 通过 scaleFactor 放大同一数值的半径占比
+      const normalizedValue = Math.min((data[i] / 100) * scaleFactor, 1)
       const r = radius * normalizedValue
       const x = centerX + r * Math.cos(angle)
       const y = centerY + r * Math.sin(angle)
@@ -112,7 +112,7 @@ export function RadarChart({
     for (let i = 0; i < data.length; i++) {
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2
       // 使用相同的数值映射比例
-      const normalizedValue = Math.min((data[i] / 100) * 4, 1)
+      const normalizedValue = Math.min((data[i] / 100) * scaleFactor, 1)
       const r = radius * normalizedValue
       const x = centerX + r * Math.cos(angle)
       const y = centerY + r * Math.sin(angle)
@@ -158,7 +158,7 @@ export function RadarChart({
     for (let i = 0; i < data.length; i++) {
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2
       // 使用相同的数值映射比例
-      const normalizedValue = Math.min((data[i] / 100) * 4, 1)
+      const normalizedValue = Math.min((data[i] / 100) * scaleFactor, 1)
       const r = radius * normalizedValue
       const x = centerX + r * Math.cos(angle)
       const y = centerY + r * Math.sin(angle)
@@ -200,7 +200,7 @@ export function RadarChart({
       const angle = (i * 2 * Math.PI) / data.length - Math.PI / 2;
       
       // 计算该顶点的位置（基于实际数据值）
-      const normalizedValue = Math.min((data[i] / 100) * 4, 1);
+      const normalizedValue = Math.min((data[i] / 100) * scaleFactor, 1);
       const radius = (canvas.width / 2 - 80) * normalizedValue;
       const vertexX = centerX + radius * Math.cos(angle);
       const vertexY = centerY + radius * Math.sin(angle);
