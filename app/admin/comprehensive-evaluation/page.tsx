@@ -145,28 +145,81 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
         let headers: string[] = []
         let dataStartRow = 1
         
-        // 检查是否有合并表头（前两行）
+        // 智能处理合并表头（前两行）
         const firstRow = jsonData[0] as any[]
         const secondRow = jsonData[1] as any[]
         
         console.log('第一行:', firstRow)
         console.log('第二行:', secondRow)
         
-        // 如果第一行有很多空值，可能是合并表头，使用第二行作为表头
-        const firstRowEmptyCount = firstRow.filter(cell => !cell || cell.toString().trim() === '').length
-        const firstRowTotalCount = firstRow.length
+        // 详细调试信息
+        console.log('第一行详细信息:')
+        firstRow.forEach((cell, index) => {
+          console.log(`  列${index}: "${cell}" (类型: ${typeof cell}, 长度: ${cell ? cell.toString().length : 0})`)
+        })
         
-        if (firstRowEmptyCount > firstRowTotalCount * 0.5 && secondRow && secondRow.length > 0) {
-          // 第一行空值过多，可能是合并表头，使用第二行
-          headers = secondRow.map(cell => cell ? cell.toString() : '')
-          dataStartRow = 2
-          console.log('检测到合并表头，使用第二行作为表头:', headers)
-        } else {
-          // 使用第一行作为表头
-          headers = firstRow.map(cell => cell ? cell.toString() : '')
-          dataStartRow = 1
-          console.log('使用第一行作为表头:', headers)
+        if (secondRow) {
+          console.log('第二行详细信息:')
+          secondRow.forEach((cell, index) => {
+            console.log(`  列${index}: "${cell}" (类型: ${typeof cell}, 长度: ${cell ? cell.toString().length : 0})`)
+          })
         }
+        
+        // 智能合并表头处理算法
+        const processMergedHeaders = (row1: any[], row2: any[]): string[] => {
+          const result: string[] = []
+          
+          console.log('开始智能处理合并表头...')
+          
+          // 遍历每一列
+          for (let i = 0; i < Math.max(row1.length, row2?.length || 0); i++) {
+            const cell1 = row1[i] ? row1[i].toString().trim() : ''
+            const cell2 = row2 && row2[i] ? row2[i].toString().trim() : ''
+            
+            console.log(`列${i}: 第一行="${cell1}", 第二行="${cell2}"`)
+            
+            // 情况1: 如果第一行和第二行都有内容，且不同，说明是合并表头
+            if (cell1 && cell2 && cell1 !== cell2) {
+              // 如果第一行是合并的大类标题，第二行是具体字段，使用第二行
+              result.push(cell2)
+              console.log(`  → 使用第二行作为表头: "${cell2}"`)
+            }
+            // 情况2: 如果第一行有内容，第二行为空，说明是跨行合并
+            else if (cell1 && !cell2) {
+              result.push(cell1)
+              console.log(`  → 使用第一行作为表头（跨行合并）: "${cell1}"`)
+            }
+            // 情况3: 如果第一行为空，第二行有内容
+            else if (!cell1 && cell2) {
+              result.push(cell2)
+              console.log(`  → 使用第二行作为表头: "${cell2}"`)
+            }
+            // 情况4: 如果两行内容相同，使用任意一行
+            else if (cell1 && cell2 && cell1 === cell2) {
+              result.push(cell1)
+              console.log(`  → 两行相同，使用第一行: "${cell1}"`)
+            }
+            // 情况5: 都为空，跳过
+            else if (!cell1 && !cell2) {
+              console.log(`  → 两行都为空，跳过`)
+              continue
+            }
+            // 默认情况
+            else {
+              const header = cell1 || cell2 || `列${i}`
+              result.push(header)
+              console.log(`  → 默认使用: "${header}"`)
+            }
+          }
+          
+          console.log('合并表头处理完成，最终表头:', result)
+          return result
+        }
+        
+        headers = processMergedHeaders(firstRow, secondRow)
+        dataStartRow = 2 // 合并表头情况下，数据从第三行开始
+        
+        console.log('智能处理后的表头:', headers)
         
         const rows = jsonData.slice(dataStartRow)
         
@@ -217,6 +270,12 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
               
               // 使用映射表转换字段名，如果没有映射则保持原名
               const dbFieldName = fieldMapping[cleanedHeader] || cleanedHeader
+              
+              // 详细调试信息
+              if (index < 15) { // 只显示前15列避免日志过多
+                console.log(`字段映射 - 原始: "${header}" -> 清理后: "${cleanedHeader}" -> 数据库字段: "${dbFieldName}" -> 值: "${rowArray[index]}"`)
+              }
+              
               obj[dbFieldName] = rowArray[index]
             }
           })
@@ -1835,7 +1894,7 @@ export default function GradeRecommendationPage() {
                 <div className="text-xs text-blue-700 space-y-1">
                   <p><strong>支持中文表头：</strong>学号、姓名、上课院系、学生校区、专业名称、班级名称、培养层次、所修总门数、所修总学分、所得学分、未得学分、加权均分、平均学分绩点、专业排名、专业排名总人数</p>
                   <p><strong>文件格式：</strong>支持 .csv、.xlsx、.xls 格式</p>
-                  <p><strong>表头格式：</strong>🔄 自动识别合并表头，支持第一行或第二行作为表头</p>
+                  <p><strong>表头格式：</strong>🧠 智能识别合并表头，自动处理跨行/跨列合并单元格</p>
                   <p><strong>容错处理：</strong>✨ 自动去除表头两侧的多余空格</p>
                   <p><strong>注意：</strong>数据行必须在表头行之后</p>
                 </div>
