@@ -180,7 +180,8 @@ export async function POST(request: NextRequest) {
       .from('courses')
       .select('course_id, course_name, category, major')
       .in('course_id', studentCourseIds)
-      .eq('major', studentMajor);        // 🔧 FIX: 只获取学生对应专业的课程分类
+      .eq('major', studentMajor)
+      .eq('year', studentYear);        // 🔧 FIX: 添加年份过滤，确保获取正确年级的课程分类
 
     if (courseCategoryMappingError) {
       console.error('Error fetching course category mapping by ID:', courseCategoryMappingError);
