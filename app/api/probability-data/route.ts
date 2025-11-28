@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
+  //return NextResponse.json({
+    //proba_1: 50.1,
+    //proba_2: 50.2,
+    //year: 2023
+  //})
   try {
     const body = await request.json();
     const { studentHash, studentNumber } = body;
