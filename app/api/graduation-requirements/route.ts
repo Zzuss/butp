@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     
     const { data: requiredCreditsData, error: requiredCreditsError } = await supabase
       .from('courses')
-      .select('course_id, category, required_total, required_compulsory, required_elective')
+      .select('course_id, category, required_total, required_compulsory, required_elective, remarks')
       .eq('major', studentMajor)
       .eq('year', studentYear)  // 🎯 KEY FIX: Filter by student's year
       .not('category', 'is', null); // Ensure category is not null
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
     
     const { data: courseCategoryMapping, error: courseCategoryMappingError } = await supabase
       .from('courses')
-      .select('course_id, course_name, category, major')
+      .select('course_id, course_name, category, major, remarks')
       .in('course_id', studentCourseIds)
       .eq('major', studentMajor)
       .eq('year', studentYear);        // 🔧 FIX: 添加年份过滤，确保获取正确年级的课程分类
@@ -220,9 +220,13 @@ export async function POST(request: NextRequest) {
     let mappingStats = { exact: 0, failed: 0 };
     
     // Create CourseID to category mapping
+    const courseIdToRemarksMap = new Map();
     courseCategoryMapping.forEach(course => {
       courseIdToCategoryMap.set(course.course_id, course.category);
       courseIdToNameMap.set(course.course_id, course.course_name);
+      if (course.remarks) {
+        courseIdToRemarksMap.set(course.course_id, course.remarks);
+      }
     });
     
     // 🏃‍♂️ PRIORITY 1: Sports courses special handling (highest priority)
@@ -449,13 +453,16 @@ export async function POST(request: NextRequest) {
           // 🏃‍♂️ Special handling for sports courses
           if (category === '体育' && sportsCoursesInfo.has(result.Course_Name)) {
             const sportsInfo = sportsCoursesInfo.get(result.Course_Name);
+            const courseRemarks = courseIdToRemarksMap.get(result.Course_ID);
+            
             if (sportsInfo?.type === 'compulsory') {
               earnedCreditsByCategory[category].earned_compulsory = Math.round((earnedCreditsByCategory[category].earned_compulsory + credit) * 10) / 10;
               earnedCreditsByCategory[category].courses.push({ 
                 Course_Name: result.Course_Name, 
                 Credit: credit, 
                 Course_Attribute: result.Course_Attribute,
-                type: 'compulsory' 
+                type: 'compulsory',
+                remarks: courseRemarks
               } as any);
             } else if (sportsInfo?.type === 'elective') {
               earnedCreditsByCategory[category].earned_elective = Math.round((earnedCreditsByCategory[category].earned_elective + credit) * 10) / 10;
@@ -463,14 +470,17 @@ export async function POST(request: NextRequest) {
                 Course_Name: result.Course_Name, 
                 Credit: credit, 
                 Course_Attribute: result.Course_Attribute,
-                type: 'elective' 
+                type: 'elective',
+                remarks: courseRemarks
               } as any);
             }
           } else {
+            const courseRemarks = courseIdToRemarksMap.get(result.Course_ID);
             earnedCreditsByCategory[category].courses.push({ 
               Course_Name: result.Course_Name, 
               Credit: credit,
-              Course_Attribute: result.Course_Attribute
+              Course_Attribute: result.Course_Attribute,
+              remarks: courseRemarks
             } as any);
           }
         }
@@ -550,13 +560,34 @@ export async function POST(request: NextRequest) {
         };
       }
       
+      // 🎯 处理特殊要求（九选二）
+      const processedCourses = earned.courses.map((course: any) => {
+        if (course.remarks && course.remarks.includes('九选二')) {
+          // 统计同一特殊要求组的课程数量
+          const sameGroupCourses = earned.courses.filter((c: any) => c.remarks && c.remarks.includes('九选二'));
+          const completedCount = sameGroupCourses.length;
+          
+          return {
+            ...course,
+            special_requirement: {
+              type: '九选二',
+              total_options: 9,
+              required_count: 2,
+              completed_count: completedCount,
+              is_satisfied: completedCount >= 2
+            }
+          };
+        }
+        return course;
+      });
+
       return {
         category,
         required_total_credits: required.required_total,
         required_compulsory_credits: required.required_compulsory,
         required_elective_credits: required.required_elective,
         credits_already_obtained: earned.earned_credits,
-        courses_taken: earned.courses,
+        courses_taken: processedCourses,
         // 🔧 NEW: Add graduation status for this category
         meets_requirement: earned.earned_credits >= required.required_total,
         is_completed: earned.earned_credits >= required.required_total  // 🎨 NEW: For green highlighting
