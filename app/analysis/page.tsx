@@ -60,6 +60,7 @@ export default function Analysis() {
   const [graduationRequirementsData, setGraduationRequirementsData] = useState<any[]>([]);
   const [otherCategoryData, setOtherCategoryData] = useState<any>(null);
   const [loadingGraduationRequirements, setLoadingGraduationRequirements] = useState(false);
+  const [graduationSummary, setGraduationSummary] = useState<any>(null);
 
   // 编辑状态
   const [isEditing, setIsEditing] = useState(false);
@@ -272,6 +273,7 @@ export default function Analysis() {
         
         if (result.data.summary) {
           console.log('📊 Graduation Summary:', result.data.summary);
+          setGraduationSummary(result.data.summary);
         }
       } else {
         // 如果没有数据，使用示例数据
@@ -1862,6 +1864,7 @@ export default function Analysis() {
                 <GraduationRequirementsTable 
                   graduationRequirements={graduationRequirementsData} 
                   otherCategory={otherCategoryData}
+                  graduationSummary={graduationSummary}
                 />
               ) : loadingGraduationRequirements ? (
                 <div className="flex justify-center items-center py-8">

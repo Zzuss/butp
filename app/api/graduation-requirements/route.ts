@@ -73,6 +73,24 @@ export async function POST(request: NextRequest) {
 
     console.log(`📊 Found ${requiredCreditsData.length} course records for Major: "${studentMajor}", Year: "${studentYear}"`);
     
+    // 3. Get graduation total credit requirement for this major and year
+    console.log(`🎯 Querying graduation total credits for Major: "${studentMajor}", Year: "${studentYear}"`);
+    
+    const { data: graduationCreditData, error: graduationCreditError } = await supabase
+      .from('graduation_credit_requirements')
+      .select('total_credits')
+      .eq('major', studentMajor)
+      .eq('year', studentYear)
+      .single();
+    
+    if (graduationCreditError) {
+      console.warn('⚠️  Failed to fetch graduation total credits:', graduationCreditError);
+      console.warn('   Using fallback calculation from curriculum requirements');
+    }
+    
+    const graduationTotalCredits = graduationCreditData?.total_credits || null;
+    console.log(`🎓 Graduation total credits: ${graduationTotalCredits || 'Not found, will calculate from curriculum'}`);
+    
     if (requiredCreditsData.length === 0) {
       console.warn(`⚠️  No courses found for Major: "${studentMajor}", Year: "${studentYear}"`);
       console.warn(`   This might indicate:`);
@@ -613,7 +631,8 @@ export async function POST(request: NextRequest) {
           overall_graduation_eligible: overallGraduationStatus,
           total_required_credits: totalRequiredCredits,
           total_earned_credits: totalEarnedCredits,
-          curriculum_mapping_rate: parseFloat(mappingRate)
+          curriculum_mapping_rate: parseFloat(mappingRate),
+          graduation_total_credits: graduationTotalCredits
         }
       }
     });

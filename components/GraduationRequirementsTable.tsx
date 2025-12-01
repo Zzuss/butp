@@ -36,9 +36,13 @@ interface OtherCategory {
 interface GraduationRequirementsTableProps {
   graduationRequirements: GraduationRequirement[];
   otherCategory?: OtherCategory | null;
+  graduationSummary?: {
+    total_earned_credits: number;
+    graduation_total_credits?: number;
+  } | null;
 }
 
-const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = ({ graduationRequirements, otherCategory }) => {
+const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = ({ graduationRequirements, otherCategory, graduationSummary }) => {
   const { t } = useLanguage();
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedCategoryDetails, setSelectedCategoryDetails] = useState<CourseDetail[]>([]);
@@ -132,6 +136,45 @@ const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = 
               查看其他
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* 总学分统计 */}
+      {graduationSummary && (
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-blue-900">毕业学分统计</h4>
+              <p className="text-sm text-blue-700 mt-1">
+                已修学分 / 毕业要求总学分
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-900">
+                {graduationSummary.total_earned_credits}
+                {graduationSummary.graduation_total_credits && (
+                  <span className="text-blue-600"> / {graduationSummary.graduation_total_credits}</span>
+                )}
+              </div>
+              {graduationSummary.graduation_total_credits && (
+                <div className="text-sm text-blue-600 mt-1">
+                  完成度: {Math.round((graduationSummary.total_earned_credits / graduationSummary.graduation_total_credits) * 100)}%
+                </div>
+              )}
+            </div>
+          </div>
+          {graduationSummary.graduation_total_credits && (
+            <div className="mt-3">
+              <div className="w-full bg-blue-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${Math.min((graduationSummary.total_earned_credits / graduationSummary.graduation_total_credits) * 100, 100)}%` 
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
