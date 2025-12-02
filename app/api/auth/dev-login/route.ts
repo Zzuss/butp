@@ -50,22 +50,22 @@ export async function POST(request: NextRequest) {
     // 🎯 根据哈希值映射对应的虚拟学号和用户信息
     const demoUserMappings: Record<string, { studentNumber: string; name: string; year: string }> = {
       '0582c53c000705d1b968df56c252bdd6321474f19986bc7f862ed607ca955018': {
-        studentNumber: '2022213269',
+        studentNumber: '2022000000',
         name: '2022级示例用户',
         year: '2022'
       },
       '24b56f91ab67af4531242999abd99e154df308220eb51f08e7c0dfff51d25889': {
-        studentNumber: '2023213480',
+        studentNumber: '2023000000',
         name: '2023级示例用户',
         year: '2023'
       },
       '118ef2f061483894f93e921653b98d66ec21d3f849e458eda96c25e655fd3a49': {
-        studentNumber: '2024213450',
+        studentNumber: '2024000000',
         name: '2024级示例用户', 
         year: '2024'
       },
       'f001ad16ec7a0b0934bc1a52c1d3e523e24a35bfced8c6e901fd03c6476cf505': {
-        studentNumber: '2025213175',
+        studentNumber: '2025000000',
         name: '2025级示例用户',
         year: '2025'
       }
