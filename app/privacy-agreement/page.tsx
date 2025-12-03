@@ -36,19 +36,78 @@ export default function PrivacyAgreementPage() {
     }
   }, [])
 
-  // 检查用户是否已登录
+  // 检查用户是否已登录或CAS认证
   useEffect(() => {
-    if (!loading && !user) {
+    const checkAuthStatus = async () => {
+      if (loading) return
+      
+      // 如果用户已完全登录，直接继续
+      if (user) return
+      
+      // 检查是否来自CAS重定向
+      const urlParams = new URLSearchParams(window.location.search)
+      const fromCas = urlParams.get('from') === 'cas'
+      
+      if (fromCas) {
+        console.log('Privacy page: 来自CAS重定向，检查CAS认证状态...')
+        try {
+          const response = await fetch('/api/auth/cas/check-session', {
+            credentials: 'include'
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.isCasAuthenticated && data.userId && data.userHash) {
+              console.log('Privacy page: CAS认证有效，允许访问隐私条款页面')
+              return // 允许继续访问隐私条款页面
+            }
+          }
+        } catch (error) {
+          console.error('Privacy page: CAS状态检查失败:', error)
+        }
+      }
+      
+      // 如果不是CAS重定向或CAS认证无效，重定向到登录页面
+      console.log('Privacy page: 用户未登录且非有效CAS认证，重定向到登录页面')
       router.push('/login')
-      return
     }
+    
+    checkAuthStatus()
   }, [user, loading, router])
 
   // 加载隐私条款内容
   useEffect(() => {
-    if (user) {
-      loadPrivacyContent()
+    const loadContentIfNeeded = async () => {
+      // 如果用户已登录，直接加载
+      if (user) {
+        loadPrivacyContent()
+        return
+      }
+      
+      // 如果来自CAS且有认证状态，也加载内容
+      const urlParams = new URLSearchParams(window.location.search)
+      const fromCas = urlParams.get('from') === 'cas'
+      
+      if (fromCas) {
+        try {
+          const response = await fetch('/api/auth/cas/check-session', {
+            credentials: 'include'
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.isCasAuthenticated && data.userId && data.userHash) {
+              console.log('Privacy page: CAS认证有效，加载隐私条款内容')
+              loadPrivacyContent()
+            }
+          }
+        } catch (error) {
+          console.error('Privacy page: 检查CAS状态失败:', error)
+        }
+      }
     }
+    
+    loadContentIfNeeded()
   }, [user])
 
   // 加载隐私条款内容
@@ -84,8 +143,31 @@ export default function PrivacyAgreementPage() {
 
   // 同意隐私条款
   const handleAgree = async () => {
-    if (!user) {
-      setError('用户未登录')
+    // 检查用户登录状态或CAS认证状态
+    let hasValidAuth = false
+    
+    if (user) {
+      hasValidAuth = true
+    } else {
+      // 检查CAS认证状态
+      try {
+        const response = await fetch('/api/auth/cas/check-session', {
+          credentials: 'include'
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.isCasAuthenticated && data.userId && data.userHash) {
+            hasValidAuth = true
+          }
+        }
+      } catch (error) {
+        console.error('Privacy page: 检查CAS认证状态失败:', error)
+      }
+    }
+    
+    if (!hasValidAuth) {
+      setError('用户未登录或认证无效')
       return
     }
 
@@ -107,9 +189,40 @@ export default function PrivacyAgreementPage() {
       const data = await response.json()
 
       if (response.ok && data.success) {
-        // 同意成功，跳转到dashboard
-        console.log('✅ 隐私条款同意成功，跳转到dashboard')
-        router.push('/dashboard')
+        console.log('✅ 隐私条款同意成功')
+        
+        // 如果是CAS用户且未完全登录，需要先完成登录
+        if (!user) {
+          console.log('🔄 CAS用户同意隐私条款后，完成登录流程...')
+          try {
+            const loginResponse = await fetch('/api/auth/cas/complete-auto-login', {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            })
+            
+            if (loginResponse.ok) {
+              const loginData = await loginResponse.json()
+              if (loginData.success) {
+                console.log('✅ CAS自动登录完成，跳转到dashboard')
+                router.push('/dashboard')
+                return
+              }
+            }
+            
+            console.error('❌ CAS自动登录失败，跳转到登录页面')
+            router.push('/login')
+          } catch (error) {
+            console.error('❌ CAS自动登录请求失败:', error)
+            router.push('/login')
+          }
+        } else {
+          // 普通用户直接跳转到dashboard
+          console.log('✅ 普通用户同意隐私条款，跳转到dashboard')
+          router.push('/dashboard')
+        }
       } else {
         console.error('❌ 隐私条款同意失败:', data.error)
         setError('同意失败，请重试')
