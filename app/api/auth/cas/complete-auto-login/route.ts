@@ -38,6 +38,13 @@ export async function POST(request: NextRequest) {
     session.isLoggedIn = true;
     session.lastActiveTime = Date.now();
     
+    console.log('Auto-login: 设置完整登录状态', {
+      isLoggedIn: session.isLoggedIn,
+      isCasAuthenticated: session.isCasAuthenticated,
+      userId: session.userId,
+      userHash: session.userHash?.substring(0, 12) + '...'
+    });
+    
     console.log('Auto-login: completing login for user:', {
       userId: session.userId,
       userHash: session.userHash.substring(0, 12) + '...',

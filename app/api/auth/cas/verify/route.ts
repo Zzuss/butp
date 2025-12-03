@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     session.userHash = hash; // 学号哈希值
     session.name = casUser.name || `学生${casUser.userId}`; // CAS返回的真实姓名，如果没有则使用学号
     session.isCasAuthenticated = true;
-    session.isLoggedIn = false; // 最终登录在login页面完成
+    session.isLoggedIn = true; // 🔧 修复：CAS认证成功后立即设置完整登录状态，与示例用户一致
     session.loginTime = now;
     session.lastActiveTime = now; // 🆕 设置最后活跃时间
     
@@ -88,8 +88,76 @@ export async function GET(request: NextRequest) {
     await session.save();
     console.log('CAS verify: session saved successfully');
     
-    // 创建重定向响应
-    const response = NextResponse.redirect(new URL('/login', request.url));
+    // 🔧 修复：检查用户是否已同意隐私条款，决定重定向目标
+    console.log('CAS verify: 检查用户隐私条款同意状态...');
+    
+    let redirectUrl = '/privacy-agreement?from=cas'; // 默认重定向到隐私条款页面
+    
+    // 检查隐私条款同意状态
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { getStorageSupabase } = await import('@/lib/storageSupabase');
+      const storageSupabase = getStorageSupabase();
+      
+      // 获取最新隐私条款文件信息
+      const possibleFiles = [
+        'privacy-policy-latest.docx',
+        'privacy-policy-latest.doc', 
+        'privacy-policy-latest.pdf',
+        'privacy-policy-latest.txt',
+        'privacy-policy-latest.html'
+      ];
+
+      let currentFileInfo: any = null;
+      let fileName = '';
+
+      for (const testFileName of possibleFiles) {
+        try {
+          const { data: files, error: listError } = await storageSupabase.storage
+            .from('privacy-files')
+            .list('', {
+              search: testFileName
+            });
+
+          if (!listError && files && files.length > 0) {
+            currentFileInfo = files[0];
+            fileName = testFileName;
+            break;
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+
+      if (currentFileInfo) {
+        const fileVersion = currentFileInfo.updated_at || currentFileInfo.created_at;
+        
+        // 查询用户是否已同意当前版本
+        const { data: agreementData, error: agreementError } = await supabase
+          .from('user_privacy_agreements')
+          .select('id, agreed_at')
+          .eq('user_id', session.userHash)
+          .eq('privacy_policy_file', fileName)
+          .eq('privacy_policy_version', fileVersion)
+          .single();
+
+        if (agreementData && !agreementError) {
+          console.log('CAS verify: 用户已同意隐私条款，重定向到dashboard');
+          redirectUrl = '/dashboard';
+        } else {
+          console.log('CAS verify: 用户未同意隐私条款，重定向到隐私条款页面');
+          redirectUrl = '/privacy-agreement?from=cas';
+        }
+      } else {
+        console.log('CAS verify: 未找到隐私条款文件，重定向到隐私条款页面');
+        redirectUrl = '/privacy-agreement?from=cas';
+      }
+    } catch (error) {
+      console.error('CAS verify: 隐私条款检查失败，重定向到隐私条款页面:', error);
+      redirectUrl = '/privacy-agreement?from=cas';
+    }
+    
+    const response = NextResponse.redirect(new URL(redirectUrl, request.url));
     
     // 复制session cookies到重定向响应
     const sessionCookieHeader = tempResponse.headers.get('set-cookie');

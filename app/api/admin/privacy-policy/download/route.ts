@@ -57,66 +57,87 @@ export async function GET(request: NextRequest) {
         console.error('❌ 获取桶列表失败:', bucketsError)
       }
 
-      // 获取当前活跃的隐私条款记录
-      const { data: policyRecord, error: dbError } = await storageSupabase
-        .from('privacy_policy')
-        .select('file_name, file_path, file_type, file_size')
-        .eq('is_active', true)
-        .single()
+      // 🔥 新方案：直接从Storage查找隐私条款文件
+      const possibleFiles = [
+        'privacy-policy-latest.docx',
+        'privacy-policy-latest.doc', 
+        'privacy-policy-latest.pdf',
+        'privacy-policy-latest.txt',
+        'privacy-policy-latest.html'
+      ]
 
-      console.log('🔍 隐私条款记录:', {
-        record: policyRecord,
-        error: dbError
-      })
+      let fileData: Blob | null = null
+      let fileName = ''
+      let fileInfo: any = null
 
-      if (dbError || !policyRecord) {
-        console.error('❌ 未找到活跃的隐私条款记录:', dbError)
+      // 尝试找到存在的文件
+      for (const testFileName of possibleFiles) {
+        try {
+          console.log(`🔍 尝试下载文件: ${testFileName}`)
+          
+          // 先获取文件信息
+          const { data: files, error: listError } = await storageSupabase.storage
+            .from('privacy-files')
+            .list('', {
+              search: testFileName
+            })
+
+          if (!listError && files && files.length > 0) {
+            fileInfo = files[0]
+            console.log(`📋 找到文件信息:`, fileInfo)
+          }
+
+          // 下载文件
+          const { data: downloadData, error: downloadError } = await storageSupabase.storage
+            .from('privacy-files')
+            .download(testFileName)
+
+          if (!downloadError && downloadData) {
+            fileData = downloadData
+            fileName = testFileName
+            console.log(`✅ 成功下载文件: ${testFileName}`)
+            break
+          }
+        } catch (err) {
+          console.log(`⚠️ 文件 ${testFileName} 不存在，继续尝试下一个`)
+          continue
+        }
+      }
+
+      if (!fileData) {
+        console.error('❌ 未找到任何隐私条款文件')
         return NextResponse.json({ 
           success: false, 
           error: '当前没有可下载的隐私条款文件' 
         }, { status: 404 })
       }
 
-      const storageFileName = policyRecord.file_path.replace('privacy-files/', '')
-
-      console.log('🔍 尝试下载文件:', {
-        bucket: 'privacy-files',
-        fileName: storageFileName
-      })
-
-      // 从Supabase Storage下载文件
-      const { data: fileData, error: downloadError } = await storageSupabase.storage
-        .from('privacy-files')
-        .download(storageFileName)
-
-      console.log('📥 文件下载结果:', {
-        fileData: fileData ? `文件大小: ${fileData.size} 字节` : '无文件数据',
-        downloadError
-      })
-
-      if (downloadError) {
-        console.error('❌ 从Supabase Storage下载文件失败:', downloadError)
-        return NextResponse.json({
-          success: false,
-          error: '从Supabase Storage下载文件失败: ' + downloadError.message
-        }, { status: 500 })
-      }
-
       // 将Blob转换为Buffer
       const arrayBuffer = await fileData.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
 
+      // 获取文件类型
+      const fileExtension = fileName.split('.').pop()?.toLowerCase()
+      const mimeTypeMap: { [key: string]: string } = {
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'doc': 'application/msword',
+        'pdf': 'application/pdf',
+        'txt': 'text/plain',
+        'html': 'text/html'
+      }
+      const fileType = mimeTypeMap[fileExtension || ''] || 'application/octet-stream'
+
       console.log('✅ 隐私条款文件下载成功', {
         adminId: adminId,
-        fileName: policyRecord.file_name,
-        fileSize: policyRecord.file_size,
+        fileName: fileName,
+        fileSize: fileData.size,
         timestamp: new Date().toISOString()
       })
 
       // 设置响应头
       const headers = new Headers()
-      headers.set('Content-Type', policyRecord.file_type || 'application/octet-stream')
-      headers.set('Content-Disposition', `attachment; filename="${policyRecord.file_name}"`)
+      headers.set('Content-Type', fileType)
+      headers.set('Content-Disposition', `attachment; filename="${fileName}"`)
       headers.set('Content-Length', buffer.length.toString())
       headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
       headers.set('Pragma', 'no-cache')

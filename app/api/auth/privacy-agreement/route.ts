@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import { SessionData, sessionOptions } from '@/lib/session'
 import { getStorageSupabase } from '@/lib/storageSupabase'
+import { supabase } from '@/lib/supabase'
 
 // GET - 检查用户隐私条款同意状态
 export async function GET(request: NextRequest) {
@@ -29,35 +30,58 @@ export async function GET(request: NextRequest) {
         console.error('❌ 获取桶列表失败:', bucketsError)
       }
 
-      // 获取当前活跃的隐私条款
-      const { data: currentPolicy, error: policyError } = await storageSupabase
-        .from('privacy_policy')
-        .select('id, version, effective_date, updated_at')
-        .eq('is_active', true)
-        .single()
+      // 🔥 新方案：直接从Storage获取隐私条款文件信息
+      const possibleFiles = [
+        'privacy-policy-latest.docx',
+        'privacy-policy-latest.doc', 
+        'privacy-policy-latest.pdf',
+        'privacy-policy-latest.txt',
+        'privacy-policy-latest.html'
+      ]
 
-      console.log('🔍 当前隐私条款记录:', {
-        policy: currentPolicy,
-        error: policyError
-      })
+      let currentFileInfo: any = null
+      let fileName = ''
 
-      if (policyError) {
-        console.error('查询当前隐私条款失败:', policyError)
-        // 如果没有隐私条款记录，默认要求同意
+      // 找到存在的隐私条款文件
+      for (const testFileName of possibleFiles) {
+        try {
+          const { data: files, error: listError } = await storageSupabase.storage
+            .from('privacy-files')
+            .list('', {
+              search: testFileName
+            })
+
+          if (!listError && files && files.length > 0) {
+            currentFileInfo = files[0]
+            fileName = testFileName
+            console.log(`📋 找到隐私条款文件: ${testFileName}`, currentFileInfo)
+            break
+          }
+        } catch (err) {
+          continue
+        }
+      }
+
+      if (!currentFileInfo) {
+        console.error('❌ 未找到隐私条款文件')
         return NextResponse.json({
           success: true,
           hasAgreed: false,
           userHash: session.userHash,
-          message: '未找到有效的隐私条款版本，需要同意'
+          message: '未找到隐私条款文件，需要同意'
         })
       }
 
-      // 查询用户是否已同意当前版本的隐私条款
-      const { data: agreementRecord, error: agreementError } = await storageSupabase
+      // 使用文件修改时间作为版本标识
+      const fileVersion = currentFileInfo.updated_at || currentFileInfo.created_at
+
+      // 从主数据库查询用户同意记录
+      const { data: agreementRecord, error: agreementError } = await supabase
         .from('user_privacy_agreements')
-        .select('id, agreed_at, privacy_policy_id')
+        .select('id, agreed_at, privacy_policy_version, privacy_policy_file')
         .eq('user_id', session.userHash)
-        .eq('privacy_policy_id', currentPolicy.id)
+        .eq('privacy_policy_file', fileName)
+        .eq('privacy_policy_version', fileVersion)
         .single()
 
       console.log('🔍 用户隐私条款同意记录:', {
@@ -65,7 +89,7 @@ export async function GET(request: NextRequest) {
         error: agreementError
       })
 
-      if (agreementError && agreementError.code !== 'PGRST116') { // PGRST116 = 找不到记录
+      if (agreementError && (agreementError as any).code !== 'PGRST116') { // PGRST116 = 找不到记录
         console.error('查询用户同意记录失败:', agreementError)
         // 查询失败时默认要求重新同意
         return NextResponse.json({
@@ -73,7 +97,8 @@ export async function GET(request: NextRequest) {
           hasAgreed: false,
           userHash: session.userHash,
           message: '数据库查询失败，需要重新同意',
-          currentPolicyId: currentPolicy.id
+          currentPolicyFile: fileName,
+          currentPolicyVersion: fileVersion
         })
       }
 
@@ -85,12 +110,12 @@ export async function GET(request: NextRequest) {
         hasAgreed,
         userHash: session.userHash,
         message: hasAgreed ? 
-          `用户已同意当前版本（${currentPolicy.version}）` : 
-          `需要同意最新版本（${currentPolicy.version}）`,
-        currentPolicyId: currentPolicy.id,
-        currentPolicyVersion: currentPolicy.version,
+          `用户已同意当前版本（${fileName}）` : 
+          `需要同意最新版本（${fileName}）`,
+        currentPolicyFile: fileName,
+        currentPolicyVersion: fileVersion,
         userAgreedAt: agreementRecord?.agreed_at,
-        policyUpdatedAt: currentPolicy.updated_at
+        policyUpdatedAt: fileVersion
       })
 
     } catch (dbError) {
@@ -120,13 +145,28 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.next()
     const session = await getIronSession<SessionData>(request, response, sessionOptions)
 
-    // 检查用户是否已登录
-    if (!session.isLoggedIn || !session.userHash) {
+    // 检查用户是否已登录或CAS认证
+    const hasValidAuth = (session.isLoggedIn && session.userHash) || 
+                        (session.isCasAuthenticated && session.userHash && session.userId)
+    
+    if (!hasValidAuth) {
+      console.log('Privacy agreement POST: 认证检查失败', {
+        isLoggedIn: session.isLoggedIn,
+        isCasAuthenticated: session.isCasAuthenticated,
+        hasUserHash: !!session.userHash,
+        hasUserId: !!session.userId
+      })
       return NextResponse.json({ 
         success: false, 
         error: '用户未登录' 
       }, { status: 401 })
     }
+    
+    console.log('Privacy agreement POST: 认证检查通过', {
+      isLoggedIn: session.isLoggedIn,
+      isCasAuthenticated: session.isCasAuthenticated,
+      userHash: session.userHash?.substring(0, 12) + '...'
+    })
 
     try {
       const body = await request.json()
@@ -149,51 +189,85 @@ export async function POST(request: NextRequest) {
         console.error('❌ 获取桶列表失败:', bucketsError)
       }
 
-      // 获取当前活跃的隐私条款
-      const { data: currentPolicy, error: policyError } = await storageSupabase
-        .from('privacy_policy')
-        .select('id, version')
-        .eq('is_active', true)
-        .single()
+      // 🔥 新方案：直接从Storage获取隐私条款文件信息
+      const possibleFiles = [
+        'privacy-policy-latest.docx',
+        'privacy-policy-latest.doc', 
+        'privacy-policy-latest.pdf',
+        'privacy-policy-latest.txt',
+        'privacy-policy-latest.html'
+      ]
 
-      console.log('🔍 当前隐私条款记录:', {
-        policy: currentPolicy,
-        error: policyError
-      })
+      let currentFileInfo: any = null
+      let fileName = ''
 
-      if (policyError) {
-        console.error('查询当前隐私条款失败:', policyError)
+      // 找到存在的隐私条款文件
+      for (const testFileName of possibleFiles) {
+        try {
+          const { data: files, error: listError } = await storageSupabase.storage
+            .from('privacy-files')
+            .list('', {
+              search: testFileName
+            })
+
+          if (!listError && files && files.length > 0) {
+            currentFileInfo = files[0]
+            fileName = testFileName
+            console.log(`📋 找到隐私条款文件: ${testFileName}`, currentFileInfo)
+            break
+          }
+        } catch (err) {
+          continue
+        }
+      }
+
+      if (!currentFileInfo) {
+        console.error('❌ 未找到隐私条款文件')
         return NextResponse.json({
           success: false,
-          error: '未找到有效的隐私条款版本'
+          error: '未找到隐私条款文件'
         }, { status: 404 })
       }
+
+      // 使用文件修改时间作为版本标识
+      const fileVersion = currentFileInfo.updated_at || currentFileInfo.created_at
+
+      console.log('🔍 隐私条款API版本:', {
+        file: fileName,
+        version: fileVersion,
+        userHash: session.userHash?.substring(0, 8) + '...'
+      });
 
       // 获取用户IP和User-Agent
       const clientIP = request.headers.get('x-forwarded-for') || 
                       request.headers.get('x-real-ip') || 
-                      request.ip || 
                       'unknown'
       const userAgent = request.headers.get('user-agent') || 'unknown'
 
-      // 使用upsert插入或更新用户同意记录
-      const { data: agreementData, error: insertError } = await storageSupabase
+      // 向主数据库写入用户同意记录
+      const agreementRecord = {
+        user_id: session.userHash,
+        privacy_policy_file: fileName,
+        privacy_policy_version: fileVersion,
+        agreed_at: new Date().toISOString(),
+        ip_address: clientIP,
+        user_agent: userAgent,
+        created_at: new Date().toISOString()
+      }
+
+      console.log('📝 准备写入用户同意记录:', {
+        user_id: session.userHash.substring(0, 12) + '...',
+        privacy_policy_file: fileName,
+        privacy_policy_version: fileVersion,
+        agreed_at: agreementRecord.agreed_at
+      })
+
+      const { data: agreementData, error: insertError } = await supabase
         .from('user_privacy_agreements')
-        .upsert({
-          user_id: session.userHash,
-          privacy_policy_id: currentPolicy.id,
-          agreed_at: new Date().toISOString(),
-          ip_address: clientIP,
-          user_agent: userAgent
-        }, {
-          onConflict: 'user_id,privacy_policy_id'
+        .upsert(agreementRecord, {
+          onConflict: 'user_id,privacy_policy_file,privacy_policy_version'
         })
         .select()
-
-      console.log('🔍 用户隐私条款同意记录:', {
-        agreementData,
-        error: insertError
-      })
 
       if (insertError) {
         console.error('记录用户同意失败:', insertError)
@@ -205,8 +279,8 @@ export async function POST(request: NextRequest) {
 
       console.log('✅ 用户隐私条款同意记录成功', {
         userHash: session.userHash.substring(0, 12) + '...',
-        policyId: currentPolicy.id,
-        policyVersion: currentPolicy.version,
+        policyFile: fileName,
+        policyVersion: fileVersion,
         clientIP: clientIP.substring(0, 12) + '...',
         timestamp: new Date().toISOString()
       })
@@ -214,7 +288,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: '隐私条款同意记录成功',
-        policyVersion: currentPolicy.version
+        policyVersion: fileVersion
       })
 
     } catch (dbError) {

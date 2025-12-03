@@ -45,10 +45,11 @@ export default function LoginPage() {
     
     setIsDevMode(isDev)
     
-    // 🆕 处理URL错误参数
+    // 页面加载时检查URL参数
     const urlParams = new URLSearchParams(window.location.search)
     const errorParam = urlParams.get('error')
     const messageParam = urlParams.get('message')
+    const casSuccessParam = urlParams.get('cas_success')
     
     if (errorParam) {
       let errorMessage = ''
@@ -89,6 +90,21 @@ export default function LoginPage() {
       newUrl.searchParams.delete('error')
       newUrl.searchParams.delete('message')
       window.history.replaceState({}, '', newUrl.toString())
+    }
+    
+    // 检查CAS成功参数
+    if (casSuccessParam === 'true') {
+      console.log('Login page: CAS认证成功，清除URL参数并检查session状态')
+      // 清除URL中的cas_success参数
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('cas_success')
+      window.history.replaceState({}, '', newUrl.toString())
+      
+      // 立即检查CAS认证状态
+      setTimeout(() => {
+        checkCasAuth()
+      }, 100)
+      return
     }
     
     // 本地开发环境直接跳过CAS认证检查
@@ -140,8 +156,31 @@ export default function LoginPage() {
         
         if (data.isCasAuthenticated && data.userId && data.name && data.userHash) {
           if (data.isLoggedIn) {
-            // CAS认证且已登录，直接跳转到dashboard
-            router.push('/dashboard')
+            // CAS认证且已登录，检查隐私条款同意状态
+            console.log('Login page: CAS认证且已登录，检查隐私条款状态...')
+            try {
+              const privacyResponse = await fetch('/api/auth/privacy-agreement', {
+                method: 'GET',
+                credentials: 'include'
+              })
+              
+              if (privacyResponse.ok) {
+                const privacyData = await privacyResponse.json()
+                if (privacyData.hasAgreed) {
+                  console.log('Login page: 隐私条款已同意，跳转到dashboard')
+                  router.push('/dashboard')
+                } else {
+                  console.log('Login page: 隐私条款未同意，跳转到隐私条款页面')
+                  router.push('/privacy-agreement')
+                }
+              } else {
+                console.log('Login page: 隐私条款检查失败，跳转到隐私条款页面')
+                router.push('/privacy-agreement')
+              }
+            } catch (error) {
+              console.error('Login page: 隐私条款检查出错:', error)
+              router.push('/privacy-agreement')
+            }
             return
           } else {
             // CAS认证成功但未完成登录，自动完成登录流程
