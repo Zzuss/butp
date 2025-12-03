@@ -90,8 +90,10 @@ export async function GET(request: NextRequest) {
     console.log('CAS callback: session saved successfully');
 
     // 🔧 新方案：直接重定向到隐私条款页面，跳过前端检查
-    console.log('🔍 CAS callback: 直接重定向到隐私条款页面，让middleware处理');
+    console.log('🚨🚨🚨 CAS callback: 准备重定向到隐私条款页面！！！');
+    console.log('🚨🚨🚨 重定向URL:', new URL('/privacy-agreement?from=cas', request.url).toString());
     const redirectResponse = NextResponse.redirect(new URL('/privacy-agreement?from=cas', request.url));
+    console.log('🚨🚨🚨 重定向响应已创建，Location header:', redirectResponse.headers.get('location'));
     
     // 正确复制所有set-cookie头到重定向响应
     const cookieHeaders = response.headers.getSetCookie();
