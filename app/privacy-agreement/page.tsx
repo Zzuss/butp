@@ -22,6 +22,19 @@ export default function PrivacyAgreementPage() {
   const [loadingContent, setLoadingContent] = useState(true)
   const [agreeing, setAgreeing] = useState(false)
   const [error, setError] = useState("")
+  const [systemError, setSystemError] = useState("")
+
+  // 检查URL参数中的错误信息
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const errorParam = urlParams.get('error')
+    
+    if (errorParam === 'db_error') {
+      setSystemError('数据库连接异常，请稍后重试或联系管理员')
+    } else if (errorParam === 'check_error') {
+      setSystemError('隐私条款检查系统异常，请稍后重试或联系管理员')
+    }
+  }, [])
 
   // 检查用户是否已登录
   useEffect(() => {
@@ -151,6 +164,17 @@ export default function PrivacyAgreementPage() {
             请仔细阅读以下隐私政策与用户数据使用条款，同意后方可使用系统服务
           </p>
         </div>
+
+        {/* 系统错误提示 */}
+        {systemError && (
+          <div className="mb-6 flex items-center gap-2 p-4 bg-orange-50 border border-orange-200 rounded-lg text-orange-700">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold">系统异常</p>
+              <p>{systemError}</p>
+            </div>
+          </div>
+        )}
 
         {/* 错误提示 */}
         {error && (

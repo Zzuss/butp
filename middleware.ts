@@ -241,8 +241,11 @@ export async function middleware(request: NextRequest) {
             }
 
             if (!currentFileInfo) {
-              console.log('⚠️  Middleware: 未找到隐私条款文件，允许访问');
-              return response;
+              console.log('⚠️  Middleware: 未找到隐私条款文件，但仍需要用户同意');
+              // 即使没有找到文件，也要求用户访问隐私条款页面
+              const privacyUrl = new URL('/privacy-agreement', request.url);
+              privacyUrl.searchParams.set('returnUrl', pathname);
+              return NextResponse.redirect(privacyUrl);
             }
 
             // 使用文件修改时间作为版本标识
@@ -259,9 +262,12 @@ export async function middleware(request: NextRequest) {
 
             if (agreementError && (agreementError as any).code !== 'PGRST116') {
               console.error('❌ Middleware: privacy agreement check failed:', agreementError);
-              // 如果查询失败，允许访问（避免阻塞用户）
-              console.log('⚠️  Middleware: 数据库查询失败，允许访问');
-              return response;
+              // 如果查询失败，重定向到隐私条款页面（安全优先）
+              console.log('⚠️  Middleware: 数据库查询失败，重定向到隐私条款页面');
+              const privacyUrl = new URL('/privacy-agreement', request.url);
+              privacyUrl.searchParams.set('returnUrl', pathname);
+              privacyUrl.searchParams.set('error', 'db_error');
+              return NextResponse.redirect(privacyUrl);
             }
 
             // 如果没有找到同意记录，说明未同意隐私条款
@@ -275,9 +281,12 @@ export async function middleware(request: NextRequest) {
             console.log('✅ Middleware: privacy agreement check passed');
           } catch (error) {
             console.error('❌ Middleware: privacy agreement check error:', error);
-            // 硬编码绕过：如果检查失败，允许访问（避免阻塞用户）
-            console.log('⚠️  Middleware: 隐私条款检查失败，使用硬编码绕过，允许访问');
-            return response;
+            // 如果检查失败，重定向到隐私条款页面（安全优先）
+            console.log('⚠️  Middleware: 隐私条款检查失败，重定向到隐私条款页面');
+            const privacyUrl = new URL('/privacy-agreement', request.url);
+            privacyUrl.searchParams.set('returnUrl', pathname);
+            privacyUrl.searchParams.set('error', 'check_error');
+            return NextResponse.redirect(privacyUrl);
           }
         }
         
