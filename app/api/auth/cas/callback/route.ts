@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
     await session.save();
     console.log('CAS callback: session saved successfully');
 
-    // 修复: session保存后创建重定向响应并正确复制cookie
-    const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url));
+    // 修复: session保存后重定向到登录页面，让前端处理隐私条款检查
+    const redirectResponse = NextResponse.redirect(new URL('/login?cas_success=true', request.url));
     
     // 正确复制所有set-cookie头到重定向响应
     const cookieHeaders = response.headers.getSetCookie();
@@ -105,6 +105,26 @@ export async function GET(request: NextRequest) {
     });
     
     console.log('CAS callback: auto-login successful, redirecting to dashboard');
+    
+    // 调试：检查隐私条款状态
+    console.log('🔍 CAS callback: 检查隐私条款同意状态...');
+    try {
+      const { supabase: mainSupabase } = await import('@/lib/supabase');
+      const { data: agreementData } = await mainSupabase
+        .from('user_privacy_agreements')
+        .select('id, agreed_at')
+        .eq('user_id', userHash)
+        .single();
+      
+      console.log('🔍 CAS callback: 隐私条款同意记录:', agreementData ? '已同意' : '未同意');
+      
+      if (!agreementData) {
+        console.log('🔍 CAS callback: 用户未同意隐私条款，应该会被middleware重定向');
+      }
+    } catch (error) {
+      console.log('🔍 CAS callback: 隐私条款检查出错:', error);
+    }
+    
     return redirectResponse;
       
   } catch (error) {
