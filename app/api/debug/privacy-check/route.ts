@@ -231,10 +231,15 @@ export async function GET(request: NextRequest) {
       status: 'info',
       variables: {
         NODE_ENV: process.env.NODE_ENV,
-        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        // 主数据库环境变量（实际使用的）
+        hasSupabaseLocalUrl: !!process.env.NEXT_PUBLIC_SUPABASELOCAL_URL,
+        hasSupabaseLocalKey: !!process.env.NEXT_PUBLIC_SUPABASELOCAL_ANON_KEY,
+        // Storage环境变量
         hasStorageUrl: !!process.env.NEXT_PUBLIC_STORAGE_SUPABASE_URL,
-        hasStorageKey: !!process.env.NEXT_PUBLIC_STORAGE_SUPABASE_ANON_KEY
+        hasStorageKey: !!process.env.NEXT_PUBLIC_STORAGE_SUPABASE_ANON_KEY,
+        // 检查是否配置了错误的环境变量名
+        hasWrongSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasWrongSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       }
     })
 
