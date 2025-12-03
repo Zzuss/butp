@@ -238,8 +238,21 @@ export default function PrivacyAgreementPage() {
     )
   }
 
-  // 如果用户未登录，不显示内容（会被useEffect重定向）
-  if (!user) {
+  // 检查是否应该显示页面内容
+  const shouldShowContent = () => {
+    // 如果用户已登录，显示内容
+    if (user) return true
+    
+    // 如果来自CAS重定向，也显示内容（认证检查在useEffect中处理）
+    const urlParams = new URLSearchParams(window.location.search)
+    const fromCas = urlParams.get('from') === 'cas'
+    if (fromCas) return true
+    
+    // 其他情况不显示（会被useEffect重定向）
+    return false
+  }
+
+  if (!shouldShowContent()) {
     return null
   }
 
