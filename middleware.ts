@@ -203,6 +203,13 @@ export async function middleware(request: NextRequest) {
         }
         
         // 检查隐私条款同意状态 - 只检查完全登录的用户
+        console.log('🔍 Middleware隐私条款检查条件:', {
+          needsPrivacyCheck,
+          isLoggedIn: session.isLoggedIn,
+          hasUserHash: !!session.userHash,
+          pathname
+        });
+        
         if (needsPrivacyCheck && session.isLoggedIn && session.userHash) {
           try {
             console.log('🔒 Middleware: checking privacy agreement for path:', pathname);
