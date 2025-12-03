@@ -251,6 +251,12 @@ export async function middleware(request: NextRequest) {
             // 使用文件修改时间作为版本标识
             const fileVersion = currentFileInfo.updated_at || currentFileInfo.created_at;
 
+            console.log('🔍 Middleware版本检查:', {
+              file: fileName,
+              version: fileVersion,
+              userHash: session.userHash?.substring(0, 8) + '...'
+            });
+
             // 从主数据库查询用户同意记录
             const { data: agreementData, error: agreementError } = await supabase
               .from('user_privacy_agreements')

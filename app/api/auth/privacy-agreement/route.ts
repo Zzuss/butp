@@ -232,6 +232,12 @@ export async function POST(request: NextRequest) {
       // 使用文件修改时间作为版本标识
       const fileVersion = currentFileInfo.updated_at || currentFileInfo.created_at
 
+      console.log('🔍 隐私条款API版本:', {
+        file: fileName,
+        version: fileVersion,
+        userHash: session.userHash?.substring(0, 8) + '...'
+      });
+
       // 获取用户IP和User-Agent
       const clientIP = request.headers.get('x-forwarded-for') || 
                       request.headers.get('x-real-ip') || 
