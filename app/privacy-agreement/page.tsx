@@ -207,20 +207,24 @@ export default function PrivacyAgreementPage() {
               const loginData = await loginResponse.json()
               if (loginData.success) {
                 console.log('✅ CAS自动登录完成，跳转到dashboard')
+                setAgreeing(false) // 重置加载状态
                 router.push('/dashboard')
                 return
               }
             }
             
             console.error('❌ CAS自动登录失败，跳转到登录页面')
+            setAgreeing(false) // 重置加载状态
             router.push('/login')
           } catch (error) {
             console.error('❌ CAS自动登录请求失败:', error)
+            setAgreeing(false) // 重置加载状态
             router.push('/login')
           }
         } else {
           // 普通用户直接跳转到dashboard
           console.log('✅ 普通用户同意隐私条款，跳转到dashboard')
+          setAgreeing(false) // 重置加载状态
           router.push('/dashboard')
         }
       } else {
