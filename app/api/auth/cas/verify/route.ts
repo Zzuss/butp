@@ -88,8 +88,9 @@ export async function GET(request: NextRequest) {
     await session.save();
     console.log('CAS verify: session saved successfully');
     
-    // 创建重定向响应
-    const response = NextResponse.redirect(new URL('/login', request.url));
+    // 🔧 修复：直接重定向到隐私条款页面，跳过前端检查
+    console.log('🚨🚨🚨 CAS verify: 准备重定向到隐私条款页面！！！');
+    const response = NextResponse.redirect(new URL('/privacy-agreement?from=cas', request.url));
     
     // 复制session cookies到重定向响应
     const sessionCookieHeader = tempResponse.headers.get('set-cookie');
