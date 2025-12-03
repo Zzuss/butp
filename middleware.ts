@@ -202,8 +202,16 @@ export async function middleware(request: NextRequest) {
           console.log('✅ Middleware: session valid, no changes needed');
         }
         
-        // 检查隐私条款同意状态
-        if (needsPrivacyCheck && session.isLoggedIn && session.userHash) {
+        // 检查隐私条款同意状态 - 对所有已认证用户（包括CAS用户）
+        const shouldCheckPrivacy = needsPrivacyCheck && session.userHash && 
+                                  (session.isLoggedIn || session.isCasAuthenticated);
+        
+        if (shouldCheckPrivacy) {
+          console.log('🔒 Middleware: 检查隐私条款同意状态', {
+            isLoggedIn: session.isLoggedIn,
+            isCasAuthenticated: session.isCasAuthenticated,
+            userHash: session.userHash?.substring(0, 12) + '...'
+          });
           try {
             console.log('🔒 Middleware: checking privacy agreement for path:', pathname);
             
@@ -275,10 +283,26 @@ export async function middleware(request: NextRequest) {
               console.log('📋 Middleware: user has not agreed to privacy policy, redirecting to privacy agreement page');
               const privacyUrl = new URL('/privacy-agreement', request.url);
               privacyUrl.searchParams.set('returnUrl', pathname);
+              
+              // 🔧 为CAS用户添加特殊标识
+              if (session.isCasAuthenticated && !session.isLoggedIn) {
+                privacyUrl.searchParams.set('from', 'cas');
+                console.log('📋 Middleware: CAS用户未同意隐私条款，重定向到CAS隐私条款页面');
+              }
+              
               return NextResponse.redirect(privacyUrl);
             }
 
             console.log('✅ Middleware: privacy agreement check passed');
+            
+            // 🔧 关键修复：如果CAS用户已同意隐私条款，立即恢复完整登录状态
+            if (session.isCasAuthenticated && !session.isLoggedIn) {
+              console.log('🔄 Middleware: CAS用户已同意隐私条款，恢复完整登录状态');
+              session.isLoggedIn = true;
+              session.lastActiveTime = Date.now();
+              await session.save();
+              console.log('✅ Middleware: CAS用户登录状态已恢复');
+            }
           } catch (error) {
             console.error('❌ Middleware: privacy agreement check error:', error);
             // 如果检查失败，重定向到隐私条款页面（安全优先）

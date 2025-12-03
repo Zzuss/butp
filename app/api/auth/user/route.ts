@@ -54,7 +54,8 @@ export async function GET(request: NextRequest) {
 
           if (currentFileInfo) {
             // 检查用户是否已同意当前版本的隐私条款
-            const expectedVersion = new Date(currentFileInfo.updated_at).getTime().toString()
+            // 🔧 修复：使用与隐私条款同意API相同的版本格式
+            const expectedVersion = currentFileInfo.updated_at || currentFileInfo.created_at
             console.log('Auth check: 隐私条款版本检查', {
               fileName: currentFileInfo.name,
               fileUpdatedAt: currentFileInfo.updated_at,
@@ -62,19 +63,43 @@ export async function GET(request: NextRequest) {
               userHash: session.userHash?.substring(0, 12) + '...'
             })
             
+            // 🔍 先查询所有该用户的记录，用于调试
+            const { data: allRecords, error: allError } = await supabase
+              .from('user_privacy_agreements')
+              .select('*')
+              .eq('user_id', session.userHash);
+
+            console.log('Auth check: 用户所有隐私条款记录', {
+              userHash: session.userHash?.substring(0, 12) + '...',
+              recordCount: allRecords?.length || 0,
+              records: allRecords?.map(r => ({
+                file: r.privacy_policy_file,
+                version: r.privacy_policy_version,
+                agreedAt: r.agreed_at
+              }))
+            });
+
             const { data: agreementData, error: agreementError } = await supabase
               .from('user_privacy_agreements')
               .select('*')
               .eq('user_id', session.userHash)
-              .eq('file_name', currentFileInfo.name)
-              .eq('version', expectedVersion)
+              .eq('privacy_policy_file', currentFileInfo.name)
+              .eq('privacy_policy_version', expectedVersion)
               .single();
 
-            console.log('Auth check: 数据库查询结果', {
+            console.log('Auth check: 精确匹配查询结果', {
               found: !!agreementData,
               error: agreementError?.message,
-              agreementVersion: agreementData?.version,
-              expectedVersion: expectedVersion
+              queryConditions: {
+                user_id: session.userHash?.substring(0, 12) + '...',
+                privacy_policy_file: currentFileInfo.name,
+                privacy_policy_version: expectedVersion
+              },
+              foundRecord: agreementData ? {
+                file: agreementData.privacy_policy_file,
+                version: agreementData.privacy_policy_version,
+                agreedAt: agreementData.agreed_at
+              } : null
             })
 
             if (agreementError || !agreementData) {
@@ -91,6 +116,11 @@ export async function GET(request: NextRequest) {
             }
             
             console.log('Auth check: 隐私条款检查通过，用户已同意最新版本')
+            // 🔧 关键修复：立即恢复登录状态
+            session.isLoggedIn = true;
+            session.lastActiveTime = Date.now();
+            await session.save();
+            console.log('Auth check: 已恢复CAS用户的完整登录状态')
           }
         } catch (error) {
           console.error('Auth check: 隐私条款检查失败，不恢复登录状态:', error);
@@ -104,12 +134,7 @@ export async function GET(request: NextRequest) {
           });
         }
 
-        console.log('Auth check: 隐私条款检查通过，恢复登录状态');
-        session.isLoggedIn = true;
-        
-        // 更新活跃时间
-        session.lastActiveTime = Date.now();
-        await session.save();
+        // 注意：登录状态已在隐私条款检查通过后设置，这里不需要重复设置
       }
       
       console.log('Auth check: user is authenticated');
