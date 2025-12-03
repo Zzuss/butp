@@ -63,21 +63,6 @@ export async function GET(request: NextRequest) {
               userHash: session.userHash?.substring(0, 12) + '...'
             })
             
-            // 🔍 先查询所有该用户的记录，用于调试
-            const { data: allRecords, error: allError } = await supabase
-              .from('user_privacy_agreements')
-              .select('*')
-              .eq('user_id', session.userHash);
-
-            console.log('Auth check: 用户所有隐私条款记录', {
-              userHash: session.userHash?.substring(0, 12) + '...',
-              recordCount: allRecords?.length || 0,
-              records: allRecords?.map(r => ({
-                file: r.privacy_policy_file,
-                version: r.privacy_policy_version,
-                agreedAt: r.agreed_at
-              }))
-            });
 
             const { data: agreementData, error: agreementError } = await supabase
               .from('user_privacy_agreements')
@@ -87,20 +72,6 @@ export async function GET(request: NextRequest) {
               .eq('privacy_policy_version', expectedVersion)
               .single();
 
-            console.log('Auth check: 精确匹配查询结果', {
-              found: !!agreementData,
-              error: agreementError?.message,
-              queryConditions: {
-                user_id: session.userHash?.substring(0, 12) + '...',
-                privacy_policy_file: currentFileInfo.name,
-                privacy_policy_version: expectedVersion
-              },
-              foundRecord: agreementData ? {
-                file: agreementData.privacy_policy_file,
-                version: agreementData.privacy_policy_version,
-                agreedAt: agreementData.agreed_at
-              } : null
-            })
 
             if (agreementError || !agreementData) {
               console.log('Auth check: 用户未同意最新隐私条款，不能自动恢复登录状态');

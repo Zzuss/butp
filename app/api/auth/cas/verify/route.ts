@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     session.userHash = hash; // 学号哈希值
     session.name = casUser.name || `学生${casUser.userId}`; // CAS返回的真实姓名，如果没有则使用学号
     session.isCasAuthenticated = true;
-    session.isLoggedIn = false; // 最终登录在login页面完成
+    session.isLoggedIn = true; // 🔧 修复：CAS认证成功后立即设置完整登录状态，与示例用户一致
     session.loginTime = now;
     session.lastActiveTime = now; // 🆕 设置最后活跃时间
     
