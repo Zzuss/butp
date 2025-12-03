@@ -145,13 +145,28 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.next()
     const session = await getIronSession<SessionData>(request, response, sessionOptions)
 
-    // 检查用户是否已登录
-    if (!session.isLoggedIn || !session.userHash) {
+    // 检查用户是否已登录或CAS认证
+    const hasValidAuth = (session.isLoggedIn && session.userHash) || 
+                        (session.isCasAuthenticated && session.userHash && session.userId)
+    
+    if (!hasValidAuth) {
+      console.log('Privacy agreement POST: 认证检查失败', {
+        isLoggedIn: session.isLoggedIn,
+        isCasAuthenticated: session.isCasAuthenticated,
+        hasUserHash: !!session.userHash,
+        hasUserId: !!session.userId
+      })
       return NextResponse.json({ 
         success: false, 
         error: '用户未登录' 
       }, { status: 401 })
     }
+    
+    console.log('Privacy agreement POST: 认证检查通过', {
+      isLoggedIn: session.isLoggedIn,
+      isCasAuthenticated: session.isCasAuthenticated,
+      userHash: session.userHash?.substring(0, 12) + '...'
+    })
 
     try {
       const body = await request.json()
