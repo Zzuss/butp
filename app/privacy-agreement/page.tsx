@@ -36,15 +36,15 @@ export default function PrivacyAgreementPage() {
     }
   }, [])
 
-  // 检查用户是否已登录或CAS认证
+  // 检查用户认证状态并加载内容
   useEffect(() => {
-    const checkAuthStatus = async () => {
+    const checkAuthAndLoadContent = async () => {
       // 检查是否来自CAS重定向
       const urlParams = new URLSearchParams(window.location.search)
       const fromCas = urlParams.get('from') === 'cas'
       
       if (fromCas) {
-        console.log('Privacy page: 来自CAS重定向，直接检查CAS认证状态...')
+        console.log('Privacy page: 来自CAS重定向，检查认证状态并加载内容...')
         try {
           const response = await fetch('/api/auth/cas/check-session', {
             credentials: 'include'
@@ -53,8 +53,9 @@ export default function PrivacyAgreementPage() {
           if (response.ok) {
             const data = await response.json()
             if (data.isCasAuthenticated && data.userId && data.userHash) {
-              console.log('Privacy page: CAS认证有效，允许访问隐私条款页面')
-              return // 允许继续访问隐私条款页面
+              console.log('Privacy page: CAS认证有效，加载隐私条款内容')
+              loadPrivacyContent() // 直接加载内容
+              return
             }
           }
           
@@ -70,51 +71,19 @@ export default function PrivacyAgreementPage() {
       // 非CAS情况，等待AuthContext加载完成
       if (loading) return
       
-      // 如果用户已完全登录，直接继续
-      if (user) return
+      // 如果用户已完全登录，加载内容
+      if (user) {
+        loadPrivacyContent()
+        return
+      }
       
       // 如果不是CAS重定向且用户未登录，重定向到登录页面
       console.log('Privacy page: 用户未登录，重定向到登录页面')
       router.push('/login')
     }
     
-    checkAuthStatus()
+    checkAuthAndLoadContent()
   }, [user, loading, router])
-
-  // 加载隐私条款内容
-  useEffect(() => {
-    const loadContentIfNeeded = async () => {
-      // 如果用户已登录，直接加载
-      if (user) {
-        loadPrivacyContent()
-        return
-      }
-      
-      // 如果来自CAS且有认证状态，也加载内容
-      const urlParams = new URLSearchParams(window.location.search)
-      const fromCas = urlParams.get('from') === 'cas'
-      
-      if (fromCas) {
-        try {
-          const response = await fetch('/api/auth/cas/check-session', {
-            credentials: 'include'
-          })
-          
-          if (response.ok) {
-            const data = await response.json()
-            if (data.isCasAuthenticated && data.userId && data.userHash) {
-              console.log('Privacy page: CAS认证有效，加载隐私条款内容')
-              loadPrivacyContent()
-            }
-          }
-        } catch (error) {
-          console.error('Privacy page: 检查CAS状态失败:', error)
-        }
-      }
-    }
-    
-    loadContentIfNeeded()
-  }, [user])
 
   // 加载隐私条款内容
   const loadPrivacyContent = async () => {

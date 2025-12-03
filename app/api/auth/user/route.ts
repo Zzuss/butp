@@ -54,13 +54,28 @@ export async function GET(request: NextRequest) {
 
           if (currentFileInfo) {
             // 检查用户是否已同意当前版本的隐私条款
+            const expectedVersion = new Date(currentFileInfo.updated_at).getTime().toString()
+            console.log('Auth check: 隐私条款版本检查', {
+              fileName: currentFileInfo.name,
+              fileUpdatedAt: currentFileInfo.updated_at,
+              expectedVersion: expectedVersion,
+              userHash: session.userHash?.substring(0, 12) + '...'
+            })
+            
             const { data: agreementData, error: agreementError } = await supabase
               .from('user_privacy_agreements')
               .select('*')
               .eq('user_id', session.userHash)
               .eq('file_name', currentFileInfo.name)
-              .eq('version', new Date(currentFileInfo.updated_at).getTime().toString())
+              .eq('version', expectedVersion)
               .single();
+
+            console.log('Auth check: 数据库查询结果', {
+              found: !!agreementData,
+              error: agreementError?.message,
+              agreementVersion: agreementData?.version,
+              expectedVersion: expectedVersion
+            })
 
             if (agreementError || !agreementData) {
               console.log('Auth check: 用户未同意最新隐私条款，不能自动恢复登录状态');
@@ -74,6 +89,8 @@ export async function GET(request: NextRequest) {
                 name: session.name
               });
             }
+            
+            console.log('Auth check: 隐私条款检查通过，用户已同意最新版本')
           }
         } catch (error) {
           console.error('Auth check: 隐私条款检查失败，不恢复登录状态:', error);
