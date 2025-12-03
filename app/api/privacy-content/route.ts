@@ -9,106 +9,97 @@ interface PrivacyContent {
   fileType: string
 }
 
-// GET - 从Supabase Storage读取隐私条款内容
+// GET - 直接从Supabase Storage读取隐私条款内容
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Supabase Storage URL:', process.env.NEXT_PUBLIC_STORAGE_SUPABASE_URL)
-    console.log('🔑 Supabase Storage Anon Key:', process.env.NEXT_PUBLIC_STORAGE_SUPABASE_ANON_KEY ? '✅ 存在' : '❌ 未设置')
+    console.log('🔍 直接从Storage读取隐私条款文件')
 
     // 获取 Supabase 客户端
     const storageSupabase = getStorageSupabase()
 
-    // 尝试获取所有桶的列表
-    const { data: buckets, error: bucketsError } = await storageSupabase.storage.listBuckets()
-    console.log('🗃️ 可用的桶:', buckets?.map(bucket => bucket.name))
-    if (bucketsError) {
-      console.error('❌ 获取桶列表失败:', bucketsError)
-    }
+    // 固定文件名：privacy-policy-latest.* (支持多种格式)
+    const possibleFiles = [
+      'privacy-policy-latest.docx',
+      'privacy-policy-latest.doc', 
+      'privacy-policy-latest.pdf',
+      'privacy-policy-latest.txt',
+      'privacy-policy-latest.html'
+    ]
 
-    // 首先从数据库获取当前活跃的隐私条款信息
-    const { data: policyRecord, error: dbError } = await storageSupabase
-      .from('privacy_policy')
-      .select('*')
-      .eq('is_active', true)
-      .single()
+    let fileData: Blob | null = null
+    let fileName = ''
+    let fileInfo: any = null
 
-    console.log('🔍 隐私条款记录:', {
-      record: policyRecord,
-      error: dbError
-    })
-
-    if (dbError && dbError.code !== 'PGRST116') {
-      console.error('查询数据库失败:', dbError)
-      return NextResponse.json({
-        success: false,
-        error: '查询数据库失败: ' + dbError.message
-      }, { status: 500 })
-    }
-
-    // 如果数据库中有记录且有文件路径，从Storage读取
-    if (policyRecord?.file_path) {
+    // 尝试找到存在的文件
+    for (const testFileName of possibleFiles) {
       try {
-        const storageFileName = policyRecord.file_path.replace('privacy-files/', '')
+        console.log(`🔍 尝试下载文件: ${testFileName}`)
         
-        console.log('🔍 尝试下载文件:', {
-          bucket: 'privacy-files',
-          fileName: storageFileName
-        })
-
-        // 从Supabase Storage下载文件
-        const { data: fileData, error: downloadError } = await storageSupabase.storage
+        // 先获取文件信息（包含修改时间）
+        const { data: files, error: listError } = await storageSupabase.storage
           .from('privacy-files')
-          .download(storageFileName)
+          .list('', {
+            search: testFileName
+          })
 
-        console.log('📥 文件下载结果:', {
-          fileData: fileData ? `文件大小: ${fileData.size} 字节` : '无文件数据',
-          downloadError
-        })
-
-        if (downloadError) {
-          console.error('从Storage下载文件失败:', downloadError)
-          return NextResponse.json({
-            success: false,
-            error: '从Storage下载文件失败: ' + downloadError.message
-          }, { status: 500 })
+        if (!listError && files && files.length > 0) {
+          fileInfo = files[0]
+          console.log(`📋 找到文件信息:`, fileInfo)
         }
 
-        // 根据文件类型处理内容
-        const content = await processFileContent(fileData, policyRecord.file_type, storageFileName)
-        
-        return NextResponse.json({
-          success: true,
-          data: {
-            ...content,
-            fileName: policyRecord.file_name,
-            fileSize: policyRecord.file_size,
-            fileModified: policyRecord.updated_at
-          }
-        }, {
-          headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          }
-        })
+        // 下载文件
+        const { data: downloadData, error: downloadError } = await storageSupabase.storage
+          .from('privacy-files')
+          .download(testFileName)
 
-      } catch (storageError) {
-        console.error('Storage操作失败:', storageError)
-        return NextResponse.json({
-          success: false,
-          error: 'Storage操作失败: ' + storageError.message
-        }, { status: 500 })
+        if (!downloadError && downloadData) {
+          fileData = downloadData
+          fileName = testFileName
+          console.log(`✅ 成功下载文件: ${testFileName}`)
+          break
+        }
+      } catch (err) {
+        console.log(`⚠️ 文件 ${testFileName} 不存在，继续尝试下一个`)
+        continue
       }
     }
 
-    // 最后的后备方案：返回默认内容
+    if (!fileData) {
+      console.error('❌ 未找到任何隐私条款文件')
+      return NextResponse.json({
+        success: false,
+        error: '未找到隐私条款文件'
+      }, { status: 404 })
+    }
+
+    // 获取文件类型
+    const fileExtension = fileName.split('.').pop()?.toLowerCase()
+    const mimeTypeMap: { [key: string]: string } = {
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'doc': 'application/msword',
+      'pdf': 'application/pdf',
+      'txt': 'text/plain',
+      'html': 'text/html'
+    }
+    const fileType = mimeTypeMap[fileExtension || ''] || 'application/octet-stream'
+
+    // 处理文件内容
+    const content = await processFileContent(fileData, fileType, fileName)
+    
     return NextResponse.json({
       success: true,
       data: {
-        title: '隐私政策与用户数据使用条款',
-        content: '隐私条款内容正在加载中，请稍后刷新页面...',
-        lastUpdated: new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' }),
-        fileType: 'default'
+        ...content,
+        fileName: fileName,
+        fileSize: fileData.size,
+        fileModified: fileInfo?.updated_at || fileInfo?.created_at || new Date().toISOString(),
+        lastModified: fileInfo?.updated_at || fileInfo?.created_at || new Date().toISOString()
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache', 
+        'Expires': '0'
       }
     })
 
@@ -116,7 +107,7 @@ export async function GET(request: NextRequest) {
     console.error('读取隐私条款失败:', error)
     return NextResponse.json({
       success: false,
-      error: '读取隐私条款失败: ' + error.message
+      error: '读取隐私条款失败: ' + (error as Error).message
     }, { status: 500 })
   }
 }

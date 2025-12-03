@@ -10,9 +10,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 export default function PrivacyPolicyAdminPage() {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [fixing, setFixing] = useState(false)
+  const [agreementStats, setAgreementStats] = useState<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 下载当前隐私条款文件
@@ -135,6 +138,61 @@ export default function PrivacyPolicyAdminPage() {
     }
   }
 
+  // 检查用户同意记录状态
+  const handleCheckAgreements = async () => {
+    try {
+      setChecking(true)
+      setError('')
+      
+      const response = await fetch('/api/admin/check-privacy-agreements', {
+        method: 'GET',
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setAgreementStats(data.data)
+        setSuccess(`检查完成！当前有 ${data.data.totalCount} 条用户同意记录`)
+      } else {
+        setError(data.error || '检查失败')
+      }
+    } catch (error) {
+      console.error('检查失败:', error)
+      setError('网络错误，请重试')
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  // 修复表结构
+  const handleFixTable = async () => {
+    try {
+      setFixing(true)
+      setError('')
+      
+      const response = await fetch('/api/admin/fix-privacy-table', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setSuccess(`表结构修复完成！${data.operations.join(', ')}`)
+        // 清空统计数据，因为记录已被清空
+        setAgreementStats(null)
+      } else {
+        setError(data.error || '修复失败')
+      }
+    } catch (error) {
+      console.error('修复失败:', error)
+      setError('网络错误，请重试')
+    } finally {
+      setFixing(false)
+    }
+  }
+
   return (
     <AdminLayout showBackButton={true}>
       <div className="space-y-6">
@@ -150,6 +208,32 @@ export default function PrivacyPolicyAdminPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              onClick={handleFixTable}
+              variant="destructive"
+              className="flex items-center gap-2"
+              disabled={fixing}
+            >
+              {fixing ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
+              修复表结构
+            </Button>
+            <Button
+              onClick={handleCheckAgreements}
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={checking}
+            >
+              {checking ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+              检查同意记录
+            </Button>
             <Button
               onClick={handleDownload}
               variant="outline"
@@ -180,6 +264,49 @@ export default function PrivacyPolicyAdminPage() {
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">{success}</AlertDescription>
           </Alert>
+        )}
+
+        {/* 用户同意记录统计 */}
+        {agreementStats && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-green-600" />
+                用户同意记录统计
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="font-semibold text-blue-800">总记录数</p>
+                  <p className="text-2xl font-bold text-blue-600">{agreementStats.totalCount}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <p className="font-semibold text-green-800">文件版本数</p>
+                  <p className="text-2xl font-bold text-green-600">{agreementStats.uniqueFiles}</p>
+                </div>
+                <div className="bg-purple-50 p-3 rounded-lg">
+                  <p className="font-semibold text-purple-800">最新同意时间</p>
+                  <p className="text-sm text-purple-600">
+                    {agreementStats.latestAgreement ? new Date(agreementStats.latestAgreement).toLocaleString('zh-CN') : '无记录'}
+                  </p>
+                </div>
+              </div>
+              {agreementStats.fileStats && Object.keys(agreementStats.fileStats).length > 0 && (
+                <div className="mt-4">
+                  <p className="font-semibold text-gray-700 mb-2">按文件分组统计:</p>
+                  <div className="space-y-1">
+                    {Object.entries(agreementStats.fileStats).map(([fileName, count]) => (
+                      <div key={fileName} className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded">
+                        <span className="text-sm text-gray-700">{fileName}</span>
+                        <span className="text-sm font-semibold text-gray-900">{count as number} 条记录</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* 当前文件信息 */}

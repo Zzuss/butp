@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { SessionData, sessionOptions, isSessionExpired, updateSessionActivity } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
+import { getStorageSupabase } from '@/lib/storageSupabase';
 
 // 需要保护的路由路径
 const PROTECTED_PATHS = [
@@ -206,22 +207,65 @@ export async function middleware(request: NextRequest) {
           try {
             console.log('🔒 Middleware: checking privacy agreement for path:', pathname);
             
-            // 查询用户是否已同意隐私条款
-            const { data: privacyData, error: privacyError } = await supabase
-              .from('privacy_policy')
-              .select('SNH')
-              .eq('SNH', session.userHash)
-              .single();
+            // 🔥 新方案：直接从Storage获取隐私条款文件信息
+            const storageSupabase = getStorageSupabase();
+            const possibleFiles = [
+              'privacy-policy-latest.docx',
+              'privacy-policy-latest.doc', 
+              'privacy-policy-latest.pdf',
+              'privacy-policy-latest.txt',
+              'privacy-policy-latest.html'
+            ];
 
-            if (privacyError && privacyError.code !== 'PGRST116') {
-              console.error('❌ Middleware: privacy agreement check failed:', privacyError);
-              // 硬编码绕过：如果查询失败，允许访问（避免阻塞用户）
-              console.log('⚠️  Middleware: 数据库查询失败，使用硬编码绕过，允许访问');
+            let currentFileInfo: any = null;
+            let fileName = '';
+
+            // 找到存在的隐私条款文件
+            for (const testFileName of possibleFiles) {
+              try {
+                const { data: files, error: listError } = await storageSupabase.storage
+                  .from('privacy-files')
+                  .list('', {
+                    search: testFileName
+                  });
+
+                if (!listError && files && files.length > 0) {
+                  currentFileInfo = files[0];
+                  fileName = testFileName;
+                  console.log(`📋 Middleware: 找到隐私条款文件: ${testFileName}`);
+                  break;
+                }
+              } catch (err) {
+                continue;
+              }
+            }
+
+            if (!currentFileInfo) {
+              console.log('⚠️  Middleware: 未找到隐私条款文件，允许访问');
               return response;
             }
 
-            // 如果没有找到记录，说明未同意隐私条款
-            if (!privacyData) {
+            // 使用文件修改时间作为版本标识
+            const fileVersion = currentFileInfo.updated_at || currentFileInfo.created_at;
+
+            // 从主数据库查询用户同意记录
+            const { data: agreementData, error: agreementError } = await supabase
+              .from('user_privacy_agreements')
+              .select('id, agreed_at')
+              .eq('user_id', session.userHash)
+              .eq('privacy_policy_file', fileName)
+              .eq('privacy_policy_version', fileVersion)
+              .single()
+
+            if (agreementError && (agreementError as any).code !== 'PGRST116') {
+              console.error('❌ Middleware: privacy agreement check failed:', agreementError);
+              // 如果查询失败，允许访问（避免阻塞用户）
+              console.log('⚠️  Middleware: 数据库查询失败，允许访问');
+              return response;
+            }
+
+            // 如果没有找到同意记录，说明未同意隐私条款
+            if (!agreementData) {
               console.log('📋 Middleware: user has not agreed to privacy policy, redirecting to privacy agreement page');
               const privacyUrl = new URL('/privacy-agreement', request.url);
               privacyUrl.searchParams.set('returnUrl', pathname);

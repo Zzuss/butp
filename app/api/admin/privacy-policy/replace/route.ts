@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStorageSupabase } from '@/lib/storageSupabase'
+import { supabase } from '@/lib/supabase'
 
 // 验证管理员权限的辅助函数
 function checkAdminPermission(request: NextRequest): { isValid: boolean, adminId?: string } {
@@ -109,65 +110,103 @@ export async function POST(request: NextRequest) {
         }, { status: 500 })
       }
 
-      // 更新数据库记录（仅存储元数据）
+      // 🔥 新方案：文件上传成功后，清空主数据库中的所有用户同意记录
+      // 这样所有用户都需要重新同意新的隐私条款
       try {
-        // 将所有现有记录设为非活跃状态
-        const { error: deactivateError } = await storageSupabase
-          .from('privacy_policy')
-          .update({ is_active: false })
-          .eq('is_active', true)
+        console.log('🗑️ 开始清空用户同意记录...')
+        
+        // 先查询现有记录数量
+        const { count: beforeCount, error: countError } = await supabase
+          .from('user_privacy_agreements')
+          .select('*', { count: 'exact', head: true })
 
-        // 创建新的隐私条款记录（只存储元数据）
-        const { data: newRecord, error: insertError } = await storageSupabase
-          .from('privacy_policy')
-          .insert({
-            title: '隐私政策与用户数据使用条款',
-            file_name: fileName,
-            file_path: `privacy-files/${fileName}`,
-            file_size: file.size,
-            file_type: file.type,
-            version: new Date().toISOString().substring(0, 10), // 使用日期作为版本号
-            effective_date: new Date().toISOString().split('T')[0],
-            created_by: adminId,
-            is_active: true
-          })
-          .select()
-          .single()
+        if (countError) {
+          console.error('❌ 查询记录数量失败:', countError)
+        } else {
+          console.log(`📊 清空前记录数量: ${beforeCount}`)
+        }
 
-        if (insertError) {
-          console.error('❌ 数据库记录创建失败:', insertError)
+        // 使用最简单的清空方式 - 先查询所有记录然后删除
+        const { data: allRecords, error: queryError } = await supabase
+          .from('user_privacy_agreements')
+          .select('user_id')
+
+        if (queryError) {
+          console.error('❌ 查询现有记录失败:', queryError)
           return NextResponse.json({
             success: false,
-            error: '数据库记录创建失败: ' + insertError.message
+            error: '文件上传成功，但查询用户同意记录失败: ' + queryError.message
           }, { status: 500 })
         }
 
-        console.log('✅ 隐私条款文件上传成功', {
-          adminId: adminId,
+        if (allRecords && allRecords.length > 0) {
+          console.log(`🗑️ 找到 ${allRecords.length} 条记录，开始逐条删除...`)
+          
+          // 逐条删除记录
+          let deletedCount = 0
+          for (const record of allRecords) {
+            const { error: deleteError } = await supabase
+              .from('user_privacy_agreements')
+              .delete()
+              .eq('user_id', record.user_id)
+
+            if (deleteError) {
+              console.error(`❌ 删除记录失败 (user_id: ${record.user_id}):`, deleteError)
+            } else {
+              deletedCount++
+            }
+          }
+
+          console.log(`✅ 成功删除 ${deletedCount}/${allRecords.length} 条记录`)
+          
+          if (deletedCount < allRecords.length) {
+            console.warn(`⚠️ 警告：有 ${allRecords.length - deletedCount} 条记录删除失败`)
+          }
+        } else {
+          console.log('📝 没有找到需要删除的记录')
+        }
+
+        console.log(`✅ 用户同意记录清空操作完成`)
+          
+        // 验证清空结果
+        const { count: afterCount, error: verifyError } = await supabase
+          .from('user_privacy_agreements')
+          .select('*', { count: 'exact', head: true })
+
+        if (!verifyError) {
+          console.log(`🔍 清空后记录数量: ${afterCount}`)
+          if (afterCount === 0) {
+            console.log('✅ 确认：所有用户同意记录已成功清空')
+          } else {
+            console.warn(`⚠️ 警告：仍有 ${afterCount} 条记录未被清空`)
+          }
+        }
+      } catch (clearUserError) {
+        console.error('❌ 清空用户同意记录异常:', clearUserError)
+        return NextResponse.json({
+          success: false,
+          error: '文件上传成功，但清空用户同意记录时发生异常: ' + (clearUserError as Error).message
+        }, { status: 500 })
+      }
+
+      console.log('✅ 隐私条款文件上传成功', {
+        adminId: adminId,
+        fileName: fileName,
+        fileSize: file.size,
+        storagePath: uploadData.path,
+        timestamp: new Date().toISOString()
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: '隐私条款文件上传成功，所有用户需要重新同意',
+        data: {
           fileName: fileName,
           fileSize: file.size,
           storagePath: uploadData.path,
-          timestamp: new Date().toISOString()
-        })
-
-        return NextResponse.json({
-          success: true,
-          message: '隐私条款文件上传成功，所有用户需要重新同意',
-          data: {
-            fileName: fileName,
-            fileSize: file.size,
-            storagePath: uploadData.path,
-            uploadedAt: new Date().toISOString()
-          }
-        })
-
-      } catch (dbError) {
-        console.error('❌ 数据库操作失败:', dbError)
-        return NextResponse.json({
-          success: false,
-          error: '数据库操作失败: ' + dbError.message
-        }, { status: 500 })
-      }
+          uploadedAt: new Date().toISOString()
+        }
+      })
 
     } catch (uploadError) {
       console.error('❌ 文件处理失败:', uploadError)
