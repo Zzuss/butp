@@ -55,6 +55,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (response.ok) {
         const userData = await response.json();
+        
+        // 🚨 安全检查：如果CAS用户需要重新同意隐私条款
+        if (userData.requiresPrivacyAgreement && userData.isCasAuthenticated) {
+          console.log('AuthContext: CAS用户需要重新同意隐私条款，重定向到隐私条款页面');
+          // 使用window.location.href确保完全重定向
+          window.location.href = '/privacy-agreement?from=cas';
+          return null;
+        }
+        
         return userData;
       }
       
