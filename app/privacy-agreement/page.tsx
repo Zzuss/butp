@@ -39,17 +39,12 @@ export default function PrivacyAgreementPage() {
   // 检查用户是否已登录或CAS认证
   useEffect(() => {
     const checkAuthStatus = async () => {
-      if (loading) return
-      
-      // 如果用户已完全登录，直接继续
-      if (user) return
-      
       // 检查是否来自CAS重定向
       const urlParams = new URLSearchParams(window.location.search)
       const fromCas = urlParams.get('from') === 'cas'
       
       if (fromCas) {
-        console.log('Privacy page: 来自CAS重定向，检查CAS认证状态...')
+        console.log('Privacy page: 来自CAS重定向，直接检查CAS认证状态...')
         try {
           const response = await fetch('/api/auth/cas/check-session', {
             credentials: 'include'
@@ -62,13 +57,24 @@ export default function PrivacyAgreementPage() {
               return // 允许继续访问隐私条款页面
             }
           }
+          
+          console.log('Privacy page: CAS认证无效，重定向到登录页面')
+          router.push('/login')
         } catch (error) {
           console.error('Privacy page: CAS状态检查失败:', error)
+          router.push('/login')
         }
+        return
       }
       
-      // 如果不是CAS重定向或CAS认证无效，重定向到登录页面
-      console.log('Privacy page: 用户未登录且非有效CAS认证，重定向到登录页面')
+      // 非CAS情况，等待AuthContext加载完成
+      if (loading) return
+      
+      // 如果用户已完全登录，直接继续
+      if (user) return
+      
+      // 如果不是CAS重定向且用户未登录，重定向到登录页面
+      console.log('Privacy page: 用户未登录，重定向到登录页面')
       router.push('/login')
     }
     
