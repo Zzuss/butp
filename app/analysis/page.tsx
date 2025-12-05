@@ -1652,54 +1652,88 @@ export default function Analysis() {
         </div>
 
         {/* 三个交互按钮 */}
-        <div className="mb-6 grid grid-cols-3 gap-2 md:gap-4">
-          <Button
-            variant={selectedButton === 'graduation' ? 'default' : 'outline'}
-            className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
-              selectedButton === 'graduation' 
-                ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
-                : 'hover:scale-95'
-            }`}
-            onClick={() => handleButtonSelect('graduation')}
-          >
-            <span>{t('analysis.graduation.title')}</span>
-            <span className="text-xs text-red-500 mt-1 px-1 text-center leading-tight break-words whitespace-normal">
-              {t('analysis.graduation.pending')}
-            </span>
-          </Button>
-                   <Button
-             variant="outline"
-             className="h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden hover:scale-95"
-           onClick={() => handleButtonSelect('overseas')}
-          >
-            <div className="grid grid-rows-2 w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto">
-               <div className="flex items-center justify-center border-b border-gray-300">
-                 <span>{t('analysis.overseas.title')}</span>
-               </div>
-               <div className="flex items-center justify-center">
-                 <span className="text-[11px] text-gray-600 font-medium">
-                   {t('analysis.predict.click.hint')}
-                 </span>
-               </div>
-             </div>
-          </Button>
-                   <Button
-             variant="outline"
-             className="h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden hover:scale-95"
-            onClick={() => handleButtonSelect('domestic')}
-          >
-             <div className="grid grid-rows-2 w-full h-full md:w-4/5 md:h-4/5 md:mx-auto md:my-auto">
-               <div className="flex items-center justify-center border-b border-gray-300">
-                 <span>{t('analysis.domestic.title')}</span>
-               </div>
-               <div className="flex items-center justify-center">
-                 <span className="text-[11px] text-gray-600 font-medium">
-                   {t('analysis.predict.click.hint')}
-                 </span>
-               </div>
-             </div>
-          </Button>
-        </div>
+<div className="mb-6 grid grid-cols-3 gap-2 md:gap-4">
+  {/* 毕业要求按钮（保持现有逻辑，作为参考） */}
+  <Button
+    variant={selectedButton === 'graduation' ? 'default' : 'outline'}
+    className={`h-22 md:h-16 text-base font-medium flex flex-col items-center justify-center transition-transform duration-200 ${
+      selectedButton === 'graduation' 
+        ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white' 
+        : 'hover:scale-95'
+    }`}
+    onClick={() => handleButtonSelect('graduation')}
+  >
+    <span>{t('analysis.graduation.title')}</span>
+    <span className="text-xs text-red-500 mt-1 px-1 text-center leading-tight break-words whitespace-normal">
+      {t('analysis.graduation.pending')}
+    </span>
+  </Button>
+
+  {/* 海外读研按钮（修改样式逻辑） */}
+  <Button
+    // 选中时切换为default样式，未选中为outline
+    variant={selectedButton === 'overseas' ? 'default' : 'outline'}
+    className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
+      selectedButton === 'overseas'
+        // 选中状态样式（与毕业按钮保持一致）
+        ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white'
+        // 未选中状态样式
+        : 'hover:scale-95'
+    }`}
+    onClick={() => handleButtonSelect('overseas')}
+  >
+    <div className="flex flex-col items-center justify-center h-full w-full">
+      {/* 标题行 */}
+      <span className={`${selectedButton === 'overseas' ? 'text-base' : 'text-sm'}`}>
+        {t('analysis.overseas.title')}
+      </span>
+      {/* 内容行（选中时显示概率，未选中时显示提示） */}
+      <span className={`mt-1 ${
+        selectedButton === 'overseas'
+          ? 'text-blue-500 font-medium' // 选中时强调色
+          : 'text-[11px] text-gray-600' // 未选中时灰色小字
+      }`}>
+        {selectedButton === 'overseas' 
+          ? loadingProbability 
+            ? t('analysis.target.score.loading') // 加载中
+            : probabilityData?.proba_2 !== null 
+            ?`${(((probabilityData?.proba_1 ?? 0) + (probabilityData?.proba_2 ?? 0)) * 100).toFixed(1)}%`              : t('analysis.target.score.no.data') // 无数据
+          : t('analysis.predict.click.hint') // 未选中时提示
+        }
+      </span>
+    </div>
+  </Button>
+
+  {/* 国内读研按钮（与海外按钮逻辑一致） */}
+  <Button
+    variant={selectedButton === 'domestic' ? 'default' : 'outline'}
+    className={`h-22 md:h-16 text-base font-medium transition-transform duration-200 p-0 overflow-hidden ${
+      selectedButton === 'domestic'
+        ? 'bg-blue-200 text-blue-700 border-blue-300 hover:bg-blue-400 hover:text-white'
+        : 'hover:scale-95'
+    }`}
+    onClick={() => handleButtonSelect('domestic')}
+  >
+    <div className="flex flex-col items-center justify-center h-full w-full">
+      <span className={`${selectedButton === 'domestic' ? 'text-base' : 'text-sm'}`}>
+        {t('analysis.domestic.title')}
+      </span>
+      <span className={`mt-1 ${
+        selectedButton === 'domestic'
+          ? 'text-blue-500 font-medium'
+          : 'text-[11px] text-gray-600'
+      }`}>
+        {selectedButton === 'domestic' 
+          ? loadingProbability 
+            ? t('analysis.target.score.loading')
+            : probabilityData?.proba_1 !== null 
+            ? `${((probabilityData?.proba_1 ?? 0) * 100).toFixed(1)}%`              : t('analysis.target.score.no.data')
+          : t('analysis.predict.click.hint')
+        }
+      </span>
+    </div>
+  </Button>
+</div>
 
         <div className="analysis-content">
           {/* 初始界面内容 - 仅在未选择按钮时显示 */}
@@ -1961,6 +1995,9 @@ export default function Analysis() {
                                     ? `国内读研新百分比与之前相比下降${Math.abs(domesticImprovement).toFixed(1)}%`
                                     : `国内读研新百分比与之前相比提高0.0%`
                                 ) : '国内读研百分比计算中...'}
+                              </p>
+                              <p className="text-blue-800 font-medium">
+                                注：百分比下降是由于未来均分低于当前均分造成的。
                               </p>
                             </>
                           );
