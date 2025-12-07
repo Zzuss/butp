@@ -370,6 +370,14 @@ export async function POST(request: NextRequest) {
     console.log(`📦 Checking for courses not in official curriculum...`);
     
     const curriculumCategories = new Set(Object.keys(requiredCreditsByCategory));
+    
+    // 🏃‍♂️ CRITICAL FIX: Always include "体育" category if any sports courses were mapped
+    // This ensures sports courses won't be moved to "其他类别" even if courses table has "体育基础" category
+    if (sportsCoursesInfo.size > 0) {
+      curriculumCategories.add('体育');
+      console.log(`🏃‍♂️ Added "体育" to curriculum categories (${sportsCoursesInfo.size} sports courses found)`);
+    }
+    
     console.log(`📋 Official curriculum categories:`, Array.from(curriculumCategories));
     
     const otherCategoryCourses: any[] = [];
@@ -505,6 +513,13 @@ export async function POST(request: NextRequest) {
       ...Object.keys(requiredCreditsByCategory).filter(category => category !== '其他类别' && category !== '体育基础')
     ]);
     
+    // 🏃‍♂️ CRITICAL FIX: Always include "体育" if sports courses exist, even if not in requiredCreditsByCategory
+    // This handles cases where courses table has "体育基础" but we map to "体育"
+    if (earnedCreditsByCategory['体育'] && earnedCreditsByCategory['体育'].courses.length > 0) {
+      allCategories.add('体育');
+      console.log(`🏃‍♂️ Added "体育" to final categories (student has ${earnedCreditsByCategory['体育'].courses.length} sports courses)`);
+    }
+    
     console.log(`📋 Final categories for graduation requirements:`, Array.from(allCategories));
     
     const graduationRequirements = Array.from(allCategories).map(category => {
@@ -512,16 +527,16 @@ export async function POST(request: NextRequest) {
       
       // 🏃‍♂️ SPECIAL: Override sports category requirements based on curriculum data
       if (category === '体育') {
-        // Get sports requirements from original curriculum data
+        // 🎯 Direct CourseID matching - no category filter needed
         const sportsBasicRequirement = requiredCreditsData.find(course => 
-          course.course_id === '3812150010' && course.category === '体育'
+          course.course_id === '3812150010'
         );
         const sportsElectiveRequirement = requiredCreditsData.find(course => 
-          course.course_id === '3812150020' && course.category === '体育'
+          course.course_id === '3812150020'
         );
         
-        const requiredCompulsory = sportsBasicRequirement ? (sportsBasicRequirement.required_compulsory || 1) : 1; // Use required_compulsory field
-        const requiredElective = sportsElectiveRequirement ? (sportsElectiveRequirement.required_elective || 3) : 3; // Use required_elective field
+        const requiredCompulsory = sportsBasicRequirement ? (sportsBasicRequirement.required_compulsory || 1) : 1;
+        const requiredElective = sportsElectiveRequirement ? (sportsElectiveRequirement.required_elective || 3) : 3;
         
         // Set sports requirements based on curriculum
         required = {
@@ -530,9 +545,7 @@ export async function POST(request: NextRequest) {
           required_elective: requiredElective
         };
         
-        console.log(`🏃‍♂️ Sports requirements from curriculum: compulsory=${requiredCompulsory}, elective=${requiredElective}, total=${required.required_total}`);
-        console.log(`🏃‍♂️ Sports basic requirement found:`, sportsBasicRequirement);
-        console.log(`🏃‍♂️ Sports elective requirement found:`, sportsElectiveRequirement);
+        console.log(`🏃‍♂️ Sports requirements: compulsory=${requiredCompulsory}, elective=${requiredElective}, total=${required.required_total}`);
       }
       
       const earned = earnedCreditsByCategory[category] || { 
