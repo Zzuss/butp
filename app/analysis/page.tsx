@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 import { useLanguage } from "@/contexts/language-context"
-import { getTopPercentageGPAThreshold, getStudentInfo } from "@/lib/dashboard-data"
+import { getTopPercentageGPAThreshold, getStudentInfo, calculateDashboardStats, getStudentResults, type CourseResult } from "@/lib/dashboard-data"
 import { getStudentAbilityData } from "@/lib/ability-data"
 import { RadarChart } from "@/components/ui/radar-chart"
 import { Slider } from "@/components/ui/slider"
@@ -101,6 +101,9 @@ export default function Analysis() {
   // Source2缓存状态
   const [source2ScoresCache, setSource2ScoresCache] = useState<Record<string, any>>({});
   const [loadingSource2Scores, setLoadingSource2Scores] = useState(false);
+  
+  // 加权均分缓存（AcademicAverage）
+  const [academicAverageCache, setAcademicAverageCache] = useState<Record<string, number>>({});
 
 
 
@@ -406,7 +409,7 @@ export default function Analysis() {
         setShowEditModal(false);
       }, 3000);
       
-      // 初始化modified缓存（如果还没有的话）- 根据 selectedButton 初始化对应的缓存
+      // 初始化两个modified缓存（如果还没有的话）- 根据 selectedButton 初始化对应的缓存
       if (user?.userHash) {
         const originalScores = getOriginalScores();
         if (originalScores.length > 0) {
@@ -417,10 +420,17 @@ export default function Analysis() {
             );
             const copiedScores = JSON.parse(JSON.stringify(scoresWithGrades));
             // 如果targetScores已加载，将所有成绩设置为target2_score
-            if (targetScores && targetScores.target2_score !== null && targetScores.target2_score !== undefined) {
+            //if (targetScores && targetScores.target2_score !== null && targetScores.target2_score !== undefined) {
+            //  copiedScores.forEach((course: any) => {
+            //  course.score = targetScores.target2_score;
+            //  });
+            // 如果加权均分已计算，将所有成绩设置为加权均分
+            const average = getAcademicAverage();
+            if (average !== null) {
               copiedScores.forEach((course: any) => {
-                course.score = targetScores.target2_score;
+                course.score = average;
               });
+              //删到这里为止
             }
             setModified1ScoresCache(prev => ({
               ...prev,
@@ -433,10 +443,17 @@ export default function Analysis() {
             );
             const copiedScores = JSON.parse(JSON.stringify(scoresWithGrades));
             // 如果targetScores已加载，将所有成绩设置为target1_score
-            if (targetScores && targetScores.target1_score !== null && targetScores.target1_score !== undefined) {
+            //if (targetScores && targetScores.target1_score !== null && targetScores.target1_score !== undefined) {
+            //  copiedScores.forEach((course: any) => {
+            //    course.score = targetScores.target1_score;
+            //  });
+            // 如果加权均分已计算，将所有成绩设置为加权均分
+            const average = getAcademicAverage();
+            if (average !== null) {
               copiedScores.forEach((course: any) => {
-                course.score = targetScores.target1_score;
-              });
+                course.score = average;
+                });
+                //删到这里为止
             }
             setModified2ScoresCache(prev => ({
               ...prev,
@@ -1013,21 +1030,64 @@ export default function Analysis() {
   };
 
   // 辅助函数：将modified缓存中所有课程的成绩设置为目标分数
+  //const applyTargetScoresToModified = () => {
+  //  if (!user?.userHash) return;
+  //  
+  //  // 直接操作modified1和modified2缓存，而不是从original读取
+  //  setModified1ScoresCache(prev => {
+  //    const currentModified1 = prev[user.userHash];
+  //    if (!currentModified1 || currentModified1.length === 0) return prev;
+  //    if (!targetScores || targetScores.target2_score === null || targetScores.target2_score === undefined) return prev;
+  //    
+  //    // 更新modified1：所有成绩设置为target2_score（海外读研）
+  //    const updatedModified1 = currentModified1.map((course: any) => ({
+  //      ...course,
+  //      score: targetScores.target2_score
+  //    }));
+  //    console.log('Modified1 scores set to target2_score:', targetScores.target2_score);
+  //    return {
+  //      ...prev,
+  //      [user.userHash]: updatedModified1
+  //    };
+  //  });
+  //
+  //  setModified2ScoresCache(prev => {
+  //    const currentModified2 = prev[user.userHash];
+  //    if (!currentModified2 || currentModified2.length === 0) return prev;
+  //    if (!targetScores || targetScores.target1_score === null || targetScores.target1_score === undefined) return prev;
+  //    
+  //    // 更新modified2：所有成绩设置为target1_score（国内读研）
+  //    const updatedModified2 = currentModified2.map((course: any) => ({
+  //      ...course,
+  //      score: targetScores.target1_score
+  //    }));
+  //    console.log('Modified2 scores set to target1_score:', targetScores.target1_score);
+  //    return {
+  //      ...prev,
+  //      [user.userHash]: updatedModified2
+  //    };
+  //  });
+  //};
+
+  // 辅助函数：将modified缓存中所有课程的成绩设置为加权平均分
   const applyTargetScoresToModified = () => {
     if (!user?.userHash) return;
+    
+    // 获取加权平均分
+    const average = getAcademicAverage();
+    if (average === null) return;
     
     // 直接操作modified1和modified2缓存，而不是从original读取
     setModified1ScoresCache(prev => {
       const currentModified1 = prev[user.userHash];
       if (!currentModified1 || currentModified1.length === 0) return prev;
-      if (!targetScores || targetScores.target2_score === null || targetScores.target2_score === undefined) return prev;
       
-      // 更新modified1：所有成绩设置为target2_score（海外读研）
+      // 更新modified1：所有成绩设置为加权平均分（海外读研）
       const updatedModified1 = currentModified1.map((course: any) => ({
         ...course,
-        score: targetScores.target2_score
+        score: average
       }));
-      console.log('Modified1 scores set to target2_score:', targetScores.target2_score);
+      console.log('Modified1 scores set to academic average:', average);
       return {
         ...prev,
         [user.userHash]: updatedModified1
@@ -1037,14 +1097,13 @@ export default function Analysis() {
     setModified2ScoresCache(prev => {
       const currentModified2 = prev[user.userHash];
       if (!currentModified2 || currentModified2.length === 0) return prev;
-      if (!targetScores || targetScores.target1_score === null || targetScores.target1_score === undefined) return prev;
       
-      // 更新modified2：所有成绩设置为target1_score（国内读研）
+      // 更新modified2：所有成绩设置为加权平均分（国内读研）
       const updatedModified2 = currentModified2.map((course: any) => ({
         ...course,
-        score: targetScores.target1_score
+        score: average
       }));
-      console.log('Modified2 scores set to target1_score:', targetScores.target1_score);
+      console.log('Modified2 scores set to academic average:', average);
       return {
         ...prev,
         [user.userHash]: updatedModified2
@@ -1174,6 +1233,7 @@ export default function Analysis() {
     }
   };
 
+
   // 获取Modified缓存数据（根据当前选择的按钮返回对应的缓存）
   const getModifiedScores = () => {
     if (!user?.userHash) return [];
@@ -1236,6 +1296,14 @@ export default function Analysis() {
     
     console.log('No source2 cache available');
     return [];
+  };
+
+  // 获取加权均分（AcademicAverage）
+  const getAcademicAverage = (): number | null => {
+    if (!user?.userHash) return null;
+    
+    // 返回缓存中的加权均分，如果没有则返回 null
+    return academicAverageCache[user.userHash] ?? null;
   };
 
   // 更新Modified缓存数据（根据当前选择的按钮更新对应的缓存）
@@ -1485,6 +1553,56 @@ export default function Analysis() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.userHash, authLoading]);
+
+  // 计算并缓存加权均分（AcademicAverage）- 使用 dashboard-data.ts 的计算逻辑
+  // 数据来源：直接从 academic__data.ts 获取数据
+  const academicAverageCalculatedRef = useRef<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!user?.userHash) return;
+    
+    // 如果已经计算过该用户的加权均分，不再重复计算
+    if (academicAverageCalculatedRef.current[user.userHash]) return;
+    
+    // 直接从 academic__data.ts 获取数据（使用 getStudentResults，它会自动从缓存或查询获取）
+    const calculateAverage = async () => {
+      try {
+        console.log('开始计算加权均分，从 academic__data.ts 获取数据');
+        
+        // 使用 getStudentResults 获取 CourseResult[] 格式的数据
+        // 这个函数会从 academic__data.ts 的统一缓存获取数据，或调用 queryAcademicResults
+        const courseResults = await getStudentResults(user.userHash);
+        console.log('从 academic__data.ts 获取的课程数量:', courseResults.length);
+        
+        if (courseResults.length === 0) {
+          console.log('没有课程数据，无法计算加权均分');
+          return;
+        }
+        
+        // 使用 dashboard-data.ts 中的 calculateDashboardStats 函数计算
+        const stats = calculateDashboardStats(courseResults);
+        console.log('calculateDashboardStats 计算结果:', stats);
+        
+        // 获取加权平均分并向下取整
+        const average = Math.floor(stats.averageScore);
+        
+        // 缓存计算结果
+        setAcademicAverageCache(prev => ({
+          ...prev,
+          [user.userHash]: average
+        }));
+        
+        // 标记为已计算
+        academicAverageCalculatedRef.current[user.userHash] = true;
+        
+        console.log('加权均分已计算并缓存 (AcademicAverage):', average, '（原始值:', stats.averageScore, '）');
+      } catch (error) {
+        console.error('计算加权均分时出错:', error);
+      }
+    };
+    
+    calculateAverage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.userHash]);
 
   // 加载学生信息
   useEffect(() => {
@@ -1926,10 +2044,17 @@ export default function Analysis() {
                       <p className="text-blue-800 font-medium">
                         为达到海外读研目标，预估后续科目的最低平均分为{' '}
                         <span className="text-blue-600 font-bold">
+                          {/*
                           {loadingTargetScores ? t('analysis.target.score.loading') : 
                            targetScores && targetScores.target2_score !== null ? 
                            `${targetScores.target2_score}` : 
                            t('analysis.target.score.no.data')}
+                           */}
+                          {loadingOriginalScores ? t('analysis.target.score.loading') : 
+                          (() => {
+                            const average = getAcademicAverage();
+                            return average !== null ? `${average}` : t('analysis.target.score.no.data');
+                          })()}
                         </span>
                       </p>
                     </div>
@@ -2353,10 +2478,17 @@ export default function Analysis() {
                       <p className="text-blue-800 font-medium">
                         为达到国内读研目标，预估后续科目的最低平均分为{' '}
                         <span className="text-blue-600 font-bold">
+                          {/*
                           {loadingTargetScores ? t('analysis.target.score.loading') : 
-                           targetScores && targetScores.target1_score !== null ? 
-                           `${targetScores.target1_score}` : 
-                           t('analysis.target.score.no.data')}
+                            targetScores && targetScores.target1_score !== null ? 
+                            `${targetScores.target1_score}` : 
+                            t('analysis.target.score.no.data')}
+                          */}
+                          {loadingOriginalScores ? t('analysis.target.score.loading') : 
+                           (() => {
+                             const average = getAcademicAverage();
+                             return average !== null ? `${average}` : t('analysis.target.score.no.data');
+                           })()}
                         </span>
                       </p>
                     </div>
