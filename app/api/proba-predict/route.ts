@@ -55,11 +55,20 @@ export async function POST(request: NextRequest) {
 
       if (!resp.ok) {
         const text = await resp.text().catch(() => '')
-        return NextResponse.json({ error: 'Backend request failed', detail: text, statusCode: resp.status }, { status: 502 })
+        let errorDetail: any = { detail: text, statusCode: resp.status }
+        // 尝试解析错误响应为JSON
+        try {
+          const errorJson = JSON.parse(text)
+          errorDetail = { ...errorDetail, ...errorJson }
+        } catch {
+          // 如果不是JSON，保持原文本
+        }
+        return NextResponse.json({ error: 'Backend request failed', ...errorDetail }, { status: 502 })
       }
 
       const backendData = await resp.json().catch(() => ({}))
 
+      // 后端返回格式: { "success": True, "data": { "probabilities": [...] } }
       const probabilities = Array.isArray(backendData?.probabilities)
         ? backendData.probabilities
         : Array.isArray(backendData?.data?.probabilities)
@@ -67,7 +76,11 @@ export async function POST(request: NextRequest) {
         : undefined
 
       if (!Array.isArray(probabilities)) {
-        return NextResponse.json({ error: 'Invalid response from backend', raw: backendData }, { status: 502 })
+        return NextResponse.json({ 
+          error: 'Invalid response from backend', 
+          raw: backendData,
+          expectedFormat: '{ "success": true, "data": { "probabilities": [...] } }'
+        }, { status: 502 })
       }
 
       return NextResponse.json({ success: true, data: { probabilities } })
