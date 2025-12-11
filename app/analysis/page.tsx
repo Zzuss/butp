@@ -664,11 +664,26 @@ export default function Analysis() {
         
         // 3. 重新计算特征值 - 使用新的总表数据
         console.log('🔄 开始调用 calculate-features API...');
+        
+        // 从学号前4位提取年份（数字格式，如 2023）
+        const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+          ? (user as any).studentNumber 
+          : (user?.userId || '').toString();
+        const trimmedStudentNumber = studentNumber.toString().trim();
+        const extractedYear = parseInt(trimmedStudentNumber.substring(0, 4));
+        const year = !isNaN(extractedYear) && extractedYear >= 2018 && extractedYear <= 2050 
+          ? extractedYear 
+          : null;
+        
+        console.log('📅 提取的年份:', { studentNumber: trimmedStudentNumber, extractedYear, year });
+        
         const featureResponse = await fetch('/api/calculate-features', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            allCourses: data.data.allCourses
+            allCourses: data.data.allCourses,
+            year: year,
+            major: studentInfo?.major || null
           })
         });
 
@@ -680,76 +695,35 @@ export default function Analysis() {
           console.log('📊 特征值数据结构:', {
             success: featureData.success,
             hasData: !!featureData.data,
-            hasFeatureValues: !!featureData.data?.featureValues,
-            featureValuesKeys: featureData.data?.featureValues ? Object.keys(featureData.data.featureValues) : []
+            hasC1: featureData.data?.C1 !== undefined,
+            hasC23: featureData.data?.C23 !== undefined,
+            cValues: featureData.data ? Object.keys(featureData.data).filter(k => k.startsWith('C')) : []
           });
-          setCalculatedFeatures(featureData.data.featureValues);
           
-          // 4. 调用预测API - 使用计算出的特征值进行预测
-          // 将中文特征名称映射为英文
-          const featureMapping: Record<string, string> = {
-            '公共课程': 'public',
-            '实践课程': 'practice',
-            '数学科学': 'math_science',
-            '政治课程': 'political',
-            '基础学科': 'basic_subject',
-            '创新课程': 'innovation',
-            '英语课程': 'english',
-            '基础专业': 'basic_major',
-            '专业课程': 'major'
-          };
+          // 4. 调用预测API - 使用计算出的 C1~C23 特征值进行预测
+          // 现在直接使用 C1~C23，不需要映射
+          const featureValues: Record<string, number> = {};
           
-          const englishFeatureValues: Record<string, number> = {};
-          Object.entries(featureData.data.featureValues).forEach(([chineseName, value]) => {
-            const englishName = featureMapping[chineseName];
-            if (englishName && typeof value === 'number') {
-              englishFeatureValues[englishName] = value;
+          // 提取 C1~C23
+          for (let i = 1; i <= 23; i++) {
+            const cKey = `C${i}`;
+            const value = featureData.data?.[cKey];
+            if (value !== undefined && value !== null) {
+              featureValues[cKey] = value;
             }
-          });
-          // 计算 AcademicStrength
-          // 步骤1：填充缺失值
-          // 仅对 major 和 innovation 进行填充
-          if (englishFeatureValues['major'] === 0) {
-            englishFeatureValues['major'] = englishFeatureValues['basic_major'] * 0.5 + englishFeatureValues['basic_subject'] * 0.3 + englishFeatureValues['math_science'] * 0.2;
           }
-          if (englishFeatureValues['innovation'] === 0) {
-            englishFeatureValues['innovation'] = englishFeatureValues['practice'] * 0.4 + englishFeatureValues['major'] * 0.35 + englishFeatureValues['basic_major'] * 0.15 + englishFeatureValues['basic_subject'] * 0.1;
-          }
-          // 步骤2：获取专业基准数据（假设使用 _global_，实际应根据学生专业选择）
-          const strengthStats = {
-            'public': [84.82204689896997, 4.143366335953203],
-            'political': [86.12457264957264, 2.7169474528845057],
-            'english': [79.34048297381631, 6.140405395538642],
-            'math_science': [78.69331772479921, 8.399991165101154],
-            'basic_subject': [81.95231535388756, 6.609251767392124],
-            'basic_major': [80.99553919085157, 5.045698290548678],
-            'major': [81.68312065476074, 7.143527823218448],
-            'practice': [85.6373547217951, 4.35426980203138],
-            'innovation': [82.82630183345319, 5.204012346585702]
-          };
-          // 步骤3：计算 Z-score
-          let zScores = [];
-          for (const [key, value] of Object.entries(englishFeatureValues)) {
-            const score = value === 0 ? 60 : (value as number); // 对于值为 0 的类别，临时使用 60 计算 Z-score
-            const stats = strengthStats[key as keyof typeof strengthStats];
-            if (!stats) continue;
-            const [mean, std] = stats;
-            const zScore = (score - mean) / std;
-            zScores.push(zScore);
-          }
-          // 步骤4：计算 AcademicStrength
-          const academicStrengthValue = zScores.reduce((sum, z) => sum + z, 0) / zScores.length;
-          setAcademicStrength(academicStrengthValue);
-          englishFeatureValues['AcademicStrength'] = academicStrengthValue;
           
-          console.log('📊 英文特征值:', englishFeatureValues);
+          // 保存计算出的特征值（用于显示）
+          setCalculatedFeatures(featureValues);
+          
+          console.log('📊 C1~C23 特征值:', featureValues);
           
           console.log('🔄 开始调用预测API...');
           const predictionResponse = await fetch('/api/proba-predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              featureValues: englishFeatureValues
+              featureValues: featureValues
             })
           });
 
@@ -1367,11 +1341,23 @@ export default function Analysis() {
         // 计算特征值
         setLoadingFeatures(true);
         try {
+          // 从学号前4位提取年份（数字格式，如 2023）
+          const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+            ? (user as any).studentNumber 
+            : (user?.userId || '').toString();
+          const trimmedStudentNumber = studentNumber.toString().trim();
+          const extractedYear = parseInt(trimmedStudentNumber.substring(0, 4));
+          const year = !isNaN(extractedYear) && extractedYear >= 2018 && extractedYear <= 2050 
+            ? extractedYear 
+            : null;
+          
           const featureResponse = await fetch('/api/calculate-features', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              allCourses: data.data.allCourses
+              allCourses: data.data.allCourses,
+              year: year,
+              major: studentInfo?.major || null
             })
           });
 
