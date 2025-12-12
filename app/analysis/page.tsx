@@ -2325,7 +2325,7 @@ export default function Analysis() {
                                           return Number(score); // 如果没有修改，显示原始成绩
                                         })()}
                                         min={60}
-                                        max={98}
+                                        max={95}
                                         step={1}
                                         onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
                                         className="w-full"
@@ -2738,7 +2738,7 @@ export default function Analysis() {
                                           return Number(score); // 如果没有修改，显示原始成绩
                                         })()}
                                         min={60}
-                                        max={98}
+                                        max={95}
                                         step={1}
                                         onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
                                         className="w-full"
