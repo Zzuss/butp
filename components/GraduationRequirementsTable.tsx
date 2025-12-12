@@ -88,7 +88,7 @@ const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = 
               </TableCell>
               <TableCell>{req.required_total_credits}</TableCell>
               <TableCell>
-                {req.category === '体育' && req.compulsory_credits_obtained !== undefined ? (
+                {req.category.includes('体育') && req.compulsory_credits_obtained !== undefined ? (
                   <span className="text-sm">
                     {req.required_compulsory_credits}
                     <span className="text-gray-500 ml-1">
@@ -100,7 +100,7 @@ const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = 
                 )}
               </TableCell>
               <TableCell>
-                {req.category === '体育' && req.elective_credits_obtained !== undefined ? (
+                {req.category.includes('体育') && req.elective_credits_obtained !== undefined ? (
                   <span className="text-sm">
                     {req.required_elective_credits}
                     <span className="text-gray-500 ml-1">
@@ -187,7 +187,7 @@ const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = 
       )}
 
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{t('analysis.graduation.detailsForCategory', { category: selectedCategoryName })}</DialogTitle>
             <DialogDescription>
@@ -205,7 +205,7 @@ const GraduationRequirementsTable: React.FC<GraduationRequirementsTableProps> = 
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 overflow-y-auto flex-1">
             {selectedCategoryDetails.length > 0 ? (
               <Table>
                 <TableHeader>
