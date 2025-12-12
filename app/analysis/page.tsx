@@ -2093,25 +2093,17 @@ export default function Analysis() {
                           return (
                             <>
                               <p className="text-blue-800 font-medium">
+                                根据新的目标成绩，计算新百分比如下：
+                              </p>
+                              <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  overseasImprovement > 0
-                                    ? `海外读研新百分比与之前相比提高${overseasImprovement.toFixed(1)}%`
-                                    : overseasImprovement < 0
-                                    ? `海外读研新百分比与之前相比下降${Math.abs(overseasImprovement).toFixed(1)}%`
-                                    : `海外读研新百分比与之前相比提高0.0%`
+                                  `海外读研新百分比为${predictionResult.overseasPercentage}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  domesticImprovement > 0
-                                    ? `国内读研新百分比与之前相比提高${domesticImprovement.toFixed(1)}%`
-                                    : domesticImprovement < 0
-                                    ? `国内读研新百分比与之前相比下降${Math.abs(domesticImprovement).toFixed(1)}%`
-                                    : `国内读研新百分比与之前相比提高0.0%`
+                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
                                 ) : '国内读研百分比计算中...'}
-                              </p>
-                              <p className="text-blue-800 font-medium">
-                                注：百分比下降是由于未来均分低于当前均分造成的。
                               </p>
                             </>
                           );
@@ -2517,21 +2509,16 @@ export default function Analysis() {
                           return (
                             <>
                               <p className="text-blue-800 font-medium">
+                                根据新的目标成绩，计算新百分比如下：
+                              </p>
+                              <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  overseasImprovement > 0
-                                    ? `海外读研新百分比与之前相比提高${overseasImprovement.toFixed(1)}%`
-                                    : overseasImprovement < 0
-                                    ? `海外读研新百分比与之前相比下降${Math.abs(overseasImprovement).toFixed(1)}%`
-                                    : `海外读研新百分比与之前相比提高0.0%`
+                                  `海外读研新百分比为${predictionResult.overseasPercentage}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  domesticImprovement > 0
-                                    ? `国内读研新百分比与之前相比提高${domesticImprovement.toFixed(1)}%`
-                                    : domesticImprovement < 0
-                                    ? `国内读研新百分比与之前相比下降${Math.abs(domesticImprovement).toFixed(1)}%`
-                                    : `国内读研新百分比与之前相比提高0.0%`
+                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
                                 ) : '国内读研百分比计算中...'}
                               </p>
                             </>
