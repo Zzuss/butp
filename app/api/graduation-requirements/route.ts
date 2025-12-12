@@ -565,61 +565,80 @@ export async function POST(request: NextRequest) {
       
       // 🏃‍♂️ SPECIAL: Override sports category requirements based on curriculum data
       if (category === targetSportsCategory) {
-        // 🎯 Direct CourseID matching - no category filter needed
-        const sportsBasicRequirement = requiredCreditsData.find(course => 
-          course.course_id === '3812150010'
-        );
-        const sportsElectiveRequirement = requiredCreditsData.find(course => 
-          course.course_id === '3812150020'
-        );
-        
-        const requiredCompulsory = sportsBasicRequirement ? (sportsBasicRequirement.required_compulsory || 1) : 1;
-        const requiredElective = sportsElectiveRequirement ? (sportsElectiveRequirement.required_elective || 3) : 3;
-        
-        // 🏃‍♂️ 如果有多个体育类别，需要合并所有体育类别的要求
+        // 🏃‍♂️ 如果有多个体育类别，检查它们的要求是否相同
         if (sportsRelatedCategories.length > 1) {
-          console.log(`🏃‍♂️ 合并多个体育类别的要求...`);
+          console.log(`🏃‍♂️ 检查多个体育类别的要求...`);
           
           // 收集所有体育类别的原始要求
-          let totalOriginalRequired = { required_total: 0, required_compulsory: 0, required_elective: 0 };
-          sportsRelatedCategories.forEach(sportsCategory => {
+          const sportsRequirements = sportsRelatedCategories.map(sportsCategory => {
             const categoryData = requiredCreditsData.find(course => course.category === sportsCategory);
             if (categoryData) {
-              console.log(`🏃‍♂️ 找到体育类别 "${sportsCategory}" 的要求: total=${categoryData.required_total}, compulsory=${categoryData.required_compulsory}, elective=${categoryData.required_elective}`);
-              totalOriginalRequired.required_total += categoryData.required_total || 0;
-              totalOriginalRequired.required_compulsory += categoryData.required_compulsory || 0;
-              totalOriginalRequired.required_elective += categoryData.required_elective || 0;
+              console.log(`🏃‍♂️ 体育类别 "${sportsCategory}" 的要求: total=${categoryData.required_total}, compulsory=${categoryData.required_compulsory}, elective=${categoryData.required_elective}`);
+              return {
+                category: sportsCategory,
+                required_total: categoryData.required_total || 0,
+                required_compulsory: categoryData.required_compulsory || 0,
+                required_elective: categoryData.required_elective || 0
+              };
             }
-          });
+            return null;
+          }).filter(req => req !== null);
           
-          // 使用合并后的要求加上体育课程要求
-          required = {
-            required_total: totalOriginalRequired.required_total + requiredCompulsory + requiredElective,
-            required_compulsory: totalOriginalRequired.required_compulsory + requiredCompulsory,
-            required_elective: totalOriginalRequired.required_elective + requiredElective
-          };
+          // 检查所有体育类别的要求是否相同
+          const firstRequirement = sportsRequirements[0];
+          const allSame = sportsRequirements.every(req => 
+            req.required_total === firstRequirement.required_total &&
+            req.required_compulsory === firstRequirement.required_compulsory &&
+            req.required_elective === firstRequirement.required_elective
+          );
           
-          console.log(`🏃‍♂️ 合并后的原始要求: total=${totalOriginalRequired.required_total}, compulsory=${totalOriginalRequired.required_compulsory}, elective=${totalOriginalRequired.required_elective}`);
-        } else {
-          // 🏃‍♂️ 只有一个体育类别，获取该类别的原始要求（可能包含其他课程）
-          const originalRequired = requiredCreditsByCategory[category];
-          
-          // 如果培养方案中该类别有其他课程的要求，需要加上体育课程的要求
-          if (originalRequired && originalRequired.required_total > 0) {
-            console.log(`🏃‍♂️ "${category}" 类别原有要求: total=${originalRequired.required_total}, compulsory=${originalRequired.required_compulsory}, elective=${originalRequired.required_elective}`);
-            
-            // 合并体育课程要求和原有要求
+          if (allSame) {
+            console.log(`🏃‍♂️ 所有体育类别的要求相同（重复定义），直接使用原有要求`);
+            // 原有要求的必修就是体育必修，选修就是体育选修，不需要再加
             required = {
-              required_total: originalRequired.required_total + requiredCompulsory + requiredElective,
-              required_compulsory: originalRequired.required_compulsory + requiredCompulsory,
-              required_elective: originalRequired.required_elective + requiredElective
+              required_total: firstRequirement.required_total,
+              required_compulsory: firstRequirement.required_compulsory,
+              required_elective: firstRequirement.required_elective
             };
           } else {
-            // 如果没有其他课程，只使用体育课程的要求
+            console.log(`🏃‍♂️ 体育类别的要求不同，需要累加`);
+            // 累加所有不同的要求
+            let totalOriginalRequired = { required_total: 0, required_compulsory: 0, required_elective: 0 };
+            sportsRequirements.forEach(req => {
+              totalOriginalRequired.required_total += req.required_total;
+              totalOriginalRequired.required_compulsory += req.required_compulsory;
+              totalOriginalRequired.required_elective += req.required_elective;
+            });
+            
+            // 使用合并后的要求
             required = {
-              required_total: requiredCompulsory + requiredElective,
-              required_compulsory: requiredCompulsory,
-              required_elective: requiredElective
+              required_total: totalOriginalRequired.required_total,
+              required_compulsory: totalOriginalRequired.required_compulsory,
+              required_elective: totalOriginalRequired.required_elective
+            };
+            
+            console.log(`🏃‍♂️ 累加后的要求: total=${totalOriginalRequired.required_total}, compulsory=${totalOriginalRequired.required_compulsory}, elective=${totalOriginalRequired.required_elective}`);
+          }
+        } else {
+          // 🏃‍♂️ 只有一个体育类别，直接使用该类别的原始要求
+          const originalRequired = requiredCreditsByCategory[category];
+          
+          if (originalRequired && originalRequired.required_total > 0) {
+            console.log(`🏃‍♂️ "${category}" 类别原有要求已包含体育要求: total=${originalRequired.required_total}, compulsory=${originalRequired.required_compulsory}, elective=${originalRequired.required_elective}`);
+            
+            // 原有要求已经包含了体育的要求，直接使用
+            required = {
+              required_total: originalRequired.required_total,
+              required_compulsory: originalRequired.required_compulsory,
+              required_elective: originalRequired.required_elective
+            };
+          } else {
+            // 如果没有原有要求，使用默认的体育课程要求
+            console.log(`🏃‍♂️ "${category}" 类别没有原有要求，使用默认体育要求`);
+            required = {
+              required_total: 4,  // 默认：1必修 + 3选修
+              required_compulsory: 1,
+              required_elective: 3
             };
           }
         }
