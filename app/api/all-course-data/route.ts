@@ -285,9 +285,14 @@ export async function POST(request: NextRequest) {
         const originalCategory = course.category || null;
         const mappedCategory = originalCategory ? source1CategoryToFeatureMapping[originalCategory] || '基础学科' : '基础学科';
         
+        // 使用硬编码映射表获取课号
+        const courseName = course.courseName;
+        const courseId = courseNameToIdMapping[courseName] || course.courseId || null;
+        
         source1Courses.push({
           source: '专业预测表',
-          courseName: course.courseName,
+          courseName: courseName,
+          courseId: courseId, // 使用硬编码映射表的课号
           score: currentScore,
           semester: course.semester || null,
           category: mappedCategory, // 使用映射后的category
@@ -391,12 +396,19 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ 数据整合完成，总课程数: ${allCourses.length}`)
     
+    // 简化 allCourses 格式，只保留 courseId、score、credit 返回值
+    const simplifiedAllCourses = allCourses.map((course: any) => ({
+      courseId: course.courseId || null,
+      score: course.score,
+      credit: course.credit || null
+    }));
+    
     return NextResponse.json({
       success: true,
       data: {
         studentInfo: {
           SNH: trimmedHash,
-          major: source2Data?.[0]?.Current_Major || source2Data?.[0]?.currentMajor,
+          major: source2Data?.[0]?.Current_Major || source2Data?.[0]?.currentMajor || null,
           year: null
         },
         summary: {
@@ -407,7 +419,7 @@ export async function POST(request: NextRequest) {
         },
         source1Data: source1Courses,
         source2Data: source2Courses,
-        allCourses: allCourses,
+        allCourses: simplifiedAllCourses, // 简化后的格式
         courseMapping: courseNameToIdMapping, // 恢复使用硬编码映射表
         courseInfo: {}, // 不再需要courseIdToInfoMap
         cacheInfo: cacheInfo

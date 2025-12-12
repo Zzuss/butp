@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 import { useLanguage } from "@/contexts/language-context"
-import { getTopPercentageGPAThreshold, getStudentInfo } from "@/lib/dashboard-data"
+import { getTopPercentageGPAThreshold, getStudentInfo, calculateDashboardStats, getStudentResults, type CourseResult } from "@/lib/dashboard-data"
 import { getStudentAbilityData } from "@/lib/ability-data"
 import { RadarChart } from "@/components/ui/radar-chart"
 import { Slider } from "@/components/ui/slider"
@@ -101,6 +101,9 @@ export default function Analysis() {
   // Source2缓存状态
   const [source2ScoresCache, setSource2ScoresCache] = useState<Record<string, any>>({});
   const [loadingSource2Scores, setLoadingSource2Scores] = useState(false);
+  
+  // 加权均分缓存（AcademicAverage）
+  const [academicAverageCache, setAcademicAverageCache] = useState<Record<string, number>>({});
 
 
 
@@ -406,7 +409,7 @@ export default function Analysis() {
         setShowEditModal(false);
       }, 3000);
       
-      // 初始化modified缓存（如果还没有的话）- 根据 selectedButton 初始化对应的缓存
+      // 初始化两个modified缓存（如果还没有的话）- 根据 selectedButton 初始化对应的缓存
       if (user?.userHash) {
         const originalScores = getOriginalScores();
         if (originalScores.length > 0) {
@@ -417,10 +420,17 @@ export default function Analysis() {
             );
             const copiedScores = JSON.parse(JSON.stringify(scoresWithGrades));
             // 如果targetScores已加载，将所有成绩设置为target2_score
-            if (targetScores && targetScores.target2_score !== null && targetScores.target2_score !== undefined) {
+            //if (targetScores && targetScores.target2_score !== null && targetScores.target2_score !== undefined) {
+            //  copiedScores.forEach((course: any) => {
+            //  course.score = targetScores.target2_score;
+            //  });
+            // 如果加权均分已计算，将所有成绩设置为加权均分
+            const average = getAcademicAverage();
+            if (average !== null) {
               copiedScores.forEach((course: any) => {
-                course.score = targetScores.target2_score;
+                course.score = average;
               });
+              //删到这里为止
             }
             setModified1ScoresCache(prev => ({
               ...prev,
@@ -433,10 +443,17 @@ export default function Analysis() {
             );
             const copiedScores = JSON.parse(JSON.stringify(scoresWithGrades));
             // 如果targetScores已加载，将所有成绩设置为target1_score
-            if (targetScores && targetScores.target1_score !== null && targetScores.target1_score !== undefined) {
+            //if (targetScores && targetScores.target1_score !== null && targetScores.target1_score !== undefined) {
+            //  copiedScores.forEach((course: any) => {
+            //    course.score = targetScores.target1_score;
+            //  });
+            // 如果加权均分已计算，将所有成绩设置为加权均分
+            const average = getAcademicAverage();
+            if (average !== null) {
               copiedScores.forEach((course: any) => {
-                course.score = targetScores.target1_score;
-              });
+                course.score = average;
+                });
+                //删到这里为止
             }
             setModified2ScoresCache(prev => ({
               ...prev,
@@ -647,11 +664,26 @@ export default function Analysis() {
         
         // 3. 重新计算特征值 - 使用新的总表数据
         console.log('🔄 开始调用 calculate-features API...');
+        
+        // 从学号前4位提取年份（数字格式，如 2023）
+        const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+          ? (user as any).studentNumber 
+          : (user?.userId || '').toString();
+        const trimmedStudentNumber = studentNumber.toString().trim();
+        const extractedYear = parseInt(trimmedStudentNumber.substring(0, 4));
+        const year = !isNaN(extractedYear) && extractedYear >= 2018 && extractedYear <= 2050 
+          ? extractedYear 
+          : null;
+        
+        console.log('📅 提取的年份:', { studentNumber: trimmedStudentNumber, extractedYear, year });
+        
         const featureResponse = await fetch('/api/calculate-features', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            allCourses: data.data.allCourses
+            allCourses: data.data.allCourses,
+            year: year,
+            major: studentInfo?.major || null
           })
         });
 
@@ -663,76 +695,35 @@ export default function Analysis() {
           console.log('📊 特征值数据结构:', {
             success: featureData.success,
             hasData: !!featureData.data,
-            hasFeatureValues: !!featureData.data?.featureValues,
-            featureValuesKeys: featureData.data?.featureValues ? Object.keys(featureData.data.featureValues) : []
+            hasC1: featureData.data?.C1 !== undefined,
+            hasC23: featureData.data?.C23 !== undefined,
+            cValues: featureData.data ? Object.keys(featureData.data).filter(k => k.startsWith('C')) : []
           });
-          setCalculatedFeatures(featureData.data.featureValues);
           
-          // 4. 调用预测API - 使用计算出的特征值进行预测
-          // 将中文特征名称映射为英文
-          const featureMapping: Record<string, string> = {
-            '公共课程': 'public',
-            '实践课程': 'practice',
-            '数学科学': 'math_science',
-            '政治课程': 'political',
-            '基础学科': 'basic_subject',
-            '创新课程': 'innovation',
-            '英语课程': 'english',
-            '基础专业': 'basic_major',
-            '专业课程': 'major'
-          };
+          // 4. 调用预测API - 使用计算出的 C1~C23 特征值进行预测
+          // 现在直接使用 C1~C23，不需要映射
+          const featureValues: Record<string, number> = {};
           
-          const englishFeatureValues: Record<string, number> = {};
-          Object.entries(featureData.data.featureValues).forEach(([chineseName, value]) => {
-            const englishName = featureMapping[chineseName];
-            if (englishName && typeof value === 'number') {
-              englishFeatureValues[englishName] = value;
+          // 提取 C1~C23
+          for (let i = 1; i <= 23; i++) {
+            const cKey = `C${i}`;
+            const value = featureData.data?.[cKey];
+            if (value !== undefined && value !== null) {
+              featureValues[cKey] = value;
             }
-          });
-          // 计算 AcademicStrength
-          // 步骤1：填充缺失值
-          // 仅对 major 和 innovation 进行填充
-          if (englishFeatureValues['major'] === 0) {
-            englishFeatureValues['major'] = englishFeatureValues['basic_major'] * 0.5 + englishFeatureValues['basic_subject'] * 0.3 + englishFeatureValues['math_science'] * 0.2;
           }
-          if (englishFeatureValues['innovation'] === 0) {
-            englishFeatureValues['innovation'] = englishFeatureValues['practice'] * 0.4 + englishFeatureValues['major'] * 0.35 + englishFeatureValues['basic_major'] * 0.15 + englishFeatureValues['basic_subject'] * 0.1;
-          }
-          // 步骤2：获取专业基准数据（假设使用 _global_，实际应根据学生专业选择）
-          const strengthStats = {
-            'public': [84.82204689896997, 4.143366335953203],
-            'political': [86.12457264957264, 2.7169474528845057],
-            'english': [79.34048297381631, 6.140405395538642],
-            'math_science': [78.69331772479921, 8.399991165101154],
-            'basic_subject': [81.95231535388756, 6.609251767392124],
-            'basic_major': [80.99553919085157, 5.045698290548678],
-            'major': [81.68312065476074, 7.143527823218448],
-            'practice': [85.6373547217951, 4.35426980203138],
-            'innovation': [82.82630183345319, 5.204012346585702]
-          };
-          // 步骤3：计算 Z-score
-          let zScores = [];
-          for (const [key, value] of Object.entries(englishFeatureValues)) {
-            const score = value === 0 ? 60 : (value as number); // 对于值为 0 的类别，临时使用 60 计算 Z-score
-            const stats = strengthStats[key as keyof typeof strengthStats];
-            if (!stats) continue;
-            const [mean, std] = stats;
-            const zScore = (score - mean) / std;
-            zScores.push(zScore);
-          }
-          // 步骤4：计算 AcademicStrength
-          const academicStrengthValue = zScores.reduce((sum, z) => sum + z, 0) / zScores.length;
-          setAcademicStrength(academicStrengthValue);
-          englishFeatureValues['AcademicStrength'] = academicStrengthValue;
           
-          console.log('📊 英文特征值:', englishFeatureValues);
+          // 保存计算出的特征值（用于显示）
+          setCalculatedFeatures(featureValues);
+          
+          console.log('📊 C1~C23 特征值:', featureValues);
           
           console.log('🔄 开始调用预测API...');
           const predictionResponse = await fetch('/api/proba-predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              featureValues: englishFeatureValues
+              featureValues: featureValues
             })
           });
 
@@ -1013,21 +1004,64 @@ export default function Analysis() {
   };
 
   // 辅助函数：将modified缓存中所有课程的成绩设置为目标分数
+  //const applyTargetScoresToModified = () => {
+  //  if (!user?.userHash) return;
+  //  
+  //  // 直接操作modified1和modified2缓存，而不是从original读取
+  //  setModified1ScoresCache(prev => {
+  //    const currentModified1 = prev[user.userHash];
+  //    if (!currentModified1 || currentModified1.length === 0) return prev;
+  //    if (!targetScores || targetScores.target2_score === null || targetScores.target2_score === undefined) return prev;
+  //    
+  //    // 更新modified1：所有成绩设置为target2_score（海外读研）
+  //    const updatedModified1 = currentModified1.map((course: any) => ({
+  //      ...course,
+  //      score: targetScores.target2_score
+  //    }));
+  //    console.log('Modified1 scores set to target2_score:', targetScores.target2_score);
+  //    return {
+  //      ...prev,
+  //      [user.userHash]: updatedModified1
+  //    };
+  //  });
+  //
+  //  setModified2ScoresCache(prev => {
+  //    const currentModified2 = prev[user.userHash];
+  //    if (!currentModified2 || currentModified2.length === 0) return prev;
+  //    if (!targetScores || targetScores.target1_score === null || targetScores.target1_score === undefined) return prev;
+  //    
+  //    // 更新modified2：所有成绩设置为target1_score（国内读研）
+  //    const updatedModified2 = currentModified2.map((course: any) => ({
+  //      ...course,
+  //      score: targetScores.target1_score
+  //    }));
+  //    console.log('Modified2 scores set to target1_score:', targetScores.target1_score);
+  //    return {
+  //      ...prev,
+  //      [user.userHash]: updatedModified2
+  //    };
+  //  });
+  //};
+
+  // 辅助函数：将modified缓存中所有课程的成绩设置为加权平均分
   const applyTargetScoresToModified = () => {
     if (!user?.userHash) return;
+    
+    // 获取加权平均分
+    const average = getAcademicAverage();
+    if (average === null) return;
     
     // 直接操作modified1和modified2缓存，而不是从original读取
     setModified1ScoresCache(prev => {
       const currentModified1 = prev[user.userHash];
       if (!currentModified1 || currentModified1.length === 0) return prev;
-      if (!targetScores || targetScores.target2_score === null || targetScores.target2_score === undefined) return prev;
       
-      // 更新modified1：所有成绩设置为target2_score（海外读研）
+      // 更新modified1：所有成绩设置为加权平均分（海外读研）
       const updatedModified1 = currentModified1.map((course: any) => ({
         ...course,
-        score: targetScores.target2_score
+        score: average
       }));
-      console.log('Modified1 scores set to target2_score:', targetScores.target2_score);
+      console.log('Modified1 scores set to academic average:', average);
       return {
         ...prev,
         [user.userHash]: updatedModified1
@@ -1037,14 +1071,13 @@ export default function Analysis() {
     setModified2ScoresCache(prev => {
       const currentModified2 = prev[user.userHash];
       if (!currentModified2 || currentModified2.length === 0) return prev;
-      if (!targetScores || targetScores.target1_score === null || targetScores.target1_score === undefined) return prev;
       
-      // 更新modified2：所有成绩设置为target1_score（国内读研）
+      // 更新modified2：所有成绩设置为加权平均分（国内读研）
       const updatedModified2 = currentModified2.map((course: any) => ({
         ...course,
-        score: targetScores.target1_score
+        score: average
       }));
-      console.log('Modified2 scores set to target1_score:', targetScores.target1_score);
+      console.log('Modified2 scores set to academic average:', average);
       return {
         ...prev,
         [user.userHash]: updatedModified2
@@ -1174,6 +1207,7 @@ export default function Analysis() {
     }
   };
 
+
   // 获取Modified缓存数据（根据当前选择的按钮返回对应的缓存）
   const getModifiedScores = () => {
     if (!user?.userHash) return [];
@@ -1238,6 +1272,14 @@ export default function Analysis() {
     return [];
   };
 
+  // 获取加权均分（AcademicAverage）
+  const getAcademicAverage = (): number | null => {
+    if (!user?.userHash) return null;
+    
+    // 返回缓存中的加权均分，如果没有则返回 null
+    return academicAverageCache[user.userHash] ?? null;
+  };
+
   // 更新Modified缓存数据（根据当前选择的按钮更新对应的缓存）
   const updateModifiedScores = (newScores: any[]) => {
     if (!user?.userHash) return;
@@ -1299,11 +1341,23 @@ export default function Analysis() {
         // 计算特征值
         setLoadingFeatures(true);
         try {
+          // 从学号前4位提取年份（数字格式，如 2023）
+          const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+            ? (user as any).studentNumber 
+            : (user?.userId || '').toString();
+          const trimmedStudentNumber = studentNumber.toString().trim();
+          const extractedYear = parseInt(trimmedStudentNumber.substring(0, 4));
+          const year = !isNaN(extractedYear) && extractedYear >= 2018 && extractedYear <= 2050 
+            ? extractedYear 
+            : null;
+          
           const featureResponse = await fetch('/api/calculate-features', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              allCourses: data.data.allCourses
+              allCourses: data.data.allCourses,
+              year: year,
+              major: studentInfo?.major || null
             })
           });
 
@@ -1485,6 +1539,56 @@ export default function Analysis() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.userHash, authLoading]);
+
+  // 计算并缓存加权均分（AcademicAverage）- 使用 dashboard-data.ts 的计算逻辑
+  // 数据来源：直接从 academic__data.ts 获取数据
+  const academicAverageCalculatedRef = useRef<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!user?.userHash) return;
+    
+    // 如果已经计算过该用户的加权均分，不再重复计算
+    if (academicAverageCalculatedRef.current[user.userHash]) return;
+    
+    // 直接从 academic__data.ts 获取数据（使用 getStudentResults，它会自动从缓存或查询获取）
+    const calculateAverage = async () => {
+      try {
+        console.log('开始计算加权均分，从 academic__data.ts 获取数据');
+        
+        // 使用 getStudentResults 获取 CourseResult[] 格式的数据
+        // 这个函数会从 academic__data.ts 的统一缓存获取数据，或调用 queryAcademicResults
+        const courseResults = await getStudentResults(user.userHash);
+        console.log('从 academic__data.ts 获取的课程数量:', courseResults.length);
+        
+        if (courseResults.length === 0) {
+          console.log('没有课程数据，无法计算加权均分');
+          return;
+        }
+        
+        // 使用 dashboard-data.ts 中的 calculateDashboardStats 函数计算
+        const stats = calculateDashboardStats(courseResults);
+        console.log('calculateDashboardStats 计算结果:', stats);
+        
+        // 获取加权平均分并向下取整
+        const average = Math.floor(stats.averageScore);
+        
+        // 缓存计算结果
+        setAcademicAverageCache(prev => ({
+          ...prev,
+          [user.userHash]: average
+        }));
+        
+        // 标记为已计算
+        academicAverageCalculatedRef.current[user.userHash] = true;
+        
+        console.log('加权均分已计算并缓存 (AcademicAverage):', average, '（原始值:', stats.averageScore, '）');
+      } catch (error) {
+        console.error('计算加权均分时出错:', error);
+      }
+    };
+    
+    calculateAverage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.userHash]);
 
   // 加载学生信息
   useEffect(() => {
@@ -1926,10 +2030,17 @@ export default function Analysis() {
                       <p className="text-blue-800 font-medium">
                         为达到海外读研目标，预估后续科目的最低平均分为{' '}
                         <span className="text-blue-600 font-bold">
+                          {/*
                           {loadingTargetScores ? t('analysis.target.score.loading') : 
                            targetScores && targetScores.target2_score !== null ? 
                            `${targetScores.target2_score}` : 
                            t('analysis.target.score.no.data')}
+                           */}
+                          {loadingOriginalScores ? t('analysis.target.score.loading') : 
+                          (() => {
+                            const average = getAcademicAverage();
+                            return average !== null ? `${average}` : t('analysis.target.score.no.data');
+                          })()}
                         </span>
                       </p>
                     </div>
@@ -1982,25 +2093,17 @@ export default function Analysis() {
                           return (
                             <>
                               <p className="text-blue-800 font-medium">
+                                根据新的目标成绩，计算新百分比如下：
+                              </p>
+                              <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  overseasImprovement > 0
-                                    ? `海外读研新百分比与之前相比提高${overseasImprovement.toFixed(1)}%`
-                                    : overseasImprovement < 0
-                                    ? `海外读研新百分比与之前相比下降${Math.abs(overseasImprovement).toFixed(1)}%`
-                                    : `海外读研新百分比与之前相比提高0.0%`
+                                  `海外读研新百分比为${predictionResult.overseasPercentage}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  domesticImprovement > 0
-                                    ? `国内读研新百分比与之前相比提高${domesticImprovement.toFixed(1)}%`
-                                    : domesticImprovement < 0
-                                    ? `国内读研新百分比与之前相比下降${Math.abs(domesticImprovement).toFixed(1)}%`
-                                    : `国内读研新百分比与之前相比提高0.0%`
+                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
                                 ) : '国内读研百分比计算中...'}
-                              </p>
-                              <p className="text-blue-800 font-medium">
-                                注：百分比下降是由于未来均分低于当前均分造成的。
                               </p>
                             </>
                           );
@@ -2214,7 +2317,7 @@ export default function Analysis() {
                                           return Number(score); // 如果没有修改，显示原始成绩
                                         })()}
                                         min={60}
-                                        max={98}
+                                        max={95}
                                         step={1}
                                         onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
                                         className="w-full"
@@ -2353,10 +2456,17 @@ export default function Analysis() {
                       <p className="text-blue-800 font-medium">
                         为达到国内读研目标，预估后续科目的最低平均分为{' '}
                         <span className="text-blue-600 font-bold">
+                          {/*
                           {loadingTargetScores ? t('analysis.target.score.loading') : 
-                           targetScores && targetScores.target1_score !== null ? 
-                           `${targetScores.target1_score}` : 
-                           t('analysis.target.score.no.data')}
+                            targetScores && targetScores.target1_score !== null ? 
+                            `${targetScores.target1_score}` : 
+                            t('analysis.target.score.no.data')}
+                          */}
+                          {loadingOriginalScores ? t('analysis.target.score.loading') : 
+                           (() => {
+                             const average = getAcademicAverage();
+                             return average !== null ? `${average}` : t('analysis.target.score.no.data');
+                           })()}
                         </span>
                       </p>
                     </div>
@@ -2399,21 +2509,16 @@ export default function Analysis() {
                           return (
                             <>
                               <p className="text-blue-800 font-medium">
+                                根据新的目标成绩，计算新百分比如下：
+                              </p>
+                              <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  overseasImprovement > 0
-                                    ? `海外读研新百分比与之前相比提高${overseasImprovement.toFixed(1)}%`
-                                    : overseasImprovement < 0
-                                    ? `海外读研新百分比与之前相比下降${Math.abs(overseasImprovement).toFixed(1)}%`
-                                    : `海外读研新百分比与之前相比提高0.0%`
+                                  `海外读研新百分比为${predictionResult.overseasPercentage}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  domesticImprovement > 0
-                                    ? `国内读研新百分比与之前相比提高${domesticImprovement.toFixed(1)}%`
-                                    : domesticImprovement < 0
-                                    ? `国内读研新百分比与之前相比下降${Math.abs(domesticImprovement).toFixed(1)}%`
-                                    : `国内读研新百分比与之前相比提高0.0%`
+                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
                                 ) : '国内读研百分比计算中...'}
                               </p>
                             </>
@@ -2620,7 +2725,7 @@ export default function Analysis() {
                                           return Number(score); // 如果没有修改，显示原始成绩
                                         })()}
                                         min={60}
-                                        max={98}
+                                        max={95}
                                         step={1}
                                         onChange={(newValue) => handleScoreChange(course.courseName, newValue.toString())}
                                         className="w-full"

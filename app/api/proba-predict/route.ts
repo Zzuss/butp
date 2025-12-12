@@ -27,6 +27,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'featureValues is required' }, { status: 400 })
     }
 
+    // 将前端使用的 C1~C23 字段名映射到后端期望的 Ability_1~Ability_23
+    const mappedFeatureValues: Record<string, number> = {}
+    for (const [key, value] of Object.entries(featureValues)) {
+      // 如果键名是 C1, C2, ..., C23，映射为 Ability_1, Ability_2, ..., Ability_23
+      const cMatch = key.match(/^C(\d+)$/)
+      if (cMatch) {
+        const num = cMatch[1]
+        mappedFeatureValues[`Ability_${num}`] = value as number
+      } else {
+        // 如果不是 C1~C23 格式，保持原样
+        mappedFeatureValues[key] = value as number
+      }
+    }
+
     // 直接调用后端（无本地回退），失败则返回错误
     const backendUrl = process.env.PROBA_BACKEND_URL
     if (!backendUrl) {
@@ -48,18 +62,27 @@ export async function POST(request: NextRequest) {
       const resp = await fetch(backendUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ featureValues }),
+        body: JSON.stringify({ featureValues: mappedFeatureValues }),
         signal: controller.signal
       })
       clearTimeout(timer)
 
       if (!resp.ok) {
         const text = await resp.text().catch(() => '')
-        return NextResponse.json({ error: 'Backend request failed', detail: text, statusCode: resp.status }, { status: 502 })
+        let errorDetail: any = { detail: text, statusCode: resp.status }
+        // 尝试解析错误响应为JSON
+        try {
+          const errorJson = JSON.parse(text)
+          errorDetail = { ...errorDetail, ...errorJson }
+        } catch {
+          // 如果不是JSON，保持原文本
+        }
+        return NextResponse.json({ error: 'Backend request failed', ...errorDetail }, { status: 502 })
       }
 
       const backendData = await resp.json().catch(() => ({}))
 
+      // 后端返回格式: { "success": True, "data": { "probabilities": [...] } }
       const probabilities = Array.isArray(backendData?.probabilities)
         ? backendData.probabilities
         : Array.isArray(backendData?.data?.probabilities)
@@ -67,7 +90,11 @@ export async function POST(request: NextRequest) {
         : undefined
 
       if (!Array.isArray(probabilities)) {
-        return NextResponse.json({ error: 'Invalid response from backend', raw: backendData }, { status: 502 })
+        return NextResponse.json({ 
+          error: 'Invalid response from backend', 
+          raw: backendData,
+          expectedFormat: '{ "success": true, "data": { "probabilities": [...] } }'
+        }, { status: 502 })
       }
 
       return NextResponse.json({ success: true, data: { probabilities } })
