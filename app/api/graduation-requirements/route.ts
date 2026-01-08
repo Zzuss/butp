@@ -554,8 +554,8 @@ export async function POST(request: NextRequest) {
     // 🏃‍♂️ CRITICAL FIX: Always include sports category if sports courses exist, even if not in requiredCreditsByCategory
     // This handles cases where courses table has "体育基础" but we map to target sports category
     if (earnedCreditsByCategory[targetSportsCategory] && earnedCreditsByCategory[targetSportsCategory].courses.length > 0) {
-      allCategories.add('体育');
-      console.log(`🏃‍♂️ Added "体育" to final categories (student has ${earnedCreditsByCategory['体育'].courses.length} sports courses)`);
+      allCategories.add(targetSportsCategory);
+      console.log(`🏃‍♂️ Added "${targetSportsCategory}" to final categories (student has ${earnedCreditsByCategory[targetSportsCategory].courses.length} sports courses)`);
     }
     
     console.log(`📋 Final categories for graduation requirements:`, Array.from(allCategories));
