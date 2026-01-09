@@ -2097,7 +2097,7 @@ export default function Analysis() {
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  `海外读研新百分比为${predictionResult.overseasPercentage}%`
+                                  `海外读研新百分比为${(predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0)}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
@@ -2513,7 +2513,7 @@ export default function Analysis() {
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  `海外读研新百分比为${predictionResult.overseasPercentage}%`
+                                  `海外读研新百分比为${(predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0)}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
