@@ -508,12 +508,13 @@ export interface Paper {
   journal_category?: string;
   bupt_student_id?: string;
   full_name?: string;
-  class?: string;
+  phone_number?: string; // 改为手机号
   author_type?: string;
   publish_date?: string;
   note?: string;
   colorIndex: number;
-  defense_status?: 'pending' | 'passed'; // 答辩状态
+  defense_status?: 'pending' | 'passed' | 'failed'; // 答辩状态，支持三种状态
+  approval_status?: 'pending' | 'approved' | 'rejected'; // 审核状态
 }
 
 // 专利接口
@@ -523,11 +524,13 @@ export interface Patent {
   patent_number?: string;
   patent_date?: string;
   bupt_student_id?: string;
-  class?: string;
+  phone_number?: string; // 改为手机号
   full_name?: string;
   category_of_patent_owner?: string;
   note?: string;
   colorIndex: number;
+  defense_status?: 'pending' | 'passed' | 'failed'; // 新增答辩状态
+  approval_status?: 'pending' | 'approved' | 'rejected'; // 审核状态
 }
 
 // 论文 CRUD 操作
@@ -551,11 +554,12 @@ export async function getUserPapers(userId: string): Promise<Paper[]> {
       journal_category: paper.journal_category,
       bupt_student_id: paper.bupt_student_id,
       full_name: paper.full_name,
-      class: paper.class,
+      phone_number: paper.phone_number, // 改为手机号
       author_type: paper.author_type,
       publish_date: paper.publish_date,
       note: paper.note,
       defense_status: paper.defense_status || 'pending', // 答辩状态，默认为待答辩
+      approval_status: paper.approval_status || 'pending', // 审核状态
       colorIndex: Math.floor(Math.random() * 10) // 随机分配颜色索引
     })) || [];
   } catch (error) {
@@ -624,23 +628,16 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
       return value.trim();
     };
 
-    // 辅助函数：处理班级字段，将"X班"格式转换为数字
-    const processClassValue = (classValue: string | undefined | null): number | null => {
-      if (!classValue || classValue.trim() === '') {
+    // 辅助函数：验证手机号格式
+    const validatePhoneNumber = (phoneNumber: string | undefined | null): string | null => {
+      if (!phoneNumber || phoneNumber.trim() === '') {
         return null;
       }
       
-      const trimmed = classValue.trim();
-      // 如果是"X班"格式，提取数字
-      const match = trimmed.match(/^(\d+)班$/);
-      if (match) {
-        return parseInt(match[1], 10);
-      }
-      
-      // 如果是纯数字，直接转换
-      const num = parseInt(trimmed, 10);
-      if (!isNaN(num)) {
-        return num;
+      const trimmed = phoneNumber.trim();
+      // 验证11位数字格式
+      if (/^1[3-9]\d{9}$/.test(trimmed)) {
+        return trimmed;
       }
       
       return null;
@@ -653,14 +650,31 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
       journal_category: emptyToNull(paper.journal_category),
       bupt_student_id: userId, // 自动填入用户的学号
       full_name: userName, // 自动填入用户的真实姓名
-      class: processClassValue(paper.class),
+      phone_number: validatePhoneNumber(paper.phone_number), // 改为手机号
       author_type: emptyToNull(paper.author_type),
       publish_date: formattedDate,
       note: emptyToNull(paper.note)
     };
 
     if (paper.id) {
-      // 更新现有记录
+      // 更新现有记录 - 先检查是否已审核
+      const { data: existingPaper, error: checkError } = await supabase
+        .from('student_papers')
+        .select('approval_status')
+        .eq('id', paper.id)
+        .eq('bupt_student_id', userId)
+        .single();
+
+      if (checkError) {
+        console.error('Error checking paper approval status:', checkError);
+        return false;
+      }
+
+      if (existingPaper?.approval_status === 'approved') {
+        console.error('Cannot update approved paper');
+        return false;
+      }
+
       const { error } = await supabase
         .from('student_papers')
         .update(paperData)
@@ -693,6 +707,24 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
 
 export async function deletePaper(userId: string, paperId: string): Promise<boolean> {
   try {
+    // 先检查是否已审核
+    const { data: existingPaper, error: checkError } = await supabase
+      .from('student_papers')
+      .select('approval_status')
+      .eq('id', paperId)
+      .eq('bupt_student_id', userId)
+      .single();
+
+    if (checkError) {
+      console.error('Error checking paper approval status:', checkError);
+      return false;
+    }
+
+    if (existingPaper?.approval_status === 'approved') {
+      console.error('Cannot delete approved paper');
+      return false;
+    }
+
     const { error } = await supabase
       .from('student_papers')
       .delete()
@@ -731,10 +763,12 @@ export async function getUserPatents(userId: string): Promise<Patent[]> {
       patent_number: patent.patent_number,
       patent_date: patent.patent_date,
       bupt_student_id: patent.bupt_student_id,
-      class: patent.class,
+      phone_number: patent.phone_number, // 改为手机号
       full_name: patent.full_name,
       category_of_patent_owner: patent.category_of_patent_owner,
       note: patent.note,
+      defense_status: patent.defense_status || 'pending', // 答辩状态
+      approval_status: patent.approval_status || 'pending', // 审核状态
       colorIndex: Math.floor(Math.random() * 10) // 随机分配颜色索引
     })) || [];
   } catch (error) {
@@ -779,23 +813,16 @@ export async function savePatent(userId: string, userName: string, patent: Paten
       return value.trim();
     };
 
-    // 辅助函数：处理班级字段，将"X班"格式转换为数字
-    const processClassValue = (classValue: string | undefined | null): number | null => {
-      if (!classValue || classValue.trim() === '') {
+    // 辅助函数：验证手机号格式
+    const validatePhoneNumber = (phoneNumber: string | undefined | null): string | null => {
+      if (!phoneNumber || phoneNumber.trim() === '') {
         return null;
       }
       
-      const trimmed = classValue.trim();
-      // 如果是"X班"格式，提取数字
-      const match = trimmed.match(/^(\d+)班$/);
-      if (match) {
-        return parseInt(match[1], 10);
-      }
-      
-      // 如果是纯数字，直接转换
-      const num = parseInt(trimmed, 10);
-      if (!isNaN(num)) {
-        return num;
+      const trimmed = phoneNumber.trim();
+      // 验证11位数字格式
+      if (/^1[3-9]\d{9}$/.test(trimmed)) {
+        return trimmed;
       }
       
       return null;
@@ -807,14 +834,31 @@ export async function savePatent(userId: string, userName: string, patent: Paten
       patent_number: emptyToNull(patent.patent_number),
       patent_date: formattedPatentDate,
       bupt_student_id: userId, // 自动填入用户的学号
-      class: processClassValue(patent.class),
+      phone_number: validatePhoneNumber(patent.phone_number), // 改为手机号
       full_name: userName, // 自动填入用户的真实姓名
       category_of_patent_owner: emptyToNull(patent.category_of_patent_owner),
       note: emptyToNull(patent.note)
     };
 
     if (patent.id) {
-      // 更新现有记录
+      // 更新现有记录 - 先检查是否已审核
+      const { data: existingPatent, error: checkError } = await supabase
+        .from('student_patents')
+        .select('approval_status')
+        .eq('id', patent.id)
+        .eq('bupt_student_id', userId)
+        .single();
+
+      if (checkError) {
+        console.error('Error checking patent approval status:', checkError);
+        return false;
+      }
+
+      if (existingPatent?.approval_status === 'approved') {
+        console.error('Cannot update approved patent');
+        return false;
+      }
+
       const { error } = await supabase
         .from('student_patents')
         .update(patentData)
@@ -847,6 +891,24 @@ export async function savePatent(userId: string, userName: string, patent: Paten
 
 export async function deletePatent(userId: string, patentId: string): Promise<boolean> {
   try {
+    // 先检查是否已审核
+    const { data: existingPatent, error: checkError } = await supabase
+      .from('student_patents')
+      .select('approval_status')
+      .eq('id', patentId)
+      .eq('bupt_student_id', userId)
+      .single();
+
+    if (checkError) {
+      console.error('Error checking patent approval status:', checkError);
+      return false;
+    }
+
+    if (existingPatent?.approval_status === 'approved') {
+      console.error('Cannot delete approved patent');
+      return false;
+    }
+
     const { error } = await supabase
       .from('student_patents')
       .delete()

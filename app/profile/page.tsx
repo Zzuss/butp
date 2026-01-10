@@ -100,11 +100,12 @@ interface PaperLocal {
   journal_category?: string;
   bupt_student_id?: string;
   full_name?: string;
-  class?: string;
+  phone_number?: string; // 改为手机号
   author_type?: string;
   publish_date?: string;
   note?: string;
   colorIndex: number;
+  approval_status?: 'pending' | 'approved' | 'rejected'; // 新增审核状态
 }
 
 // 定义专利接口
@@ -114,11 +115,13 @@ interface PatentLocal {
   patent_number?: string;
   patent_date?: string;
   bupt_student_id?: string;
-  class?: string;
+  phone_number?: string; // 改为手机号
   full_name?: string;
   category_of_patent_owner?: string;
   note?: string;
   colorIndex: number;
+  defense_status?: 'pending' | 'passed' | 'failed'; // 新增答辩状态
+  approval_status?: 'pending' | 'approved' | 'rejected'; // 新增审核状态
 }
 
 // 定义竞赛记录接口
@@ -129,7 +132,7 @@ interface CompetitionRecord {
   competition_name: string;
   bupt_student_id: string;
   full_name: string;
-  class: string;
+  phone_number?: string; // 改为手机号（可选）
   note: string;
   score: number;
   colorIndex: number;
@@ -633,6 +636,11 @@ export default function Profile() {
       alert('您的推免资格已通过审核，无法修改保研相关信息');
       return;
     }
+    // 检查单条记录是否已审核
+    if (paper.approval_status === 'approved') {
+      alert('该记录已审核通过，无法修改');
+      return;
+    }
     setEditingPaper(paper);
     setPaperErrors({});
     // 检查是否需要显示自定义输入框
@@ -699,7 +707,7 @@ export default function Profile() {
       paper_title: formData.get("paper_title") as string,
       journal_name: formData.get("journal_name") as string,
       journal_category: formData.get("journal_category") as string,
-      class: formData.get("class") as string,
+      phone_number: formData.get("phone_number") as string, // 改为手机号
       author_type: finalAuthorType,
       publish_date: formData.get("publish_date") as string,
       note: formData.get("note") as string,
@@ -754,6 +762,11 @@ export default function Profile() {
       alert('您的推免资格已通过审核，无法修改保研相关信息');
       return;
     }
+    // 检查单条记录是否已审核
+    if (patent.approval_status === 'approved') {
+      alert('该记录已审核通过，无法修改');
+      return;
+    }
     setEditingPatent(patent);
     setPatentErrors({});
     // 检查是否需要显示自定义输入框
@@ -803,7 +816,8 @@ export default function Profile() {
       patent_name: formData.get("patent_name") as string,
       patent_number: formData.get("patent_number") as string,
       patent_date: formData.get("patent_date") as string,
-      class: formData.get("class") as string,
+      phone_number: formData.get("phone_number") as string, // 改为手机号
+      defense_status: formData.get("defense_status") as 'pending' | 'passed' | 'failed', // 新增答辩状态
       category_of_patent_owner: finalPatentOwnerCategory,
       note: formData.get("note") as string,
       colorIndex: editingPatent ? editingPatent.colorIndex : getRandomColorIndex(patents.map(item => item.colorIndex))
@@ -855,6 +869,11 @@ export default function Profile() {
       alert('您的推免资格已通过审核，无法修改保研相关信息');
       return;
     }
+    // 检查单条记录是否已审核
+    if (competition.approval_status === 'approved') {
+      alert('该记录已审核通过，无法修改');
+      return;
+    }
     setEditingCompetition(competition);
     setShowCompetitionForm(true);
   };
@@ -872,12 +891,13 @@ export default function Profile() {
     
     try {
       const requestData = {
+        id: record.id, // 如果是编辑，会有id
         competition_region: record.competition_region,
         competition_level: record.competition_level,
         competition_name: record.competition_name,
         bupt_student_id: user.userId,
         full_name: user.name,
-        class: record.class,
+        phone_number: record.phone_number,
         award_type: (record as any).award_type,
         award_value: (record as any).award_value,
         competition_type: record.competition_type,
@@ -888,8 +908,11 @@ export default function Profile() {
         note: record.note
       };
       
+      // 如果有id，说明是编辑，使用PUT方法；否则使用POST方法
+      const method = record.id ? 'PUT' : 'POST';
+      
       const response = await fetch('/api/competition-records', {
-        method: 'POST',
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -979,7 +1002,12 @@ export default function Profile() {
   };
   
   // 处理删除确认
-  const handleDeleteConfirm = (type: "award" | "internship" | "other" | "paper" | "patent" | "competition", index: number, id?: string) => {
+  const handleDeleteConfirm = (type: "award" | "internship" | "other" | "paper" | "patent" | "competition", index: number, id?: string, approvalStatus?: string) => {
+    // 检查是否已审核
+    if (approvalStatus === 'approved') {
+      alert('该记录已审核通过，无法删除');
+      return;
+    }
     setDeleteItemType(type);
     setDeleteItemIndex(index);
     setDeleteItemId(id || null);
@@ -1755,17 +1783,16 @@ export default function Profile() {
                 
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">{t('profile.common.class')}</label>
-                  <select 
-                    name="class"
+                  <label className="block text-sm font-medium mb-1">手机号（可选）</label>
+                  <input 
+                    name="phone_number"
+                    type="tel"
+                    pattern="^1[3-9]\d{9}$"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingPaper?.class ? `${editingPaper.class}班` : ""}
-                  >
-                    <option value="">{t('profile.common.class.placeholder')}</option>
-                    {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={`${num}班`}>{t('profile.common.class.option', { num })}</option>
-                    ))}
-                  </select>
+                    defaultValue={editingPaper?.phone_number || ""}
+                    placeholder="请输入11位手机号"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">格式：11位数字，以1开头</p>
                 </div>
                 
                 <div>
@@ -1888,16 +1915,28 @@ export default function Profile() {
                 
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">{t('profile.common.class')}</label>
-                  <select 
-                    name="class"
+                  <label className="block text-sm font-medium mb-1">手机号（可选）</label>
+                  <input 
+                    name="phone_number"
+                    type="tel"
+                    pattern="^1[3-9]\d{9}$"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingPatent?.class ? `${editingPatent.class}班` : ""}
+                    defaultValue={editingPatent?.phone_number || ""}
+                    placeholder="请输入11位手机号"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">格式：11位数字，以1开头</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">答辩状态</label>
+                  <select 
+                    name="defense_status"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPatent?.defense_status || 'pending'}
                   >
-                    <option value="">{t('profile.common.class.placeholder')}</option>
-                    {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={`${num}班`}>{t('profile.common.class.option', { num })}</option>
-                    ))}
+                    <option value="pending">待答辩</option>
+                    <option value="passed">已通过</option>
+                    <option value="failed">未通过</option>
                   </select>
                 </div>
                 
@@ -2154,7 +2193,7 @@ export default function Profile() {
                               <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditPaper(paper)}>
                                 <Edit className="h-3 w-3" />
                               </Button>
-                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("paper", index, paper.id)}>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("paper", index, paper.id, paper.approval_status)}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </>
@@ -2227,7 +2266,7 @@ export default function Profile() {
                               <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditPatent(patent)}>
                                 <Edit className="h-3 w-3" />
                               </Button>
-                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("patent", index, patent.id)}>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("patent", index, patent.id, patent.approval_status)}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </>
@@ -2304,7 +2343,7 @@ export default function Profile() {
                               <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditCompetition(record)}>
                                 <Edit className="h-3 w-3" />
                               </Button>
-                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("competition", index, record.id)}>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("competition", index, record.id, record.approval_status)}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </>

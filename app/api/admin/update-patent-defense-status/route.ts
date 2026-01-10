@@ -8,16 +8,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASELOCAL_ANON_KEY || 'eyJhb
 // 创建 Supabase 客户端
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// 更新论文答辩状态
+// 更新专利答辩状态
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { paperId, defenseStatus } = body;
+    const { patentId, defenseStatus } = body;
 
     // 验证参数
-    if (!paperId || !defenseStatus) {
+    if (!patentId || !defenseStatus) {
       return NextResponse.json(
-        { error: '缺少必要参数：paperId, defenseStatus' },
+        { error: '缺少必要参数：patentId, defenseStatus' },
         { status: 400 }
       );
     }
@@ -30,27 +30,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 更新论文答辩状态
+    // 更新专利答辩状态
     const { data, error } = await supabase
-      .from('student_papers')
+      .from('student_patents')
       .update({ 
         defense_status: defenseStatus,
         updated_at: new Date().toISOString()
       })
-      .eq('id', paperId)
+      .eq('id', patentId)
       .select();
 
     if (error) {
-      console.error('更新答辩状态失败:', error);
+      console.error('更新专利答辩状态失败:', error);
       return NextResponse.json(
-        { error: '更新答辩状态失败' },
+        { error: '更新专利答辩状态失败' },
         { status: 500 }
       );
     }
 
     if (!data || data.length === 0) {
       return NextResponse.json(
-        { error: '未找到要更新的论文记录' },
+        { error: '未找到要更新的专利记录' },
         { status: 404 }
       );
     }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `论文答辩状态已更新为${statusText}`,
+      message: `专利答辩状态已更新为${statusText}`,
       data: data[0]
     });
 

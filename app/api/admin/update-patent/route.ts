@@ -23,8 +23,9 @@ export async function PUT(request: NextRequest) {
       patent_name, 
       patent_number, 
       patent_date, 
-      class: classValue, 
-      category_of_patent_owner, 
+      phone_number,  // 修改：class → phone_number
+      category_of_patent_owner,
+      defense_status,  // 新增：答辩状态
       note,
       score 
     } = body;
@@ -37,23 +38,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 处理班级字段：将"X班"格式转换为数字
-    const processClassValue = (classValue: string | undefined | null): number | null => {
-      if (!classValue || classValue.trim() === '') {
+    // 验证手机号格式（如果提供）
+    const validatePhoneNumber = (phone: string | undefined | null): string | null => {
+      if (!phone || phone.trim() === '') {
         return null;
       }
       
-      const trimmed = classValue.trim();
-      // 如果是"X班"格式，提取数字
-      const match = trimmed.match(/^(\d+)班$/);
-      if (match) {
-        return parseInt(match[1], 10);
-      }
-      
-      // 如果是纯数字，直接转换
-      const num = parseInt(trimmed, 10);
-      if (!isNaN(num)) {
-        return num;
+      const trimmed = phone.trim();
+      // 验证手机号格式：11位数字
+      if (/^\d{11}$/.test(trimmed)) {
+        return trimmed;
       }
       
       return null;
@@ -100,8 +94,15 @@ export async function PUT(request: NextRequest) {
       updateData.patent_date = formattedDate;
     }
     
-    if (classValue) {
-      updateData.class = processClassValue(classValue);
+    if (phone_number !== undefined) {
+      updateData.phone_number = validatePhoneNumber(phone_number);
+    }
+    
+    if (defense_status !== undefined) {
+      // 验证答辩状态值
+      if (['pending', 'passed', 'failed'].includes(defense_status)) {
+        updateData.defense_status = defense_status;
+      }
     }
     
     if (category_of_patent_owner) {

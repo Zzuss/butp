@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       competition_name,
       bupt_student_id,
       full_name,
-      class: studentClass,
+      phone_number, // 改为手机号
       award_type, // 'prize' 或 'ranking'
       award_value, // 具体获得的奖项或排名
       note,
@@ -83,10 +83,18 @@ export async function POST(req: NextRequest) {
 
     // 验证必填字段
     if (!competition_region || !competition_level || !competition_name || 
-        !bupt_student_id || !full_name || !studentClass || !award_type || !award_value) {
+        !bupt_student_id || !full_name || !award_type || !award_value) {
       return NextResponse.json({
         success: false,
         message: '请填写所有必填字段'
+      }, { status: 400 })
+    }
+
+    // 验证手机号格式（如果提供）
+    if (phone_number && !/^1[3-9]\d{9}$/.test(phone_number)) {
+      return NextResponse.json({
+        success: false,
+        message: '手机号格式不正确，应为11位数字'
       }, { status: 400 })
     }
 
@@ -135,7 +143,12 @@ export async function POST(req: NextRequest) {
     } else {
       const baseScore = Number(scoreQuery.data?.[award_value]) || 0
       // 应用系数计算最终分数
-      score = Math.round(baseScore * finalCoefficient * 100) / 100 // 保留两位小数
+      // 团体竞赛需要除以主力队员人数
+      if (competition_type === 'team' && main_members_count >= 1) {
+        score = Math.round((baseScore * finalCoefficient / main_members_count) * 100) / 100
+      } else {
+        score = Math.round(baseScore * finalCoefficient * 100) / 100
+      }
     }
 
     // 插入竞赛记录
@@ -147,7 +160,7 @@ export async function POST(req: NextRequest) {
         competition_name,
         bupt_student_id,
         full_name,
-        class: studentClass,
+        phone_number: phone_number || null, // 改为手机号
         note: note || '',
         score,
         // 新增字段
@@ -183,6 +196,169 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PUT - 更新竞赛记录
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const {
+      id, // 记录ID
+      competition_region,
+      competition_level,
+      competition_name,
+      bupt_student_id,
+      full_name,
+      phone_number,
+      award_type,
+      award_value,
+      note,
+      competition_type,
+      team_leader_is_bupt,
+      is_main_member,
+      main_members_count,
+      coefficient
+    } = body
+
+    console.log('✏️ 更新竞赛记录:', {
+      id,
+      competition_region,
+      competition_level, 
+      competition_name,
+      bupt_student_id,
+      award_type,
+      award_value,
+      competition_type,
+      team_leader_is_bupt,
+      is_main_member,
+      main_members_count,
+      coefficient
+    })
+
+    // 验证必填字段
+    if (!id || !competition_region || !competition_level || !competition_name || 
+        !bupt_student_id || !full_name || !award_type || !award_value) {
+      return NextResponse.json({
+        success: false,
+        message: '请填写所有必填字段'
+      }, { status: 400 })
+    }
+
+    // 先检查记录是否存在且属于该用户
+    const { data: existingRecord, error: checkError } = await supabase
+      .from('student_competition_records')
+      .select('approval_status')
+      .eq('id', id)
+      .eq('bupt_student_id', bupt_student_id)
+      .single()
+
+    if (checkError || !existingRecord) {
+      console.error('❌ 竞赛记录不存在或无权限:', checkError)
+      return NextResponse.json({
+        success: false,
+        message: '竞赛记录不存在或无权限修改'
+      }, { status: 404 })
+    }
+
+    if (existingRecord.approval_status === 'approved') {
+      return NextResponse.json({
+        success: false,
+        message: '已审核的竞赛记录不允许修改'
+      }, { status: 403 })
+    }
+
+    // 验证手机号格式（如果提供）
+    if (phone_number && !/^1[3-9]\d{9}$/.test(phone_number)) {
+      return NextResponse.json({
+        success: false,
+        message: '手机号格式不正确，应为11位数字'
+      }, { status: 400 })
+    }
+
+    // 根据奖项类型查询对应的分数
+    let score = 0
+    let scoreQuery
+    const finalCoefficient = award_type === 'ranking' ? 1 : (Number(coefficient) || 1)
+    
+    if (award_type === 'prize') {
+      scoreQuery = await supabase
+        .from('student_competition_scores')
+        .select(award_value)
+        .eq('region', competition_region)
+        .eq('level', competition_level)
+        .eq('name', competition_name)
+        .single()
+    } else if (award_type === 'ranking') {
+      scoreQuery = await supabase
+        .from('student_competition_ranking_scores')
+        .select(award_value)
+        .eq('region', competition_region)
+        .eq('level', competition_level)
+        .eq('name', competition_name)
+        .single()
+    } else {
+      return NextResponse.json({
+        success: false,
+        message: '无效的奖项类型'
+      }, { status: 400 })
+    }
+
+    if (scoreQuery.error) {
+      console.error('❌ 查询分数失败:', scoreQuery.error)
+      score = 0
+    } else {
+      const baseScore = Number(scoreQuery.data?.[award_value]) || 0
+      // 团体竞赛需要除以主力队员人数
+      if (competition_type === 'team' && main_members_count >= 1) {
+        score = Math.round((baseScore * finalCoefficient / main_members_count) * 100) / 100
+      } else {
+        score = Math.round(baseScore * finalCoefficient * 100) / 100
+      }
+    }
+
+    // 更新竞赛记录
+    const { data, error } = await supabase
+      .from('student_competition_records')
+      .update({
+        competition_region,
+        competition_level,
+        competition_name,
+        full_name,
+        phone_number: phone_number || null,
+        note: note || '',
+        score,
+        competition_type: award_type === 'ranking' ? 'individual' : (competition_type || 'individual'),
+        team_leader_is_bupt: (award_type === 'ranking' || competition_type !== 'team') ? null : team_leader_is_bupt,
+        is_main_member: (award_type === 'ranking' || competition_type !== 'team') ? null : is_main_member,
+        main_members_count: (award_type === 'ranking' || competition_type !== 'team') ? null : main_members_count,
+        coefficient: finalCoefficient
+      })
+      .eq('id', id)
+      .eq('bupt_student_id', bupt_student_id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ 更新竞赛记录失败:', error)
+      throw error
+    }
+
+    console.log('✅ 成功更新竞赛记录，ID:', data.id)
+    
+    return NextResponse.json({
+      success: true,
+      message: '竞赛记录更新成功',
+      data: data
+    })
+
+  } catch (error) {
+    console.error('💥 更新竞赛记录失败:', error)
+    return NextResponse.json({
+      success: false,
+      message: '更新竞赛记录失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    }, { status: 500 })
+  }
+}
+
 // DELETE - 删除竞赛记录
 export async function DELETE(req: NextRequest) {
   try {
@@ -199,6 +375,29 @@ export async function DELETE(req: NextRequest) {
 
     console.log(`🗑️ 删除竞赛记录 ${recordId}...`)
     
+    // 先检查是否已审核
+    const { data: existingRecord, error: checkError } = await supabase
+      .from('student_competition_records')
+      .select('approval_status')
+      .eq('id', recordId)
+      .eq('bupt_student_id', userId)
+      .single()
+
+    if (checkError) {
+      console.error('❌ 检查竞赛记录审核状态失败:', checkError)
+      return NextResponse.json({
+        success: false,
+        message: '检查竞赛记录审核状态失败'
+      }, { status: 500 })
+    }
+
+    if (existingRecord?.approval_status === 'approved') {
+      return NextResponse.json({
+        success: false,
+        message: '已审核的竞赛记录不允许删除'
+      }, { status: 403 })
+    }
+
     const { error } = await supabase
       .from('student_competition_records')
       .delete()

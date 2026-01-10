@@ -32,7 +32,7 @@ interface CompetitionRecord {
   competition_name: string
   bupt_student_id: string
   full_name: string
-  class: string
+  phone_number?: string // 改为手机号（可选）
   note: string
   score: number
   colorIndex: number
@@ -76,7 +76,7 @@ export default function CompetitionForm({
   const [selectedRegion, setSelectedRegion] = useState("")
   const [selectedLevel, setSelectedLevel] = useState("")
   const [selectedCompetition, setSelectedCompetition] = useState("")
-  const [selectedClass, setSelectedClass] = useState("")
+  const [phoneNumber, setPhoneNumber] = useState("") // 改为手机号
   const [awardType, setAwardType] = useState<'prize' | 'ranking'>('prize')
   const [awardValue, setAwardValue] = useState("")
   const [note, setNote] = useState("")
@@ -88,9 +88,6 @@ export default function CompetitionForm({
   const [teamLeaderIsBupt, setTeamLeaderIsBupt] = useState<boolean | null>(null)
   const [isMainMember, setIsMainMember] = useState<boolean | null>(null)
   const [mainMembersCount, setMainMembersCount] = useState<number>(1)
-
-  // 生成班级选项（1-24班）
-  const classOptions = Array.from({ length: 24 }, (_, i) => `${i + 1}班`)
 
   // 获取竞赛选项
   useEffect(() => {
@@ -105,7 +102,7 @@ export default function CompetitionForm({
       setSelectedRegion(editingRecord.competition_region)
       setSelectedLevel(editingRecord.competition_level)
       setSelectedCompetition(editingRecord.competition_name)
-      setSelectedClass(editingRecord.class)
+      setPhoneNumber(editingRecord.phone_number || "") // 改为手机号
       setNote(editingRecord.note || "")
       setAwardType(editingRecord.award_type || 'prize')
       setAwardValue(editingRecord.award_value || "")
@@ -140,7 +137,7 @@ export default function CompetitionForm({
     setSelectedRegion("")
     setSelectedLevel("")
     setSelectedCompetition("")
-    setSelectedClass("")
+    setPhoneNumber("") // 改为手机号
     setAwardType('prize')
     setAwardValue("")
     setNote("")
@@ -282,6 +279,12 @@ export default function CompetitionForm({
     
     const baseScore = (currentComp as any)[awardValue] || 0
     const coefficient = calculateCoefficient()
+    
+    // 团体竞赛需要除以主力队员人数
+    if (competitionType === 'team' && mainMembersCount >= 1) {
+      return Math.round((baseScore * coefficient / mainMembersCount) * 100) / 100 // 保留两位小数
+    }
+    
     return Math.round(baseScore * coefficient * 100) / 100 // 保留两位小数
   }
 
@@ -315,8 +318,12 @@ export default function CompetitionForm({
     if (!selectedRegion) errors.region = t('profile.competitions.form.error.region')
     if (!selectedLevel) errors.level = t('profile.competitions.form.error.level')
     if (!selectedCompetition) errors.competition = t('profile.competitions.form.error.name')
-    if (!selectedClass) errors.class = t('profile.competitions.form.error.class')
     if (!awardValue) errors.award = t('profile.competitions.form.error.award')
+    
+    // 验证手机号格式（如果填写了）
+    if (phoneNumber && !/^1[3-9]\d{9}$/.test(phoneNumber)) {
+      errors.phoneNumber = '手机号格式不正确，应为11位数字'
+    }
     
     // 团体竞赛验证
     if (competitionType === 'team') {
@@ -346,7 +353,7 @@ export default function CompetitionForm({
       competition_name: selectedCompetition,
       bupt_student_id: studentId,
       full_name: studentName,
-      class: selectedClass,
+      phone_number: phoneNumber || undefined, // 改为手机号
       note: note.trim(),
       score: getPreviewScore() || 0,
       colorIndex: editingRecord?.colorIndex || Math.floor(Math.random() * 10),
@@ -480,20 +487,19 @@ export default function CompetitionForm({
                 {formErrors.competition && <p className="text-red-500 text-sm mt-1">{formErrors.competition}</p>}
               </div>
 
-              {/* 班级选择 */}
+              {/* 手机号输入 */}
               <div>
-                <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.class')}</label>
-                <select 
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.class ? 'border-red-500' : ''}`}
-                >
-                  <option value="">{t('profile.competitions.form.class.placeholder')}</option>
-                  {classOptions.map(className => (
-                    <option key={className} value={className}>{t('profile.common.class.option', { num: parseInt(className) })}</option>
-                  ))}
-                </select>
-                {formErrors.class && <p className="text-red-500 text-sm mt-1">{formErrors.class}</p>}
+                <label className="block text-sm font-medium mb-1">手机号（可选）</label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="请输入11位手机号"
+                  pattern="^1[3-9]\d{9}$"
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phoneNumber ? 'border-red-500' : ''}`}
+                />
+                <p className="text-xs text-gray-500 mt-1">格式：11位数字，以1开头</p>
+                {formErrors.phoneNumber && <p className="text-red-500 text-sm mt-1">{formErrors.phoneNumber}</p>}
               </div>
 
               {/* 竞赛类型选择 */}
@@ -633,6 +639,9 @@ export default function CompetitionForm({
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       系数计算：1 + (主力队员人数 - 1) × 0.6 = {calculateCoefficient().toFixed(1)}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      最终加分 = 基础分数 × 系数 ÷ 主力队员人数
                     </p>
                     {formErrors.membersCount && <p className="text-red-500 text-sm mt-1">{formErrors.membersCount}</p>}
                   </div>

@@ -19,13 +19,13 @@ interface Paper {
   journal_category: string
   bupt_student_id: string
   full_name: string
-  class: string | number
+  phone_number: string | null  // 修改：class → phone_number
   author_type: string
   publish_date: string | null
   note?: string
   score: string | number  // 数据库中是text类型，但可能包含数字字符串
   approval_status: 'pending' | 'approved' | 'rejected'  // 审核状态
-  defense_status?: 'pending' | 'passed'  // 答辩状态
+  defense_status?: 'pending' | 'passed' | 'failed'  // 答辩状态
   created_at: string
   updated_at: string
 }
@@ -36,12 +36,13 @@ interface Patent {
   patent_number?: string
   patent_date: string | null
   bupt_student_id: string
-  class: string | number
+  phone_number: string | null  // 修改：class → phone_number
   full_name: string
   category_of_patent_owner: string
   note?: string
   score: string | number  // 数据库中是text类型，但可能包含数字字符串
   approval_status: 'pending' | 'approved' | 'rejected'  // 审核状态
+  defense_status?: 'pending' | 'passed' | 'failed'  // 新增：答辩状态
   created_at: string
   updated_at: string
 }
@@ -54,7 +55,7 @@ interface Competition {
   competition_type: string
   bupt_student_id: string
   full_name: string
-  class: string
+  phone_number: string | null  // 修改：class → phone_number
   note: string
   score: number
   approval_status: 'pending' | 'approved' | 'rejected'  // 审核状态
@@ -78,7 +79,7 @@ interface StudentData {
 interface ComprehensiveScore {
   id: string
   bupt_student_id: string
-  class: string
+  class: string  // 注意：这里保持 class，因为是学生基本信息中的班级
   full_name: string
   paper_score: number
   patent_score: number
@@ -315,10 +316,10 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
   })
 }
 
-// 解析德育总表文件（支持CSV和Excel）
+// 解析推免加分总表文件（支持CSV和Excel）
 const parseMoralEducationFile = async (file: File): Promise<any[]> => {
   return new Promise((resolve, reject) => {
-    console.log('开始解析德育总表文件:', file.name, '大小:', file.size, '类型:', file.type)
+    console.log('开始解析推免加分总表文件:', file.name, '大小:', file.size, '类型:', file.type)
     
     const reader = new FileReader()
     
@@ -364,8 +365,8 @@ const parseMoralEducationFile = async (file: File): Promise<any[]> => {
         const firstRow = jsonData[0] as any[]
         const secondRow = jsonData[1] as any[]
         
-        console.log('德育表第一行:', firstRow)
-        console.log('德育表第二行:', secondRow)
+        console.log('推免加分表第一行:', firstRow)
+        console.log('推免加分表第二行:', secondRow)
         
         // 如果第一行有很多空值，可能是合并表头，使用第二行作为表头
         const firstRowEmptyCount = firstRow.filter(cell => !cell || cell.toString().trim() === '').length
@@ -375,17 +376,17 @@ const parseMoralEducationFile = async (file: File): Promise<any[]> => {
           // 第一行空值过多，可能是合并表头，使用第二行
           headers = secondRow.map(cell => cell ? cell.toString() : '')
           dataStartRow = 2
-          console.log('德育表检测到合并表头，使用第二行作为表头:', headers)
+          console.log('推免加分表检测到合并表头，使用第二行作为表头:', headers)
         } else {
           // 使用第一行作为表头
           headers = firstRow.map(cell => cell ? cell.toString() : '')
           dataStartRow = 1
-          console.log('德育表使用第一行作为表头:', headers)
+          console.log('推免加分表使用第一行作为表头:', headers)
         }
         
         const rows = jsonData.slice(dataStartRow)
         
-        // 德育总表字段映射
+        // 推免加分总表字段映射
         const moralFieldMapping: { [key: string]: string } = {
           // 中文表头映射
           '学号': 'bupt_student_id',
@@ -423,7 +424,7 @@ const parseMoralEducationFile = async (file: File): Promise<any[]> => {
           return hasStudentId
         })
         
-        console.log('德育总表解析完成，有效数据行数:', parsedData.length)
+        console.log('推免加分总表解析完成，有效数据行数:', parsedData.length)
         
         if (parsedData.length === 0) {
           reject(new Error('没有找到有效的数据行，请检查文件格式和学号字段'))
@@ -432,7 +433,7 @@ const parseMoralEducationFile = async (file: File): Promise<any[]> => {
         
         resolve(parsedData)
       } catch (error) {
-        console.error('德育总表文件解析错误:', error)
+        console.error('推免加分总表文件解析错误:', error)
         reject(new Error('文件解析失败: ' + (error instanceof Error ? error.message : '未知错误')))
       }
     }
@@ -467,6 +468,16 @@ export default function GradeRecommendationPage() {
   const [showPatentEditForm, setShowPatentEditForm] = useState(false)
   const [showCompetitionEditForm, setShowCompetitionEditForm] = useState(false)
 
+  // 竞赛表单字段状态
+  const [competitionFormData, setCompetitionFormData] = useState({
+    competition_name: '',
+    competition_region: '',
+    competition_level: '',
+    phone_number: '',
+    note: '',
+    score: ''
+  })
+
   // 总加分表相关状态
   const [showScoreTable, setShowScoreTable] = useState(false)
   const [comprehensiveScores, setComprehensiveScores] = useState<ComprehensiveScore[]>([])
@@ -477,12 +488,12 @@ export default function GradeRecommendationPage() {
   const [academicImportLoading, setAcademicImportLoading] = useState(false)
   const [importMode, setImportMode] = useState<'append' | 'replace'>('replace')
   
-  // 推免排名相关状态
+  // 综合排名相关状态
   const [comprehensiveRankings, setComprehensiveRankings] = useState<any[]>([])
   const [showRankingTable, setShowRankingTable] = useState(false)
   const [rankingGenerateLoading, setRankingGenerateLoading] = useState(false)
 
-  // 德育总表导入相关状态
+  // 推免加分总表导入相关状态
   const [moralImportLoading, setMoralImportLoading] = useState(false)
   const [moralImportMode, setMoralImportMode] = useState<'append' | 'replace'>('replace')
   const [validationResult, setValidationResult] = useState<any>(null)
@@ -512,7 +523,18 @@ export default function GradeRecommendationPage() {
   }
 
   const handleEditCompetition = (competition: Competition) => {
+    console.log('编辑竞赛记录:', competition)
+    console.log('竞赛级别:', competition.competition_level)
     setEditingCompetition(competition)
+    // 初始化表单数据
+    setCompetitionFormData({
+      competition_name: competition.competition_name || '',
+      competition_region: competition.competition_region || '',
+      competition_level: competition.competition_level || '',
+      phone_number: competition.phone_number || '',
+      note: competition.note || '',
+      score: competition.score?.toString() || ''
+    })
     setShowCompetitionEditForm(true)
   }
 
@@ -524,6 +546,15 @@ export default function GradeRecommendationPage() {
     setShowPaperEditForm(false)
     setShowPatentEditForm(false)
     setShowCompetitionEditForm(false)
+    // 清空竞赛表单数据
+    setCompetitionFormData({
+      competition_name: '',
+      competition_region: '',
+      competition_level: '',
+      phone_number: '',
+      note: '',
+      score: ''
+    })
   }
 
   // 保存论文编辑
@@ -539,7 +570,7 @@ export default function GradeRecommendationPage() {
         paper_title: formData.get('paper_title') as string,
         journal_name: formData.get('journal_name') as string,
         journal_category: formData.get('journal_category') as string,
-        class: formData.get('class') as string,
+        phone_number: formData.get('phone_number') as string,  // 修改：class → phone_number
         author_type: formData.get('author_type') as string,
         publish_date: (formData.get('publish_date') as string) || null,
         note: formData.get('note') as string,
@@ -596,8 +627,9 @@ export default function GradeRecommendationPage() {
         patent_name: formData.get('patent_name') as string,
         patent_number: formData.get('patent_number') as string,
         patent_date: (formData.get('patent_date') as string) || null,
-        class: formData.get('class') as string,
+        phone_number: formData.get('phone_number') as string,  // 修改：class → phone_number
         category_of_patent_owner: formData.get('category_of_patent_owner') as string,
+        defense_status: formData.get('defense_status') as 'pending' | 'passed' | 'failed',  // 新增：答辩状态
         note: formData.get('note') as string,
         score: parseFloat(formData.get('score') as string) || 0,
       }
@@ -648,16 +680,24 @@ export default function GradeRecommendationPage() {
 
     setLoading(true)
     try {
-      const formData = new FormData(e.currentTarget)
+      // 验证必填字段
+      if (!competitionFormData.competition_level || competitionFormData.competition_level.trim() === '') {
+        setError('请选择竞赛级别');
+        setLoading(false);
+        return;
+      }
+      
       const updatedCompetition = {
         ...editingCompetition,
-        competition_name: formData.get('competition_name') as string,
-        competition_region: formData.get('competition_region') as string,
-        competition_level: formData.get('competition_level') as string,
-        class: formData.get('class') as string,
-        note: formData.get('note') as string,
-        score: parseFloat(formData.get('score') as string) || 0,
+        competition_name: competitionFormData.competition_name,
+        competition_region: competitionFormData.competition_region,
+        competition_level: competitionFormData.competition_level,
+        phone_number: competitionFormData.phone_number || null,
+        note: competitionFormData.note,
+        score: parseFloat(competitionFormData.score) || 0,
       }
+
+      console.log('保存竞赛数据:', updatedCompetition)
 
       // 调用保存API
       const response = await fetch('/api/admin/update-competition', {
@@ -669,7 +709,8 @@ export default function GradeRecommendationPage() {
       })
 
       if (!response.ok) {
-        throw new Error('保存失败')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '保存失败')
       }
 
       // 更新本地状态
@@ -695,7 +736,7 @@ export default function GradeRecommendationPage() {
   }
 
   // 更新论文答辩状态
-  const handleUpdateDefenseStatus = async (paperId: string, defenseStatus: 'pending' | 'passed') => {
+  const handleUpdateDefenseStatus = async (paperId: string, defenseStatus: 'pending' | 'passed' | 'failed') => {
     const loadingKey = `defense-${paperId}`
     setDefenseLoading(prev => ({ ...prev, [loadingKey]: true }))
     
@@ -730,11 +771,57 @@ export default function GradeRecommendationPage() {
         }
       })
 
-      setSuccess(`论文答辩状态已更新为${defenseStatus === 'pending' ? '待答辩' : '已通过'}`)
+      setSuccess(`论文答辩状态已更新为${defenseStatus === 'pending' ? '待答辩' : defenseStatus === 'passed' ? '已通过' : '未通过'}`)
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('更新答辩状态失败:', err)
       setError(err instanceof Error ? err.message : '更新答辩状态失败')
+    } finally {
+      setDefenseLoading(prev => ({ ...prev, [loadingKey]: false }))
+    }
+  }
+
+  // 更新专利答辩状态
+  const handleUpdatePatentDefenseStatus = async (patentId: string, defenseStatus: 'pending' | 'passed' | 'failed') => {
+    const loadingKey = `patent-defense-${patentId}`
+    setDefenseLoading(prev => ({ ...prev, [loadingKey]: true }))
+    
+    try {
+      const response = await fetch('/api/admin/update-patent-defense-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patentId,
+          defenseStatus
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '更新专利答辩状态失败')
+      }
+
+      // 更新本地状态
+      setStudentData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          patents: prev.patents.map(patent => 
+            patent.id === patentId 
+              ? { ...patent, defense_status: defenseStatus }
+              : patent
+          )
+        }
+      })
+
+      setSuccess(`专利答辩状态已更新为${defenseStatus === 'pending' ? '待答辩' : defenseStatus === 'passed' ? '已通过' : '未通过'}`)
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('更新专利答辩状态失败:', err)
+      setError(err instanceof Error ? err.message : '更新专利答辩状态失败')
     } finally {
       setDefenseLoading(prev => ({ ...prev, [loadingKey]: false }))
     }
@@ -792,7 +879,7 @@ export default function GradeRecommendationPage() {
   }
 
 
-  // 导出德育总表CSV
+  // 导出推免加分总表CSV
   const handleExportMoralScores = async () => {
     try {
       const response = await fetch('/api/admin/moral-education-scores?format=csv')
@@ -811,15 +898,15 @@ export default function GradeRecommendationPage() {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       
-      setSuccess('德育总表CSV导出成功')
+      setSuccess('推免加分总表CSV导出成功')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('导出失败:', err)
-      setError('导出德育总表失败')
+      setError('导出推免加分总表失败')
     }
   }
 
-  // 导出德育总表Excel
+  // 导出推免加分总表Excel
   const handleExportMoralScoresExcel = async () => {
     try {
       const response = await fetch('/api/admin/export-moral-education-excel')
@@ -833,28 +920,28 @@ export default function GradeRecommendationPage() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `德育总表_${new Date().toISOString().split('T')[0]}.xlsx`
+      a.download = `推免加分总表_${new Date().toISOString().split('T')[0]}.xlsx`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       
-      setSuccess('德育总表Excel导出成功')
+      setSuccess('推免加分总表Excel导出成功')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Excel导出失败:', err)
-      setError(err instanceof Error ? err.message : '导出德育总表失败')
+      setError(err instanceof Error ? err.message : '导出推免加分总表失败')
     }
   }
 
-  // 加载德育总表（只显示前10名）
+  // 加载推免加分总表（只显示前10名）
   const loadScoreTable = async () => {
     try {
       const response = await fetch('/api/admin/moral-education-scores?limit=10')
       
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || '获取德育总表失败')
+        throw new Error(errorData.error || '获取推免加分总表失败')
       }
 
       const result = await response.json()
@@ -864,8 +951,8 @@ export default function GradeRecommendationPage() {
         .slice(0, 10)
       setComprehensiveScores(sortedScores)
     } catch (err) {
-      console.error('获取德育总表失败:', err)
-      setError(err instanceof Error ? err.message : '获取德育总表失败')
+      console.error('获取推免加分总表失败:', err)
+      setError(err instanceof Error ? err.message : '获取推免加分总表失败')
     }
   }
 
@@ -955,7 +1042,7 @@ export default function GradeRecommendationPage() {
     setShowAcademicTable(!showAcademicTable)
   }
 
-  // 生成推免排名表
+  // 生成综合排名表
   const handleGenerateRanking = async () => {
     setRankingGenerateLoading(true)
     setError('')
@@ -971,7 +1058,7 @@ export default function GradeRecommendationPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || '生成推免排名失败')
+        throw new Error(errorData.error || '生成综合排名失败')
       }
 
       const result = await response.json()
@@ -983,21 +1070,21 @@ export default function GradeRecommendationPage() {
       
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      console.error('生成推免排名失败:', err)
-      setError(err instanceof Error ? err.message : '生成推免排名失败')
+      console.error('生成综合排名失败:', err)
+      setError(err instanceof Error ? err.message : '生成综合排名失败')
     } finally {
       setRankingGenerateLoading(false)
     }
   }
 
-  // 加载推免排名
+  // 加载综合排名
   const loadRankings = async () => {
     try {
       const response = await fetch('/api/admin/comprehensive-ranking?topN=100')
       
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || '获取推免排名失败')
+        throw new Error(errorData.error || '获取综合排名失败')
       }
 
       const result = await response.json()
@@ -1005,12 +1092,12 @@ export default function GradeRecommendationPage() {
       setComprehensiveRankings(rankingData)
       updateAvailableProgrammes(rankingData)
     } catch (err) {
-      console.error('获取推免排名失败:', err)
-      setError(err instanceof Error ? err.message : '获取推免排名失败')
+      console.error('获取综合排名失败:', err)
+      setError(err instanceof Error ? err.message : '获取综合排名失败')
     }
   }
 
-  // 显示推免排名表
+  // 显示综合排名表
   const handleShowRankingTable = async () => {
     if (!showRankingTable) {
       await loadRankings()
@@ -1018,7 +1105,7 @@ export default function GradeRecommendationPage() {
     setShowRankingTable(!showRankingTable)
   }
 
-  // 导出推免排名CSV
+  // 导出综合排名CSV
   const handleExportRanking = async () => {
     try {
       const response = await fetch('/api/admin/comprehensive-ranking?format=csv&topN=100')
@@ -1037,15 +1124,15 @@ export default function GradeRecommendationPage() {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       
-      setSuccess('推免排名导出成功')
+      setSuccess('综合排名导出成功')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('导出失败:', err)
-      setError('导出推免排名失败')
+      setError('导出综合排名失败')
     }
   }
 
-  // 导出推免排名Excel
+  // 导出综合排名Excel
   const handleExportRankingExcel = async () => {
     try {
       const response = await fetch('/api/admin/export-comprehensive-ranking-excel?topN=100')
@@ -1059,21 +1146,21 @@ export default function GradeRecommendationPage() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `推免排名_${new Date().toISOString().split('T')[0]}.xlsx`
+      a.download = `综合排名_${new Date().toISOString().split('T')[0]}.xlsx`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       
-      setSuccess('推免排名Excel导出成功')
+      setSuccess('综合排名Excel导出成功')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Excel导出失败:', err)
-      setError('导出推免排名Excel失败')
+      setError('导出综合排名Excel失败')
     }
   }
 
-  // 德育总表导入（文件上传）
+  // 推免加分总表导入（文件上传）
   const handleMoralImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -1129,13 +1216,13 @@ export default function GradeRecommendationPage() {
 
         if (!importResponse.ok) {
           const errorData = await importResponse.json()
-          throw new Error(errorData.error || '导入德育总表失败')
+          throw new Error(errorData.error || '导入推免加分总表失败')
         }
 
         const result = await importResponse.json()
-        setSuccess(`德育总表导入成功！处理了 ${result.summary.validRecords} 条有效记录`)
+        setSuccess(`推免加分总表导入成功！处理了 ${result.summary.validRecords} 条有效记录`)
         
-        // 如果德育总表正在显示，隐藏它以便用户重新加载
+        // 如果推免加分总表正在显示，隐藏它以便用户重新加载
         if (showScoreTable) {
           setShowScoreTable(false)
         }
@@ -1144,7 +1231,7 @@ export default function GradeRecommendationPage() {
       }
     } catch (err) {
       console.error('导入失败:', err)
-      setError(err instanceof Error ? err.message : '导入德育总表失败')
+      setError(err instanceof Error ? err.message : '导入推免加分总表失败')
     } finally {
       setMoralImportLoading(false)
       // 清空文件输入
@@ -1174,7 +1261,7 @@ export default function GradeRecommendationPage() {
 
   // 创建备份
   const handleCreateBackup = async () => {
-    if (!window.confirm('确定要创建当前德育总表的备份吗？\n\n这将覆盖之前的备份数据。')) {
+    if (!window.confirm('确定要创建当前推免加分总表的备份吗？\n\n这将覆盖之前的备份数据。')) {
       return
     }
 
@@ -1202,7 +1289,7 @@ export default function GradeRecommendationPage() {
 
   // 回退到备份
   const handleRollback = async () => {
-    if (!window.confirm('确定要回退到备份数据吗？\n\n⚠️ 当前德育总表数据将被完全替换，此操作不可撤销！')) {
+    if (!window.confirm('确定要回退到备份数据吗？\n\n⚠️ 当前推免加分总表数据将被完全替换，此操作不可撤销！')) {
       return
     }
 
@@ -1220,7 +1307,7 @@ export default function GradeRecommendationPage() {
       const result = await response.json()
       setSuccess(`${result.message}！恢复了 ${result.restoredCount} 条记录`)
       
-      // 刷新备份状态和德育总表
+      // 刷新备份状态和推免加分总表
       await loadBackupStatus()
       if (showScoreTable) {
         setShowScoreTable(false)
@@ -1235,14 +1322,14 @@ export default function GradeRecommendationPage() {
     }
   }
 
-  // 清空德育总表
+  // 清空推免加分总表
   const handleClearMoralTable = async () => {
-    if (!window.confirm('⚠️ 确定要清空德育总表吗？\n\n此操作将删除所有德育总表数据，建议先创建备份！\n\n此操作不可撤销，请谨慎操作！')) {
+    if (!window.confirm('⚠️ 确定要清空推免加分总表吗？\n\n此操作将删除所有推免加分总表数据，建议先创建备份！\n\n此操作不可撤销，请谨慎操作！')) {
       return
     }
 
     // 二次确认
-    if (!window.confirm('⚠️ 最后确认：真的要清空德育总表吗？\n\n所有学生的德育加分数据都将被删除！')) {
+    if (!window.confirm('⚠️ 最后确认：真的要清空推免加分总表吗？\n\n所有学生的推免加分数据都将被删除！')) {
       return
     }
 
@@ -1257,13 +1344,13 @@ export default function GradeRecommendationPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || '清空德育总表失败')
+        throw new Error(errorData.error || '清空推免加分总表失败')
       }
 
       const result = await response.json()
-      setSuccess(`德育总表清空成功！已删除 ${result.deletedCount} 条记录`)
+      setSuccess(`推免加分总表清空成功！已删除 ${result.deletedCount} 条记录`)
       
-      // 如果德育总表正在显示，隐藏它
+      // 如果推免加分总表正在显示，隐藏它
       if (showScoreTable) {
         setShowScoreTable(false)
         setComprehensiveScores([])
@@ -1271,8 +1358,8 @@ export default function GradeRecommendationPage() {
       
       setTimeout(() => setSuccess(''), 5000)
     } catch (err) {
-      console.error('清空德育总表失败:', err)
-      setError(err instanceof Error ? err.message : '清空德育总表失败')
+      console.error('清空推免加分总表失败:', err)
+      setError(err instanceof Error ? err.message : '清空推免加分总表失败')
     } finally {
       setClearMoralTableLoading(false)
     }
@@ -1289,7 +1376,7 @@ export default function GradeRecommendationPage() {
     .filter(score => score.programme === academicProgrammeFilter)
     .slice(0, 10)
 
-  // 过滤推免排名数据 - 始终按专业过滤
+  // 过滤综合排名数据 - 始终按专业过滤
   const filteredRankings = comprehensiveRankings
     .filter(ranking => ranking.programme === rankingProgrammeFilter)
     .slice(0, 10)
@@ -1570,7 +1657,7 @@ export default function GradeRecommendationPage() {
       
       if (!canApprove) {
         const recordsList = pendingRecords.map(record => `• ${record}`).join('\n')
-        setError(`无法审核通过该学生，以下加分记录尚未审核通过：\n${recordsList}\n\n请先审核通过所有加分记录，再审核学生推免资格。`)
+        setError(`无法审核通过该学生，以下加分记录尚未审核通过：\n${recordsList}\n\n请先审核通过所有加分记录，再审核学生综合资格。`)
         return
       }
     }
@@ -1606,8 +1693,8 @@ export default function GradeRecommendationPage() {
         })
       }
 
-      // 显示成功消息，包含德育分数信息
-      setSuccess(result.message || `学生推免资格${status === 'approved' ? '通过' : status === 'rejected' ? '拒绝' : '重置为待审核'}成功`)
+      // 显示成功消息，包含推免加分分数信息
+      setSuccess(result.message || `学生综合资格${status === 'approved' ? '通过' : status === 'rejected' ? '拒绝' : '重置为待审核'}成功`)
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('学生审核失败:', err)
@@ -1630,11 +1717,18 @@ export default function GradeRecommendationPage() {
     }
   }
 
-  // 获取答辩状态徽章（可点击）
+  // 获取答辩状态徽章（可点击）- 论文
   const getDefenseStatusBadge = (status: string, paperId: string) => {
     const handleDefenseStatusClick = () => {
-      // 在两种状态之间切换：pending <-> passed
-      const nextStatus: 'pending' | 'passed' = status === 'pending' ? 'passed' : 'pending'
+      // 在三种状态之间循环切换：pending -> passed -> failed -> pending
+      let nextStatus: 'pending' | 'passed' | 'failed'
+      if (status === 'pending') {
+        nextStatus = 'passed'
+      } else if (status === 'passed') {
+        nextStatus = 'failed'
+      } else {
+        nextStatus = 'pending'
+      }
       handleUpdateDefenseStatus(paperId, nextStatus)
     }
 
@@ -1646,9 +1740,71 @@ export default function GradeRecommendationPage() {
           <Badge 
             className="bg-blue-100 text-blue-800 border-blue-200 cursor-pointer hover:bg-blue-200 transition-colors" 
             onClick={handleDefenseStatusClick}
-            title="点击切换到待答辩"
+            title="点击切换到未通过"
           >
             {isLoading ? '更新中...' : '已通过'}
+          </Badge>
+        )
+      case 'failed':
+        return (
+          <Badge 
+            className="bg-red-100 text-red-800 border-red-200 cursor-pointer hover:bg-red-200 transition-colors" 
+            onClick={handleDefenseStatusClick}
+            title="点击切换到待答辩"
+          >
+            {isLoading ? '更新中...' : '未通过'}
+          </Badge>
+        )
+      case 'pending':
+      default:
+        return (
+          <Badge 
+            className="bg-gray-100 text-gray-800 border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors" 
+            onClick={handleDefenseStatusClick}
+            title="点击切换到已通过"
+          >
+            {isLoading ? '更新中...' : '待答辩'}
+          </Badge>
+        )
+    }
+  }
+
+  // 获取答辩状态徽章（可点击）- 专利
+  const getPatentDefenseStatusBadge = (status: string, patentId: string) => {
+    const handleDefenseStatusClick = () => {
+      // 在三种状态之间循环切换：pending -> passed -> failed -> pending
+      let nextStatus: 'pending' | 'passed' | 'failed'
+      if (status === 'pending') {
+        nextStatus = 'passed'
+      } else if (status === 'passed') {
+        nextStatus = 'failed'
+      } else {
+        nextStatus = 'pending'
+      }
+      handleUpdatePatentDefenseStatus(patentId, nextStatus)
+    }
+
+    const isLoading = defenseLoading[`patent-defense-${patentId}`]
+    
+    switch (status) {
+      case 'passed':
+        return (
+          <Badge 
+            className="bg-blue-100 text-blue-800 border-blue-200 cursor-pointer hover:bg-blue-200 transition-colors" 
+            onClick={handleDefenseStatusClick}
+            title="点击切换到未通过"
+          >
+            {isLoading ? '更新中...' : '已通过'}
+          </Badge>
+        )
+      case 'failed':
+        return (
+          <Badge 
+            className="bg-red-100 text-red-800 border-red-200 cursor-pointer hover:bg-red-200 transition-colors" 
+            onClick={handleDefenseStatusClick}
+            title="点击切换到待答辩"
+          >
+            {isLoading ? '更新中...' : '未通过'}
           </Badge>
         )
       case 'pending':
@@ -1669,26 +1825,26 @@ export default function GradeRecommendationPage() {
     <AdminLayout>
       <div className="container mx-auto py-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">成绩推免管理</h1>
-          <p className="text-gray-600">管理学生论文发表、专利申请和竞赛获奖的加分记录审核，设置学生推免资格</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">成绩综合管理</h1>
+          <p className="text-gray-600">管理学生论文发表、专利申请和竞赛获奖的加分记录审核，设置学生综合资格</p>
         </div>
 
-        {/* 重要提醒：德育总表数据管理 */}
+        {/* 重要提醒：推免加分总表数据管理 */}
         <Card className="mb-6 border-red-200 bg-red-50">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center text-red-700">
               <Trophy className="h-5 w-5 mr-2" />
-              ⚠️ 重要提醒：德育总表数据管理
+              ⚠️ 重要提醒：推免加分总表数据管理
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="bg-white p-4 rounded-lg border border-red-200">
               <div className="mb-3">
                 <p className="text-sm text-red-800 mb-2">
-                  <strong>必须定期清理德育总表数据！</strong>过时的数据会影响推免排名计算的准确性。
+                  <strong>必须定期清理推免加分总表数据！</strong>过时的数据会影响综合排名计算的准确性。
                 </p>
                 <p className="text-xs text-gray-600 mb-3">
-                  建议在每学期开始时清空上学期的旧数据，然后导入新的德育加分数据。
+                  建议在每学期开始时清空上学期的旧数据，然后导入新的推免加分数据。
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1698,7 +1854,7 @@ export default function GradeRecommendationPage() {
                   disabled={clearMoralTableLoading}
                   className="bg-red-600 hover:bg-red-700 text-white font-medium"
                 >
-                  {clearMoralTableLoading ? '清空中...' : '🗑️ 清空德育总表'}
+                  {clearMoralTableLoading ? '清空中...' : '🗑️ 清空推免加分总表'}
                 </Button>
                 <Button 
                   onClick={handleCreateBackup}
@@ -1713,7 +1869,7 @@ export default function GradeRecommendationPage() {
                   variant="outline"
                   className="border-blue-500 text-blue-600 hover:bg-blue-50"
                 >
-                  {showScoreTable ? '隐藏德育总表' : '📈 查看德育总表'}
+                  {showScoreTable ? '隐藏推免加分总表' : '📈 查看推免加分总表'}
                 </Button>
               </div>
             </div>
@@ -1750,10 +1906,10 @@ export default function GradeRecommendationPage() {
               </Button>
             </div>
             
-            {/* 德育总表导入管理 */}
+            {/* 推免加分总表导入管理 */}
             <div className="mt-4 pt-4 border-t">
               <div className="mb-3">
-                <Label className="text-sm font-medium text-orange-700">德育总表导入：</Label>
+                <Label className="text-sm font-medium text-orange-700">推免加分总表导入：</Label>
                 <div className="flex gap-4 mt-1">
                   <label className="flex items-center">
                     <input
@@ -1783,7 +1939,7 @@ export default function GradeRecommendationPage() {
                   {moralImportMode === 'append' ? (
                     <span>• 相同学号的学生数据会被更新，不同学号会新增</span>
                   ) : (
-                    <span className="text-blue-600">• 🔄 将清空所有现有德育总表数据，然后导入新数据（推荐用于当年推免计算）</span>
+                    <span className="text-blue-600">• 🔄 将清空所有现有推免加分总表数据，然后导入新数据（推荐用于当年综合计算）</span>
                   )}
                 </div>
               </div>
@@ -1808,21 +1964,21 @@ export default function GradeRecommendationPage() {
                     disabled={moralImportLoading}
                     className="hidden"
                   />
-                  {moralImportLoading ? '导入中...' : '导入德育总表'}
+                  {moralImportLoading ? '导入中...' : '导入推免加分总表'}
                 </label>
                 <Button 
                   onClick={handleExportMoralScores} 
                   variant="outline"
                   className="border-purple-500 text-purple-600 hover:bg-purple-50"
                 >
-                  导出德育表CSV
+                  导出推免加分表CSV
                 </Button>
                 <Button 
                   onClick={handleExportMoralScoresExcel} 
                   variant="outline"
                   className="border-green-500 text-green-600 hover:bg-green-50"
                 >
-                  导出德育表Excel
+                  导出推免加分表Excel
                 </Button>
                 <Button 
                   onClick={handleCreateBackup}
@@ -1884,7 +2040,7 @@ export default function GradeRecommendationPage() {
                   {importMode === 'append' ? (
                     <span>• 相同学号的学生数据会被更新，不同学号会新增，不会删除现有其他数据</span>
                   ) : (
-                    <span className="text-blue-600">• 🔄 将清空所有现有数据，然后导入新数据（推荐用于当年推免计算）</span>
+                    <span className="text-blue-600">• 🔄 将清空所有现有数据，然后导入新数据（推荐用于当年综合计算）</span>
                   )}
                 </div>
               </div>
@@ -1921,35 +2077,35 @@ export default function GradeRecommendationPage() {
               </div>
             </div>
             
-            {/* 推免排名管理 */}
+            {/* 综合排名管理 */}
             <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
               <Button 
                 onClick={handleGenerateRanking} 
                 disabled={rankingGenerateLoading}
                 className="bg-red-600 hover:bg-red-700"
               >
-                {rankingGenerateLoading ? '生成中...' : '生成推免排名'}
+                {rankingGenerateLoading ? '生成中...' : '生成综合排名'}
               </Button>
               <Button 
                 onClick={handleShowRankingTable} 
                 variant="outline"
                 className="border-red-500 text-red-600 hover:bg-red-50"
               >
-                {showRankingTable ? '隐藏推免排名' : '查看推免排名'}
+                {showRankingTable ? '隐藏综合排名' : '查看综合排名'}
               </Button>
               <Button 
                 onClick={handleExportRanking} 
                 variant="outline"
                 className="border-purple-500 text-purple-600 hover:bg-purple-50"
               >
-                导出推免排名CSV
+                导出综合排名CSV
               </Button>
               <Button 
                 onClick={handleExportRankingExcel} 
                 variant="outline"
                 className="border-green-500 text-green-600 hover:bg-green-50"
               >
-                导出推免排名Excel
+                导出综合排名Excel
               </Button>
             </div>
           </CardContent>
@@ -1968,7 +2124,7 @@ export default function GradeRecommendationPage() {
           </Alert>
         )}
 
-        {/* 德育总表导入验证结果 */}
+        {/* 推免加分总表导入验证结果 */}
         {showValidationResult && validationResult && (
           <Card className="mb-6">
             <CardHeader>
@@ -2058,7 +2214,7 @@ export default function GradeRecommendationPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <RotateCcw className="h-5 w-5 mr-2" />
-                德育总表备份状态
+                推免加分总表备份状态
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -2107,7 +2263,7 @@ export default function GradeRecommendationPage() {
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center">
                     <Award className="h-5 w-5 mr-2" />
-                    学生推免资格审核
+                    学生综合资格审核
                   </div>
                   <div className="flex items-center space-x-2">
                     {getApprovalStatusBadge(studentData.overall_approval_status || 'pending')}
@@ -2121,12 +2277,12 @@ export default function GradeRecommendationPage() {
                       学号：<span className="font-mono font-semibold">{studentData.studentId}</span>
                     </p>
                     <p className="text-sm text-gray-600 mb-1">
-                      当前状态：{studentData.overall_approval_status === 'approved' ? '推免资格已通过' : 
-                                studentData.overall_approval_status === 'rejected' ? '推免资格已拒绝' : '等待审核'}
+                      当前状态：{studentData.overall_approval_status === 'approved' ? '综合资格已通过' : 
+                                studentData.overall_approval_status === 'rejected' ? '综合资格已拒绝' : '等待审核'}
                     </p>
                     {studentData.overall_approval_status === 'approved' && (
                       <p className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                        ⚠️ 学生推免资格已通过，所有保研相关信息已锁定，无法修改
+                        ⚠️ 学生综合资格已通过，所有保研相关信息已锁定，无法修改
                       </p>
                     )}
                     {(() => {
@@ -2136,7 +2292,7 @@ export default function GradeRecommendationPage() {
                           <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded mt-2">
                             <div className="flex items-center gap-1">
                               <span>⚠️</span>
-                              <span>还有 {pendingRecords.length} 项加分记录未审核通过，无法审核学生推免资格</span>
+                              <span>还有 {pendingRecords.length} 项加分记录未审核通过，无法审核学生综合资格</span>
                             </div>
                             <div className="mt-1 text-xs text-amber-700">
                               待审核记录：{pendingRecords.slice(0, 3).join('、')}
@@ -2161,9 +2317,9 @@ export default function GradeRecommendationPage() {
                             disabled={isDisabled}
                             className={`${hasUnApprovedRecords ? 'bg-gray-400 hover:bg-gray-500' : 'bg-green-600 hover:bg-green-700'}`}
                             size="sm"
-                            title={hasUnApprovedRecords ? `无法审核通过，还有${pendingRecords.length}项记录未审核通过` : '审核通过学生推免资格'}
+                            title={hasUnApprovedRecords ? `无法审核通过，还有${pendingRecords.length}项记录未审核通过` : '审核通过学生综合资格'}
                           >
-                            {approvalLoading[`student-${studentData.studentId}`] ? '处理中...' : '通过推免'}
+                            {approvalLoading[`student-${studentData.studentId}`] ? '处理中...' : '通过综合'}
                           </Button>
                           {hasUnApprovedRecords && (
                             <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -2179,7 +2335,7 @@ export default function GradeRecommendationPage() {
                       variant="destructive"
                       size="sm"
                     >
-                      {approvalLoading[`student-${studentData.studentId}`] ? '处理中...' : '拒绝推免'}
+                      {approvalLoading[`student-${studentData.studentId}`] ? '处理中...' : '拒绝综合'}
                     </Button>
                     {(studentData.overall_approval_status !== 'pending') && (
                       <Button
@@ -2263,7 +2419,7 @@ export default function GradeRecommendationPage() {
                           <TableHead>期刊名称</TableHead>
                           <TableHead>期刊类别</TableHead>
                           <TableHead>姓名</TableHead>
-                          <TableHead>班级</TableHead>
+                          <TableHead>手机号</TableHead>
                           <TableHead>作者类型</TableHead>
                           <TableHead>发布日期</TableHead>
                           <TableHead>分数</TableHead>
@@ -2285,7 +2441,7 @@ export default function GradeRecommendationPage() {
                                 <Badge variant="outline">{paper.journal_category}</Badge>
                               </TableCell>
                               <TableCell>{paper.full_name}</TableCell>
-                              <TableCell>{paper.class}</TableCell>
+                              <TableCell>{paper.phone_number || '-'}</TableCell>
                               <TableCell>{paper.author_type}</TableCell>
                               <TableCell>{paper.publish_date ? formatDate(paper.publish_date) : '-'}</TableCell>
                               <TableCell>
@@ -2422,9 +2578,10 @@ export default function GradeRecommendationPage() {
                           <TableHead>专利名称</TableHead>
                           <TableHead>专利号</TableHead>
                           <TableHead>姓名</TableHead>
-                          <TableHead>班级</TableHead>
+                          <TableHead>手机号</TableHead>
                           <TableHead>发明人类型</TableHead>
                           <TableHead>申请日期</TableHead>
+                          <TableHead>答辩状态</TableHead>
                           <TableHead>分数</TableHead>
                           <TableHead>审核状态</TableHead>
                           <TableHead>操作</TableHead>
@@ -2440,9 +2597,12 @@ export default function GradeRecommendationPage() {
                               <TableCell className="font-medium">{patent.patent_name}</TableCell>
                               <TableCell>{patent.patent_number || '-'}</TableCell>
                               <TableCell>{patent.full_name}</TableCell>
-                              <TableCell>{patent.class}</TableCell>
+                              <TableCell>{patent.phone_number || '-'}</TableCell>
                               <TableCell>{patent.category_of_patent_owner}</TableCell>
                               <TableCell>{patent.patent_date ? formatDate(patent.patent_date) : '-'}</TableCell>
+                              <TableCell>
+                                {getPatentDefenseStatusBadge(patent.defense_status || 'pending', patent.id)}
+                              </TableCell>
                               <TableCell>
                                 {isEditing ? (
                                   <Input
@@ -2575,7 +2735,7 @@ export default function GradeRecommendationPage() {
                           <TableHead>竞赛地区</TableHead>
                           <TableHead>竞赛级别</TableHead>
                           <TableHead>姓名</TableHead>
-                          <TableHead>班级</TableHead>
+                          <TableHead>手机号</TableHead>
                           <TableHead>备注</TableHead>
                           <TableHead>分数</TableHead>
                           <TableHead>审核状态</TableHead>
@@ -2595,7 +2755,7 @@ export default function GradeRecommendationPage() {
                                 <Badge variant="outline">{competition.competition_level}</Badge>
                               </TableCell>
                               <TableCell>{competition.full_name}</TableCell>
-                              <TableCell>{competition.class}</TableCell>
+                              <TableCell>{competition.phone_number || '-'}</TableCell>
                               <TableCell>{competition.note || '-'}</TableCell>
                               <TableCell>
                                 {isEditing ? (
@@ -2731,7 +2891,7 @@ export default function GradeRecommendationPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Trophy className="h-5 w-5 mr-2" />
-                德育总表 - 前10名
+                推免加分总表 - 前10名
                 <Badge variant="outline" className="ml-2">
                   显示前 {comprehensiveScores.length} 名
                 </Badge>
@@ -2911,13 +3071,13 @@ export default function GradeRecommendationPage() {
           </Card>
         )}
 
-        {/* 推免排名表 */}
+        {/* 综合排名表 */}
         {showRankingTable && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Trophy className="h-5 w-5 mr-2" />
-                推免排名表 - 前10名
+                综合排名表 - 前10名
                 <Badge variant="outline" className="ml-2">
                   显示 {filteredRankings.length} 条记录
                   {rankingProgrammeFilter && ` (${rankingProgrammeFilter})`}
@@ -2952,7 +3112,7 @@ export default function GradeRecommendationPage() {
                       <TableHead>专业</TableHead>
                       <TableHead>班级</TableHead>
                       <TableHead>智育成绩</TableHead>
-                      <TableHead>德育加分</TableHead>
+                      <TableHead>推免加分加分</TableHead>
                       <TableHead>综合成绩</TableHead>
                       <TableHead>排名百分比</TableHead>
                     </TableRow>
@@ -3001,7 +3161,7 @@ export default function GradeRecommendationPage() {
               </div>
               {comprehensiveRankings.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  暂无推免排名数据，请先生成推免排名
+                  暂无综合排名数据，请先生成综合排名
                 </div>
               ) : filteredRankings.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -3013,8 +3173,8 @@ export default function GradeRecommendationPage() {
                 <h4 className="font-semibold mb-2">综测计算规则：</h4>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• <strong>智育成绩</strong>：学生的加权均分</li>
-                  <li>• <strong>德育加分</strong>：论文、专利、竞赛的实践活动加分（最高4分）</li>
-                  <li>• <strong>综合成绩</strong>：智育成绩 + 德育加分</li>
+                  <li>• <strong>推免加分加分</strong>：论文、专利、竞赛的实践活动加分（最高4分）</li>
+                  <li>• <strong>综合成绩</strong>：智育成绩 + 推免加分加分</li>
                   <li>• <strong>排名</strong>：按专业内综合成绩降序排列</li>
                 </ul>
               </div>
@@ -3077,21 +3237,17 @@ export default function GradeRecommendationPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">班级</label>
-                  <select 
-                    name="class"
+                  <label className="block text-sm font-medium mb-1">手机号</label>
+                  <input 
+                    name="phone_number"
+                    type="tel"
+                    pattern="^1[3-9]\d{9}$"
+                    maxLength={11}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={(() => {
-                      if (!editingPaper.class) return "";
-                      const classValue = editingPaper.class.toString();
-                      return classValue.includes('班') ? classValue : `${classValue}班`;
-                    })()}
-                  >
-                    <option value="">请选择班级</option>
-                    {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={`${num}班`}>{num}班</option>
-                    ))}
-                  </select>
+                    defaultValue={editingPaper.phone_number || ""}
+                    placeholder="请输入11位手机号"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">请输入11位手机号码</p>
                 </div>
                 
                 <div>
@@ -3140,7 +3296,7 @@ export default function GradeRecommendationPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">德育加分</label>
+                  <label className="block text-sm font-medium mb-1">推免加分加分</label>
                   <input 
                     name="score"
                     type="number" 
@@ -3149,9 +3305,9 @@ export default function GradeRecommendationPage() {
                     max="10"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPaper.score || ""}
-                    placeholder="请输入德育加分（0-10分）"
+                    placeholder="请输入推免加分加分（0-10分）"
                   />
-                  <p className="text-xs text-gray-500 mt-1">德育加分范围：0-10分，支持小数</p>
+                  <p className="text-xs text-gray-500 mt-1">推免加分加分范围：0-10分，支持小数</p>
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-4">
@@ -3220,20 +3376,29 @@ export default function GradeRecommendationPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">班级</label>
-                  <select 
-                    name="class"
+                  <label className="block text-sm font-medium mb-1">手机号</label>
+                  <input 
+                    name="phone_number"
+                    type="tel"
+                    pattern="^1[3-9]\d{9}$"
+                    maxLength={11}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={(() => {
-                      if (!editingPatent.class) return "";
-                      const classValue = editingPatent.class.toString();
-                      return classValue.includes('班') ? classValue : `${classValue}班`;
-                    })()}
+                    defaultValue={editingPatent.phone_number || ""}
+                    placeholder="请输入11位手机号"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">请输入11位手机号码</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">答辩状态</label>
+                  <select 
+                    name="defense_status"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    defaultValue={editingPatent.defense_status || 'pending'}
                   >
-                    <option value="">请选择班级</option>
-                    {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={`${num}班`}>{num}班</option>
-                    ))}
+                    <option value="pending">待答辩</option>
+                    <option value="passed">已通过</option>
+                    <option value="failed">未通过</option>
                   </select>
                 </div>
                 
@@ -3263,7 +3428,7 @@ export default function GradeRecommendationPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">德育加分</label>
+                  <label className="block text-sm font-medium mb-1">推免加分加分</label>
                   <input 
                     name="score"
                     type="number" 
@@ -3272,9 +3437,9 @@ export default function GradeRecommendationPage() {
                     max="10"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPatent.score || ""}
-                    placeholder="请输入德育加分（0-10分）"
+                    placeholder="请输入推免加分加分（0-10分）"
                   />
-                  <p className="text-xs text-gray-500 mt-1">德育加分范围：0-10分，支持小数</p>
+                  <p className="text-xs text-gray-500 mt-1">推免加分加分范围：0-10分，支持小数</p>
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-4">
@@ -3308,7 +3473,8 @@ export default function GradeRecommendationPage() {
                     type="text" 
                     required
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    defaultValue={editingCompetition.competition_name || ""}
+                    value={competitionFormData.competition_name}
+                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, competition_name: e.target.value }))}
                     placeholder="请输入竞赛名称"
                   />
                 </div>
@@ -3318,7 +3484,8 @@ export default function GradeRecommendationPage() {
                   <select 
                     name="competition_region"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingCompetition.competition_region || ""}
+                    value={competitionFormData.competition_region}
+                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, competition_region: e.target.value }))}
                   >
                     <option value="">请选择竞赛地区</option>
                     <option value="国际">国际</option>
@@ -3331,38 +3498,40 @@ export default function GradeRecommendationPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">竞赛级别</label>
+                  <label className="block text-sm font-medium mb-1">竞赛级别 <span className="text-red-500">*</span></label>
                   <select 
                     name="competition_level"
+                    required
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingCompetition.competition_level || ""}
+                    value={competitionFormData.competition_level}
+                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, competition_level: e.target.value }))}
                   >
                     <option value="">请选择竞赛级别</option>
-                    <option value="特等奖">特等奖</option>
-                    <option value="一等奖">一等奖</option>
-                    <option value="二等奖">二等奖</option>
-                    <option value="三等奖">三等奖</option>
-                    <option value="优秀奖">优秀奖</option>
-                    <option value="其他">其他</option>
+                    <option value="S">S</option>
+                    <option value="A+">A+</option>
+                    <option value="A">A</option>
+                    <option value="B+">B+</option>
+                    <option value="B">B</option>
+                    <option value="C+">C+</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">S级最高，依次为A+、A、B+、B、C+、C、D</p>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">班级</label>
-                  <select 
-                    name="class"
+                  <label className="block text-sm font-medium mb-1">手机号</label>
+                  <input 
+                    name="phone_number"
+                    type="tel"
+                    pattern="^1[3-9]\d{9}$"
+                    maxLength={11}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={(() => {
-                      if (!editingCompetition.class) return "";
-                      const classValue = editingCompetition.class.toString();
-                      return classValue.includes('班') ? classValue : `${classValue}班`;
-                    })()}
-                  >
-                    <option value="">请选择班级</option>
-                    {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={`${num}班`}>{num}班</option>
-                    ))}
-                  </select>
+                    value={competitionFormData.phone_number}
+                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, phone_number: e.target.value }))}
+                    placeholder="请输入11位手机号"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">请输入11位手机号码</p>
                 </div>
                 
                 
@@ -3372,13 +3541,14 @@ export default function GradeRecommendationPage() {
                     name="note"
                     rows={3}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingCompetition.note || ""}
+                    value={competitionFormData.note}
+                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, note: e.target.value }))}
                     placeholder="请输入备注信息"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">德育加分</label>
+                  <label className="block text-sm font-medium mb-1">推免加分加分</label>
                   <input 
                     name="score"
                     type="number" 
@@ -3386,10 +3556,10 @@ export default function GradeRecommendationPage() {
                     min="0"
                     max="10"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingCompetition.score || ""}
-                    placeholder="请输入德育加分（0-10分）"
+                    value={competitionFormData.score}
+                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, score: e.target.value }))}
+                    placeholder="请输入推免加分加分"
                   />
-                  <p className="text-xs text-gray-500 mt-1">德育加分范围：0-10分，支持小数</p>
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-4">
