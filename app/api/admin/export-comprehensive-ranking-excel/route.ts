@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         '实践活动加分': ranking.practice_extra_points || 0,
         '专业综合成绩': ranking.academic_practice_total || 0,
         '专业综合排名': ranking.overall_rank || '',
-        '专业综合排名百分比': ranking.overall_rank_percentage || ''
+        '专业综合排名百分比': ranking.overall_rank_percentage ? `${ranking.overall_rank_percentage}%` : ''
       }));
     }
 

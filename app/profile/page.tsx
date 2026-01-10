@@ -155,6 +155,10 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
   
+  // 截止时间相关状态
+  const [isPastDeadline, setIsPastDeadline] = useState(false)
+  const [deadline, setDeadline] = useState<string | null>(null)
+  
   // 添加获奖记录和实习经历的表单状态
   const [showAwardForm, setShowAwardForm] = useState(false);
   const [showInternshipForm, setShowInternshipForm] = useState(false);
@@ -180,8 +184,7 @@ export default function Profile() {
   const [paperErrors, setPaperErrors] = useState<{[key: string]: string}>({});
   const [patentErrors, setPatentErrors] = useState<{[key: string]: string}>({});
   
-  // 自定义输入状态
-  const [paperAuthorTypeCustom, setPaperAuthorTypeCustom] = useState(false);
+  // 自定义输入状态（仅专利需要）
   const [patentOwnerCategoryCustom, setPatentOwnerCategoryCustom] = useState(false);
   
   // 颜色数组，用于生成随机颜色
@@ -298,11 +301,8 @@ export default function Profile() {
   }
 
   const translateAuthorType = (type: string) => {
-    if (type === '第一作者') return t('profile.papers.form.author_type.first')
-    if (type === '通讯作者') return t('profile.papers.form.author_type.corresponding')
-    if (type === '独立第一作者') return t('profile.papers.form.author_type.independent.first')
     if (type === '独立作者') return t('profile.papers.form.author_type.independent')
-    if (type === '其他') return t('profile.papers.form.author_type.other')
+    if (type === '第一作者') return t('profile.papers.form.author_type.first')
     return type
   }
   
@@ -405,6 +405,39 @@ export default function Profile() {
     
     loadData();
   }, [user, authLoading]);
+
+  // 检查截止时间
+  useEffect(() => {
+    async function checkDeadline() {
+      try {
+        const response = await fetch('/api/check-deadline')
+        const result = await response.json()
+        
+        if (result.success) {
+          setIsPastDeadline(result.isPastDeadline)
+          setDeadline(result.deadline)
+          
+          // 调试信息
+          console.log('截止时间检查:', {
+            isPastDeadline: result.isPastDeadline,
+            deadline: result.deadline,
+            currentTime: new Date().toLocaleString('zh-CN')
+          })
+        }
+      } catch (error) {
+        console.error('检查截止时间失败:', error)
+      }
+    }
+    
+    // 立即检查一次
+    checkDeadline()
+    
+    // 每5分钟检查一次，确保实时性
+    const interval = setInterval(checkDeadline, 5 * 60 * 1000)
+    
+    // 清理定时器
+    return () => clearInterval(interval)
+  }, [])
   
   const handleAddScore = () => {
     setEditMode(false);
@@ -625,9 +658,12 @@ export default function Profile() {
       alert('您的推免资格已通过审核，无法修改保研相关信息');
       return;
     }
+    if (isPastDeadline) {
+      alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法添加论文记录`);
+      return;
+    }
     setEditingPaper(null);
     setPaperErrors({});
-    setPaperAuthorTypeCustom(false);
     setShowPaperForm(true);
   };
   
@@ -641,22 +677,18 @@ export default function Profile() {
       alert('该记录已审核通过，无法修改');
       return;
     }
+    if (isPastDeadline) {
+      alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法修改论文记录`);
+      return;
+    }
     setEditingPaper(paper);
     setPaperErrors({});
-    // 检查是否需要显示自定义输入框
-    const predefinedAuthorTypes = ["第一作者", "通讯作者", "独立第一作者", "独立作者"];
-    if (paper.author_type && !predefinedAuthorTypes.includes(paper.author_type)) {
-      setPaperAuthorTypeCustom(true);
-    } else {
-      setPaperAuthorTypeCustom(false);
-    }
     setShowPaperForm(true);
   };
   
   const handleCancelPaper = () => {
     setShowPaperForm(false);
     setEditingPaper(null);
-    setPaperAuthorTypeCustom(false);
   };
   
   const handlePaperSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -697,18 +729,13 @@ export default function Profile() {
     
     setSaveStatus('saving');
     
-    // 处理作者类型，如果选择了"其他"，使用自定义输入的值
-    const authorType = formData.get("author_type") as string;
-    const customAuthorType = formData.get("author_type_custom") as string;
-    const finalAuthorType = authorType === "其他" && customAuthorType ? customAuthorType : authorType;
-
     const newPaper: PaperLocal = {
       id: editingPaper?.id,
       paper_title: formData.get("paper_title") as string,
       journal_name: formData.get("journal_name") as string,
       journal_category: formData.get("journal_category") as string,
-      phone_number: formData.get("phone_number") as string, // 改为手机号
-      author_type: finalAuthorType,
+      phone_number: formData.get("phone_number") as string,
+      author_type: formData.get("author_type") as string,
       publish_date: formData.get("publish_date") as string,
       note: formData.get("note") as string,
       colorIndex: editingPaper ? editingPaper.colorIndex : getRandomColorIndex(papers.map(item => item.colorIndex))
@@ -742,13 +769,16 @@ export default function Profile() {
     
     setShowPaperForm(false);
     setEditingPaper(null);
-    setPaperAuthorTypeCustom(false);
   };
   
   // 添加专利处理函数
   const handleAddPatent = () => {
     if (isLocked) {
       alert('您的推免资格已通过审核，无法修改保研相关信息');
+      return;
+    }
+    if (isPastDeadline) {
+      alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法添加专利记录`);
       return;
     }
     setEditingPatent(null);
@@ -765,6 +795,10 @@ export default function Profile() {
     // 检查单条记录是否已审核
     if (patent.approval_status === 'approved') {
       alert('该记录已审核通过，无法修改');
+      return;
+    }
+    if (isPastDeadline) {
+      alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法修改专利记录`);
       return;
     }
     setEditingPatent(patent);
@@ -860,6 +894,10 @@ export default function Profile() {
       alert('您的推免资格已通过审核，无法修改保研相关信息');
       return;
     }
+    if (isPastDeadline) {
+      alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法添加竞赛记录`);
+      return;
+    }
     setEditingCompetition(null);
     setShowCompetitionForm(true);
   };
@@ -872,6 +910,10 @@ export default function Profile() {
     // 检查单条记录是否已审核
     if (competition.approval_status === 'approved') {
       alert('该记录已审核通过，无法修改');
+      return;
+    }
+    if (isPastDeadline) {
+      alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法修改竞赛记录`);
       return;
     }
     setEditingCompetition(competition);
@@ -1800,37 +1842,12 @@ export default function Profile() {
                   <select 
                     name="author_type"
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={(() => {
-                      const predefinedTypes = ["第一作者", "通讯作者", "独立第一作者", "独立作者"];
-                      const authorType = editingPaper?.author_type || "";
-                      return predefinedTypes.includes(authorType) ? authorType : (authorType ? "其他" : "");
-                    })()}
-                    onChange={(e) => {
-                      setPaperAuthorTypeCustom(e.target.value === "其他");
-                    }}
+                    defaultValue={editingPaper?.author_type || ""}
                   >
                     <option value="">{t('profile.papers.form.author_type.placeholder')}</option>
-                    <option value="第一作者">{t('profile.papers.form.author_type.first')}</option>
-                    <option value="通讯作者">{t('profile.papers.form.author_type.corresponding')}</option>
-                    <option value="独立第一作者">{t('profile.papers.form.author_type.independent.first')}</option>
                     <option value="独立作者">{t('profile.papers.form.author_type.independent')}</option>
-                    <option value="其他">{t('profile.papers.form.author_type.other')}</option>
+                    <option value="第一作者">{t('profile.papers.form.author_type.first')}</option>
                   </select>
-                  {paperAuthorTypeCustom && (
-                    <div className="mt-2">
-                      <input 
-                        name="author_type_custom"
-                        type="text" 
-                        placeholder={t('profile.papers.form.author_type.custom.placeholder')}
-                        defaultValue={(() => {
-                          const predefinedTypes = ["第一作者", "通讯作者", "独立第一作者", "独立作者"];
-                          const authorType = editingPaper?.author_type || "";
-                          return predefinedTypes.includes(authorType) ? "" : authorType;
-                        })()}
-                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                      />
-                    </div>
-                  )}
                 </div>
                 
                 <div>
@@ -2154,7 +2171,7 @@ export default function Profile() {
                 size="sm" 
                 className="flex items-center gap-2" 
                 onClick={handleAddPaper}
-                disabled={isLocked}
+                disabled={isLocked || isPastDeadline}
               >
                 <Plus className="h-4 w-4" />
                 {t('profile.papers.add')}
@@ -2228,7 +2245,7 @@ export default function Profile() {
                 size="sm" 
                 className="flex items-center gap-2" 
                 onClick={handleAddPatent}
-                disabled={isLocked}
+                disabled={isLocked || isPastDeadline}
               >
                 <Plus className="h-4 w-4" />
                 {t('profile.patents.add')}
@@ -2301,7 +2318,7 @@ export default function Profile() {
                 size="sm" 
                 className="flex items-center gap-2" 
                 onClick={handleAddCompetition}
-                disabled={isLocked}
+                disabled={isLocked || isPastDeadline}
               >
                 <Plus className="h-4 w-4" />
                 {t('profile.competitions.add')}

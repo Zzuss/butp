@@ -509,6 +509,14 @@ export default function GradeRecommendationPage() {
   const [rankingProgrammeFilter, setRankingProgrammeFilter] = useState<string>('智能科学与技术')
   const [availableProgrammes, setAvailableProgrammes] = useState<string[]>([])
   
+  // 截止时间管理相关状态
+  const [deadline, setDeadline] = useState<string>('')
+  const [isDeadlineEnabled, setIsDeadlineEnabled] = useState(false)
+  const [deadlineLoading, setDeadlineLoading] = useState(false)
+  
+  // 导出专业选择状态
+  const [exportProgramme, setExportProgramme] = useState<string>('all')
+  
   // 审核相关状态已在上面定义
 
   // 编辑记录处理函数
@@ -1135,7 +1143,13 @@ export default function GradeRecommendationPage() {
   // 导出综合排名Excel
   const handleExportRankingExcel = async () => {
     try {
-      const response = await fetch('/api/admin/export-comprehensive-ranking-excel?topN=100')
+      // 构建URL，如果选择了特定专业则添加专业参数
+      let url = '/api/admin/export-comprehensive-ranking-excel?topN=100'
+      if (exportProgramme && exportProgramme !== 'all') {
+        url += `&programme=${encodeURIComponent(exportProgramme)}`
+      }
+      
+      const response = await fetch(url)
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
@@ -1143,13 +1157,16 @@ export default function GradeRecommendationPage() {
       }
 
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const url2 = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = `综合排名_${new Date().toISOString().split('T')[0]}.xlsx`
+      a.href = url2
+      const fileName = exportProgramme && exportProgramme !== 'all' 
+        ? `${exportProgramme}_综合排名_${new Date().toISOString().split('T')[0]}.xlsx`
+        : `综合排名_${new Date().toISOString().split('T')[0]}.xlsx`
+      a.download = fileName
       document.body.appendChild(a)
       a.click()
-      window.URL.revokeObjectURL(url)
+      window.URL.revokeObjectURL(url2)
       document.body.removeChild(a)
       
       setSuccess('综合排名Excel导出成功')
@@ -1159,6 +1176,150 @@ export default function GradeRecommendationPage() {
       setError('导出综合排名Excel失败')
     }
   }
+
+  // 加载截止时间配置
+  const loadDeadlineConfig = async () => {
+    try {
+      const response = await fetch('/api/admin/deadline-config')
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        // 转换数据库时间格式为 datetime-local 格式
+        if (result.data.deadline) {
+          const date = new Date(result.data.deadline)
+          // 转换为本地时间的 YYYY-MM-DDTHH:mm 格式
+          const year = date.getFullYear()
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const day = String(date.getDate()).padStart(2, '0')
+          const hours = String(date.getHours()).padStart(2, '0')
+          const minutes = String(date.getMinutes()).padStart(2, '0')
+          const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`
+          setDeadline(formattedDate)
+        } else {
+          setDeadline('')
+        }
+        setIsDeadlineEnabled(result.data.is_enabled || false)
+        
+        console.log('截止时间配置已加载:', {
+          deadline: result.data.deadline,
+          is_enabled: result.data.is_enabled
+        })
+      }
+    } catch (error) {
+      console.error('加载截止时间配置失败:', error)
+    }
+  }
+
+  // 保存截止时间配置
+  const handleSaveDeadline = async () => {
+    setDeadlineLoading(true)
+    setError('')
+    setSuccess('')
+    
+    try {
+      // 将 datetime-local 格式转换为 ISO 8601 格式（带时区）
+      let deadlineToSave = null
+      if (deadline) {
+        // datetime-local 格式: 2026-01-10T23:25
+        // 需要转换为完整的 ISO 8601 格式
+        const localDate = new Date(deadline)
+        deadlineToSave = localDate.toISOString()
+        
+        console.log('保存截止时间:', {
+          输入值: deadline,
+          本地时间: localDate.toLocaleString('zh-CN'),
+          ISO格式: deadlineToSave
+        })
+      }
+      
+      const response = await fetch('/api/admin/deadline-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deadline: deadlineToSave,
+          is_enabled: isDeadlineEnabled
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setSuccess('截止时间配置保存成功')
+        setTimeout(() => setSuccess(''), 3000)
+        // 重新加载配置以确保显示一致
+        await loadDeadlineConfig()
+      } else {
+        setError(result.message || '保存失败')
+      }
+    } catch (error) {
+      console.error('保存截止时间配置失败:', error)
+      setError('保存截止时间配置失败')
+    } finally {
+      setDeadlineLoading(false)
+    }
+  }
+
+  // 切换截止时间启用状态（立即保存）
+  const handleToggleDeadlineEnabled = async () => {
+    const newEnabledState = !isDeadlineEnabled
+    setIsDeadlineEnabled(newEnabledState)
+    
+    // 如果要启用但没有设置截止时间，提示用户
+    if (newEnabledState && !deadline) {
+      setError('请先设置截止时间')
+      setIsDeadlineEnabled(false)
+      return
+    }
+    
+    setDeadlineLoading(true)
+    setError('')
+    setSuccess('')
+    
+    try {
+      // 将 datetime-local 格式转换为 ISO 8601 格式
+      let deadlineToSave = null
+      if (deadline) {
+        const localDate = new Date(deadline)
+        deadlineToSave = localDate.toISOString()
+      }
+      
+      const response = await fetch('/api/admin/deadline-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deadline: deadlineToSave,
+          is_enabled: newEnabledState
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setSuccess(newEnabledState ? '截止时间限制已启用' : '截止时间限制已禁用')
+        setTimeout(() => setSuccess(''), 3000)
+      } else {
+        setError(result.message || '操作失败')
+        // 恢复原状态
+        setIsDeadlineEnabled(!newEnabledState)
+      }
+    } catch (error) {
+      console.error('切换截止时间状态失败:', error)
+      setError('操作失败')
+      // 恢复原状态
+      setIsDeadlineEnabled(!newEnabledState)
+    } finally {
+      setDeadlineLoading(false)
+    }
+  }
+
+  // 页面加载时获取截止时间配置
+  React.useEffect(() => {
+    loadDeadlineConfig()
+  }, [])
 
   // 推免加分总表导入（文件上传）
   const handleMoralImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1829,6 +1990,89 @@ export default function GradeRecommendationPage() {
           <p className="text-gray-600">管理学生论文发表、专利申请和竞赛获奖的加分记录审核，设置学生综合资格</p>
         </div>
 
+        {/* 截止时间管理 */}
+        <Card className="mb-6 border-orange-200 bg-orange-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center text-orange-700">
+              <Clock className="h-5 w-5 mr-2" />
+              ⏰ 提交截止时间管理
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="bg-white p-4 rounded-lg border border-orange-200">
+              <p className="text-sm text-gray-700 mb-4">
+                设置截止时间后，学生将无法在个人页面新增或修改论文、专利和竞赛记录。
+              </p>
+              
+              <div className="space-y-4">
+                {/* 状态切换按钮 */}
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-gray-700">
+                    截止时间限制状态：
+                  </label>
+                  <Button
+                    onClick={handleToggleDeadlineEnabled}
+                    disabled={deadlineLoading}
+                    className={`${
+                      isDeadlineEnabled 
+                        ? 'bg-green-600 hover:bg-green-700' 
+                        : 'bg-gray-400 hover:bg-gray-500'
+                    } transition-colors`}
+                  >
+                    {deadlineLoading ? (
+                      '切换中...'
+                    ) : isDeadlineEnabled ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        已启用
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-2" />
+                        已禁用
+                      </>
+                    )}
+                  </Button>
+                  <span className="text-xs text-gray-500">
+                    {isDeadlineEnabled ? '点击禁用限制' : '点击启用限制'}
+                  </span>
+                </div>
+                
+                {/* 截止时间选择 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    截止时间
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className="w-full max-w-md p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {deadline ? `学生将在 ${new Date(deadline).toLocaleString('zh-CN')} 后无法修改记录` : '请选择截止时间'}
+                  </p>
+                </div>
+                
+                {/* 保存截止时间按钮 */}
+                <div>
+                  <Button
+                    onClick={handleSaveDeadline}
+                    disabled={deadlineLoading || !deadline}
+                    variant="outline"
+                    className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                  >
+                    {deadlineLoading ? '保存中...' : '💾 保存截止时间'}
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">
+                    修改截止时间后需要点击此按钮保存
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* 重要提醒：推免加分总表数据管理 */}
         <Card className="mb-6 border-red-200 bg-red-50">
           <CardHeader className="pb-3">
@@ -2078,35 +2322,55 @@ export default function GradeRecommendationPage() {
             </div>
             
             {/* 综合排名管理 */}
-            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-              <Button 
-                onClick={handleGenerateRanking} 
-                disabled={rankingGenerateLoading}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {rankingGenerateLoading ? '生成中...' : '生成综合排名'}
-              </Button>
-              <Button 
-                onClick={handleShowRankingTable} 
-                variant="outline"
-                className="border-red-500 text-red-600 hover:bg-red-50"
-              >
-                {showRankingTable ? '隐藏综合排名' : '查看综合排名'}
-              </Button>
-              <Button 
-                onClick={handleExportRanking} 
-                variant="outline"
-                className="border-purple-500 text-purple-600 hover:bg-purple-50"
-              >
-                导出综合排名CSV
-              </Button>
-              <Button 
-                onClick={handleExportRankingExcel} 
-                variant="outline"
-                className="border-green-500 text-green-600 hover:bg-green-50"
-              >
-                导出综合排名Excel
-              </Button>
+            <div className="mt-4 pt-4 border-t">
+              {/* 专业选择 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">选择导出专业</label>
+                <select 
+                  value={exportProgramme}
+                  onChange={(e) => setExportProgramme(e.target.value)}
+                  className="w-full max-w-xs p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="all">全部专业</option>
+                  <option value="智能科学与技术">智能科学与技术</option>
+                  <option value="电子信息工程">电子信息工程</option>
+                  <option value="电信工程及管理">电信工程及管理</option>
+                  <option value="物联网工程">物联网工程</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">选择"全部专业"将导出所有学生的综合排名</p>
+              </div>
+              
+              {/* 操作按钮 */}
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  onClick={handleGenerateRanking} 
+                  disabled={rankingGenerateLoading}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {rankingGenerateLoading ? '生成中...' : '生成综合排名'}
+                </Button>
+                <Button 
+                  onClick={handleShowRankingTable} 
+                  variant="outline"
+                  className="border-red-500 text-red-600 hover:bg-red-50"
+                >
+                  {showRankingTable ? '隐藏综合排名' : '查看综合排名'}
+                </Button>
+                <Button 
+                  onClick={handleExportRanking} 
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                >
+                  导出综合排名CSV
+                </Button>
+                <Button 
+                  onClick={handleExportRankingExcel} 
+                  variant="outline"
+                  className="border-green-500 text-green-600 hover:bg-green-50"
+                >
+                  导出综合排名Excel
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -3258,11 +3522,8 @@ export default function GradeRecommendationPage() {
                     defaultValue={editingPaper.author_type || ""}
                   >
                     <option value="">请选择作者类型</option>
-                    <option value="第一作者">第一作者</option>
-                    <option value="通讯作者">通讯作者</option>
-                    <option value="独立第一作者">独立第一作者</option>
                     <option value="独立作者">独立作者</option>
-                    <option value="其他">其他</option>
+                    <option value="第一作者">第一作者</option>
                   </select>
                 </div>
                 
