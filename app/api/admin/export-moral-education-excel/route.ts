@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       '学号': string;
       '姓名': string;
       '班级': string;
+      '手机号': string;
       '论文分数': number;
       '专利分数': number;
       '竞赛分数': number;
@@ -58,6 +59,7 @@ export async function GET(request: NextRequest) {
         '学号': score.bupt_student_id || '',
         '姓名': score.full_name || '',
         '班级': score.class || '',
+        '手机号': score.phone_number || '',
         '论文分数': score.paper_score || 0,
         '专利分数': score.patent_score || 0,
         '竞赛分数': score.competition_score || 0,
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
     const workbook = XLSX.utils.book_new();
 
     // 定义中文表头
-    const headers = ['学号', '姓名', '班级', '论文分数', '专利分数', '竞赛分数', '论文+专利小计', '总加分'];
+    const headers = ['学号', '姓名', '班级', '手机号', '论文分数', '专利分数', '竞赛分数', '论文+专利小计', '总加分'];
     
     // 创建工作表，确保始终有表头
     let worksheet;
@@ -87,6 +89,7 @@ export async function GET(request: NextRequest) {
       { wch: 12 }, // 学号
       { wch: 10 }, // 姓名
       { wch: 15 }, // 班级
+      { wch: 12 }, // 手机号
       { wch: 12 }, // 论文分数
       { wch: 12 }, // 专利分数
       { wch: 12 }, // 竞赛分数

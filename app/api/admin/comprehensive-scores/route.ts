@@ -12,6 +12,7 @@ interface StudentScore {
   bupt_student_id: string;
   full_name: string;
   class: string;
+  phone_number?: string;
   paper_score: number;
   patent_score: number;
   competition_score: number;
@@ -193,6 +194,24 @@ export async function POST(request: NextRequest) {
       studentScore.competition_score += score;
     });
 
+    // 获取额外加分数据
+    console.log('获取额外加分数据...');
+    const { data: extraBonusData, error: extraBonusError } = await supabase
+      .from('extra_bonus_scores')
+      .select('bupt_student_id, bonus_score');
+
+    if (extraBonusError) {
+      console.error('获取额外加分数据失败:', extraBonusError);
+      // 不中断流程，继续处理
+    }
+
+    // 创建额外加分映射
+    const extraBonusMap = new Map<string, number>();
+    extraBonusData?.forEach(item => {
+      extraBonusMap.set(item.bupt_student_id, parseFloat(item.bonus_score?.toString() || '0') || 0);
+    });
+    console.log(`获取到 ${extraBonusMap.size} 条额外加分记录`);
+
     // 计算总分并应用限制规则
     const finalScores: StudentScore[] = [];
     
@@ -201,8 +220,11 @@ export async function POST(request: NextRequest) {
       const paperPatentSum = studentScore.paper_score + studentScore.patent_score;
       studentScore.paper_patent_total = Math.min(paperPatentSum, 3);
       
-      // 总加分不超过4分
-      const totalSum = studentScore.paper_patent_total + studentScore.competition_score;
+      // 获取该学生的额外加分
+      const extraBonus = extraBonusMap.get(studentScore.bupt_student_id) || 0;
+      
+      // 总加分 = 论文专利小计 + 竞赛分数 + 额外加分，不超过4分
+      const totalSum = studentScore.paper_patent_total + studentScore.competition_score + extraBonus;
       studentScore.total_score = Math.min(totalSum, 4);
       
       // 保留两位小数

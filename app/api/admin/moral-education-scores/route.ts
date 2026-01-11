@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
       // 生成CSV格式，添加BOM以确保Excel正确识别UTF-8编码
       const BOM = '\uFEFF'; // UTF-8 BOM
       // 使用中文表头
-      const csvHeader = '学号,姓名,班级,论文分数,专利分数,竞赛分数,论文+专利小计,总加分\n';
+      const csvHeader = '学号,姓名,班级,手机号,论文分数,专利分数,竞赛分数,论文+专利小计,总加分\n';
       const csvRows = scores?.map(score => {
-        return `${score.bupt_student_id || ''},${score.full_name || ''},${score.class || ''},${score.paper_score || 0},${score.patent_score || 0},${score.competition_score || 0},${score.paper_patent_total || 0},${score.total_score || 0}`;
+        return `${score.bupt_student_id || ''},${score.full_name || ''},${score.class || ''},${score.phone_number || ''},${score.paper_score || 0},${score.patent_score || 0},${score.competition_score || 0},${score.paper_patent_total || 0},${score.total_score || 0}`;
       }).join('\n') || '';
 
       const csvContent = BOM + csvHeader + csvRows;

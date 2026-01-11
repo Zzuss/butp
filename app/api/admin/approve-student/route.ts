@@ -12,6 +12,7 @@ interface MoralEducationScore {
   bupt_student_id: string;
   full_name: string;
   class: string;
+  phone_number?: string;
   paper_score: number;
   patent_score: number;
   competition_score: number;
@@ -25,7 +26,7 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
     // 获取学生的论文记录
     const { data: papers, error: paperError } = await supabase
       .from('student_papers')
-      .select('bupt_student_id, full_name, class, score')
+      .select('bupt_student_id, full_name, phone_number, score')
       .eq('bupt_student_id', studentId)
       .eq('approval_status', 'approved');
 
@@ -37,7 +38,7 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
     // 获取学生的专利记录
     const { data: patents, error: patentError } = await supabase
       .from('student_patents')
-      .select('bupt_student_id, full_name, class, score')
+      .select('bupt_student_id, full_name, phone_number, score')
       .eq('bupt_student_id', studentId)
       .eq('approval_status', 'approved');
 
@@ -49,7 +50,7 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
     // 获取学生的竞赛记录
     const { data: competitions, error: competitionError } = await supabase
       .from('student_competition_records')
-      .select('bupt_student_id, full_name, class, score')
+      .select('bupt_student_id, full_name, phone_number, score')
       .eq('bupt_student_id', studentId)
       .eq('approval_status', 'approved');
 
@@ -58,21 +59,43 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
       return null;
     }
 
-    // 如果学生没有任何记录，返回null
+    // 获取额外加分
+    const { data: extraBonus, error: extraBonusError } = await supabase
+      .from('extra_bonus_scores')
+      .select('bonus_score')
+      .eq('bupt_student_id', studentId)
+      .single();
+
+    const extraBonusScore = (!extraBonusError && extraBonus) ? (parseFloat(extraBonus.bonus_score?.toString() || '0') || 0) : 0;
+
+    // 如果学生没有任何记录（包括额外加分），返回null
     if ((!papers || papers.length === 0) && 
         (!patents || patents.length === 0) && 
-        (!competitions || competitions.length === 0)) {
+        (!competitions || competitions.length === 0) &&
+        extraBonusScore === 0) {
       return null;
     }
 
-    // 获取学生基本信息（从任一有记录的表中获取）
-    let studentInfo = { full_name: '', class: '' };
+    // 获取学生基本信息（从任一有记录的表中获取，优先使用phone_number作为class）
+    let studentInfo = { full_name: '', class: '', phone_number: '' };
     if (papers && papers.length > 0) {
-      studentInfo = { full_name: papers[0].full_name || '', class: papers[0].class?.toString() || '' };
+      studentInfo = { 
+        full_name: papers[0].full_name || '', 
+        class: papers[0].phone_number?.toString() || '',
+        phone_number: papers[0].phone_number?.toString() || ''
+      };
     } else if (patents && patents.length > 0) {
-      studentInfo = { full_name: patents[0].full_name || '', class: patents[0].class?.toString() || '' };
+      studentInfo = { 
+        full_name: patents[0].full_name || '', 
+        class: patents[0].phone_number?.toString() || '',
+        phone_number: patents[0].phone_number?.toString() || ''
+      };
     } else if (competitions && competitions.length > 0) {
-      studentInfo = { full_name: competitions[0].full_name || '', class: competitions[0].class?.toString() || '' };
+      studentInfo = { 
+        full_name: competitions[0].full_name || '', 
+        class: competitions[0].phone_number?.toString() || '',
+        phone_number: competitions[0].phone_number?.toString() || ''
+      };
     }
 
     // 计算各项分数
@@ -83,12 +106,13 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
     // 应用德育加分规则
     const paperPatentSum = paperScore + patentScore;
     const paperPatentTotal = Math.min(paperPatentSum, 3); // 论文+专利总分不超过3分
-    const totalScore = Math.min(paperPatentTotal + competitionScore, 4); // 德育总加分不超过4分
+    const totalScore = Math.min(paperPatentTotal + competitionScore + extraBonusScore, 4); // 德育总加分（含额外加分）不超过4分
 
     return {
       bupt_student_id: studentId,
       full_name: studentInfo.full_name,
       class: studentInfo.class,
+      phone_number: studentInfo.phone_number,
       paper_score: Math.round(paperScore * 100) / 100,
       patent_score: Math.round(patentScore * 100) / 100,
       competition_score: Math.round(competitionScore * 100) / 100,
@@ -112,31 +136,6 @@ export async function POST(request: NextRequest) {
 
     if (!['approved', 'rejected', 'pending'].includes(status)) {
       return NextResponse.json({ error: '无效的审核状态' }, { status: 400 })
-    }
-
-    // 检查学生是否存在（通过查询任一表中的记录）
-    const { data: paperExists } = await supabase
-      .from('student_papers')
-      .select('bupt_student_id')
-      .eq('bupt_student_id', studentId)
-      .limit(1)
-
-    const { data: patentExists } = await supabase
-      .from('student_patents')
-      .select('bupt_student_id')
-      .eq('bupt_student_id', studentId)
-      .limit(1)
-
-    const { data: competitionExists } = await supabase
-      .from('student_competition_records')
-      .select('bupt_student_id')
-      .eq('bupt_student_id', studentId)
-      .limit(1)
-
-    if ((!paperExists || paperExists.length === 0) && 
-        (!patentExists || patentExists.length === 0) && 
-        (!competitionExists || competitionExists.length === 0)) {
-      return NextResponse.json({ error: '学生记录不存在' }, { status: 404 })
     }
 
     // 处理德育总表操作

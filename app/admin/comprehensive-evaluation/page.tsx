@@ -68,6 +68,14 @@ interface StudentData {
   papers: Paper[]
   patents: Patent[]
   competitions: Competition[]
+  extraBonus?: {
+    id: string
+    bupt_student_id: string
+    bonus_score: number
+    note?: string
+    created_at: string
+    updated_at: string
+  } | null
   total: {
     papers: number
     patents: number
@@ -88,6 +96,115 @@ interface ComprehensiveScore {
   total_score: number
   created_at: string
   updated_at: string
+}
+
+// 解析额外加分文件（简化版，只支持学号和分数两列）
+const parseExtraBonusFile = async (file: File): Promise<any[]> => {
+  return new Promise((resolve, reject) => {
+    console.log('开始解析额外加分文件:', file.name)
+    
+    const reader = new FileReader()
+    
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result
+        if (!data) {
+          reject(new Error('文件读取结果为空'))
+          return
+        }
+        
+        let workbook: XLSX.WorkBook
+        
+        if (file.name.endsWith('.csv')) {
+          workbook = XLSX.read(data, { type: 'binary' })
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+          workbook = XLSX.read(data, { type: 'array' })
+        } else {
+          reject(new Error('不支持的文件格式，请上传CSV或Excel文件'))
+          return
+        }
+        
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        
+        if (!worksheet) {
+          reject(new Error('工作表为空'))
+          return
+        }
+        
+        // 转换为JSON数组
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+        console.log('额外加分文件JSON数据行数:', jsonData.length)
+        
+        if (jsonData.length < 2) {
+          reject(new Error('文件内容为空或格式不正确，至少需要表头和一行数据'))
+          return
+        }
+        
+        // 第一行是表头
+        const headers = (jsonData[0] as any[]).map(h => h ? h.toString().trim() : '')
+        console.log('额外加分表头:', headers)
+        
+        // 从第二行开始是数据
+        const rows = jsonData.slice(1)
+        
+        // 查找学号和分数列的索引
+        let studentIdIndex = -1
+        let scoreIndex = -1
+        
+        headers.forEach((header, index) => {
+          if (header === '学号' || header === 'bupt_student_id') {
+            studentIdIndex = index
+          }
+          if (header === '分数' || header === '额外加分' || header === 'bonus_score') {
+            scoreIndex = index
+          }
+        })
+        
+        if (studentIdIndex === -1) {
+          reject(new Error('未找到"学号"列，请确保表头包含"学号"'))
+          return
+        }
+        
+        if (scoreIndex === -1) {
+          reject(new Error('未找到"分数"列，请确保表头包含"分数"'))
+          return
+        }
+        
+        // 解析数据
+        const parsedData = rows.map((row: unknown) => {
+          const rowArray = row as any[]
+          return {
+            bupt_student_id: rowArray[studentIdIndex]?.toString().trim() || '',
+            bonus_score: parseFloat(rowArray[scoreIndex]?.toString() || '0') || 0
+          }
+        }).filter(item => item.bupt_student_id) // 过滤掉学号为空的行
+        
+        console.log('额外加分解析完成，有效数据行数:', parsedData.length)
+        console.log('额外加分数据示例:', parsedData.slice(0, 2))
+        
+        if (parsedData.length === 0) {
+          reject(new Error('没有找到有效的数据行，请检查学号列是否为空'))
+          return
+        }
+        
+        resolve(parsedData)
+      } catch (error) {
+        console.error('额外加分文件解析错误:', error)
+        reject(new Error('文件解析失败: ' + (error instanceof Error ? error.message : '未知错误')))
+      }
+    }
+    
+    reader.onerror = () => {
+      reject(new Error('文件读取失败'))
+    }
+    
+    if (file.name.endsWith('.csv')) {
+      reader.readAsBinaryString(file)
+    } else {
+      reader.readAsArrayBuffer(file)
+    }
+  })
 }
 
 // 解析智育成绩文件（支持CSV和Excel）
@@ -242,6 +359,10 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
           '平均学分绩点': 'gpa',
           '专业排名': 'programme_rank',
           '专业排名总人数': 'programme_total',
+          // 额外加分表头映射
+          '分数': 'bonus_score',
+          '额外加分': 'bonus_score',
+          '备注': 'note',
           // 英文表头映射（保持向后兼容）
           'BUPT Student ID': 'bupt_student_id',
           'Full name': 'full_name',
@@ -282,8 +403,9 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
           })
           return obj
         }).filter(row => {
-          // 检查是否有学号字段
-          const hasStudentId = row.bupt_student_id && row.bupt_student_id.toString().trim()
+          // 检查是否有学号字段（支持多种可能的字段名）
+          const hasStudentId = (row.bupt_student_id || row.学号) && 
+                               (row.bupt_student_id || row.学号).toString().trim()
           console.log('行数据:', row, '有学号:', hasStudentId)
           return hasStudentId
         })
@@ -292,7 +414,21 @@ const parseAcademicFile = async (file: File): Promise<any[]> => {
         console.log('解析后的数据示例:', parsedData.slice(0, 2))
         
         if (parsedData.length === 0) {
-          reject(new Error('没有找到有效的数据行，请检查文件格式和bupt_student_id字段'))
+          console.error('解析失败 - 表头:', headers)
+          console.error('解析失败 - 原始行数:', rows.length)
+          console.error('解析失败 - 字段映射结果:', rows.slice(0, 2).map((row: unknown) => {
+            const rowArray = row as any[]
+            const obj: any = {}
+            headers.forEach((header, index) => {
+              if (header && header.trim()) {
+                const cleanedHeader = header.trim()
+                const dbFieldName = fieldMapping[cleanedHeader] || cleanedHeader
+                obj[dbFieldName] = rowArray[index]
+              }
+            })
+            return obj
+          }))
+          reject(new Error('没有找到有效的数据行。请确保：1) 表头包含"学号"列 2) 数据行中学号不为空'))
           return
         }
         
@@ -392,6 +528,7 @@ const parseMoralEducationFile = async (file: File): Promise<any[]> => {
           '学号': 'bupt_student_id',
           '姓名': 'full_name',
           '班级': 'class',
+          '手机号': 'phone_number',
           '论文分数': 'paper_score',
           '专利分数': 'patent_score',
           '竞赛分数': 'competition_score',
@@ -401,6 +538,7 @@ const parseMoralEducationFile = async (file: File): Promise<any[]> => {
           'BUPT Student ID': 'bupt_student_id',
           'Full Name': 'full_name',
           'Class': 'class',
+          'Phone Number': 'phone_number',
           'Paper Score': 'paper_score',
           'Patent Score': 'patent_score',
           'Competition Score': 'competition_score',
@@ -467,6 +605,10 @@ export default function GradeRecommendationPage() {
   const [showPaperEditForm, setShowPaperEditForm] = useState(false)
   const [showPatentEditForm, setShowPatentEditForm] = useState(false)
   const [showCompetitionEditForm, setShowCompetitionEditForm] = useState(false)
+  
+  // 额外加分编辑状态
+  const [editingExtraBonus, setEditingExtraBonus] = useState(false)
+  const [extraBonusScore, setExtraBonusScore] = useState<string>('')
 
   // 竞赛表单字段状态
   const [competitionFormData, setCompetitionFormData] = useState({
@@ -516,6 +658,12 @@ export default function GradeRecommendationPage() {
   
   // 导出专业选择状态
   const [exportProgramme, setExportProgramme] = useState<string>('all')
+  
+  // 额外加分相关状态
+  const [extraBonusData, setExtraBonusData] = useState<any[]>([])
+  const [showExtraBonusTable, setShowExtraBonusTable] = useState(false)
+  const [extraBonusImportLoading, setExtraBonusImportLoading] = useState(false)
+  const [extraBonusImportMode, setExtraBonusImportMode] = useState<'append' | 'replace'>('replace')
   
   // 审核相关状态已在上面定义
 
@@ -857,6 +1005,13 @@ export default function GradeRecommendationPage() {
       const data = await response.json()
       setStudentData(data)
       
+      // 初始化额外加分编辑状态
+      if (data.extraBonus) {
+        setExtraBonusScore(data.extraBonus.bonus_score.toString())
+      } else {
+        setExtraBonusScore('0')
+      }
+      
       if (data.total.papers === 0 && data.total.patents === 0 && data.total.competitions === 0) {
         setError('该学号未找到论文、专利或竞赛信息')
       }
@@ -866,6 +1021,68 @@ export default function GradeRecommendationPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 开始编辑额外加分
+  const handleEditExtraBonus = () => {
+    setEditingExtraBonus(true)
+  }
+
+  // 保存额外加分
+  const handleSaveExtraBonus = async () => {
+    if (!studentData) return
+
+    try {
+      const score = parseFloat(extraBonusScore)
+      if (isNaN(score) || score < 0 || score > 4) {
+        setError('额外加分必须在0-4之间')
+        return
+      }
+
+      const response = await fetch('/api/admin/student-papers-patents', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'extra_bonus',
+          studentId: studentData.studentId,
+          score: score
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '更新额外加分失败')
+      }
+
+      // 更新本地状态
+      setStudentData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          extraBonus: result.data
+        }
+      })
+
+      setEditingExtraBonus(false)
+      setSuccess('额外加分更新成功')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('更新额外加分失败:', err)
+      setError(err instanceof Error ? err.message : '更新额外加分失败')
+    }
+  }
+
+  // 取消编辑额外加分
+  const handleCancelExtraBonusEdit = () => {
+    if (studentData?.extraBonus) {
+      setExtraBonusScore(studentData.extraBonus.bonus_score.toString())
+    } else {
+      setExtraBonusScore('0')
+    }
+    setEditingExtraBonus(false)
   }
 
   // 调试功能：查看数据库中的实际数据
@@ -1174,6 +1391,219 @@ export default function GradeRecommendationPage() {
     } catch (err) {
       console.error('Excel导出失败:', err)
       setError('导出综合排名Excel失败')
+    }
+  }
+
+  // 导出论文数据
+  const handleExportPapers = async () => {
+    try {
+      const response = await fetch('/api/admin/export-papers')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '导出失败')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `论文数据_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      setSuccess('论文数据导出成功')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('导出论文数据失败:', err)
+      setError('导出论文数据失败')
+    }
+  }
+
+  // 导出专利数据
+  const handleExportPatents = async () => {
+    try {
+      const response = await fetch('/api/admin/export-patents')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '导出失败')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `专利数据_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      setSuccess('专利数据导出成功')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('导出专利数据失败:', err)
+      setError('导出专利数据失败')
+    }
+  }
+
+  // 导出竞赛数据
+  const handleExportCompetitions = async () => {
+    try {
+      const response = await fetch('/api/admin/export-competitions')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '导出失败')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `竞赛数据_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      setSuccess('竞赛数据导出成功')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('导出竞赛数据失败:', err)
+      setError('导出竞赛数据失败')
+    }
+  }
+
+  // 导入额外加分数据
+  const handleExtraBonusImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setExtraBonusImportLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const parsedData = await parseExtraBonusFile(file)
+      console.log('解析的额外加分数据:', parsedData)
+
+      const response = await fetch('/api/admin/extra-bonus', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: parsedData,
+          mode: extraBonusImportMode
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '导入失败')
+      }
+
+      setSuccess(result.message || '额外加分数据导入成功')
+      setTimeout(() => setSuccess(''), 3000)
+      
+      // 刷新额外加分表
+      if (showExtraBonusTable) {
+        await loadExtraBonusData()
+      }
+    } catch (err) {
+      console.error('导入额外加分数据失败:', err)
+      setError(err instanceof Error ? err.message : '导入额外加分数据失败')
+    } finally {
+      setExtraBonusImportLoading(false)
+      e.target.value = ''
+    }
+  }
+
+  // 加载额外加分数据
+  const loadExtraBonusData = async () => {
+    try {
+      const response = await fetch('/api/admin/extra-bonus')
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || '获取额外加分数据失败')
+      }
+
+      setExtraBonusData(result.data || [])
+    } catch (err) {
+      console.error('获取额外加分数据失败:', err)
+      setError(err instanceof Error ? err.message : '获取额外加分数据失败')
+    }
+  }
+
+  // 显示/隐藏额外加分表
+  const handleShowExtraBonusTable = async () => {
+    if (!showExtraBonusTable) {
+      await loadExtraBonusData()
+    }
+    setShowExtraBonusTable(!showExtraBonusTable)
+  }
+
+  // 导出额外加分数据
+  const handleExportExtraBonus = async () => {
+    try {
+      const response = await fetch('/api/admin/export-extra-bonus')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '导出失败')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `额外推免加分_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      setSuccess('额外加分数据导出成功')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('导出额外加分数据失败:', err)
+      setError('导出额外加分数据失败')
+    }
+  }
+
+  // 清空额外加分表
+  const handleClearExtraBonusTable = async () => {
+    if (!confirm('确定要清空额外加分表吗？此操作不可恢复！')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/admin/extra-bonus', {
+        method: 'DELETE'
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '清空失败')
+      }
+
+      setSuccess('额外加分表已清空')
+      setTimeout(() => setSuccess(''), 3000)
+      
+      // 刷新表格
+      if (showExtraBonusTable) {
+        await loadExtraBonusData()
+      }
+    } catch (err) {
+      console.error('清空额外加分表失败:', err)
+      setError(err instanceof Error ? err.message : '清空额外加分表失败')
     }
   }
 
@@ -2120,6 +2550,208 @@ export default function GradeRecommendationPage() {
           </CardContent>
         </Card>
 
+        {/* 数据导出管理 */}
+        <Card className="mb-6 border-green-200 bg-green-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center text-green-700">
+              <FileText className="h-5 w-5 mr-2" />
+              📊 数据导出管理
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="bg-white p-4 rounded-lg border border-green-200">
+              <p className="text-sm text-gray-700 mb-4">
+                导出论文、专利和竞赛的完整数据表格，包含所有字段信息。
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 论文数据导出 */}
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">📄 论文数据</h4>
+                  <p className="text-xs text-gray-600 mb-3">
+                    包含学号、姓名、论文标题、期刊信息、作者类型、审核状态、答辩状态等
+                  </p>
+                  <Button 
+                    onClick={handleExportPapers}
+                    variant="outline"
+                    className="w-full border-blue-500 text-blue-600 hover:bg-blue-100"
+                  >
+                    导出论文数据
+                  </Button>
+                </div>
+
+                {/* 专利数据导出 */}
+                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <h4 className="text-sm font-medium text-purple-800 mb-2">🔬 专利数据</h4>
+                  <p className="text-xs text-gray-600 mb-3">
+                    包含学号、姓名、专利名称、专利号、专利权人类别、审核状态、答辩状态等
+                  </p>
+                  <Button 
+                    onClick={handleExportPatents}
+                    variant="outline"
+                    className="w-full border-purple-500 text-purple-600 hover:bg-purple-100"
+                  >
+                    导出专利数据
+                  </Button>
+                </div>
+
+                {/* 竞赛数据导出 */}
+                <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <h4 className="text-sm font-medium text-orange-800 mb-2">🏆 竞赛数据</h4>
+                  <p className="text-xs text-gray-600 mb-3">
+                    包含学号、姓名、竞赛名称、竞赛级别、竞赛类型、团队信息、审核状态等
+                  </p>
+                  <Button 
+                    onClick={handleExportCompetitions}
+                    variant="outline"
+                    className="w-full border-orange-500 text-orange-600 hover:bg-orange-100"
+                  >
+                    导出竞赛数据
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 额外推免加分管理 */}
+        <Card className="mb-6 border-indigo-200 bg-indigo-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center text-indigo-700">
+              <Award className="h-5 w-5 mr-2" />
+              ⭐ 额外推免加分管理
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="bg-white p-4 rounded-lg border border-indigo-200">
+              <p className="text-sm text-gray-700 mb-3">
+                管理学生的额外推免加分项。额外加分会在生成推免加分总表时自动计入，总加分仍不超过4分。
+              </p>
+              
+              <div className="mb-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                <h4 className="text-sm font-medium text-indigo-800 mb-2">📋 文件格式要求</h4>
+                <div className="text-xs text-indigo-700 space-y-1">
+                  <p><strong>必需字段：</strong>学号、分数</p>
+                  <p><strong>文件格式：</strong>支持 .csv、.xlsx、.xls 格式</p>
+                  <p><strong>分数范围：</strong>0-4分</p>
+                  <p className="text-red-600"><strong>重要：</strong>额外加分会计入推免总分，总分仍受4分上限约束</p>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <Label className="text-sm font-medium text-indigo-700">导入模式选择：</Label>
+                <div className="flex gap-4 mt-1">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="extraBonusImportMode"
+                      value="append"
+                      checked={extraBonusImportMode === 'append'}
+                      onChange={(e) => setExtraBonusImportMode(e.target.value as 'append' | 'replace')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">追加模式</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="extraBonusImportMode"
+                      value="replace"
+                      checked={extraBonusImportMode === 'replace'}
+                      onChange={(e) => setExtraBonusImportMode(e.target.value as 'append' | 'replace')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">替换模式</span>
+                    <Badge variant="outline" className="ml-2 text-xs">推荐</Badge>
+                  </label>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {extraBonusImportMode === 'append' ? (
+                    <span>• 相同学号的数据会被更新，不同学号会新增</span>
+                  ) : (
+                    <span className="text-blue-600">• 🔄 将清空所有现有额外加分数据，然后导入新数据</span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <label className="flex items-center cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleExtraBonusImport}
+                    disabled={extraBonusImportLoading}
+                    className="hidden"
+                  />
+                  {extraBonusImportLoading ? '导入中...' : '导入额外加分'}
+                </label>
+                <Button 
+                  onClick={handleExportExtraBonus} 
+                  variant="outline"
+                  className="border-indigo-500 text-indigo-600 hover:bg-indigo-50"
+                >
+                  导出额外加分
+                </Button>
+                <Button 
+                  onClick={handleShowExtraBonusTable} 
+                  variant="outline"
+                  className="border-indigo-500 text-indigo-600 hover:bg-indigo-50"
+                >
+                  {showExtraBonusTable ? '隐藏额外加分表' : '查看额外加分表'}
+                </Button>
+                <Button 
+                  onClick={handleClearExtraBonusTable}
+                  variant="outline"
+                  className="border-red-500 text-red-600 hover:bg-red-50"
+                >
+                  清空额外加分表
+                </Button>
+              </div>
+
+              {/* 额外加分表格 */}
+              {showExtraBonusTable && (
+                <div className="mt-4 border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    额外加分数据（共 {extraBonusData.length} 条）
+                  </h4>
+                  <div className="max-h-96 overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>学号</TableHead>
+                          <TableHead>分数</TableHead>
+                          <TableHead>更新时间</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {extraBonusData.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center text-gray-500">
+                              暂无额外加分数据
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          extraBonusData.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>{item.bupt_student_id}</TableCell>
+                              <TableCell className="font-medium text-indigo-600">
+                                {item.bonus_score}
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-500">
+                                {item.updated_at ? new Date(item.updated_at).toLocaleString('zh-CN') : '-'}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* 搜索区域 */}
         <Card className="mb-6">
           <CardHeader>
@@ -2661,6 +3293,63 @@ export default function GradeRecommendationPage() {
                     <p className="text-sm text-gray-600">查询学号</p>
                     <p className="text-2xl font-bold text-purple-600">{studentData.studentId}</p>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">额外加分</p>
+                      {editingExtraBonus ? (
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="4"
+                            value={extraBonusScore}
+                            onChange={(e) => setExtraBonusScore(e.target.value)}
+                            className="w-24 h-8"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={handleSaveExtraBonus}
+                            className="h-8 px-2"
+                          >
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCancelExtraBonusEdit}
+                            className="h-8 px-2"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <p className="text-2xl font-bold text-indigo-600">
+                            {studentData.extraBonus?.bonus_score || 0}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleEditExtraBonus}
+                            className="h-6 px-2"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {studentData.extraBonus?.updated_at 
+                      ? `更新于 ${new Date(studentData.extraBonus.updated_at).toLocaleString('zh-CN')}`
+                      : '暂无记录'}
+                  </p>
                 </CardContent>
               </Card>
             </div>
