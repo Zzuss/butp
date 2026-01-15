@@ -32,7 +32,6 @@ interface CompetitionRecord {
   competition_name: string
   bupt_student_id: string
   full_name: string
-  phone_number?: string // 改为手机号（可选）
   note: string
   score: number
   colorIndex: number
@@ -53,6 +52,7 @@ interface CompetitionFormProps {
   studentId: string
   studentName: string
   loading?: boolean
+  adminMode?: boolean // 管理员模式，允许修改分数
 }
 
 export default function CompetitionForm({
@@ -62,7 +62,8 @@ export default function CompetitionForm({
   editingRecord,
   studentId,
   studentName,
-  loading = false
+  loading = false,
+  adminMode = false
 }: CompetitionFormProps) {
   const { t } = useLanguage()
   const [competitionOptions, setCompetitionOptions] = useState<{
@@ -76,10 +77,10 @@ export default function CompetitionForm({
   const [selectedRegion, setSelectedRegion] = useState("")
   const [selectedLevel, setSelectedLevel] = useState("")
   const [selectedCompetition, setSelectedCompetition] = useState("")
-  const [phoneNumber, setPhoneNumber] = useState("") // 改为手机号
   const [awardType, setAwardType] = useState<'prize' | 'ranking'>('prize')
   const [awardValue, setAwardValue] = useState("")
   const [note, setNote] = useState("")
+  const [adminScore, setAdminScore] = useState<string>("") // 管理员模式下的分数
   const [formLoading, setFormLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({})
   
@@ -102,7 +103,6 @@ export default function CompetitionForm({
       setSelectedRegion(editingRecord.competition_region)
       setSelectedLevel(editingRecord.competition_level)
       setSelectedCompetition(editingRecord.competition_name)
-      setPhoneNumber(editingRecord.phone_number || "") // 改为手机号
       setNote(editingRecord.note || "")
       setAwardType(editingRecord.award_type || 'prize')
       setAwardValue(editingRecord.award_value || "")
@@ -110,6 +110,7 @@ export default function CompetitionForm({
       setTeamLeaderIsBupt(editingRecord.team_leader_is_bupt ?? null)
       setIsMainMember(editingRecord.is_main_member ?? null)
       setMainMembersCount(editingRecord.main_members_count || 1)
+      setAdminScore(editingRecord.score?.toString() || "0") // 设置管理员分数
     } else {
       resetForm()
     }
@@ -137,10 +138,10 @@ export default function CompetitionForm({
     setSelectedRegion("")
     setSelectedLevel("")
     setSelectedCompetition("")
-    setPhoneNumber("") // 改为手机号
     setAwardType('prize')
     setAwardValue("")
     setNote("")
+    setAdminScore("0")
     setFormErrors({})
     setCompetitionType('individual')
     setTeamLeaderIsBupt(null)
@@ -320,11 +321,6 @@ export default function CompetitionForm({
     if (!selectedCompetition) errors.competition = t('profile.competitions.form.error.name')
     if (!awardValue) errors.award = t('profile.competitions.form.error.award')
     
-    // 验证手机号格式（如果填写了）
-    if (phoneNumber && !/^1[3-9]\d{9}$/.test(phoneNumber)) {
-      errors.phoneNumber = '手机号格式不正确，应为11位数字'
-    }
-    
     // 团体竞赛验证
     if (competitionType === 'team') {
       if (teamLeaderIsBupt === null) {
@@ -353,9 +349,8 @@ export default function CompetitionForm({
       competition_name: selectedCompetition,
       bupt_student_id: studentId,
       full_name: studentName,
-      phone_number: phoneNumber || undefined, // 改为手机号
       note: note.trim(),
-      score: getPreviewScore() || 0,
+      score: adminMode ? (parseFloat(adminScore) || 0) : (getPreviewScore() || 0), // 管理员模式使用输入的分数
       colorIndex: editingRecord?.colorIndex || Math.floor(Math.random() * 10),
       award_type: awardType,
       award_value: awardValue,
@@ -485,21 +480,6 @@ export default function CompetitionForm({
                   ))}
                 </select>
                 {formErrors.competition && <p className="text-red-500 text-sm mt-1">{formErrors.competition}</p>}
-              </div>
-
-              {/* 手机号输入 */}
-              <div>
-                <label className="block text-sm font-medium mb-1">手机号（可选）</label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="请输入11位手机号"
-                  pattern="^1[3-9]\d{9}$"
-                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phoneNumber ? 'border-red-500' : ''}`}
-                />
-                <p className="text-xs text-gray-500 mt-1">格式：11位数字，以1开头</p>
-                {formErrors.phoneNumber && <p className="text-red-500 text-sm mt-1">{formErrors.phoneNumber}</p>}
               </div>
 
               {/* 竞赛类型选择 */}
@@ -670,6 +650,20 @@ export default function CompetitionForm({
               {selectedCompetition && (() => {
                 const availableTypes = getAvailableAwardTypes()
                 
+                // 编辑模式下，如果竞赛选项还没加载完成，显示当前的奖项类型
+                if (editingRecord && !availableTypes.prize && !availableTypes.ranking) {
+                  return (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('profile.competitions.form.award.type')}</label>
+                      <div className="p-2 bg-blue-50 border border-blue-200 rounded-md">
+                        <span className="text-blue-800 text-sm">
+                          {awardType === 'prize' ? t('profile.competitions.form.award.type.prize') : t('profile.competitions.form.award.type.ranking')}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                }
+                
                 // 如果只有一种类型可用，显示为信息提示而不是选择器
                 if (availableTypes.single) {
                   const singleType = availableTypes.prize ? 'prize' : 'ranking'
@@ -740,7 +734,7 @@ export default function CompetitionForm({
               })()}
 
               {/* 具体奖项/排名选择 */}
-              {selectedCompetition && (getAvailableAwardTypes().prize || getAvailableAwardTypes().ranking) ? (
+              {selectedCompetition && (getAvailableAwardTypes().prize || getAvailableAwardTypes().ranking || editingRecord) ? (
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     {awardType === 'prize' ? t('profile.competitions.form.award.label.prize') : t('profile.competitions.form.award.label.ranking')}
@@ -759,16 +753,31 @@ export default function CompetitionForm({
                 </div>
               ) : null}
 
-              {/* 分数预览 */}
-              {awardValue && selectedCompetition && (getAvailableAwardTypes().prize || getAvailableAwardTypes().ranking) && (
-                <div className="bg-blue-50 p-3 rounded-md">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-blue-800">{t('profile.competitions.form.preview.label')}</span>
-                    <span className="font-semibold text-blue-900">
-                      {shouldShowYearlyDecision() ? t('profile.competitions.form.preview.dependent') : t('profile.competitions.form.preview.points', { score: getPreviewScore() || 0 })}
-                    </span>
-                  </div>
+              {/* 分数预览或管理员分数输入 */}
+              {adminMode ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">分数</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    value={adminScore}
+                    onChange={(e) => setAdminScore(e.target.value)}
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="请输入分数"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">管理员可以手动修改分数</p>
                 </div>
+              ) : (
+                awardValue && selectedCompetition && (getAvailableAwardTypes().prize || getAvailableAwardTypes().ranking || editingRecord) && (
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-blue-800">{t('profile.competitions.form.preview.label')}</span>
+                      <span className="font-semibold text-blue-900">
+                        {shouldShowYearlyDecision() ? t('profile.competitions.form.preview.dependent') : t('profile.competitions.form.preview.points', { score: getPreviewScore() || 0 })}
+                      </span>
+                    </div>
+                  </div>
+                )
               )}
 
               {/* 备注 */}

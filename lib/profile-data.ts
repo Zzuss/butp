@@ -508,7 +508,6 @@ export interface Paper {
   journal_category?: string;
   bupt_student_id?: string;
   full_name?: string;
-  phone_number?: string; // 改为手机号
   author_type?: string;
   publish_date?: string;
   note?: string;
@@ -524,7 +523,6 @@ export interface Patent {
   patent_number?: string;
   patent_date?: string;
   bupt_student_id?: string;
-  phone_number?: string; // 改为手机号
   full_name?: string;
   category_of_patent_owner?: string;
   note?: string;
@@ -554,7 +552,6 @@ export async function getUserPapers(userId: string): Promise<Paper[]> {
       journal_category: paper.journal_category,
       bupt_student_id: paper.bupt_student_id,
       full_name: paper.full_name,
-      phone_number: paper.phone_number, // 改为手机号
       author_type: paper.author_type,
       publish_date: paper.publish_date,
       note: paper.note,
@@ -628,21 +625,6 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
       return value.trim();
     };
 
-    // 辅助函数：验证手机号格式
-    const validatePhoneNumber = (phoneNumber: string | undefined | null): string | null => {
-      if (!phoneNumber || phoneNumber.trim() === '') {
-        return null;
-      }
-      
-      const trimmed = phoneNumber.trim();
-      // 验证11位数字格式
-      if (/^1[3-9]\d{9}$/.test(trimmed)) {
-        return trimmed;
-      }
-      
-      return null;
-    };
-
     const paperData = {
       ...(paper.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       paper_title: paper.paper_title,
@@ -650,7 +632,6 @@ export async function savePaper(userId: string, userName: string, paper: Paper):
       journal_category: emptyToNull(paper.journal_category),
       bupt_student_id: userId, // 自动填入用户的学号
       full_name: userName, // 自动填入用户的真实姓名
-      phone_number: validatePhoneNumber(paper.phone_number), // 改为手机号
       author_type: emptyToNull(paper.author_type),
       publish_date: formattedDate,
       note: emptyToNull(paper.note)
@@ -763,7 +744,6 @@ export async function getUserPatents(userId: string): Promise<Patent[]> {
       patent_number: patent.patent_number,
       patent_date: patent.patent_date,
       bupt_student_id: patent.bupt_student_id,
-      phone_number: patent.phone_number, // 改为手机号
       full_name: patent.full_name,
       category_of_patent_owner: patent.category_of_patent_owner,
       note: patent.note,
@@ -813,28 +793,12 @@ export async function savePatent(userId: string, userName: string, patent: Paten
       return value.trim();
     };
 
-    // 辅助函数：验证手机号格式
-    const validatePhoneNumber = (phoneNumber: string | undefined | null): string | null => {
-      if (!phoneNumber || phoneNumber.trim() === '') {
-        return null;
-      }
-      
-      const trimmed = phoneNumber.trim();
-      // 验证11位数字格式
-      if (/^1[3-9]\d{9}$/.test(trimmed)) {
-        return trimmed;
-      }
-      
-      return null;
-    };
-
     const patentData = {
       ...(patent.id ? {} : { id: generateUUID() }), // 只有新记录才生成UUID
       patent_name: patent.patent_name,
       patent_number: emptyToNull(patent.patent_number),
       patent_date: formattedPatentDate,
       bupt_student_id: userId, // 自动填入用户的学号
-      phone_number: validatePhoneNumber(patent.phone_number), // 改为手机号
       full_name: userName, // 自动填入用户的真实姓名
       category_of_patent_owner: emptyToNull(patent.category_of_patent_owner),
       note: emptyToNull(patent.note)

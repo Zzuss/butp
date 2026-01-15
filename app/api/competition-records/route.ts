@@ -54,7 +54,6 @@ export async function POST(req: NextRequest) {
       competition_name,
       bupt_student_id,
       full_name,
-      phone_number, // 改为手机号
       award_type, // 'prize' 或 'ranking'
       award_value, // 具体获得的奖项或排名
       note,
@@ -87,14 +86,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         message: '请填写所有必填字段'
-      }, { status: 400 })
-    }
-
-    // 验证手机号格式（如果提供）
-    if (phone_number && !/^1[3-9]\d{9}$/.test(phone_number)) {
-      return NextResponse.json({
-        success: false,
-        message: '手机号格式不正确，应为11位数字'
       }, { status: 400 })
     }
 
@@ -160,7 +151,6 @@ export async function POST(req: NextRequest) {
         competition_name,
         bupt_student_id,
         full_name,
-        phone_number: phone_number || null, // 改为手机号
         note: note || '',
         score,
         // 新增字段
@@ -207,7 +197,6 @@ export async function PUT(req: NextRequest) {
       competition_name,
       bupt_student_id,
       full_name,
-      phone_number,
       award_type,
       award_value,
       note,
@@ -265,14 +254,6 @@ export async function PUT(req: NextRequest) {
       }, { status: 403 })
     }
 
-    // 验证手机号格式（如果提供）
-    if (phone_number && !/^1[3-9]\d{9}$/.test(phone_number)) {
-      return NextResponse.json({
-        success: false,
-        message: '手机号格式不正确，应为11位数字'
-      }, { status: 400 })
-    }
-
     // 根据奖项类型查询对应的分数
     let score = 0
     let scoreQuery
@@ -322,7 +303,6 @@ export async function PUT(req: NextRequest) {
         competition_level,
         competition_name,
         full_name,
-        phone_number: phone_number || null,
         note: note || '',
         score,
         competition_type: award_type === 'ranking' ? 'individual' : (competition_type || 'individual'),

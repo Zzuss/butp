@@ -19,7 +19,6 @@ export async function PUT(request: NextRequest) {
       paper_title, 
       journal_name, 
       journal_category, 
-      phone_number,  // 修改：class → phone_number
       author_type, 
       publish_date, 
       note,
@@ -33,21 +32,6 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // 验证手机号格式（如果提供）
-    const validatePhoneNumber = (phone: string | undefined | null): string | null => {
-      if (!phone || phone.trim() === '') {
-        return null;
-      }
-      
-      const trimmed = phone.trim();
-      // 验证手机号格式：11位数字
-      if (/^\d{11}$/.test(trimmed)) {
-        return trimmed;
-      }
-      
-      return null;
-    };
 
     // 处理日期格式：数据库现在支持年月格式
     let formattedDate = null;
@@ -88,10 +72,6 @@ export async function PUT(request: NextRequest) {
     
     if (journal_category !== undefined) {
       updateData.journal_category = journal_category?.trim() || null;
-    }
-    
-    if (phone_number !== undefined) {
-      updateData.phone_number = validatePhoneNumber(phone_number);
     }
     
     if (author_type !== undefined) {

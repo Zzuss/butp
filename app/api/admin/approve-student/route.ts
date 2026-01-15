@@ -26,7 +26,7 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
     // 获取学生的论文记录
     const { data: papers, error: paperError } = await supabase
       .from('student_papers')
-      .select('bupt_student_id, full_name, phone_number, score')
+      .select('bupt_student_id, full_name, score')
       .eq('bupt_student_id', studentId)
       .eq('approval_status', 'approved');
 
@@ -38,7 +38,7 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
     // 获取学生的专利记录
     const { data: patents, error: patentError } = await supabase
       .from('student_patents')
-      .select('bupt_student_id, full_name, phone_number, score')
+      .select('bupt_student_id, full_name, score')
       .eq('bupt_student_id', studentId)
       .eq('approval_status', 'approved');
 
@@ -50,7 +50,7 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
     // 获取学生的竞赛记录
     const { data: competitions, error: competitionError } = await supabase
       .from('student_competition_records')
-      .select('bupt_student_id, full_name, phone_number, score')
+      .select('bupt_student_id, full_name, score')
       .eq('bupt_student_id', studentId)
       .eq('approval_status', 'approved');
 
@@ -58,6 +58,15 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
       console.error('获取竞赛数据失败:', competitionError);
       return null;
     }
+
+    // 获取学生手机号
+    const { data: phoneData } = await supabase
+      .from('student_phone_numbers')
+      .select('phone_number')
+      .eq('bupt_student_id', studentId)
+      .single();
+
+    const phoneNumber = phoneData?.phone_number || '';
 
     // 获取额外加分
     const { data: extraBonus, error: extraBonusError } = await supabase
@@ -76,27 +85,18 @@ async function calculateStudentMoralScore(studentId: string): Promise<MoralEduca
       return null;
     }
 
-    // 获取学生基本信息（从任一有记录的表中获取，优先使用phone_number作为class）
-    let studentInfo = { full_name: '', class: '', phone_number: '' };
+    // 获取学生基本信息
+    let studentInfo = { full_name: '', class: '', phone_number: phoneNumber };
     if (papers && papers.length > 0) {
-      studentInfo = { 
-        full_name: papers[0].full_name || '', 
-        class: papers[0].phone_number?.toString() || '',
-        phone_number: papers[0].phone_number?.toString() || ''
-      };
+      studentInfo.full_name = papers[0].full_name || '';
     } else if (patents && patents.length > 0) {
-      studentInfo = { 
-        full_name: patents[0].full_name || '', 
-        class: patents[0].phone_number?.toString() || '',
-        phone_number: patents[0].phone_number?.toString() || ''
-      };
+      studentInfo.full_name = patents[0].full_name || '';
     } else if (competitions && competitions.length > 0) {
-      studentInfo = { 
-        full_name: competitions[0].full_name || '', 
-        class: competitions[0].phone_number?.toString() || '',
-        phone_number: competitions[0].phone_number?.toString() || ''
-      };
+      studentInfo.full_name = competitions[0].full_name || '';
     }
+
+    // class 字段暂时留空，可以从其他地方获取
+    studentInfo.class = '';
 
     // 计算各项分数
     const paperScore = papers?.reduce((sum, paper) => sum + (parseFloat(paper.score?.toString() || '0') || 0), 0) || 0;

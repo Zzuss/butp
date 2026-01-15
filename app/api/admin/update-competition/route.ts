@@ -20,7 +20,12 @@ export async function PUT(request: NextRequest) {
       competition_region, 
       competition_level, 
       competition_type,
-      phone_number,  // 修改：class → phone_number
+      award_type,
+      award_value,
+      team_leader_is_bupt,
+      is_main_member,
+      main_members_count,
+      coefficient,
       note,
       score 
     } = body;
@@ -32,21 +37,6 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // 验证手机号格式（如果提供）
-    const validatePhoneNumber = (phone: string | undefined | null): string | null => {
-      if (!phone || phone.trim() === '') {
-        return null;
-      }
-      
-      const trimmed = phone.trim();
-      // 验证手机号格式：11位数字
-      if (/^\d{11}$/.test(trimmed)) {
-        return trimmed;
-      }
-      
-      return null;
-    };
 
     // 使用与现有PATCH API相同的更新方式
     const updateData: any = {
@@ -71,8 +61,28 @@ export async function PUT(request: NextRequest) {
       updateData.competition_type = competition_type?.trim() || 'individual';
     }
     
-    if (phone_number !== undefined) {
-      updateData.phone_number = validatePhoneNumber(phone_number);
+    if (award_type !== undefined) {
+      updateData.award_type = award_type || null;
+    }
+    
+    if (award_value !== undefined) {
+      updateData.award_value = award_value || null;
+    }
+    
+    if (team_leader_is_bupt !== undefined) {
+      updateData.team_leader_is_bupt = team_leader_is_bupt;
+    }
+    
+    if (is_main_member !== undefined) {
+      updateData.is_main_member = is_main_member;
+    }
+    
+    if (main_members_count !== undefined) {
+      updateData.main_members_count = main_members_count;
+    }
+    
+    if (coefficient !== undefined) {
+      updateData.coefficient = coefficient;
     }
     
     if (note !== undefined) {

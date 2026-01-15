@@ -23,7 +23,6 @@ export async function PUT(request: NextRequest) {
       patent_name, 
       patent_number, 
       patent_date, 
-      phone_number,  // 修改：class → phone_number
       category_of_patent_owner,
       defense_status,  // 新增：答辩状态
       note,
@@ -37,21 +36,6 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // 验证手机号格式（如果提供）
-    const validatePhoneNumber = (phone: string | undefined | null): string | null => {
-      if (!phone || phone.trim() === '') {
-        return null;
-      }
-      
-      const trimmed = phone.trim();
-      // 验证手机号格式：11位数字
-      if (/^\d{11}$/.test(trimmed)) {
-        return trimmed;
-      }
-      
-      return null;
-    };
 
     // 处理日期格式：数据库现在支持年月格式
     let formattedDate = null;
@@ -92,10 +76,6 @@ export async function PUT(request: NextRequest) {
     
     if (formattedDate !== null) {
       updateData.patent_date = formattedDate;
-    }
-    
-    if (phone_number !== undefined) {
-      updateData.phone_number = validatePhoneNumber(phone_number);
     }
     
     if (defense_status !== undefined) {

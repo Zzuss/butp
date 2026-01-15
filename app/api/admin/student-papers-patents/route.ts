@@ -79,6 +79,15 @@ export async function GET(request: NextRequest) {
       extraBonusData = extraBonus;
     }
 
+    // 获取学生手机号
+    const { data: phoneData } = await supabase
+      .from('student_phone_numbers')
+      .select('phone_number')
+      .eq('bupt_student_id', studentId)
+      .single();
+
+    const studentPhoneNumber = phoneData?.phone_number || null;
+
     // 获取学生整体审核状态
     const { data: approvalData, error: approvalError } = await supabase
       .from('student_approvals')
@@ -111,6 +120,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       studentId,
+      phoneNumber: studentPhoneNumber,
       papers: papersWithStatus,
       patents: patentsWithStatus,
       competitions: competitionsWithStatus,

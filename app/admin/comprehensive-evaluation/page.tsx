@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import * as XLSX from 'xlsx'
 import AdminLayout from '@/components/admin/AdminLayout'
+import CompetitionForm from '@/components/competitions/CompetitionForm'
 
 interface Paper {
   id: string
@@ -54,6 +55,8 @@ interface Competition {
   competition_level: string
   competition_name: string
   competition_type: string
+  award_type?: 'prize' | 'ranking'
+  award_value?: string
   bupt_student_id: string
   full_name: string
   phone_number: string | null
@@ -66,6 +69,7 @@ interface Competition {
 
 interface StudentData {
   studentId: string
+  phoneNumber?: string | null
   papers: Paper[]
   patents: Patent[]
   competitions: Competition[]
@@ -316,6 +320,15 @@ export default function GradeRecommendationPage() {
   const [approvalLoading, setApprovalLoading] = useState<{ [key: string]: boolean }>({})
   const [defenseLoading, setDefenseLoading] = useState<{ [key: string]: boolean }>({})
 
+  // 审核统计状态
+  const [approvalStats, setApprovalStats] = useState({
+    approved: 0,
+    pending: 0,
+    rejected: 0,
+    total: 0
+  })
+  const [statsLoading, setStatsLoading] = useState(false)
+
   // 编辑相关状态
   const [editingPaper, setEditingPaper] = useState<Paper | null>(null)
   const [editingPatent, setEditingPatent] = useState<Patent | null>(null)
@@ -325,10 +338,6 @@ export default function GradeRecommendationPage() {
   const [showCompetitionEditForm, setShowCompetitionEditForm] = useState(false)
   const [editingExtraBonus, setEditingExtraBonus] = useState(false)
   const [extraBonusScore, setExtraBonusScore] = useState<string>('')
-  const [competitionFormData, setCompetitionFormData] = useState({
-    competition_name: '', competition_region: '', competition_level: '',
-    phone_number: '', note: '', score: ''
-  })
 
   // 数据表相关状态
   const [showScoreTable, setShowScoreTable] = useState(false)
@@ -338,6 +347,31 @@ export default function GradeRecommendationPage() {
   const [comprehensiveRankings, setComprehensiveRankings] = useState<any[]>([])
   const [showRankingTable, setShowRankingTable] = useState(false)
   const [extraBonusData, setExtraBonusData] = useState<any[]>([])
+
+  // 翻译奖项值的辅助函数
+  const translateAwardValue = (awardType: string, awardValue: string): string => {
+    if (awardType === 'prize') {
+      const prizeMap: { [key: string]: string } = {
+        'premier_prize': '特等奖',
+        'first_prize': '一等奖',
+        'second_prize': '二等奖',
+        'third_prize': '三等奖'
+      }
+      return prizeMap[awardValue] || awardValue
+    } else if (awardType === 'ranking') {
+      const rankingMap: { [key: string]: string } = {
+        'ranked_first': '第一名',
+        'ranked_second': '第二名',
+        'ranked_third': '第三名',
+        'ranked_fourth': '第四名',
+        'ranked_fifth': '第五名',
+        'ranked_sixth': '第六名'
+      }
+      return rankingMap[awardValue] || awardValue
+    }
+    return awardValue
+  }
+
   const [showExtraBonusTable, setShowExtraBonusTable] = useState(false)
 
   // 导入相关状态
@@ -382,14 +416,6 @@ export default function GradeRecommendationPage() {
 
   const handleEditCompetition = (competition: Competition) => {
     setEditingCompetition(competition)
-    setCompetitionFormData({
-      competition_name: competition.competition_name || '',
-      competition_region: competition.competition_region || '',
-      competition_level: competition.competition_level || '',
-      phone_number: competition.phone_number || '',
-      note: competition.note || '',
-      score: competition.score?.toString() || ''
-    })
     setShowCompetitionEditForm(true)
   }
 
@@ -400,7 +426,6 @@ export default function GradeRecommendationPage() {
     setShowPaperEditForm(false)
     setShowPatentEditForm(false)
     setShowCompetitionEditForm(false)
-    setCompetitionFormData({ competition_name: '', competition_region: '', competition_level: '', phone_number: '', note: '', score: '' })
   }
 
   const handleSavePaper = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -414,7 +439,6 @@ export default function GradeRecommendationPage() {
         paper_title: formData.get('paper_title') as string,
         journal_name: formData.get('journal_name') as string,
         journal_category: formData.get('journal_category') as string,
-        phone_number: formData.get('phone_number') as string,
         author_type: formData.get('author_type') as string,
         publish_date: (formData.get('publish_date') as string) || null,
         note: formData.get('note') as string,
@@ -448,7 +472,6 @@ export default function GradeRecommendationPage() {
         patent_name: formData.get('patent_name') as string,
         patent_number: formData.get('patent_number') as string,
         patent_date: (formData.get('patent_date') as string) || null,
-        phone_number: formData.get('phone_number') as string,
         category_of_patent_owner: formData.get('category_of_patent_owner') as string,
         defense_status: formData.get('defense_status') as 'pending' | 'passed' | 'failed',
         note: formData.get('note') as string,
@@ -471,24 +494,24 @@ export default function GradeRecommendationPage() {
     }
   }
 
-  const handleSaveCompetition = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleSaveCompetition = async (record: any) => {
     if (!editingCompetition) return
     setLoading(true)
     try {
-      if (!competitionFormData.competition_level?.trim()) {
-        setError('请选择竞赛级别')
-        setLoading(false)
-        return
-      }
       const updatedCompetition = {
         ...editingCompetition,
-        competition_name: competitionFormData.competition_name,
-        competition_region: competitionFormData.competition_region,
-        competition_level: competitionFormData.competition_level,
-        phone_number: competitionFormData.phone_number || null,
-        note: competitionFormData.note,
-        score: parseFloat(competitionFormData.score) || 0,
+        competition_name: record.competition_name,
+        competition_region: record.competition_region,
+        competition_level: record.competition_level,
+        competition_type: record.competition_type,
+        award_type: record.award_type,
+        award_value: record.award_value,
+        team_leader_is_bupt: record.team_leader_is_bupt,
+        is_main_member: record.is_main_member,
+        main_members_count: record.main_members_count,
+        coefficient: record.coefficient,
+        note: record.note,
+        score: record.score,
       }
       const response = await fetch('/api/admin/update-competition', {
         method: 'PUT',
@@ -565,6 +588,25 @@ export default function GradeRecommendationPage() {
       setError(err instanceof Error ? err.message : '搜索失败')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadApprovalStats = async () => {
+    setStatsLoading(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/student-approval-stats')
+      const result = await response.json()
+      if (result.success) {
+        setApprovalStats(result.data)
+      } else {
+        setError('获取审核统计失败')
+      }
+    } catch (err) {
+      console.error('加载审核统计失败:', err)
+      setError('加载审核统计失败')
+    } finally {
+      setStatsLoading(false)
     }
   }
 
@@ -1131,7 +1173,10 @@ export default function GradeRecommendationPage() {
     }
   }
 
-  React.useEffect(() => { loadDeadlineConfig() }, [])
+  React.useEffect(() => { 
+    loadDeadlineConfig()
+    loadApprovalStats()
+  }, [])
 
   // ==================== 审核函数 ====================
 
@@ -1368,12 +1413,69 @@ export default function GradeRecommendationPage() {
 
           {/* ==================== Tab 1: 学生审核 ==================== */}
           <TabsContent value="review" className="space-y-6">
+            {/* 审核统计面板 */}
+            <div className="grid grid-cols-3 gap-4">
+              <Card className="border-green-200 bg-green-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-green-600 mb-1">审核通过</p>
+                      <p className="text-3xl font-bold text-green-700">
+                        {statsLoading ? '...' : approvalStats.approved}
+                      </p>
+                    </div>
+                    <CheckCircle className="h-10 w-10 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-yellow-200 bg-yellow-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-yellow-600 mb-1">待审核</p>
+                      <p className="text-3xl font-bold text-yellow-700">
+                        {statsLoading ? '...' : approvalStats.pending}
+                      </p>
+                    </div>
+                    <Clock className="h-10 w-10 text-yellow-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-red-600 mb-1">已拒绝</p>
+                      <p className="text-3xl font-bold text-red-700">
+                        {statsLoading ? '...' : approvalStats.rejected}
+                      </p>
+                    </div>
+                    <XCircle className="h-10 w-10 text-red-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* 搜索区域 */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Search className="h-5 w-5 mr-2" />
-                  学生信息查询
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Search className="h-5 w-5 mr-2" />
+                    学生信息查询
+                  </div>
+                  <Button 
+                    onClick={loadApprovalStats} 
+                    disabled={statsLoading}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <RotateCcw className={`h-4 w-4 ${statsLoading ? 'animate-spin' : ''}`} />
+                    刷新统计
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1414,11 +1516,14 @@ export default function GradeRecommendationPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-gray-600 mb-2">学号：<span className="font-mono font-semibold">{studentData.studentId}</span></p>
+                        {studentData.phoneNumber && (
+                          <p className="text-sm text-gray-600 mb-2">手机号：<span className="font-mono font-semibold">{studentData.phoneNumber}</span></p>
+                        )}
                         <p className="text-sm text-gray-600 mb-1">
                           当前状态：{studentData.overall_approval_status === 'approved' ? '综合资格已通过' : studentData.overall_approval_status === 'rejected' ? '综合资格已拒绝' : '等待审核'}
                         </p>
                         {studentData.overall_approval_status === 'approved' && (
-                          <p className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">⚠️ 学生综合资格已通过，所有保研相关信息已锁定</p>
+                          <p className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">⚠️ 学生综合资格已通过，所有推免相关信息已锁定</p>
                         )}
                         {(() => {
                           const { canApprove, pendingRecords } = checkAllRecordsApproved(studentData)
@@ -1671,8 +1776,9 @@ export default function GradeRecommendationPage() {
                               <TableHead>竞赛名称</TableHead>
                               <TableHead>竞赛地区</TableHead>
                               <TableHead>竞赛级别</TableHead>
+                              <TableHead>竞赛类型</TableHead>
+                              <TableHead>获得奖项</TableHead>
                               <TableHead>姓名</TableHead>
-                              <TableHead>手机号</TableHead>
                               <TableHead>备注</TableHead>
                               <TableHead>分数</TableHead>
                               <TableHead>审核状态</TableHead>
@@ -1688,8 +1794,9 @@ export default function GradeRecommendationPage() {
                                   <TableCell className="font-medium">{competition.competition_name}</TableCell>
                                   <TableCell>{competition.competition_region}</TableCell>
                                   <TableCell><Badge variant="outline">{competition.competition_level}</Badge></TableCell>
+                                  <TableCell>{(competition as any).competition_type === 'individual' ? '个人' : (competition as any).competition_type === 'team' ? '团体' : '-'}</TableCell>
+                                  <TableCell>{(competition as any).award_value ? translateAwardValue((competition as any).award_type, (competition as any).award_value) : '-'}</TableCell>
                                   <TableCell>{competition.full_name}</TableCell>
-                                  <TableCell>{competition.phone_number || '-'}</TableCell>
                                   <TableCell>{competition.note || '-'}</TableCell>
                                   <TableCell>
                                     {isEditing ? (
@@ -2263,32 +2370,29 @@ export default function GradeRecommendationPage() {
                     <option value="">请选择期刊类别</option>
                     <option value="SCI">SCI</option>
                     <option value="EI">EI</option>
+                    <option value="CSCD">CSCD</option>
                     <option value="核心期刊">核心期刊</option>
                     <option value="普通期刊">普通期刊</option>
                     <option value="会议论文">会议论文</option>
+                    <option value="其他">其他</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">手机号</label>
-                  <input name="phone_number" type="text" className="w-full p-2 border rounded-md" defaultValue={editingPaper.phone_number || ""} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">作者类型</label>
                   <select name="author_type" className="w-full p-2 border rounded-md" defaultValue={editingPaper.author_type || ""}>
                     <option value="">请选择作者类型</option>
+                    <option value="独立作者">独立作者</option>
                     <option value="第一作者">第一作者</option>
-                    <option value="通讯作者">通讯作者</option>
-                    <option value="共同第一作者">共同第一作者</option>
-                    <option value="其他作者">其他作者</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">发表日期</label>
-                  <input name="publish_date" type="month" className="w-full p-2 border rounded-md" defaultValue={editingPaper.publish_date || ""} />
+                  <input name="publish_date" type="month" max={new Date().toISOString().slice(0, 7)} className="w-full p-2 border rounded-md" defaultValue={editingPaper.publish_date || ""} />
+                  <p className="text-xs text-gray-500 mt-1">只能选择当月或之前的日期</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">备注</label>
-                  <textarea name="note" className="w-full p-2 border rounded-md" rows={2} defaultValue={editingPaper.note || ""} />
+                  <textarea name="note" className="w-full p-2 border rounded-md" rows={3} defaultValue={editingPaper.note || ""} placeholder="请输入备注信息" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">分数</label>
@@ -2320,25 +2424,12 @@ export default function GradeRecommendationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">专利号</label>
-                  <input name="patent_number" type="text" className="w-full p-2 border rounded-md" defaultValue={editingPatent.patent_number || ""} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">专利权人类别</label>
-                  <select name="category_of_patent_owner" className="w-full p-2 border rounded-md" defaultValue={editingPatent.category_of_patent_owner || ""}>
-                    <option value="">请选择专利权人类别</option>
-                    <option value="发明专利">发明专利</option>
-                    <option value="实用新型">实用新型</option>
-                    <option value="外观设计">外观设计</option>
-                    <option value="软件著作权">软件著作权</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">手机号</label>
-                  <input name="phone_number" type="text" className="w-full p-2 border rounded-md" defaultValue={editingPatent.phone_number || ""} />
+                  <input name="patent_number" type="text" className="w-full p-2 border rounded-md" defaultValue={editingPatent.patent_number || ""} placeholder="请输入专利号" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">申请日期</label>
-                  <input name="patent_date" type="month" className="w-full p-2 border rounded-md" defaultValue={editingPatent.patent_date || ""} />
+                  <input name="patent_date" type="month" max={new Date().toISOString().slice(0, 7)} className="w-full p-2 border rounded-md" defaultValue={editingPatent.patent_date || ""} />
+                  <p className="text-xs text-gray-500 mt-1">只能选择当月或之前的日期</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">答辩状态</label>
@@ -2349,8 +2440,17 @@ export default function GradeRecommendationPage() {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium mb-1">专利权人类别</label>
+                  <select name="category_of_patent_owner" className="w-full p-2 border rounded-md" defaultValue={editingPatent.category_of_patent_owner || ""}>
+                    <option value="">请选择专利权人类别</option>
+                    <option value="独立发明人">独立发明人</option>
+                    <option value="第一发明人（多人）">第一发明人（多人）</option>
+                    <option value="其他">其他</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-1">备注</label>
-                  <textarea name="note" className="w-full p-2 border rounded-md" rows={2} defaultValue={editingPatent.note || ""} />
+                  <textarea name="note" className="w-full p-2 border rounded-md" rows={3} defaultValue={editingPatent.note || ""} placeholder="请输入备注信息" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">分数</label>
@@ -2367,67 +2467,33 @@ export default function GradeRecommendationPage() {
       )}
 
       {/* 竞赛编辑表单 */}
-      {showCompetitionEditForm && editingCompetition && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">编辑竞赛信息</h3>
-              <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-8 w-8"><X className="h-4 w-4" /></Button>
-            </div>
-            <form onSubmit={handleSaveCompetition}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">竞赛名称</label>
-                  <input type="text" required className="w-full p-2 border rounded-md" value={competitionFormData.competition_name}
-                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, competition_name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">竞赛地区</label>
-                  <select className="w-full p-2 border rounded-md" value={competitionFormData.competition_region}
-                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, competition_region: e.target.value }))}>
-                    <option value="">请选择竞赛地区</option>
-                    <option value="国际级">国际级</option>
-                    <option value="国家级">国家级</option>
-                    <option value="省部级">省部级</option>
-                    <option value="校级">校级</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">竞赛级别</label>
-                  <select className="w-full p-2 border rounded-md" value={competitionFormData.competition_level}
-                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, competition_level: e.target.value }))}>
-                    <option value="">请选择竞赛级别</option>
-                    <option value="特等奖">特等奖</option>
-                    <option value="一等奖">一等奖</option>
-                    <option value="二等奖">二等奖</option>
-                    <option value="三等奖">三等奖</option>
-                    <option value="优秀奖">优秀奖</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">手机号</label>
-                  <input type="text" className="w-full p-2 border rounded-md" value={competitionFormData.phone_number}
-                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, phone_number: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">备注</label>
-                  <textarea className="w-full p-2 border rounded-md" rows={2} value={competitionFormData.note}
-                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, note: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">分数</label>
-                  <input type="number" step="0.01" className="w-full p-2 border rounded-md" value={competitionFormData.score}
-                    onChange={(e) => setCompetitionFormData(prev => ({ ...prev, score: e.target.value }))} />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 mt-6">
-                <Button type="button" variant="outline" onClick={handleCancelEdit}>取消</Button>
-                <Button type="submit" disabled={loading}>{loading ? '保存中...' : '保存'}</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CompetitionForm
+        isOpen={showCompetitionEditForm}
+        onClose={handleCancelEdit}
+        onSubmit={handleSaveCompetition}
+        editingRecord={editingCompetition ? {
+          id: editingCompetition.id,
+          competition_region: editingCompetition.competition_region,
+          competition_level: editingCompetition.competition_level,
+          competition_name: editingCompetition.competition_name,
+          bupt_student_id: editingCompetition.bupt_student_id,
+          full_name: editingCompetition.full_name,
+          note: editingCompetition.note,
+          score: editingCompetition.score,
+          colorIndex: 0,
+          award_type: (editingCompetition as any).award_type,
+          award_value: (editingCompetition as any).award_value,
+          competition_type: (editingCompetition as any).competition_type,
+          team_leader_is_bupt: (editingCompetition as any).team_leader_is_bupt,
+          is_main_member: (editingCompetition as any).is_main_member,
+          main_members_count: (editingCompetition as any).main_members_count,
+          coefficient: (editingCompetition as any).coefficient
+        } : null}
+        studentId={editingCompetition?.bupt_student_id || ''}
+        studentName={editingCompetition?.full_name || ''}
+        loading={loading}
+        adminMode={true}
+      />
     </AdminLayout>
   )
 }

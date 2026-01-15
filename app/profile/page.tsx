@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/contexts/AuthContext"
 import { getStudentInfo } from "@/lib/dashboard-data"
 import CompetitionForm from "@/components/competitions/CompetitionForm"
+import PhoneNumberModal from "@/components/PhoneNumberModal"
 import { 
   getUserLanguageScores, 
   getUserAwards, 
@@ -100,7 +101,6 @@ interface PaperLocal {
   journal_category?: string;
   bupt_student_id?: string;
   full_name?: string;
-  phone_number?: string; // 改为手机号
   author_type?: string;
   publish_date?: string;
   note?: string;
@@ -115,7 +115,6 @@ interface PatentLocal {
   patent_number?: string;
   patent_date?: string;
   bupt_student_id?: string;
-  phone_number?: string; // 改为手机号
   full_name?: string;
   category_of_patent_owner?: string;
   note?: string;
@@ -132,7 +131,6 @@ interface CompetitionRecord {
   competition_name: string;
   bupt_student_id: string;
   full_name: string;
-  phone_number?: string; // 改为手机号（可选）
   note: string;
   score: number;
   colorIndex: number;
@@ -154,6 +152,11 @@ export default function Profile() {
   const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
+  
+  // 手机号相关状态
+  const [phoneNumber, setPhoneNumber] = useState<string | null>(null)
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [phoneLoading, setPhoneLoading] = useState(false)
   
   // 截止时间相关状态
   const [isPastDeadline, setIsPastDeadline] = useState(false)
@@ -343,6 +346,55 @@ export default function Profile() {
     }
   }
 
+  // 加载学生手机号
+  const loadPhoneNumber = async (studentId: string) => {
+    try {
+      const response = await fetch(`/api/student-phone?studentId=${studentId}`)
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        setPhoneNumber(result.data.phone_number)
+      } else {
+        setPhoneNumber(null)
+      }
+    } catch (error) {
+      console.error('获取手机号失败:', error)
+      setPhoneNumber(null)
+    }
+  }
+
+  // 保存手机号
+  const handleSavePhoneNumber = async (phone: string) => {
+    if (!user?.userId) return
+    
+    setPhoneLoading(true)
+    try {
+      const response = await fetch('/api/student-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: user.userId,
+          phoneNumber: phone
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setPhoneNumber(phone)
+        alert('手机号保存成功')
+      } else {
+        throw new Error(result.error || '保存失败')
+      }
+    } catch (error) {
+      console.error('保存手机号失败:', error)
+      alert(error instanceof Error ? error.message : '保存手机号失败')
+      throw error
+    } finally {
+      setPhoneLoading(false)
+    }
+  }
+
   // 加载学生信息和用户个人资料数据
   useEffect(() => {
     if (authLoading) return;
@@ -372,6 +424,11 @@ export default function Profile() {
         // 获取学生审核状态
         if (user.userId) {
           await getStudentApprovalStatus(user.userId);
+        }
+
+        // 获取学生手机号
+        if (user.userId) {
+          await loadPhoneNumber(user.userId);
         }
         
         setStudentInfo(info);
@@ -655,11 +712,16 @@ export default function Profile() {
   // 添加论文处理函数
   const handleAddPaper = () => {
     if (isLocked) {
-      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      alert('您的推免资格已通过审核，无法修改推免相关信息');
       return;
     }
     if (isPastDeadline) {
       alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法添加论文记录`);
+      return;
+    }
+    // 检查手机号
+    if (!phoneNumber) {
+      setShowPhoneModal(true);
       return;
     }
     setEditingPaper(null);
@@ -669,7 +731,7 @@ export default function Profile() {
   
   const handleEditPaper = (paper: PaperLocal) => {
     if (isLocked) {
-      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      alert('您的推免资格已通过审核，无法修改推免相关信息');
       return;
     }
     // 检查单条记录是否已审核
@@ -734,7 +796,6 @@ export default function Profile() {
       paper_title: formData.get("paper_title") as string,
       journal_name: formData.get("journal_name") as string,
       journal_category: formData.get("journal_category") as string,
-      phone_number: formData.get("phone_number") as string,
       author_type: formData.get("author_type") as string,
       publish_date: formData.get("publish_date") as string,
       note: formData.get("note") as string,
@@ -774,11 +835,16 @@ export default function Profile() {
   // 添加专利处理函数
   const handleAddPatent = () => {
     if (isLocked) {
-      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      alert('您的推免资格已通过审核，无法修改推免相关信息');
       return;
     }
     if (isPastDeadline) {
       alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法添加专利记录`);
+      return;
+    }
+    // 检查手机号
+    if (!phoneNumber) {
+      setShowPhoneModal(true);
       return;
     }
     setEditingPatent(null);
@@ -789,7 +855,7 @@ export default function Profile() {
   
   const handleEditPatent = (patent: PatentLocal) => {
     if (isLocked) {
-      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      alert('您的推免资格已通过审核，无法修改推免相关信息');
       return;
     }
     // 检查单条记录是否已审核
@@ -845,12 +911,11 @@ export default function Profile() {
     const customPatentOwnerCategory = formData.get("category_of_patent_owner_custom") as string;
     const finalPatentOwnerCategory = patentOwnerCategory === "其他" && customPatentOwnerCategory ? customPatentOwnerCategory : patentOwnerCategory;
     
-    const newPatent: PatentLocal = {
+    const newPatent: Patent = {
       id: editingPatent?.id,
       patent_name: formData.get("patent_name") as string,
       patent_number: formData.get("patent_number") as string,
       patent_date: formData.get("patent_date") as string,
-      phone_number: formData.get("phone_number") as string, // 改为手机号
       defense_status: formData.get("defense_status") as 'pending' | 'passed' | 'failed', // 新增答辩状态
       category_of_patent_owner: finalPatentOwnerCategory,
       note: formData.get("note") as string,
@@ -891,11 +956,16 @@ export default function Profile() {
   // 添加竞赛处理函数
   const handleAddCompetition = () => {
     if (isLocked) {
-      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      alert('您的推免资格已通过审核，无法修改推免相关信息');
       return;
     }
     if (isPastDeadline) {
       alert(`提交截止时间已过（${deadline ? new Date(deadline).toLocaleString('zh-CN') : ''}），无法添加竞赛记录`);
+      return;
+    }
+    // 检查手机号
+    if (!phoneNumber) {
+      setShowPhoneModal(true);
       return;
     }
     setEditingCompetition(null);
@@ -904,7 +974,7 @@ export default function Profile() {
   
   const handleEditCompetition = (competition: CompetitionRecord) => {
     if (isLocked) {
-      alert('您的推免资格已通过审核，无法修改保研相关信息');
+      alert('您的推免资格已通过审核，无法修改推免相关信息');
       return;
     }
     // 检查单条记录是否已审核
@@ -939,7 +1009,6 @@ export default function Profile() {
         competition_name: record.competition_name,
         bupt_student_id: user.userId,
         full_name: user.name,
-        phone_number: record.phone_number,
         award_type: (record as any).award_type,
         award_value: (record as any).award_value,
         competition_type: record.competition_type,
@@ -1359,6 +1428,36 @@ export default function Profile() {
     <div className="p-6 relative">
       <StatusAlert />
       
+      {/* 手机号管理弹窗 */}
+      <PhoneNumberModal
+        isOpen={showPhoneModal}
+        onClose={() => setShowPhoneModal(false)}
+        onSubmit={handleSavePhoneNumber}
+        currentPhone={phoneNumber || ''}
+        isRequired={!phoneNumber}
+      />
+      
+      {/* 手机号显示卡片 */}
+      {phoneNumber && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-blue-600">
+                📱 联系方式：<span className="font-mono font-semibold">{phoneNumber.replace(/(\d{3})(\d{4})(\d{4})/, '$1****$3')}</span>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowPhoneModal(true)}
+              className="text-blue-600 border-blue-300 hover:bg-blue-100"
+            >
+              修改
+            </Button>
+          </div>
+        </div>
+      )}
+      
       {/* 锁定状态提示 */}
       {isLocked && (
         <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
@@ -1369,7 +1468,7 @@ export default function Profile() {
             <div>
               <h3 className="font-semibold text-orange-800">推免资格已锁定</h3>
               <p className="text-sm text-orange-700 mt-1">
-                您的推免资格已通过审核，所有保研相关信息（论文、专利、竞赛记录）已被锁定，无法进行修改。
+                您的推免资格已通过审核，所有推免相关信息（论文、专利、竞赛记录）已被锁定，无法进行修改。
                 如需修改，请联系管理员。
               </p>
             </div>
@@ -1822,21 +1921,6 @@ export default function Profile() {
                   </select>
                 </div>
                 
-                
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">手机号（可选）</label>
-                  <input 
-                    name="phone_number"
-                    type="tel"
-                    pattern="^1[3-9]\d{9}$"
-                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingPaper?.phone_number || ""}
-                    placeholder="请输入11位手机号"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">格式：11位数字，以1开头</p>
-                </div>
-                
                 <div>
                   <label className="block text-sm font-medium mb-1">{t('profile.papers.form.author_type')}</label>
                   <select 
@@ -1855,9 +1939,11 @@ export default function Profile() {
                   <input 
                     name="publish_date"
                     type="month" 
+                    max={new Date().toISOString().slice(0, 7)}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPaper?.publish_date || ""}
                   />
+                  <p className="text-xs text-gray-500 mt-1">只能选择当月或之前的日期</p>
                 </div>
                 
                 <div>
@@ -1924,24 +2010,11 @@ export default function Profile() {
                   <input 
                     name="patent_date"
                     type="month" 
+                    max={new Date().toISOString().slice(0, 7)}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={editingPatent?.patent_date || ""}
                   />
-                </div>
-                
-                
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">手机号（可选）</label>
-                  <input 
-                    name="phone_number"
-                    type="tel"
-                    pattern="^1[3-9]\d{9}$"
-                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    defaultValue={editingPatent?.phone_number || ""}
-                    placeholder="请输入11位手机号"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">格式：11位数字，以1开头</p>
+                  <p className="text-xs text-gray-500 mt-1">只能选择当月或之前的日期</p>
                 </div>
                 
                 <div>
@@ -2159,7 +2232,7 @@ export default function Profile() {
                 <FileText className="h-5 w-5" />
                 {t('profile.papers.title')}
                 <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
-                  保研相关
+                  推免相关
                 </span>
                 {isLocked && (
                   <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
@@ -2233,7 +2306,7 @@ export default function Profile() {
                 <Shield className="h-5 w-5" />
                 {t('profile.patents.title')}
                 <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
-                  保研相关
+                  推免相关
                 </span>
                 {isLocked && (
                   <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
@@ -2306,7 +2379,7 @@ export default function Profile() {
                 <Trophy className="h-5 w-5" />
                 {t('profile.competitions.title')}
                 <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
-                  保研相关
+                  推免相关
                 </span>
                 {isLocked && (
                   <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
@@ -2343,8 +2416,27 @@ export default function Profile() {
                         <div className="flex-1">
                           <h4 className="font-semibold text-base">{record.competition_name}</h4>
                           <p className="text-sm text-muted-foreground">{record.competition_region} • {record.competition_level}</p>
+                          {record.award_value && (
+                            <p className="text-sm text-blue-600 mt-1">
+                              {record.award_type === 'prize' ? '获得奖项' : '获得排名'}：
+                              {record.award_type === 'prize' 
+                                ? (record.award_value === 'premier_prize' ? '特等奖' 
+                                  : record.award_value === 'first_prize' ? '一等奖'
+                                  : record.award_value === 'second_prize' ? '二等奖'
+                                  : record.award_value === 'third_prize' ? '三等奖'
+                                  : record.award_value)
+                                : (record.award_value === 'ranked_first' ? '第一名'
+                                  : record.award_value === 'ranked_second' ? '第二名'
+                                  : record.award_value === 'ranked_third' ? '第三名'
+                                  : record.award_value === 'ranked_fourth' ? '第四名'
+                                  : record.award_value === 'ranked_fifth' ? '第五名'
+                                  : record.award_value === 'ranked_sixth' ? '第六名'
+                                  : record.award_value)
+                              }
+                            </p>
+                          )}
                           <div className="flex gap-2 text-xs text-muted-foreground mt-1">
-                            <span className="bg-orange-100 text-orange-600 px-2 py-1 rounded">{record.class}</span>
+                            <span className="bg-orange-100 text-orange-600 px-2 py-1 rounded">{record.competition_type === 'individual' ? '个人' : record.competition_type === 'team' ? '团体' : '-'}</span>
                             {record.score === 0 ? (
                               <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded">{t('profile.competitions.score.dependent')}</span>
                             ) : (
@@ -2360,7 +2452,7 @@ export default function Profile() {
                               <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleEditCompetition(record)}>
                                 <Edit className="h-3 w-3" />
                               </Button>
-                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("competition", index, record.id, record.approval_status)}>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleDeleteConfirm("competition", index, record.id, (record as any).approval_status)}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </>
