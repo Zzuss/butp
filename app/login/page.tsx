@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertCircle, User, Hash, Copy, Code, LogOut, Shield, ChevronDown } from "lucide-react"
+import { AlertCircle, User, Hash, Copy, Code, LogOut, Shield } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { trackUserAction } from "@/lib/analytics"
 import Link from "next/link"
@@ -19,23 +19,6 @@ export default function LoginPage() {
   const [hashValue, setHashValue] = useState("")
   const [hashValidating, setHashValidating] = useState(false)
   const [isDevMode, setIsDevMode] = useState(false)
-  const [selectedDemoUser, setSelectedDemoUser] = useState('2023') // 默认选择2023级
-  const [showDemoUserDropdown, setShowDemoUserDropdown] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // 点击外部关闭下拉菜单
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDemoUserDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
 
   // 检查是否为开发环境
   useEffect(() => {
@@ -255,99 +238,6 @@ export default function LoginPage() {
     }
   }
 
-  // 示例用户数据
-  const demoUsers = [
-    {
-      id: '2023',
-      name: '2023级示例用户',
-      hash: '24b56f91ab67af4531242999abd99e154df308220eb51f08e7c0dfff51d25889',
-      year: '2023'
-    },
-    {
-      id: '2024',
-      name: '2024级示例用户',
-      hash: '118ef2f061483894f93e921653b98d66ec21d3f849e458eda96c25e655fd3a49',
-      year: '2024'
-    },
-    {
-      id: '2025',
-      name: '2025级示例用户',
-      hash: 'f001ad16ec7a0b0934bc1a52c1d3e523e24a35bfced8c6e901fd03c6476cf505',
-      year: '2025'
-    }
-  ];
-
-  // 示例用户登录
-  const handleDemoUserLogin = async () => {
-    const selectedUser = demoUsers.find(user => user.id === selectedDemoUser);
-    if (!selectedUser) return;
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch('/api/auth/dev-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userHash: selectedUser.hash }),
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        // 追踪登录成功事件
-        trackUserAction('login_success', { 
-          method: 'demo_user',
-          userId: data.user?.userId 
-        });
-        
-        await refreshUser();
-        
-        // 检查隐私条款同意状态
-        try {
-          const privacyResponse = await fetch('/api/auth/privacy-agreement', {
-            credentials: 'include'
-          });
-          
-          if (privacyResponse.ok) {
-            const privacyData = await privacyResponse.json();
-            if (privacyData.hasAgreed) {
-              router.push('/dashboard');
-            } else {
-              router.push('/privacy-agreement');
-            }
-          } else {
-            // 如果检查失败，默认跳转到隐私条款页面
-            router.push('/privacy-agreement');
-          }
-        } catch (error) {
-          console.error('检查隐私条款状态失败:', error);
-          // 如果检查失败，默认跳转到隐私条款页面
-          router.push('/privacy-agreement');
-        }
-      } else {
-        // 追踪登录失败事件
-        trackUserAction('login_failed', { 
-          method: 'demo_user',
-          error: data.error 
-        });
-        setError(data.error || '示例用户登录失败');
-      }
-    } catch (error) {
-      // 追踪登录错误事件
-      trackUserAction('login_error', { 
-        method: 'demo_user',
-        error: 'network_error'
-      });
-      setError('示例用户登录失败，请重试');
-    } finally {
-      setLoading(false);
-    }
-  };
-
 
   // 开发模式直接哈希登录
   const handleDevHashLogin = async () => {
@@ -564,10 +454,10 @@ export default function LoginPage() {
               </div>
             </div>
           ) : (
-            /* 生产模式：CAS认证 + 示例用户登录 */
+            /* 生产模式：CAS认证登录 */
             <div className="space-y-4">
               <div className="text-center text-gray-600">
-                <p className="mb-4">选择登录方式</p>
+                <p className="mb-4">使用统一身份认证登录</p>
               </div>
               
               {/* CAS 统一身份认证登录 */}
@@ -588,79 +478,6 @@ export default function LoginPage() {
                   </div>
                 )}
               </Button>
-
-              {/* 示例用户登录按钮 */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-gradient-to-br from-blue-50 to-indigo-100 px-2 text-gray-500">或</span>
-                </div>
-              </div>
-
-              {/* 示例用户选择 */}
-              <div className="space-y-3">
-                {/* 年级选择下拉菜单 */}
-                <div className="relative" ref={dropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDemoUserDropdown(!showDemoUserDropdown)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <span className="text-gray-700">
-                      {demoUsers.find(user => user.id === selectedDemoUser)?.name || '选择年级'}
-                    </span>
-                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showDemoUserDropdown ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  {showDemoUserDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-                      {demoUsers.map((user) => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedDemoUser(user.id);
-                            setShowDemoUserDropdown(false);
-                          }}
-                          className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${
-                            selectedDemoUser === user.id ? 'bg-green-50 text-green-700' : 'text-gray-700'
-                          }`}
-                        >
-                          <span>{user.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* 示例用户登录按钮 */}
-                <Button
-                  onClick={handleDemoUserLogin}
-                  disabled={loading}
-                  variant="outline"
-                  className="w-full border-green-300 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-400"
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                      登录中...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      示例用户登录
-                    </div>
-                  )}
-                </Button>
-              </div>
-
-              <div className="text-center">
-                <p className="text-xs text-gray-500">
-                  示例用户无需认证，可直接体验系统功能
-                </p>
-              </div>
 
               {/* 管理员登录链接 */}
               <div className="border-t pt-4">

@@ -13,6 +13,7 @@ interface ComprehensiveRanking {
   full_name: string;
   programme?: string | null;
   class?: string | null;
+  phone_number?: string | null;
   academic_weighted_average: number;
   programme_rank?: number | null;
   programme_total?: number | null;
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     // 2. 获取所有德育加分数据
     const { data: moralScores, error: moralError } = await supabase
       .from('comprehensive_evaluation_scores')
-      .select('*');
+      .select('bupt_student_id, total_score, phone_number');
 
     if (moralError) {
       console.error('获取德育加分失败:', moralError);
@@ -71,12 +72,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. 创建德育加分映射表
+    // 3. 创建德育加分映射表和手机号映射表
     const moralScoreMap = new Map<string, number>();
+    const phoneNumberMap = new Map<string, string>();
     console.log('德育总表数据数量:', moralScores?.length || 0);
     moralScores?.forEach(score => {
       console.log('德育记录:', score.bupt_student_id, score.total_score);
       moralScoreMap.set(score.bupt_student_id, score.total_score || 0);
+      if (score.phone_number) {
+        phoneNumberMap.set(score.bupt_student_id, score.phone_number);
+      }
     });
     console.log('德育映射表大小:', moralScoreMap.size);
 
@@ -85,6 +90,7 @@ export async function POST(request: NextRequest) {
       const practicePoints = moralScoreMap.get(academic.bupt_student_id) || 0;
       const academicTotal = academic.weighted_average || 0;
       const comprehensiveTotal = academicTotal + practicePoints;
+      const phoneNumber = phoneNumberMap.get(academic.bupt_student_id) || null;
       
       // 调试特定学生
       if (academic.bupt_student_id === '2021109') {
@@ -100,6 +106,7 @@ export async function POST(request: NextRequest) {
         full_name: academic.full_name,
         programme: academic.programme,
         class: academic.class,
+        phone_number: phoneNumber,
         academic_weighted_average: Math.round(academicTotal * 100) / 100,
         programme_rank: academic.programme_rank,
         programme_total: academic.programme_total,
@@ -254,9 +261,9 @@ export async function GET(request: NextRequest) {
 
       // 生成CSV格式，使用中文表头
       const BOM = '\uFEFF'; // UTF-8 BOM
-      const csvHeader = '学号,姓名,专业名称,班级名称,专业成绩加权均分,专业成绩排名,专业排名总人数,实践活动加分,专业综合成绩,专业综合排名,专业综合排名百分比\n';
+      const csvHeader = '学号,姓名,专业名称,班级名称,手机号,专业成绩加权均分,专业成绩排名,专业排名总人数,实践活动加分,专业综合成绩,专业综合排名,专业综合排名百分比\n';
       const csvRows = rankings?.map(ranking => {
-        return `${ranking.bupt_student_id || ''},${ranking.full_name || ''},${ranking.programme || ''},${ranking.class || ''},${ranking.academic_weighted_average || 0},${ranking.programme_rank || ''},${ranking.programme_total || ''},${ranking.practice_extra_points || 0},${ranking.academic_practice_total || 0},${ranking.overall_rank || ''},${ranking.overall_rank_percentage || ''}`;
+        return `${ranking.bupt_student_id || ''},${ranking.full_name || ''},${ranking.programme || ''},${ranking.class || ''},${ranking.phone_number || ''},${ranking.academic_weighted_average || 0},${ranking.programme_rank || ''},${ranking.programme_total || ''},${ranking.practice_extra_points || 0},${ranking.academic_practice_total || 0},${ranking.overall_rank || ''},${ranking.overall_rank_percentage || ''}`;
       }).join('\n') || '';
 
       const csvContent = BOM + csvHeader + csvRows;

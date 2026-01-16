@@ -66,6 +66,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 获取额外加分信息
+    const { data: extraBonus, error: extraBonusError } = await supabase
+      .from('extra_bonus_scores')
+      .select('*')
+      .eq('bupt_student_id', studentId)
+      .single();
+
+    // 如果没有额外加分记录，设置为null（不报错）
+    let extraBonusData = null;
+    if (!extraBonusError && extraBonus) {
+      extraBonusData = extraBonus;
+    }
+
+    // 获取学生手机号
+    const { data: phoneData } = await supabase
+      .from('student_phone_numbers')
+      .select('phone_number')
+      .eq('bupt_student_id', studentId)
+      .single();
+
+    const studentPhoneNumber = phoneData?.phone_number || null;
+
     // 获取学生整体审核状态
     const { data: approvalData, error: approvalError } = await supabase
       .from('student_approvals')
@@ -98,9 +120,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       studentId,
+      phoneNumber: studentPhoneNumber,
       papers: papersWithStatus,
       patents: patentsWithStatus,
       competitions: competitionsWithStatus,
+      extraBonus: extraBonusData,
       overall_approval_status: overallApprovalStatus,
       total: {
         papers: papersWithStatus.length,
@@ -118,22 +142,93 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 更新论文或专利的分数
+// 更新论文、专利、竞赛或额外加分的分数
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type, id, score } = body;
+    const { type, id, score, studentId } = body;
 
-    if (!type || !id || score === undefined) {
+    if (!type || score === undefined) {
       return NextResponse.json(
-        { error: '缺少必要参数：type, id, score' },
+        { error: '缺少必要参数：type, score' },
         { status: 400 }
       );
     }
 
-    if (!['paper', 'patent', 'competition'].includes(type)) {
+    if (!['paper', 'patent', 'competition', 'extra_bonus'].includes(type)) {
       return NextResponse.json(
-        { error: 'type 必须是 paper、patent 或 competition' },
+        { error: 'type 必须是 paper、patent、competition 或 extra_bonus' },
+        { status: 400 }
+      );
+    }
+
+    // 处理额外加分的更新
+    if (type === 'extra_bonus') {
+      if (!studentId) {
+        return NextResponse.json(
+          { error: '更新额外加分需要提供 studentId' },
+          { status: 400 }
+        );
+      }
+
+      // 检查是否已存在记录
+      const { data: existingData } = await supabase
+        .from('extra_bonus_scores')
+        .select('*')
+        .eq('bupt_student_id', studentId)
+        .single();
+
+      let result;
+      if (existingData) {
+        // 更新现有记录
+        const { data, error } = await supabase
+          .from('extra_bonus_scores')
+          .update({ 
+            bonus_score: parseFloat(score),
+            updated_at: new Date().toISOString()
+          })
+          .eq('bupt_student_id', studentId)
+          .select();
+
+        if (error) {
+          console.error('更新额外加分失败:', error);
+          return NextResponse.json(
+            { error: '更新额外加分失败' },
+            { status: 500 }
+          );
+        }
+        result = data;
+      } else {
+        // 创建新记录
+        const { data, error } = await supabase
+          .from('extra_bonus_scores')
+          .insert({ 
+            bupt_student_id: studentId,
+            bonus_score: parseFloat(score),
+            note: ''
+          })
+          .select();
+
+        if (error) {
+          console.error('创建额外加分记录失败:', error);
+          return NextResponse.json(
+            { error: '创建额外加分记录失败' },
+            { status: 500 }
+          );
+        }
+        result = data;
+      }
+
+      return NextResponse.json({
+        message: '额外加分更新成功',
+        data: result?.[0]
+      });
+    }
+
+    // 处理论文、专利、竞赛的更新
+    if (!id) {
+      return NextResponse.json(
+        { error: '缺少必要参数：id' },
         { status: 400 }
       );
     }

@@ -23,8 +23,8 @@ export async function PUT(request: NextRequest) {
       patent_name, 
       patent_number, 
       patent_date, 
-      class: classValue, 
-      category_of_patent_owner, 
+      category_of_patent_owner,
+      defense_status,  // 新增：答辩状态
       note,
       score 
     } = body;
@@ -36,28 +36,6 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // 处理班级字段：将"X班"格式转换为数字
-    const processClassValue = (classValue: string | undefined | null): number | null => {
-      if (!classValue || classValue.trim() === '') {
-        return null;
-      }
-      
-      const trimmed = classValue.trim();
-      // 如果是"X班"格式，提取数字
-      const match = trimmed.match(/^(\d+)班$/);
-      if (match) {
-        return parseInt(match[1], 10);
-      }
-      
-      // 如果是纯数字，直接转换
-      const num = parseInt(trimmed, 10);
-      if (!isNaN(num)) {
-        return num;
-      }
-      
-      return null;
-    };
 
     // 处理日期格式：数据库现在支持年月格式
     let formattedDate = null;
@@ -100,8 +78,11 @@ export async function PUT(request: NextRequest) {
       updateData.patent_date = formattedDate;
     }
     
-    if (classValue) {
-      updateData.class = processClassValue(classValue);
+    if (defense_status !== undefined) {
+      // 验证答辩状态值
+      if (['pending', 'passed', 'failed'].includes(defense_status)) {
+        updateData.defense_status = defense_status;
+      }
     }
     
     if (category_of_patent_owner) {

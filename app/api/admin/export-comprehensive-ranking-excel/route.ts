@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       '姓名': string;
       '专业名称': string;
       '班级名称': string;
+      '手机号': string;
       '专业成绩加权均分': number;
       '专业成绩排名': number | string;
       '专业排名总人数': number | string;
@@ -63,13 +64,14 @@ export async function GET(request: NextRequest) {
         '姓名': ranking.full_name || '',
         '专业名称': ranking.programme || '',
         '班级名称': ranking.class || '',
+        '手机号': ranking.phone_number || '',
         '专业成绩加权均分': ranking.academic_weighted_average || 0,
         '专业成绩排名': ranking.programme_rank || '',
         '专业排名总人数': ranking.programme_total || '',
         '实践活动加分': ranking.practice_extra_points || 0,
         '专业综合成绩': ranking.academic_practice_total || 0,
         '专业综合排名': ranking.overall_rank || '',
-        '专业综合排名百分比': ranking.overall_rank_percentage || ''
+        '专业综合排名百分比': ranking.overall_rank_percentage ? `${ranking.overall_rank_percentage}%` : ''
       }));
     }
 
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
     const workbook = XLSX.utils.book_new();
 
     // 定义中文表头
-    const headers = ['学号', '姓名', '专业名称', '班级名称', '专业成绩加权均分', '专业成绩排名', '专业排名总人数', '实践活动加分', '专业综合成绩', '专业综合排名', '专业综合排名百分比'];
+    const headers = ['学号', '姓名', '专业名称', '班级名称', '手机号', '专业成绩加权均分', '专业成绩排名', '专业排名总人数', '实践活动加分', '专业综合成绩', '专业综合排名', '专业综合排名百分比'];
     
     // 创建工作表，确保始终有表头
     let worksheet;
@@ -95,6 +97,7 @@ export async function GET(request: NextRequest) {
       { wch: 10 }, // 姓名
       { wch: 20 }, // 专业名称
       { wch: 15 }, // 班级名称
+      { wch: 12 }, // 手机号
       { wch: 18 }, // 专业成绩加权均分
       { wch: 15 }, // 专业成绩排名
       { wch: 15 }, // 专业排名总人数

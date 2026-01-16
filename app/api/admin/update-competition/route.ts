@@ -20,7 +20,12 @@ export async function PUT(request: NextRequest) {
       competition_region, 
       competition_level, 
       competition_type,
-      class: classValue, 
+      award_type,
+      award_value,
+      team_leader_is_bupt,
+      is_main_member,
+      main_members_count,
+      coefficient,
       note,
       score 
     } = body;
@@ -32,28 +37,6 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // 处理班级字段：将"X班"格式转换为数字
-    const processClassValue = (classValue: string | undefined | null): number | null => {
-      if (!classValue || classValue.trim() === '') {
-        return null;
-      }
-      
-      const trimmed = classValue.trim();
-      // 如果是"X班"格式，提取数字
-      const match = trimmed.match(/^(\d+)班$/);
-      if (match) {
-        return parseInt(match[1], 10);
-      }
-      
-      // 如果是纯数字，直接转换
-      const num = parseInt(trimmed, 10);
-      if (!isNaN(num)) {
-        return num;
-      }
-      
-      return null;
-    };
 
     // 使用与现有PATCH API相同的更新方式
     const updateData: any = {
@@ -67,15 +50,39 @@ export async function PUT(request: NextRequest) {
     }
     
     if (competition_level !== undefined) {
-      updateData.competition_level = competition_level?.trim() || null;
+      // competition_level 不能为 null，如果为空则不更新
+      const levelValue = competition_level?.trim();
+      if (levelValue) {
+        updateData.competition_level = levelValue;
+      }
     }
     
     if (competition_type !== undefined) {
       updateData.competition_type = competition_type?.trim() || 'individual';
     }
     
-    if (classValue) {
-      updateData.class = processClassValue(classValue);
+    if (award_type !== undefined) {
+      updateData.award_type = award_type || null;
+    }
+    
+    if (award_value !== undefined) {
+      updateData.award_value = award_value || null;
+    }
+    
+    if (team_leader_is_bupt !== undefined) {
+      updateData.team_leader_is_bupt = team_leader_is_bupt;
+    }
+    
+    if (is_main_member !== undefined) {
+      updateData.is_main_member = is_main_member;
+    }
+    
+    if (main_members_count !== undefined) {
+      updateData.main_members_count = main_members_count;
+    }
+    
+    if (coefficient !== undefined) {
+      updateData.coefficient = coefficient;
     }
     
     if (note !== undefined) {

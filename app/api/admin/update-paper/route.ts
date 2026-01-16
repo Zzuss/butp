@@ -19,7 +19,6 @@ export async function PUT(request: NextRequest) {
       paper_title, 
       journal_name, 
       journal_category, 
-      class: classValue, 
       author_type, 
       publish_date, 
       note,
@@ -33,28 +32,6 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // 处理班级字段：将"X班"格式转换为数字
-    const processClassValue = (classValue: string | undefined | null): number | null => {
-      if (!classValue || classValue.trim() === '') {
-        return null;
-      }
-      
-      const trimmed = classValue.trim();
-      // 如果是"X班"格式，提取数字
-      const match = trimmed.match(/^(\d+)班$/);
-      if (match) {
-        return parseInt(match[1], 10);
-      }
-      
-      // 如果是纯数字，直接转换
-      const num = parseInt(trimmed, 10);
-      if (!isNaN(num)) {
-        return num;
-      }
-      
-      return null;
-    };
 
     // 处理日期格式：数据库现在支持年月格式
     let formattedDate = null;
@@ -95,10 +72,6 @@ export async function PUT(request: NextRequest) {
     
     if (journal_category !== undefined) {
       updateData.journal_category = journal_category?.trim() || null;
-    }
-    
-    if (classValue) {
-      updateData.class = processClassValue(classValue);
     }
     
     if (author_type !== undefined) {
