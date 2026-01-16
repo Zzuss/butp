@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 import { useLanguage } from "@/contexts/language-context"
-import { getTopPercentageGPAThreshold, getStudentInfo, calculateDashboardStats, getStudentResults, type CourseResult } from "@/lib/dashboard-data"
+import { getStudentInfo, calculateDashboardStats, getStudentResults, type CourseResult } from "@/lib/dashboard-data"
 import { getStudentAbilityData } from "@/lib/ability-data"
 import { RadarChart } from "@/components/ui/radar-chart"
 import { Slider } from "@/components/ui/slider"
@@ -144,6 +144,9 @@ export default function Analysis() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   
+  // 一键修改输入值状态
+  const [bulkEditScore, setBulkEditScore] = useState<string>('');
+  
   // 所有课程数据状态
   const [allCourseData, setAllCourseData] = useState<any>(null);
   const [loadingAllCourseData, setLoadingAllCourseData] = useState(false);
@@ -174,32 +177,54 @@ export default function Analysis() {
 
   // 获取GPA门槛值
   const loadGPAThresholds = async () => {
+    // 检查必要的数据是否存在
+    if (!studentInfo?.major) {
+      console.log('等待专业信息加载...');
+      return;
+    }
+
+    // 获取学号
+    const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+      ? (user as any).studentNumber 
+      : (user?.userId || '').toString();
+    
+    if (!studentNumber) {
+      console.error('学号不存在，无法查询GPA门槛值');
+      return;
+    }
+
     setLoadingGPA(true);
     try {
-      // 并行加载三个百分比的数据
-      const promises = [10, 20, 30].map(async (percentage) => {
-        const threshold = await getTopPercentageGPAThreshold(percentage);
-        return { percentage, gpa: threshold };
+      // 调用新的API路由查询GPA门槛值
+      const response = await fetch('/api/gpa-thresholds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          major: studentInfo.major,
+          studentNumber: studentNumber
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`API请求失败: ${response.status}`);
+      }
+
+      const result = await response.json();
       
-      const results = await Promise.all(promises);
-      const newThresholds: {
-        top10: number | null;
-        top20: number | null;
-        top30: number | null;
-      } = {
-        top10: null,
-        top20: null,
-        top30: null
-      };
-      
-      results.forEach(({ percentage, gpa }) => {
-        if (percentage === 10) newThresholds.top10 = gpa;
-        if (percentage === 20) newThresholds.top20 = gpa;
-        if (percentage === 30) newThresholds.top30 = gpa;
-      });
-      
-      setGpaThresholds(newThresholds);
+      if (result.success && result.data) {
+        setGpaThresholds({
+          top10: result.data.top10,
+          top20: result.data.top20,
+          top30: result.data.top30
+        });
+      } else {
+        // API返回成功但数据为空，设置为null
+        setGpaThresholds({
+          top10: null,
+          top20: null,
+          top30: null
+        });
+      }
     } catch (error) {
       console.error('Failed to load GPA thresholds:', error);
       setGpaThresholds({
@@ -514,6 +539,59 @@ export default function Analysis() {
         };
       });
     }
+  };
+
+  // 处理一键修改
+  const handleBulkEdit = () => {
+    if (!user?.userHash) return;
+    
+    // 验证输入值
+    const score = parseFloat(bulkEditScore);
+    if (isNaN(score) || score < 0 || score > 100) {
+      alert('请输入0-100之间的有效成绩');
+      return;
+    }
+    
+    // 四舍五入取整
+    let roundedScore = Math.round(score);
+    
+    // 限制范围在60-95之间
+    if (roundedScore < 60) {
+      roundedScore = 60;
+    } else if (roundedScore > 95) {
+      roundedScore = 95;
+    }
+    
+    // 根据 selectedButton 更新对应的缓存
+    if (selectedButton === 'overseas') {
+      setModified1ScoresCache(prev => {
+        const currentModifiedScores = prev[user.userHash] || [];
+        const updatedScores = currentModifiedScores.map((course: any) => ({
+          ...course,
+          score: roundedScore
+        }));
+        
+        return {
+          ...prev,
+          [user.userHash]: updatedScores
+        };
+      });
+    } else if (selectedButton === 'domestic') {
+      setModified2ScoresCache(prev => {
+        const currentModifiedScores = prev[user.userHash] || [];
+        const updatedScores = currentModifiedScores.map((course: any) => ({
+          ...course,
+          score: roundedScore
+        }));
+        
+        return {
+          ...prev,
+          [user.userHash]: updatedScores
+        };
+      });
+    }
+    
+    console.log(`一键修改完成：所有课程成绩已设置为 ${roundedScore}`);
   };
 
   // 处理成绩输入完成（失去焦点或按回车）
@@ -1384,12 +1462,14 @@ export default function Analysis() {
 
 
 
-  // 初始加载时更新GPA门槛值（暂时不需要，注释掉）
-  // useEffect(() => {
-  //   if (authLoading) return;
-  //   
-  //   loadGPAThresholds();
-  // }, [authLoading]);
+  // 加载GPA门槛值（等待专业信息加载）
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user?.userHash) return;
+    if (!studentInfo?.major) return; // 等待专业加载
+    
+    loadGPAThresholds();
+  }, [user?.userHash, authLoading, studentInfo?.major]);
 
   // 加载能力数据
   useEffect(() => {
@@ -2157,6 +2237,31 @@ export default function Analysis() {
                               t('analysis.course.scores.confirm.modify')
                             )}
                           </Button>
+                          {/* 一键修改区域 */}
+                          <div className="flex items-center gap-2 w-full ml-4">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={bulkEditScore}
+                              onChange={(e) => setBulkEditScore(e.target.value)}
+                              onBlur={(e) => {
+                                // 失去焦点时保持输入值，但不应用修改
+                                setBulkEditScore(e.target.value);
+                              }}
+                              placeholder="输入成绩"
+                              className="flex-1 px-4 py-2 text-base placeholder:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <Button 
+                              variant="outline"
+                              size="lg"
+                              className="px-6 py-3 text-lg font-semibold transition-all duration-200 border-blue-600 text-blue-600 hover:bg-blue-50"
+                              onClick={handleBulkEdit}
+                            >
+                              一键修改
+                            </Button>
+                          </div>
                           <Button 
                             variant="destructive"
                             size="lg"
@@ -2187,22 +2292,49 @@ export default function Analysis() {
                     </div>
                     <div className="flex-1 flex justify-center items-center gap-4">
                       {isEditMode ? (
-                        <Button 
-                          variant="default"
-                          size="lg"
-                          className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
-                          onClick={handleConfirmModification}
-                          disabled={loadingFeatures}
-                        >
-                          {loadingFeatures ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              <span>{t('analysis.calculating')}</span>
-                            </div>
-                          ) : (
-                            t('analysis.course.scores.confirm.modify')
-                          )}
-                        </Button>
+                        <>
+                          <Button 
+                            variant="default"
+                            size="lg"
+                            className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
+                            onClick={handleConfirmModification}
+                            disabled={loadingFeatures}
+                          >
+                            {loadingFeatures ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>{t('analysis.calculating')}</span>
+                              </div>
+                            ) : (
+                              t('analysis.course.scores.confirm.modify')
+                            )}
+                          </Button>
+                          {/* 一键修改区域 */}
+                          <div className="flex items-center gap-2 ml-4">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={bulkEditScore}
+                              onChange={(e) => setBulkEditScore(e.target.value)}
+                              onBlur={(e) => {
+                                // 失去焦点时保持输入值，但不应用修改
+                                setBulkEditScore(e.target.value);
+                              }}
+                              placeholder="输入成绩"
+                              className="w-24 px-3 py-1.5 text-sm placeholder:text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <Button 
+                              variant="outline"
+                              size="lg"
+                              className="px-4 py-2 text-base font-semibold transition-all duration-200 border-blue-600 text-blue-600 hover:bg-blue-50"
+                              onClick={handleBulkEdit}
+                            >
+                              一键修改
+                            </Button>
+                          </div>
+                        </>
                       ) : (
                         <Button 
                           variant="default"
@@ -2573,6 +2705,31 @@ export default function Analysis() {
                               t('analysis.course.scores.confirm.modify')
                             )}
                           </Button>
+                          {/* 一键修改区域 */}
+                          <div className="flex items-center gap-2 w-full ml-4">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={bulkEditScore}
+                              onChange={(e) => setBulkEditScore(e.target.value)}
+                              onBlur={(e) => {
+                                // 失去焦点时保持输入值，但不应用修改
+                                setBulkEditScore(e.target.value);
+                              }}
+                              placeholder="输入成绩"
+                              className="flex-1 px-4 py-2 text-base placeholder:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <Button 
+                              variant="outline"
+                              size="lg"
+                              className="px-6 py-3 text-lg font-semibold transition-all duration-200 border-blue-600 text-blue-600 hover:bg-blue-50"
+                              onClick={handleBulkEdit}
+                            >
+                              一键修改
+                            </Button>
+                          </div>
                           <Button 
                             variant="destructive"
                             size="lg"
@@ -2603,22 +2760,49 @@ export default function Analysis() {
                     </div>
                     <div className="flex-1 flex justify-center items-center gap-4">
                       {isEditMode ? (
-                        <Button 
-                          variant="default"
-                          size="lg"
-                          className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
-                          onClick={handleConfirmModification}
-                          disabled={loadingFeatures}
-                        >
-                          {loadingFeatures ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              <span>{t('analysis.calculating')}</span>
-                            </div>
-                          ) : (
-                            t('analysis.course.scores.confirm.modify')
-                          )}
-                        </Button>
+                        <>
+                          <Button 
+                            variant="default"
+                            size="lg"
+                            className="px-8 py-3 text-lg font-semibold transition-all duration-200 bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl scale-110"
+                            onClick={handleConfirmModification}
+                            disabled={loadingFeatures}
+                          >
+                            {loadingFeatures ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>{t('analysis.calculating')}</span>
+                              </div>
+                            ) : (
+                              t('analysis.course.scores.confirm.modify')
+                            )}
+                          </Button>
+                          {/* 一键修改区域 */}
+                          <div className="flex items-center gap-2 ml-4">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={bulkEditScore}
+                              onChange={(e) => setBulkEditScore(e.target.value)}
+                              onBlur={(e) => {
+                                // 失去焦点时保持输入值，但不应用修改
+                                setBulkEditScore(e.target.value);
+                              }}
+                              placeholder="输入成绩"
+                              className="w-24 px-3 py-1.5 text-sm placeholder:text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <Button 
+                              variant="outline"
+                              size="lg"
+                              className="px-4 py-2 text-base font-semibold transition-all duration-200 border-blue-600 text-blue-600 hover:bg-blue-50"
+                              onClick={handleBulkEdit}
+                            >
+                              一键修改
+                            </Button>
+                          </div>
+                        </>
                       ) : (
                         <Button 
                           variant="default"
