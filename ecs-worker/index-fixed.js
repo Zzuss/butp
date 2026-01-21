@@ -47,6 +47,16 @@ class ImportWorker {
     this.isProcessing = false
     this.currentTasks = new Set()
   }
+  
+  extractYearFromFileName(fileName) {
+    if (!fileName) return null
+    const name = String(fileName)
+    const cohortMatch = name.match(/cohort\s*(19\d{2}|20\d{2})/i)
+    if (cohortMatch && cohortMatch[1]) return parseInt(cohortMatch[1], 10)
+    const anyYearMatch = name.match(/\b(19\d{2}|20\d{2})\b/)
+    if (anyYearMatch && anyYearMatch[1]) return parseInt(anyYearMatch[1], 10)
+    return null
+  }
 
   // 启动工作进程
   async start() {
@@ -206,8 +216,10 @@ class ImportWorker {
       throw new Error('文件中没有数据')
     }
 
+    const fileYear = this.extractYearFromFileName(fileDetail.file_name || fileDetail.original_name || fileDetail.file_id)
+
     // 处理数据
-    const processedData = jsonData.map(row => this.mapExcelRow(row))
+    const processedData = jsonData.map(row => this.mapExcelRow(row, fileYear))
     
     // 分批导入
     let importedCount = 0
@@ -282,7 +294,7 @@ class ImportWorker {
   }
 
   // 数据映射
-  mapExcelRow(row) {
+  mapExcelRow(row, fileYear) {
     return {
       SNH: row.SNH || null,
       Semester_Offered: row.Semester_Offered || row.Semester || null,
@@ -300,7 +312,7 @@ class ImportWorker {
       Description: row.Description || null,
       Exam_Type: row.Exam_Type || null,
       Assessment_Method: row['Assessment_Method '] || row.Assessment_Method || null,
-      year: row.year ? parseInt(row.year) : null,
+      year: (fileYear !== null && fileYear !== undefined) ? fileYear : (row.year ? parseInt(row.year, 10) : null),
     }
   }
 

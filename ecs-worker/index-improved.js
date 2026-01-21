@@ -47,6 +47,16 @@ class ImportWorker {
     this.isProcessing = false
     this.currentTasks = new Set()
   }
+  
+  extractYearFromFileName(fileName) {
+    if (!fileName) return null
+    const name = String(fileName)
+    const cohortMatch = name.match(/cohort\s*(19\d{2}|20\d{2})/i)
+    if (cohortMatch && cohortMatch[1]) return parseInt(cohortMatch[1], 10)
+    const anyYearMatch = name.match(/\b(19\d{2}|20\d{2})\b/)
+    if (anyYearMatch && anyYearMatch[1]) return parseInt(anyYearMatch[1], 10)
+    return null
+  }
 
   // 启动工作进程
   async start() {
@@ -211,6 +221,8 @@ class ImportWorker {
       throw new Error('文件中没有数据')
     }
 
+    const fileYear = this.extractYearFromFileName(fileDetail.file_name || fileDetail.original_name || fileDetail.file_id)
+
     // 分析表头字段
     const firstRow = jsonData[0]
     const detectedFields = Object.keys(firstRow)
@@ -244,7 +256,7 @@ class ImportWorker {
     }
 
     // 处理数据
-    const processedData = jsonData.map(row => this.mapExcelRow(row))
+    const processedData = jsonData.map(row => this.mapExcelRow(row, fileYear))
     
     // 分批导入
     let importedCount = 0
@@ -429,7 +441,7 @@ class ImportWorker {
   }
 
   // 数据映射 - 简化版本，只处理空格问题
-  mapExcelRow(row) {
+  mapExcelRow(row, fileYear) {
     return {
       SNH: this.findFieldValue(row, ['SNH']),
       Semester_Offered: this.findFieldValue(row, ['Semester_Offered', 'Semester']),
@@ -449,7 +461,8 @@ class ImportWorker {
       Tags: this.findFieldValue(row, ['Tags']),
       Description: this.findFieldValue(row, ['Description']),
       Exam_Type: this.findFieldValue(row, ['Exam_Type']),
-      Assessment_Method: this.findFieldValue(row, ['Assessment_Method'])
+      Assessment_Method: this.findFieldValue(row, ['Assessment_Method']),
+      year: (fileYear !== null && fileYear !== undefined) ? fileYear : (row.year ? parseInt(row.year, 10) : null),
     }
   }
 

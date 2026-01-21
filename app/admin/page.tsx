@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Users, UserCheck, TrendingUp, FileText, Bell, Award, Shield, Database } from 'lucide-react'
+import { Users, UserCheck, TrendingUp, FileText, Bell, Award, Shield, Database, Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from 'next/link'
 import AdminLayout from '@/components/admin/AdminLayout'
@@ -172,6 +172,29 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+
+        {/* 示例用户体验入口 - 外链，新开标签避免影响管理员登录状态 */}
+        <a
+          href="https://butp.tech/demo-login"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-blue-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                示例用户体验
+              </CardTitle>
+              <Globe className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-semibold text-blue-700">Demo 登录（新窗口）</div>
+              <p className="text-xs text-muted-foreground">
+                新开标签访问示例账号，不会影响当前管理员登录状态
+              </p>
+            </CardContent>
+          </Card>
+        </a>
       </div>
       
     </AdminLayout>
