@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Users, UserCheck, TrendingUp, FileText, Bell, Award, Shield, Database } from 'lucide-react'
+import { Users, UserCheck, TrendingUp, FileText, Bell, Award, Shield, Database, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from 'next/link'
 import AdminLayout from '@/components/admin/AdminLayout'
@@ -172,6 +172,25 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+
+        {/* GPA更新管理 */}
+        <Link href="/admin/GPA-update">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                GPA更新管理
+              </CardTitle>
+              <RefreshCw className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-semibold text-purple-700">GPA更新</div>
+              <p className="text-xs text-muted-foreground">
+                根据新导入的学生成绩，更新数据库GPA数据
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
       </div>
       
     </AdminLayout>
