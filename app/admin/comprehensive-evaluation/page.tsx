@@ -391,8 +391,8 @@ export default function GradeRecommendationPage() {
   const [backupLoading, setBackupLoading] = useState(false)
 
   // 过滤器状态
-  const [academicProgrammeFilter, setAcademicProgrammeFilter] = useState<string>('智能科学与技术')
-  const [rankingProgrammeFilter, setRankingProgrammeFilter] = useState<string>('智能科学与技术')
+  const [academicProgrammeFilter, setAcademicProgrammeFilter] = useState<string>('all')
+  const [rankingProgrammeFilter, setRankingProgrammeFilter] = useState<string>('all')
   const [availableProgrammes, setAvailableProgrammes] = useState<string[]>([])
   const [exportProgramme, setExportProgramme] = useState<string>('all')
 
@@ -879,8 +879,18 @@ export default function GradeRecommendationPage() {
   }
 
   const updateAvailableProgrammes = (data: any[]) => {
-    const programmes = [...new Set(data.map(item => item.programme).filter(Boolean))]
-    setAvailableProgrammes(programmes.sort())
+    const programmes = [...new Set(data.map(item => item.programme).filter(Boolean))].sort()
+    setAvailableProgrammes(programmes)
+
+    // 当当前筛选值不在新列表中时，自动切换为第一个可用专业或“全部”
+    setAcademicProgrammeFilter(prev => {
+      if (prev === 'all') return prev
+      return programmes.includes(prev) ? prev : (programmes[0] ?? 'all')
+    })
+    setRankingProgrammeFilter(prev => {
+      if (prev === 'all') return prev
+      return programmes.includes(prev) ? prev : (programmes[0] ?? 'all')
+    })
   }
 
   // ==================== 导入函数 ====================
@@ -1361,8 +1371,8 @@ export default function GradeRecommendationPage() {
     }
   }
 
-  const filteredAcademicScores = academicScores.filter(s => s.programme === academicProgrammeFilter).slice(0, 10)
-  const filteredRankings = comprehensiveRankings.filter(r => r.programme === rankingProgrammeFilter).slice(0, 10)
+  const filteredAcademicScores = (academicProgrammeFilter === 'all' ? academicScores : academicScores.filter(s => s.programme === academicProgrammeFilter)).slice(0, 10)
+  const filteredRankings = (rankingProgrammeFilter === 'all' ? comprehensiveRankings : comprehensiveRankings.filter(r => r.programme === rankingProgrammeFilter)).slice(0, 10)
 
   // ==================== 渲染 ====================
 
@@ -1908,6 +1918,7 @@ export default function GradeRecommendationPage() {
                       <label className="text-sm font-medium">专业选择：</label>
                       <select value={academicProgrammeFilter} onChange={(e) => setAcademicProgrammeFilter(e.target.value)}
                         className="px-3 py-1 border rounded-md text-sm">
+                        <option value="all">全部专业</option>
                         {availableProgrammes.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
@@ -2199,6 +2210,7 @@ export default function GradeRecommendationPage() {
                       <label className="text-sm font-medium">专业选择：</label>
                       <select value={rankingProgrammeFilter} onChange={(e) => setRankingProgrammeFilter(e.target.value)}
                         className="px-3 py-1 border rounded-md text-sm">
+                        <option value="all">全部专业</option>
                         {availableProgrammes.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>

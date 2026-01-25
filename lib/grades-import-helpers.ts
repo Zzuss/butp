@@ -21,6 +21,21 @@ export function ensureUploadDir() {
   }
 }
 
+function extractYearFromFileName(fileName: string | null | undefined): number | null {
+  if (!fileName) return null
+  const name = String(fileName)
+
+  // 优先匹配 Cohort2024 这种格式（大小写不敏感）
+  const cohortMatch = name.match(/cohort\s*(19\d{2}|20\d{2})/i)
+  if (cohortMatch?.[1]) return parseInt(cohortMatch[1], 10)
+
+  // 兜底：匹配任意 4 位年份（避免误命中SN等，限定 1900-2099）
+  const anyYearMatch = name.match(/\b(19\d{2}|20\d{2})\b/)
+  if (anyYearMatch?.[1]) return parseInt(anyYearMatch[1], 10)
+
+  return null
+}
+
 function getSupabaseServiceClient() {
   const { createClient } = require('@supabase/supabase-js')
   const supabaseUrl =
@@ -101,7 +116,7 @@ function readExcelRows(filePath: string) {
   return XLSX.utils.sheet_to_json(worksheet)
 }
 
-function mapExcelRow(row: any) {
+function mapExcelRow(row: any, fileYear: number | null) {
   return {
     SNH: row.SNH || null,
     Semester_Offered: row.Semester_Offered || null,
@@ -119,7 +134,7 @@ function mapExcelRow(row: any) {
     Description: row.Description || null,
     Exam_Type: row.Exam_Type || null,
     Assessment_Method: row['Assessment_Method '] || row.Assessment_Method || null,
-    year: row.year ? parseInt(String(row.year)) : null,
+    year: fileYear ?? (row.year ? parseInt(String(row.year), 10) : null),
   }
 }
 
@@ -129,6 +144,8 @@ export async function importSingleFileToShadow(fileId: string) {
   if (!metadata) {
     throw new Error('找不到文件元数据，请重新上传文件')
   }
+
+  const fileYear = extractYearFromFileName(metadata.name)
 
   const xlsxPath = join(UPLOAD_DIR, `${fileId}.xlsx`)
   const xlsPath = join(UPLOAD_DIR, `${fileId}.xls`)
@@ -144,7 +161,7 @@ export async function importSingleFileToShadow(fileId: string) {
 
   const supabase = getSupabaseServiceClient()
   let totalImported = 0
-  const processedRows = rows.map(mapExcelRow)
+  const processedRows = rows.map((r) => mapExcelRow(r, fileYear))
 
   for (let i = 0; i < processedRows.length; i += DEFAULT_BATCH_SIZE) {
     const batch = processedRows.slice(i, i + DEFAULT_BATCH_SIZE)

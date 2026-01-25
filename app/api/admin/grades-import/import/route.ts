@@ -24,6 +24,19 @@ function ensureUploadDir() {
   }
 }
 
+function extractYearFromFileName(fileName: string | null | undefined): number | null {
+  if (!fileName) return null
+  const name = String(fileName)
+
+  const cohortMatch = name.match(/cohort\s*(19\d{2}|20\d{2})/i)
+  if (cohortMatch?.[1]) return parseInt(cohortMatch[1], 10)
+
+  const anyYearMatch = name.match(/\b(19\d{2}|20\d{2})\b/)
+  if (anyYearMatch?.[1]) return parseInt(anyYearMatch[1], 10)
+
+  return null
+}
+
 // Supabase配置（从环境变量读取）
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASELOCAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sdtarodxdvkeeiaouddo.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASELOCAL_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdGFyb2R4ZHZrZWVpYW91ZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjUxNDksImV4cCI6MjA2NjcwMTE0OX0.4aY7qvQ6uaEfa5KK4CEr2s8BvvmX55g7FcefvhsGLTM'
@@ -127,7 +140,7 @@ function readExcelFile(filePath: string): any[] {
 }
 
 // 处理数据行
-function processDataRow(row: any): any {
+function processDataRow(row: any, fileYear: number | null): any {
   return {
     SNH: row.SNH || null,
     Semester_Offered: row.Semester_Offered || null,
@@ -145,7 +158,7 @@ function processDataRow(row: any): any {
     Description: row.Description || null,
     Exam_Type: row.Exam_Type || null,
     Assessment_Method: row['Assessment_Method '] || row.Assessment_Method || null,
-    year: row.year ? parseInt(String(row.year)) : null,
+    year: fileYear ?? (row.year ? parseInt(String(row.year), 10) : null),
   }
 }
 
@@ -163,6 +176,7 @@ async function importToShadowTable(
 
   for (const file of files) {
     try {
+      const fileYear = extractYearFromFileName(file.name)
       // 确定文件路径
       const filePathXlsx = join(UPLOAD_DIR, `${file.id}.xlsx`)
       const filePathXls = join(UPLOAD_DIR, `${file.id}.xls`)
@@ -183,7 +197,7 @@ async function importToShadowTable(
       }
 
       totalCount += jsonData.length
-      const processedData = jsonData.map(processDataRow)
+      const processedData = jsonData.map((r) => processDataRow(r, fileYear))
 
       console.log(`开始导入文件 ${file.name}，共 ${processedData.length} 条记录...`)
 

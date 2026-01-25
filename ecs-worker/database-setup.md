@@ -44,6 +44,11 @@ GRANT EXECUTE ON FUNCTION truncate_results_old() TO anon;
 GRANT EXECUTE ON FUNCTION swap_results_with_old() TO anon;
 ```
 
+### 4.（可选）如果你新增了列（例如 academic_results / academic_results_old 新增 year）
+
+如果你的 `swap_results_with_old` RPC 内部是用**显式列清单**做 `INSERT ... SELECT ...`，请确保把新增列（例如 `year`）也包含进去；  
+如果是 `INSERT INTO ... SELECT *` 或直接重命名/交换表，则一般不需要改 RPC。
+
 ## ⚠️ 安全注意事项
 
 使用ANON_KEY意味着：

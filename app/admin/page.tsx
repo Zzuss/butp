@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Users, UserCheck, TrendingUp, FileText, Bell, Award, Shield, Database, RefreshCw } from 'lucide-react'
+import { Users, UserCheck, TrendingUp, FileText, Bell, Award, Shield, Database, Globe, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from 'next/link'
 import AdminLayout from '@/components/admin/AdminLayout'
@@ -42,42 +42,6 @@ export default function AdminPage() {
               <div className="text-lg font-semibold text-purple-700">学号管理</div>
               <p className="text-xs text-muted-foreground">
                 管理学生学号和登录权限
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* 智育成绩管理 - 已启用 */}
-        <Link href="/admin/prediction/async">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                智育成绩管理
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg font-semibold text-purple-700">成绩预测</div>
-              <p className="text-xs text-muted-foreground">
-                管理学生智育成绩和异步预测系统
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* 预测表导入工具 */}
-        <Link href="/admin/prediction-import">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                预测表导入工具
-              </CardTitle>
-              <Database className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg font-semibold text-green-700">数据导入</div>
-              <p className="text-xs text-muted-foreground">
-                单独导入各专业预测文件到数据库
               </p>
             </CardContent>
           </Card>
@@ -172,6 +136,28 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+        {/* 示例用户体验入口 - 外链，新开标签避免影响管理员登录状态 */}
+        <a
+          href="https://butp.tech/demo-login"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-blue-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                示例用户体验
+              </CardTitle>
+              <Globe className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-semibold text-blue-700">Demo 登录（新窗口）</div>
+              <p className="text-xs text-muted-foreground">
+                新开标签访问示例账号，不会影响当前管理员登录状态
+              </p>
+            </CardContent>
+          </Card>
+        </a>
 
         {/* GPA更新管理 */}
         <Link href="/admin/GPA-update">
@@ -190,7 +176,6 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
-
       </div>
       
     </AdminLayout>
