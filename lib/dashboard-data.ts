@@ -139,15 +139,58 @@ export async function getStudentResults(studentHash: string): Promise<CourseResu
   }
 }
 
+// 从GPA_Student表查询GPA
+export async function getStudentGPA(studentHash: string): Promise<number> {
+  try {
+    // 验证哈希值格式
+    if (!studentHash || studentHash.trim() === '') {
+      console.error('哈希值不能为空');
+      return 0;
+    }
+    
+    const trimmedHash = studentHash.trim();
+    
+    if (trimmedHash.length !== 64 || !/^[a-f0-9]{64}$/i.test(trimmedHash)) {
+      console.error('无效的哈希值格式，必须是64位十六进制字符串:', trimmedHash);
+      return 0;
+    }
+
+    // 从GPA_Student表查询GPA
+    const { data, error } = await supabase
+      .from('GPA_Student')
+      .select('"GPA"')
+      .eq('"SNH"', trimmedHash)
+      .single();
+
+    if (error) {
+      // 如果查询失败或记录不存在，返回0
+      if (error.code === 'PGRST116') {
+        // 记录不存在
+        console.log('GPA_Student表中未找到该学生的GPA记录');
+        return 0;
+      }
+      console.error('查询GPA失败:', error);
+      return 0;
+    }
+
+    // 返回GPA值，保留两位小数
+    const gpa = data?.GPA || 0;
+    return Math.round(gpa * 100) / 100;
+  } catch (error) {
+    console.error('获取学生GPA异常:', error);
+    return 0;
+  }
+}
+
 // 计算仪表盘统计数据
-export function calculateDashboardStats(results: CourseResult[]): DashboardStats {
+export function calculateDashboardStats(results: CourseResult[], gpa?: number): DashboardStats {
   // 如果没有数据，返回默认值
   if (!results || results.length === 0) {
     return {
       averageScore: 0,
       passRate: 0,
       courseCount: 0,
-      gpa: 0
+      gpa: gpa !== undefined ? gpa : 0
     };
   }
   
@@ -177,14 +220,14 @@ export function calculateDashboardStats(results: CourseResult[]): DashboardStats
   
   const passRate = results.length > 0 ? passedCourses.length / results.length : 0;
   
-  // 计算GPA
-  const gpa = calculateGPA(results);
+  // 使用传入的GPA，如果没有传入则计算（向后兼容）
+  const finalGpa = gpa !== undefined ? gpa : calculateGPA(results);
   
   return {
     averageScore: Math.round(averageScore * 100) / 100,
     passRate: Math.round(passRate * 100) / 100,
     courseCount: results.length,
-    gpa: Math.round(gpa * 100) / 100
+    gpa: Math.round(finalGpa * 100) / 100
   };
 }
 

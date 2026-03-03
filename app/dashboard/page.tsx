@@ -20,6 +20,7 @@ import {
   getCourseTypeStats, 
   getSemesterTrends,
   getStudentInfo,
+  getStudentGPA,
   type DashboardStats,
   type SubjectGrade,
   type CourseTypeStats,
@@ -128,8 +129,12 @@ export default function DashboardPage() {
         console.log('[DEBUG] getStudentInfo ->', info)
         setStudentInfo(info)
         
-        // 计算统计数据
-        const dashboardStats = calculateDashboardStats(results)
+        // 从GPA_Student表查询GPA
+        const studentGPA = await getStudentGPA(user!.userHash)
+        console.log('[DEBUG] getStudentGPA ->', studentGPA)
+        
+        // 计算统计数据（传入从数据库查询的GPA）
+        const dashboardStats = calculateDashboardStats(results, studentGPA)
         console.log('[DEBUG] calculateDashboardStats ->', dashboardStats)
         setStats(dashboardStats)
         
@@ -270,7 +275,9 @@ export default function DashboardPage() {
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.gpa || 0}</div>
+            <div className="text-2xl font-bold">
+              {stats?.gpa !== undefined ? stats.gpa.toFixed(2) : '0.00'}
+            </div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.gpa.desc')}
             </p>
