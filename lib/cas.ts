@@ -13,18 +13,17 @@ const useRealCAS = isProduction || process.env.CAS_MODE === 'real';
 export const CAS_CONFIG = {
   // 生产环境始终使用真实CAS服务器
   serverUrl: 'https://auth.bupt.edu.cn/authserver',
-    
-  // 回调URL配置 - 根据环境使用不同的回调地址
-  serviceUrl: isProduction 
-    ? 'http://10.3.58.3:8080/api/auth/cas/callback'  // 生产环境通过代理服务器回调
-    : 'http://localhost:3000/api/auth/cas/callback',  // 开发环境直接回调
-    
+
+  // 回调URL配置 - 使用代理服务器进行回调（开发和生产环境一致）
+  // 因为新的弹窗式CAS认证流程通过代理服务器接收CAS回调
+  serviceUrl: 'http://10.3.58.3:8080/api/auth/cas/callback',
+
   // 网站URL - 生产环境使用 butp.tech
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://butp.tech',
-  
-  // 代理服务器URL
-  proxyUrl: 'http://10.3.58.3:8080', // 根据部署脚本配置
-  
+
+  // 代理服务器URL - 用于新的弹窗式CAS认证流程
+  proxyUrl: process.env.NEXT_PUBLIC_CAS_PROXY_URL || 'http://10.3.58.3:8080',
+
   // 环境标识
   isDevelopment,
   isProduction,

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAS登录测试</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+    button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    .log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .error { color: #dc2626; }
+    .success { color: #16a34a; }
+    .info { color: #2563eb; }
+  </style>
+</head>
+<body>
+  <h1>CAS登录测试页面</h1>
+  <p>点击下面的按钮测试CAS登录流程</p>
+
+  <button id="loginBtn">使用学号统一身份认证登录</button>
+
+  <div id="log" class="log"></div>
+
+  <script>
+    const loginBtn = document.getElementById('loginBtn');
+    const log = document.getElementById('log');
+    let messageListener = null;
+
+    function addLog(message, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+      log.innerHTML += `<div class="${className}">[${time}] ${message}</div>`;
+      log.scrollTop = log.scrollHeight;
+      console.log(`[${type}]`, message);
+    }
+
+    loginBtn.addEventListener('click', async () => {
+      loginBtn.disabled = true;
+      addLog('🚀 开始CAS登录流程...');
+
+      // 监听来自弹出窗口的消息
+      messageListener = async (event) => {
+        addLog(`📥 收到消息: ${JSON.stringify(event.data)}`);
+
+        if (event.data.type === 'CAS_SUCCESS') {
+          const { ticket, returnUrl } = event.data;
+
+          addLog(`✅ 收到CAS认证成功消息，ticket: ${ticket.substring(0, 30)}...`);
+
+          // 发送ticket到Next.js API验证
+          addLog('🔍 正在验证ticket...');
+
+          try {
+            const response = await fetch('http://localhost:3000/api/auth/cas/verify-ticket', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ ticket })
+            });
+
+            const data = await response.json();
+            addLog(`📄 API响应: ${JSON.stringify(data)}`);
+
+            if (data.success) {
+              addLog('✅ 登录成功！会话已创建', 'success');
+              addLog('🍕 检查cookie是否设置...');
+
+              // 尝试访问受保护页面
+              setTimeout(async () => {
+                const checkResponse = await fetch('http://localhost:3000/api/auth/cas/check-session', {
+                  credentials: 'include'
+                });
+                const sessionData = await checkResponse.json();
+                addLog(`📊 会话状态: ${JSON.stringify(sessionData)}`, 'success');
+              }, 500);
+
+            } else {
+              addLog(`❌ 登录失败: ${data.error}`, 'error');
+            }
+          } catch (error) {
+            addLog(`❌ 请求失败: ${error.message}`, 'error');
+          } finally {
+            loginBtn.disabled = false;
+            window.removeEventListener('message', messageListener);
+          }
+        }
+      };
+
+      window.addEventListener('message', messageListener);
+
+      // 打开新窗口进行CAS认证（直接访问CAS服务器）
+      const callbackUrl = encodeURIComponent('http://10.3.58.3:8080/api/auth/cas/callback');
+      const casUrl = `https://auth.bupt.edu.cn/authserver/login?service=${callbackUrl}`;
+      addLog(`🪟 打开弹出窗口（直接访问CAS服务器）: ${casUrl}`);
+
+      const newWindow = window.open(
+        casUrl,
+        'CAS Login',
+        'width=600,height=700,scrollbars=yes,resizable=yes'
+      );
+
+      if (!newWindow) {
+        addLog('❌ 弹出窗口被阻止！请允许弹出窗口后重试', 'error');
+        loginBtn.disabled = false;
+        window.removeEventListener('message', messageListener);
+        return;
+      }
+
+      addLog('✅ 弹出窗口已打开，请在新窗口中完成CAS登录...');
+
+      // 检测窗口关闭
+      const checkClosed = setInterval(() => {
+        if (newWindow.closed) {
+          clearInterval(checkClosed);
+          addLog('🔴 弹出窗口已关闭');
+          if (loginBtn.disabled) {
+            addLog('⚠️ 认证未完成，窗口被关闭', 'error');
+            loginBtn.disabled = false;
+            window.removeEventListener('message', messageListener);
+          }
+        }
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

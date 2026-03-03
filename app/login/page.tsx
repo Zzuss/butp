@@ -20,20 +20,26 @@ export default function LoginPage() {
   const [hashValidating, setHashValidating] = useState(false)
   const [isDevMode, setIsDevMode] = useState(false)
 
+  // CAS popup window refs
+  const casWindowRef = useRef<Window | null>(null)
+  const messageListenerRef = useRef<((event: MessageEvent) => void) | null>(null)
+
   // 检查是否为开发环境
   useEffect(() => {
-    const isDev = process.env.NODE_ENV === 'development' || 
-                  window.location.hostname === 'localhost' || 
-                  window.location.hostname === '127.0.0.1'
-    
+    // const isDev = process.env.NODE_ENV === 'development' ||
+    //               window.location.hostname === 'localhost' ||
+    //               window.location.hostname === '127.0.0.1'
+
+    const isDev = false
+
     setIsDevMode(isDev)
-    
+
     // 页面加载时检查URL参数
     const urlParams = new URLSearchParams(window.location.search)
     const errorParam = urlParams.get('error')
     const messageParam = urlParams.get('message')
     const casSuccessParam = urlParams.get('cas_success')
-    
+
     if (errorParam) {
       let errorMessage = ''
       switch (errorParam) {
@@ -64,39 +70,48 @@ export default function LoginPage() {
         default:
           errorMessage = messageParam || '登录过程中发生错误，请重试'
       }
-      
+
       setError(errorMessage)
       console.log('Login page: URL error detected:', { errorParam, messageParam, errorMessage })
-      
+
       // 清除URL中的错误参数，避免刷新时重复显示
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('error')
       newUrl.searchParams.delete('message')
       window.history.replaceState({}, '', newUrl.toString())
     }
-    
-    // 检查CAS成功参数
+
+    // 检查CAS成功参数（保留兼容旧的回调方式）
     if (casSuccessParam === 'true') {
       console.log('Login page: CAS认证成功，清除URL参数并检查session状态')
       // 清除URL中的cas_success参数
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('cas_success')
       window.history.replaceState({}, '', newUrl.toString())
-      
+
       // 立即检查CAS认证状态
       setTimeout(() => {
         checkCasAuth()
       }, 100)
       return
     }
-    
+
     // 本地开发环境直接跳过CAS认证检查
     if (isDev) {
       console.log('Login page: localhost detected, skipping CAS auth check')
       return
     }
-    
+
     checkCasAuth()
+  }, [])
+
+  // 清理effect：组件卸载时清理监听器
+  useEffect(() => {
+    return () => {
+      if (messageListenerRef.current) {
+        window.removeEventListener('message', messageListenerRef.current)
+      }
+    }
   }, [])
 
   // 测试哈希值
@@ -136,7 +151,7 @@ export default function LoginPage() {
 
       if (response.ok) {
         const data = await response.json()
-        
+
         if (data.isCasAuthenticated && data.userId && data.name && data.userHash) {
           if (data.isLoggedIn) {
             // CAS认证且已登录，检查隐私条款同意状态
@@ -146,7 +161,7 @@ export default function LoginPage() {
                 method: 'GET',
                 credentials: 'include'
               })
-              
+
               if (privacyResponse.ok) {
                 const privacyData = await privacyResponse.json()
                 if (privacyData.hasAgreed) {
@@ -176,7 +191,7 @@ export default function LoginPage() {
                   'Content-Type': 'application/json'
                 }
               })
-              
+
               if (loginResponse.ok) {
                 const loginData = await loginResponse.json()
                 if (loginData.success) {
@@ -185,7 +200,7 @@ export default function LoginPage() {
                   return
                 }
               }
-              
+
               console.error('Login page: 自动登录失败')
               setError('自动登录失败，请重试或联系管理员')
             } catch (error) {
@@ -201,25 +216,152 @@ export default function LoginPage() {
     }
   }
 
-  // CAS登录
+  // CAS登录 - 直接访问CAS服务器方式（适配代理服务器v2.0.0）
   const handleCasLogin = () => {
-    console.log('🚀 CAS登录按钮被点击')
+    console.log('🚀 CAS登录按钮被点击 - 直接访问CAS服务器')
     setLoading(true)
     setError("")
-    
+
     try {
-      const loginUrl = '/api/auth/cas/login?returnUrl=/dashboard'
-      console.log('�� 准备跳转到:', loginUrl)
-      
-      // 添加一个小延迟以确保状态更新
-      setTimeout(() => {
-        console.log('⏰ 开始跳转到CAS登录')
-        window.location.href = loginUrl
-      }, 100)
-      
+      // 标志：是否已经收到认证成功的消息
+      let authCompleted = false
+      let checkClosed: NodeJS.Timeout | null = null
+      let timeoutId: NodeJS.Timeout | null = null
+
+      // 监听来自CAS窗口的消息
+      const handleMessage = async (event: MessageEvent) => {
+        // 验证消息来源（可选，根据代理服务器配置）
+        const proxyOrigin = process.env.NEXT_PUBLIC_CAS_PROXY_URL || 'http://10.3.58.3:8080';
+        try {
+          const proxyUrl = new URL(proxyOrigin);
+          if (event.origin !== proxyUrl.origin && event.origin !== 'null') {
+            console.log('⚠️ 收到来自未知来源的消息:', event.origin);
+            return;
+          }
+        } catch {
+          // URL解析失败，继续处理
+        }
+
+          if (event.data.type === 'CAS_SUCCESS') {
+          authCompleted = true  // 标记认证已完成，避免窗口关闭时重置状态
+          if (checkClosed) clearInterval(checkClosed)
+          if (timeoutId) clearTimeout(timeoutId)
+          console.log('📥 收到CAS认证消息:', event.data)
+          const { ticket, returnUrl } = event.data
+
+          // 清理监听器
+          if (messageListenerRef.current) {
+            window.removeEventListener('message', messageListenerRef.current)
+            messageListenerRef.current = null
+          }
+
+          // 发送ticket到后端验证
+          try {
+            console.log('🔍 正在验证ticket...')
+            const verifyResponse = await fetch('/api/auth/cas/verify-ticket', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ ticket })
+            })
+
+            const verifyData = await verifyResponse.json()
+
+            if (verifyData.success) {
+              console.log('✅ Ticket验证成功，正在完成登录...')
+              // 刷新用户状态
+              await refreshUser()
+
+              // 检查隐私条款同意状态
+              try {
+                const privacyResponse = await fetch('/api/auth/privacy-agreement', {
+                  credentials: 'include'
+                })
+
+                if (privacyResponse.ok) {
+                  const privacyData = await privacyResponse.json()
+                  if (privacyData.hasAgreed) {
+                    router.push(returnUrl || '/dashboard')
+                  } else {
+                    router.push('/privacy-agreement')
+                  }
+                } else {
+                  router.push('/privacy-agreement')
+                }
+              } catch (error) {
+                console.error('检查隐私条款状态失败:', error)
+                router.push('/privacy-agreement')
+              }
+            } else {
+              console.error('❌ Ticket验证失败:', verifyData.error)
+              const errorMessages: Record<string, string> = {
+                'ticket_validation_failed': 'CAS票据验证失败，请重新登录',
+                'no_student_mapping': '您的学号未在系统中注册，请联系管理员',
+                'invalid_student_hash': '您的学号映射信息无效，请联系管理员',
+                'internal_error': '服务器内部错误，请稍后重试',
+              }
+              setError(errorMessages[verifyData.error] || '登录验证失败，请重试')
+            }
+          } catch (error) {
+            console.error('❌ Ticket验证请求失败:', error)
+            setError('登录请求失败，请重试')
+          } finally {
+            setLoading(false)
+          }
+        }
+      }
+
+      // 保存监听器引用以便清理
+      messageListenerRef.current = handleMessage
+      window.addEventListener('message', handleMessage)
+
+      // 🔧 关键修改：直接构建CAS登录URL（不经过proxy-login）
+      // CAS服务器会回调到代理服务器的callback端点，代理服务器通过postMessage返回ticket
+      const callbackUrl = encodeURIComponent('http://10.3.58.3:8080/api/auth/cas/callback')
+      const casLoginUrl = `https://auth.bupt.edu.cn/authserver/login?service=${callbackUrl}`
+
+      console.log('🪟 打开CAS登录页面:', casLoginUrl)
+
+      const newWindow = window.open(
+        casLoginUrl,
+        'CAS Login',
+        'width=600,height=700,scrollbars=yes,resizable=yes'
+      )
+
+      if (!newWindow) {
+        setError('弹出窗口被阻止，请允许弹出窗口后重试')
+        setLoading(false)
+        window.removeEventListener('message', handleMessage)
+        return
+      }
+
+      casWindowRef.current = newWindow
+
+      // 设置超时检测（5分钟）
+      timeoutId = setTimeout(() => {
+        if (newWindow && !newWindow.closed && !authCompleted) {
+          newWindow.close()
+          setError('登录超时，请重试')
+          setLoading(false)
+          window.removeEventListener('message', handleMessage)
+          if (checkClosed) clearInterval(checkClosed)
+        }
+      }, 300000)
+
+      // 检测窗口关闭
+      checkClosed = setInterval(() => {
+        if (newWindow.closed && !authCompleted) {
+          if (checkClosed) clearInterval(checkClosed)
+          if (timeoutId) clearTimeout(timeoutId)
+          window.removeEventListener('message', handleMessage)
+          setLoading(false)
+          console.log('🔴 弹窗被用户关闭，重置登录状态')
+        }
+      }, 1000)
+
     } catch (error) {
-      console.error('❌ CAS登录跳转失败:', error)
-      setError('登录跳转失败，请重试')
+      console.error('❌ CAS登录失败:', error)
+      setError('登录失败，请重试')
       setLoading(false)
     }
   }
@@ -268,19 +410,19 @@ export default function LoginPage() {
 
       if (response.ok && data.success) {
         // 追踪登录成功事件
-        trackUserAction('login_success', { 
+        trackUserAction('login_success', {
           method: 'dev_hash',
-          userId: data.user?.userId 
+          userId: data.user?.userId
         })
-        
+
         await refreshUser()
-        
+
         // 检查隐私条款同意状态
         try {
           const privacyResponse = await fetch('/api/auth/privacy-agreement', {
             credentials: 'include'
           })
-          
+
           if (privacyResponse.ok) {
             const privacyData = await privacyResponse.json()
             if (privacyData.hasAgreed) {
@@ -299,15 +441,15 @@ export default function LoginPage() {
         }
       } else {
         // 追踪登录失败事件
-        trackUserAction('login_failed', { 
+        trackUserAction('login_failed', {
           method: 'dev_hash',
-          error: data.error 
+          error: data.error
         })
         setError(data.error || '登录失败')
       }
     } catch (error) {
       // 追踪登录错误事件
-      trackUserAction('login_error', { 
+      trackUserAction('login_error', {
         method: 'dev_hash',
         error: 'network_error'
       })
@@ -383,7 +525,7 @@ export default function LoginPage() {
                   <Code className="h-4 w-4" />
                   本地开发模式 - 跳过CAS认证
                 </h3>
-                
+
                 {/* 测试哈希值提示 */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                   <h4 className="font-medium text-blue-800 mb-2">测试用哈希值：</h4>
@@ -415,7 +557,7 @@ export default function LoginPage() {
                     className="font-mono text-sm"
                     disabled={loading}
                   />
-                  
+
                   <Button
                     onClick={handleDevHashLogin}
                     disabled={loading || !hashValue.trim()}
@@ -438,7 +580,7 @@ export default function LoginPage() {
                 {/* 开发模式管理员登录链接 */}
                 <div className="border-t border-orange-300 pt-4">
                   <div className="text-center">
-                    <Link 
+                    <Link
                       href="/admin-login"
                       className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 transition-colors"
                     >
@@ -459,7 +601,7 @@ export default function LoginPage() {
               <div className="text-center text-gray-600">
                 <p className="mb-4">使用统一身份认证登录</p>
               </div>
-              
+
               {/* CAS 统一身份认证登录 */}
               <Button
                 onClick={handleCasLogin}
@@ -469,7 +611,7 @@ export default function LoginPage() {
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    跳转中...
+                    认证中...
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -482,7 +624,7 @@ export default function LoginPage() {
               {/* 管理员登录链接 */}
               <div className="border-t pt-4">
                 <div className="text-center">
-                  <Link 
+                  <Link
                     href="/admin-login"
                     className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 transition-colors"
                   >
@@ -498,7 +640,7 @@ export default function LoginPage() {
             </div>
           )}
         </CardContent>
-        
+
         {/* 退出登录按钮区域 - 仅在生产环境显示 */}
         {!isDevMode && (
           <div className="px-6 pb-6">
@@ -525,4 +667,4 @@ export default function LoginPage() {
       </Card>
     </div>
   )
-} 
+}

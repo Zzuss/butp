@@ -1,0 +1,28 @@
+{
+  "name": "cas-proxy-server",
+  "version": "1.0.0",
+  "description": "CAS authentication proxy server for BuTP application with popup-based flow",
+  "main": "cas-proxy-server.js",
+  "scripts": {
+    "start": "node cas-proxy-server.js",
+    "dev": "nodemon cas-proxy-server.js"
+  },
+  "keywords": [
+    "cas",
+    "authentication",
+    "proxy",
+    "bupt"
+  ],
+  "author": "BuTP Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
