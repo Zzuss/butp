@@ -1508,8 +1508,8 @@ export default function Profile() {
                   <input 
                     name="total"
                     type="text" 
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    inputMode={selectedScoreType === "ielts" ? "decimal" : "numeric"}
+                    pattern={selectedScoreType === "ielts" ? "[0-9]*\\.?[0-9]*" : "[0-9]*"}
                     className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     defaultValue={
                       editMode ? 
