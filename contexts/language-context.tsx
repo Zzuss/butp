@@ -244,7 +244,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 课程统计卡片
     'dashboard.stats.average': '平均分数',
-    'dashboard.stats.average.desc': '个人平均成绩',
+    'dashboard.stats.average.desc': '个人全科加权平均分（含公选课）',
     'dashboard.stats.pass.rate': '通过率',
     'dashboard.stats.pass.rate.desc': '课程通过率',
     'dashboard.stats.courses': '已修课程',
@@ -271,7 +271,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 学期成绩趋势
     'dashboard.trends.title': '学期成绩趋势',
-    'dashboard.trends.description': '各学期平均成绩变化趋势',
+    'dashboard.trends.description': '各学期平均成绩变化趋势(含公选课)',
     'dashboard.trends.courses.count': '{count} 门课程',
     'dashboard.trends.no.data': '暂无学期数据',
     

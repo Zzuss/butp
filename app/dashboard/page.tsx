@@ -28,6 +28,7 @@ import {
 } from '@/lib/dashboard-data'
 // 导入统一数据源查询函数，用于预加载
 import { queryAcademicResults } from '@/lib/academic__data'
+import { supabase } from '@/lib/supabase'
 
 // 导入图表组件
 import { CourseStatsChart } from '@/components/ui/chart'
@@ -142,6 +143,69 @@ export default function DashboardPage() {
         const topCreditCourses = getLatestSemesterTopCreditCourses(results, 5)
         console.log('[DEBUG] getLatestSemesterTopCreditCourses ->', topCreditCourses)
         setSubjectGrades(topCreditCourses)
+
+        // 从 Subject_Average 表查询各科平均分，替换默认平均值
+        try {
+          const studentNumber =
+            typeof (user as any)?.studentNumber === 'string'
+              ? (user as any).studentNumber
+              : (user?.userId || '').toString()
+          const trimmedStudentNumber = studentNumber.toString().trim()
+          const yearPart = trimmedStudentNumber.substring(0, 4)
+
+          const majorFromInfo = info?.major
+
+          if (yearPart && majorFromInfo) {
+            const courseIds = Array.from(
+              new Set(
+                topCreditCourses
+                  .map(course => course.courseId)
+                  .filter((id): id is string => !!id)
+              )
+            )
+
+            if (courseIds.length > 0) {
+              const { data: avgRows, error: avgError } = await supabase
+                .from('Subject_Average')
+                .select('"Course_ID", "Major", "Year", "Score"')
+                .eq('"Major"', majorFromInfo)
+                .eq('"Year"', yearPart)
+                .in('"Course_ID"', courseIds)
+
+              if (avgError) {
+                console.error('查询 Subject_Average 失败:', avgError)
+              } else if (avgRows && avgRows.length > 0) {
+                const scoreMap = new Map<string, number>()
+                for (const row of avgRows as any[]) {
+                  const cid = row.Course_ID as string
+                  const score =
+                    typeof row.Score === 'number'
+                      ? row.Score
+                      : parseFloat(String(row.Score)) || 0
+                  if (cid) {
+                    scoreMap.set(cid, score)
+                  }
+                }
+
+                const merged = topCreditCourses.map(subject => {
+                  const cid = subject.courseId
+                  const dbAverage = cid ? scoreMap.get(cid) : undefined
+                  return {
+                    ...subject,
+                    average:
+                      dbAverage !== undefined
+                        ? Math.round(dbAverage * 10) / 10
+                        : subject.average,
+                  }
+                })
+
+                setSubjectGrades(merged)
+              }
+            }
+          }
+        } catch (avgError) {
+          console.error('加载各科平均分失败:', avgError)
+        }
         
         // 获取课程类型统计
         const typeStats = getCourseTypeStats(results)
