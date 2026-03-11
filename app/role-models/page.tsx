@@ -314,10 +314,14 @@ export default function RoleModelsPage() {
       setLoadingStudentInfo(true);
       try {
         const info = await getStudentInfo(user.userHash);
-        // UI 按“年级专业-学号”展示；年级去掉“级”字样以匹配示例格式
-        const yearText = (info?.year ?? "").replace(/级/g, "").trim();
-        const majorText = (info?.major ?? "").trim();
+        // 年级优先使用学号前4位（如 202421**** -> 2024），避免数据库学期记录导致的年级偏差
         const userId = String(user.userId).trim();
+        const idYear = userId.slice(0, 4);
+        const yearFromId = /^\d{4}$/.test(idYear) ? idYear : "";
+        // 回退：若学号不规范，则使用数据库返回年级
+        const yearFromDb = (info?.year ?? "").replace(/级/g, "").trim();
+        const yearText = yearFromId || yearFromDb;
+        const majorText = (info?.major ?? "").trim();
 
         if (yearText && majorText && userId) {
           setStudentInfoText(`${yearText}${majorText}-${userId}`);
