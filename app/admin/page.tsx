@@ -136,6 +136,7 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+        
         {/* 示例用户体验入口 - 外链，新开标签避免影响管理员登录状态 */}
         <a
           href="https://butp.tech/demo-login"
@@ -164,14 +165,14 @@ export default function AdminPage() {
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                GPA更新管理
+                成绩相关数据更新管理
               </CardTitle>
               <RefreshCw className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg font-semibold text-purple-700">GPA更新</div>
+              <div className="text-lg font-semibold text-purple-700">GPA及各科平均分更新</div>
               <p className="text-xs text-muted-foreground">
-                根据新导入的学生成绩，更新数据库GPA数据
+                根据新导入的学生成绩，更新数据库GPA数据及各科平均分数据
               </p>
             </CardContent>
           </Card>

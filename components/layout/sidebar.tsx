@@ -196,14 +196,17 @@ export function AppSidebar() {
           <div className={`border-t border-border mt-auto ${isCollapsed ? 'p-2' : 'p-4'}`}>
             {!isCollapsed ? (
               <>
-          {/* PDF导出按钮 */}
-          {/* 提高按钮层级并确保可点击，避免被页面其他浮层遮挡 */}
+        {/*
+          //若希望显示PDF导出按钮，删除段首尾的注释符并将文字前的//替换为{/*与结束标志，下面折叠状态的也要改回去           
+          // PDF导出按钮 
+          // 提高按钮层级并确保可点击，避免被页面其他浮层遮挡 
           <div className="mb-3 relative z-60 pointer-events-auto">
             <div className="space-y-2">
               <PreserveLayoutPdfButton defaultViewport={1366} />
             </div>
           </div>
-          
+        */}
+
           {/* 语言切换按钮 */}
           <div className="mb-3">
             <Button
@@ -245,12 +248,14 @@ export function AppSidebar() {
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                {/* PDF导出按钮 - 折叠状态 */}
+                {/*
+                // PDF导出按钮 - 折叠状态 
                 <CompletePDFExport 
                   pageTitle="当前页面"
                   fileName={`page_export_${new Date().toISOString().split('T')[0]}.pdf`}
                   className="sidebar-collapsed"
                 />
+                */}
                 
                 {/* 语言切换按钮 - 折叠状态 */}
                 <Button

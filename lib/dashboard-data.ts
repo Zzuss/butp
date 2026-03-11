@@ -34,6 +34,7 @@ export interface SubjectGrade {
   grade: number | string
   average: number
   credit: number
+  courseId?: string
 }
 
 export interface CourseTypeStats {
@@ -263,11 +264,18 @@ export async function getRecentSubjectGrades(results: CourseResult[], limit: num
       }
     }
     
+    const gradeValue =
+      typeof course.grade === 'number'
+        ? course.grade
+        : parseFloat(String(course.grade)) || 0
+
     subjectGrades.push({
       name: courseName,
-    grade: course.grade,
-    average: Math.round((parseFloat(course.grade as string) * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
-    credit: course.credit
+      grade: course.grade,
+      // 默认平均分先使用课程本身成绩，后续可被数据库中的平均分覆盖
+      average: Math.round(gradeValue * 10) / 10,
+      credit: course.credit,
+      courseId: course.course_id,
     });
   }
   
@@ -322,14 +330,22 @@ export function getLatestSemesterTopCreditCourses(results: CourseResult[], limit
   
   // 转换为SubjectGrade格式
   const subjectGrades: SubjectGrade[] = selectedCourses.map(course => {
-    const gradeValue = typeof course.grade === 'number' ? course.grade : parseFloat(String(course.grade)) || 0;
-    const creditValue = typeof course.credit === 'number' ? course.credit : parseFloat(String(course.credit)) || 0;
-    
+    const gradeValue =
+      typeof course.grade === 'number'
+        ? course.grade
+        : parseFloat(String(course.grade)) || 0;
+    const creditValue =
+      typeof course.credit === 'number'
+        ? course.credit
+        : parseFloat(String(course.credit)) || 0;
+
     return {
       name: course.course_name,
       grade: course.grade,
-      average: Math.round((gradeValue * 0.9 + Math.random() * 10) * 10) / 10, // 模拟平均分
-      credit: creditValue
+      // 默认平均分先使用课程本身成绩，后续可被数据库中的平均分覆盖
+      average: Math.round(gradeValue * 10) / 10,
+      credit: creditValue,
+      courseId: course.course_id,
     };
   });
   
