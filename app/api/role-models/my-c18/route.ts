@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
     const userHash = session.userHash.trim();
 
-    // 1) 读取当前学生所有课程记录，再按 Course_Attribute=必修 过滤
+    // 1) 读取当前学生所有课程记录，再按 Course_Attribute=必修&选修 过滤
     const { data: academicRows, error: academicError } = await supabase
       .from("academic_results")
       .select("SNH,Current_Major,Course_ID,Grade,Course_Attribute,Credit,year")
@@ -78,10 +78,10 @@ export async function GET(request: NextRequest) {
       throw new Error(`Failed to query academic_results: ${academicError.message}`);
     }
 
-    // 过滤出必修课程的整行数据
+    // 过滤出必修&选修课程的整行数据
     const requiredCourses = (academicRows ?? []).filter((row) => {
       const attr = String((row as AnyRow).Course_Attribute ?? "").trim();
-      return attr === "必修";
+      return attr === "必修" || attr === "选修";
     }) as AnyRow[];
 
     if (requiredCourses.length === 0) {
@@ -138,8 +138,12 @@ export async function GET(request: NextRequest) {
     let totalCredit = 0;
     let matchedCourses = 0;
     let validCourses = 0;
-    // [DEBUG-ONLY] 调试使用：统计“必修但未命中 Courses_Rada”的课程信息，上线时应删除
+    // [DEBUG-ONLY] 调试使用：统计“必修&选修但未命中 Courses_Rada”的课程信息，上线时应删除
     const requiredButNotInRadaCourseIds: string[] = [];
+    // [DEBUG-ONLY] 调试使用：统计各类被过滤课程，上线时应删除
+    const droppedMissingKeyCourseIds: string[] = [];
+    const droppedInvalidGradeOrCreditCourseIds: string[] = [];
+    const droppedNoWeightCourseIds: string[] = [];
 
     for (const course of requiredCourses) {
       const major = String(pick(course, ["Current_Major", "current_major"]) ?? "").trim();
@@ -148,8 +152,16 @@ export async function GET(request: NextRequest) {
       const grade = normalizeGrade(pick(course, ["Grade", "grade"]));
       const credit = toNumber(pick(course, ["Credit", "credit"]));
 
-      if (!major || !year || !courseId) continue;
-      if (grade === null || !Number.isFinite(credit) || credit <= 0) continue;
+      if (!major || !year || !courseId) {
+        // [DEBUG-ONLY] 调试使用：记录关键字段缺失导致被过滤的课程，上线时应删除
+        droppedMissingKeyCourseIds.push(courseId || "(missing-course-id)");
+        continue;
+      }
+      if (grade === null || !Number.isFinite(credit) || credit <= 0) {
+        // [DEBUG-ONLY] 调试使用：记录成绩/学分异常导致被过滤的课程，上线时应删除
+        droppedInvalidGradeOrCreditCourseIds.push(courseId);
+        continue;
+      }
 
       const rada = radaMap.get(`${major}__${year}__${courseId}`);
       if (!rada) {
@@ -169,7 +181,11 @@ export async function GET(request: NextRequest) {
           hasAtLeastOneWeight = true;
         }
       }
-      if (!hasAtLeastOneWeight) continue;
+      if (!hasAtLeastOneWeight) {
+        // [DEBUG-ONLY] 调试使用：记录命中 Courses_Rada 但无可用权重的课程，上线时应删除
+        droppedNoWeightCourseIds.push(courseId);
+        continue;
+      }
 
       totalCredit += credit;
       validCourses += 1;
@@ -186,6 +202,32 @@ export async function GET(request: NextRequest) {
     ABILITY_COLS.forEach((ability) => {
       const raw = totalCredit > 0 ? weightedSums[ability] / totalCredit : 0;
       rawAbilities[ability] = round8(raw);
+    });
+
+    // [DEBUG-ONLY] 调试使用：输出当前用户 C1 原始值，上线时应删除
+    console.log("[DEBUG role-models/my-c18] raw C1 value", {
+      userHash: `${userHash.slice(0, 8)}...`,
+      rawC1: rawAbilities.C1 ?? 0,
+    });
+    // [DEBUG-ONLY] 调试使用：输出当前用户用于计算能力值的有效课程数量，上线时应删除
+    console.log("[DEBUG role-models/my-c18] valid courses used for ability calculation", {
+      userHash: `${userHash.slice(0, 8)}...`,
+      validCourses,
+    });
+    // [DEBUG-ONLY] 调试使用：输出当前用户必修&选修的课程数量，上线时应删除
+    console.log("[DEBUG role-models/my-c18] required courses count", {
+      userHash: `${userHash.slice(0, 8)}...`,
+      count: requiredCourses.length,
+    });
+    // [DEBUG-ONLY] 调试使用：输出各类被过滤课程计数及前三个课程ID，上线时应删除
+    console.log("[DEBUG role-models/my-c18] dropped courses breakdown", {
+      userHash: `${userHash.slice(0, 8)}...`,
+      droppedMissingKeyCount: droppedMissingKeyCourseIds.length,
+      droppedMissingKeyFirstThree: droppedMissingKeyCourseIds.slice(0, 3),
+      droppedInvalidGradeOrCreditCount: droppedInvalidGradeOrCreditCourseIds.length,
+      droppedInvalidGradeOrCreditFirstThree: droppedInvalidGradeOrCreditCourseIds.slice(0, 3),
+      droppedNoWeightCount: droppedNoWeightCourseIds.length,
+      droppedNoWeightFirstThree: droppedNoWeightCourseIds.slice(0, 3),
     });
 
     // 4) 读取当前去向 mean/std，并计算 z-score

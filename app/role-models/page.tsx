@@ -41,6 +41,7 @@ interface MyC18Response {
 
 type UserProfilesByDestination = Partial<Record<Destination, MyC18Response>>;
 type UserProfileVisibilityByDestination = Partial<Record<Destination, boolean>>;
+type DomesticMajorCode = "tewm" | "iot" | "eie" | "ist";
 
 interface DomesticBonusSummary {
   competition: number;
@@ -48,6 +49,24 @@ interface DomesticBonusSummary {
   patent: number;
   total: number;
 }
+
+interface DomesticBonusOverview {
+  year: number;
+  major: DomesticMajorCode;
+  totalNumber: number;
+  competitionAverageBonus: number;
+  competition: number;
+  paper: number;
+  patent: number;
+}
+
+const OVERVIEW_YEAR_OPTIONS = ["2022", "2023", "2024", "2025"] as const;
+const OVERVIEW_MAJOR_OPTIONS: Array<{ value: DomesticMajorCode; label: string }> = [
+  { value: "eie", label: "电子信息工程" },
+  { value: "ist", label: "智能科学与技术" },
+  { value: "iot", label: "物联网工程" },
+  { value: "tewm", label: "电信工程及管理" },
+];
 
 const destinationMeta: Record<
   Destination,
@@ -170,6 +189,14 @@ function buildRadarData(data: CentroidResponse | null, userProfile: MyC18Respons
   });
 }
 
+function mapMajorLabelToCode(major: string): DomesticMajorCode | null {
+  if (major.includes("电子信息工程")) return "eie";
+  if (major.includes("智能科学与技术")) return "ist";
+  if (major.includes("物联网工程")) return "iot";
+  if (major.includes("电信工程及管理")) return "tewm";
+  return null;
+}
+
 export default function RoleModelsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -188,7 +215,19 @@ export default function RoleModelsPage() {
     patent: 0,
     total: 0,
   });
-  const [domesticBonusLoading, setDomesticBonusLoading] = useState(false);
+  const [myBonusLoading, setMyBonusLoading] = useState(false);
+  const [overviewYear, setOverviewYear] = useState<string>("2024");
+  const [overviewMajor, setOverviewMajor] = useState<DomesticMajorCode>("eie");
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewData, setOverviewData] = useState<DomesticBonusOverview>({
+    year: 2024,
+    major: "eie",
+    totalNumber: 0,
+    competitionAverageBonus: 0,
+    competition: 0,
+    paper: 0,
+    patent: 0,
+  });
   const [studentInfoText, setStudentInfoText] = useState<string>("");
   const [loadingStudentInfo, setLoadingStudentInfo] = useState(false);
   const [showZScoreInfo, setShowZScoreInfo] = useState(false);
@@ -262,7 +301,7 @@ export default function RoleModelsPage() {
 
   const fetchDomesticBonus = async () => {
     if (!user?.userId) return;
-    setDomesticBonusLoading(true);
+    setMyBonusLoading(true);
     try {
       const res = await fetch(`/api/competition-records?userId=${encodeURIComponent(user.userId)}`, {
         method: "GET",
@@ -292,7 +331,59 @@ export default function RoleModelsPage() {
     } catch {
       setDomesticBonus({ competition: 0, paper: 0, patent: 0, total: 0 });
     } finally {
-      setDomesticBonusLoading(false);
+      setMyBonusLoading(false);
+    }
+  };
+
+  const fetchDomesticOverview = async (year: string, major: DomesticMajorCode) => {
+    setOverviewLoading(true);
+    try {
+      const res = await fetch(`/api/role-models/domestic-bonus-overview?year=${year}&major=${major}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (res.status === 401) {
+        setError("登录状态失效，请重新登录后查看职业分析。");
+        return;
+      }
+
+      if (!res.ok) {
+        setOverviewData({
+          year: Number(year),
+          major,
+          totalNumber: 0,
+          competitionAverageBonus: 0,
+          competition: 0,
+          paper: 0,
+          patent: 0,
+        });
+        return;
+      }
+
+      const body = (await res.json()) as DomesticBonusOverview;
+      setOverviewData({
+        year: Number(body.year ?? year),
+        major,
+        totalNumber: Number(body.totalNumber ?? 0),
+        competitionAverageBonus: Number(body.competitionAverageBonus ?? 0),
+        competition: Number(body.competition ?? 0),
+        paper: Number(body.paper ?? 0),
+        patent: Number(body.patent ?? 0),
+      });
+    } catch {
+      setOverviewData({
+        year: Number(year),
+        major,
+        totalNumber: 0,
+        competitionAverageBonus: 0,
+        competition: 0,
+        paper: 0,
+        patent: 0,
+      });
+    } finally {
+      setOverviewLoading(false);
     }
   };
 
@@ -302,6 +393,13 @@ export default function RoleModelsPage() {
     if (destination !== "domestic") return;
     fetchDomesticBonus();
   }, [destination, authLoading, user?.isLoggedIn, user?.userId]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user?.isLoggedIn) return;
+    if (destination !== "domestic") return;
+    fetchDomesticOverview(overviewYear, overviewMajor);
+  }, [destination, authLoading, user?.isLoggedIn, overviewYear, overviewMajor]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -322,6 +420,15 @@ export default function RoleModelsPage() {
         const yearFromDb = (info?.year ?? "").replace(/级/g, "").trim();
         const yearText = yearFromId || yearFromDb;
         const majorText = (info?.major ?? "").trim();
+        const majorCodeFromInfo = mapMajorLabelToCode(majorText);
+
+        // 默认把“往届总览”筛选项同步到当前用户年级与专业（仅首次加载常见场景）
+        if (yearText && OVERVIEW_YEAR_OPTIONS.includes(yearText as (typeof OVERVIEW_YEAR_OPTIONS)[number])) {
+          setOverviewYear(yearText);
+        }
+        if (majorCodeFromInfo) {
+          setOverviewMajor(majorCodeFromInfo);
+        }
 
         if (yearText && majorText && userId) {
           setStudentInfoText(`${yearText}${majorText}-${userId}`);
@@ -398,7 +505,7 @@ export default function RoleModelsPage() {
             {meta.label}
           </CardTitle>
           <CardDescription className="flex items-center gap-4">
-            <div>{meta.description}</div>
+            <span>{meta.description}</span>  {/*div改为span标签，网页不报错*/}
             <button
               type="button"
               className="inline-block rounded-sm px-1 text-base font-bold underline underline-offset-4 transition-colors hover:text-foreground"
@@ -438,44 +545,14 @@ export default function RoleModelsPage() {
           ) : chartData.length === 0 ? (
             <div className="h-[520px] flex items-center justify-center text-muted-foreground">暂无可展示数据</div>
           ) : (
-            <div className="flex h-[680px] w-full gap-4">
-              {destination === "domestic" && (
-                <div className="w-[290px] rounded-lg border bg-slate-100/90 p-4 shadow-sm">
-                  <div className="mb-3">
-                    <h3 className="text-base font-semibold text-slate-900">国内升学加分</h3>
-                    <p className="mt-1 text-sm text-slate-600">总分：{domesticBonus.total.toFixed(1)}</p>
-                  </div>
-                  {domesticBonusLoading ? (
-                    <div className="flex h-[230px] items-center justify-center text-sm text-slate-500">加分数据加载中...</div>
-                  ) : (
-                    <div className="mt-3 flex h-[250px] items-end justify-between gap-3">
-                      {[
-                        { key: "competition", label: "竞赛", value: domesticBonus.competition, color: "bg-emerald-500" },
-                        { key: "paper", label: "论文", value: domesticBonus.paper, color: "bg-blue-500" },
-                        { key: "patent", label: "专利", value: domesticBonus.patent, color: "bg-violet-500" },
-                      ].map((item) => {
-                        const maxVal = Math.max(domesticBonus.competition, domesticBonus.paper, domesticBonus.patent, 1);
-                        const rawHeight = (item.value / maxVal) * 150;
-                        const barHeight = item.value > 0 ? Math.max(14, rawHeight) : 8;
-                        return (
-                          <div key={item.key} className="flex flex-1 flex-col items-center">
-                            <div className="mb-2 text-sm font-semibold text-slate-800">{item.value.toFixed(1)}</div>
-                            <div className={`w-12 rounded-t-md ${item.color}`} style={{ height: `${barHeight}px` }} />
-                            <div className="mt-2 text-sm text-slate-700">{item.label}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="relative h-full flex-1">
+            <div className={destination === "domestic" ? "flex w-full flex-col gap-4 lg:h-[680px] lg:flex-row" : "relative h-[680px] w-full"}>
+              {/* 移动端优先展示雷达图，随后是往届加分总览与我的加分 */}
+              <div className={destination === "domestic" ? "relative order-1 h-[520px] w-full sm:h-[580px] lg:order-2 lg:h-full lg:flex-1" : "relative h-full w-full"}>
                 {/*图例*/}
-                <div className="absolute right-35 top-3 z-10 rounded-md border bg-background/95 px-4 py-3 shadow-sm">
+                <div className="absolute left-2 top-2 z-10 rounded-md border bg-background/95 px-3 py-2 shadow-sm lg:left-auto lg:right-4 lg:top-3 lg:px-4 lg:py-3">
                   <div className="space-y-1">
                     {data?.subclasses.map((item, idx) => (
-                      <div key={`legend-${item.subclass}`} className="flex items-center gap-2 text-base">
+                      <div key={`legend-${item.subclass}`} className="flex items-center gap-2 text-sm lg:text-base">
                         <span
                           className="inline-block h-2.5 w-2.5 rounded-full"
                           style={{ backgroundColor: radarColors[idx % radarColors.length] }}
@@ -484,7 +561,7 @@ export default function RoleModelsPage() {
                       </div>
                     ))}
                     {currentUserProfile && (
-                      <div className="flex items-center gap-2 text-base">
+                      <div className="flex items-center gap-2 text-sm lg:text-base">
                         <span className="inline-block h-2.5 w-2.5 rounded-full bg-black" />
                         <span className="text-black">我的画像</span>
                       </div>
@@ -495,7 +572,7 @@ export default function RoleModelsPage() {
                   <RadarChart
                     data={chartData}
                     outerRadius="90%"
-                    cx={destination === "domestic" ? "40%" : "50%"}
+                    cx="50%"
                   >
                     <PolarGrid />
                     <PolarAngleAxis dataKey="ability" tick={{ fontSize: 14 }} />
@@ -532,9 +609,9 @@ export default function RoleModelsPage() {
                   </RadarChart>
                 </ResponsiveContainer>
                 <Button
-                  className={`absolute h-12 min-w-[150px] px-4 py-2 text-base right-40 bottom-20 z-10 ${
+                  className={`absolute bottom-3 right-3 z-10 h-11 min-w-[128px] px-4 text-sm sm:h-12 sm:min-w-[150px] sm:text-base lg:bottom-8 lg:right-8 ${
                     isCurrentDestinationProfileVisible
-                      ? "bg-white text-black hover:bg-gray-100 border border-input"
+                      ? "border border-input bg-white text-black hover:bg-gray-100"
                       : "bg-black text-white hover:bg-black/75"
                   }`}
                   onClick={() => {
@@ -553,6 +630,113 @@ export default function RoleModelsPage() {
                   {isCurrentDestinationProfileVisible ? "隐藏我的画像" : "生成我的画像"}
                 </Button>
               </div>
+
+              {destination === "domestic" && (
+                <div className="order-2 w-full space-y-4 lg:order-1 lg:w-[340px] lg:shrink-0">
+                  <div className="rounded-lg border bg-slate-100/90 p-4 shadow-sm">
+                    <div className="mb-3">
+                      <h3 className="text-base font-semibold text-slate-900">往届加分总览</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-600">年级</label>
+                        <select
+                          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                          value={overviewYear}
+                          onChange={(e) => setOverviewYear(e.target.value)}
+                        >
+                          {OVERVIEW_YEAR_OPTIONS.map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-600">专业</label>
+                        <select
+                          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                          value={overviewMajor}
+                          onChange={(e) => setOverviewMajor(e.target.value as DomesticMajorCode)}
+                        >
+                          {OVERVIEW_MAJOR_OPTIONS.map((major) => (
+                            <option key={major.value} value={major.value}>
+                              {major.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-600">{overviewData.competition}/{overviewData.totalNumber} 表示：获竞赛加分的人数/总保研人数</p>
+                    {overviewLoading ? (
+                      <div className="flex h-[190px] items-center justify-center text-sm text-slate-500">往届数据加载中...</div>
+                    ) : (
+                      <div className="mt-3 flex h-[210px] items-end justify-between gap-3">
+                        {[
+                          { key: "competition", label: "竞赛", value: overviewData.competition, color: "bg-emerald-600", light: "bg-emerald-200" },
+                          { key: "paper", label: "论文", value: overviewData.paper, color: "bg-blue-600", light: "bg-blue-200" },
+                          { key: "patent", label: "专利", value: overviewData.patent, color: "bg-violet-600", light: "bg-violet-200" },
+                        ].map((item) => {
+                          const total = Math.max(overviewData.totalNumber, 1);
+                          const deepHeight = Math.max(8, (item.value / total) * 140);
+                          return (
+                            <div key={item.key} className="flex flex-1 flex-col items-center">
+                              {item.key === "competition" ? (
+                                <div className="mb-1 text-center text-xs font-semibold leading-tight text-slate-700">
+                                  <div>{item.value}/{overviewData.totalNumber}</div>
+                                  <div>加分均分：{overviewData.competitionAverageBonus.toFixed(1)}</div>
+                                </div>
+                              ) : (
+                                <div className="mb-1 text-xs font-semibold text-slate-700">
+                                  {item.value}/{overviewData.totalNumber}
+                                </div>
+                              )}
+                              <div className="relative h-[140px] w-12">
+                                <div className={`absolute bottom-0 w-12 rounded-t-md ${item.light}`} style={{ height: "140px" }} />
+                                <div className={`absolute bottom-0 w-12 rounded-t-md ${item.color}`} style={{ height: `${deepHeight}px` }} />
+                              </div>
+                              <div className="mt-2 text-sm text-slate-700">{item.label}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border bg-slate-100/90 p-4 shadow-sm">
+                    <div className="mb-3">
+                      <h3 className="text-base font-semibold text-slate-900">我的加分</h3>
+                      <p className="mt-1 text-xs text-slate-600">*竞赛加分只做累加，不一定符合学校上限要求</p>
+                    </div>
+                    {myBonusLoading ? (
+                      <div className="flex h-[180px] items-center justify-center text-sm text-slate-500">我的加分加载中...</div>
+                    ) : (
+                      <div className="mt-2 flex h-[190px] items-end justify-between gap-3">
+                        {[
+                          { key: "competition", label: "竞赛", value: domesticBonus.competition, unit: "分", color: "bg-emerald-600" },
+                          { key: "paper", label: "论文", value: 1, unit: "条", color: "bg-blue-600" },
+                          { key: "patent", label: "专利", value: 0, unit: "条", color: "bg-violet-600" },
+                        ].map((item) => {
+                          const maxVal = Math.max(domesticBonus.competition, 1, 0);
+                          const barHeight = item.key === "competition"
+                            ? Math.max(12, (item.value / maxVal) * 120)
+                            : Math.max(12, item.value > 0 ? 70 : 12);
+                          return (
+                            <div key={item.key} className="flex flex-1 flex-col items-center">
+                              <div className="mb-1 text-xs font-semibold text-slate-700">
+                                {item.key === "competition" ? item.value.toFixed(1) : String(Math.trunc(item.value))}
+                                {item.unit}
+                              </div>
+                              <div className={`w-12 rounded-t-md ${item.color}`} style={{ height: `${barHeight}px` }} />
+                              <div className="mt-2 text-sm text-slate-700">{item.label}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
