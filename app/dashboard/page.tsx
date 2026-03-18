@@ -396,7 +396,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{t('dashboard.subjects.current')}</span>
-                    <span>{t('dashboard.subjects.average')}: {subject.average}</span>
+                    {/* <span>{t('dashboard.subjects.average')}: {subject.average}</span> */}
                   </div>
                 </div>
               ))}
