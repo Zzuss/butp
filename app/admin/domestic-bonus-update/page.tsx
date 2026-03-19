@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Upload, Loader2, CheckCircle, XCircle, Download } from "lucide-react";
 
 type MajorCode = "tewm" | "iot" | "eie" | "ist";
 
@@ -31,6 +31,7 @@ export default function DomesticBonusUpdatePage() {
   const [selectedMajor, setSelectedMajor] = useState<MajorCode>("tewm");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [result, setResult] = useState<ImportResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -96,6 +97,52 @@ export default function DomesticBonusUpdatePage() {
     }
   };
 
+  const onDownload = async () => {
+    setDownloading(true);
+    setResult(null);
+    try {
+      const response = await fetch(`/api/admin/domestic-bonus-update/export?major=${selectedMajor}`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        setResult({
+          success: false,
+          error: body?.error || "下载失败",
+        });
+        return;
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition") || "";
+      const matched = disposition.match(/filename="?([^"]+)"?/i);
+      const encodedName = matched?.[1] || `${selectedMajor}_domestic_bonus.xlsx`;
+      const fileName = decodeURIComponent(encodedName);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+
+      setResult({
+        success: true,
+        message: `下载成功：${fileName}`,
+      });
+    } catch (error) {
+      setResult({
+        success: false,
+        error: error instanceof Error ? error.message : "下载失败",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -142,7 +189,20 @@ export default function DomesticBonusUpdatePage() {
               />
             </div>
 
-            <Button onClick={onSubmit} disabled={uploading || !selectedFile} className="w-full flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={onDownload}
+              disabled={uploading || downloading}
+              className="w-full flex items-center gap-2"
+            >
+              {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {downloading ? "下载中..." : "下载当前专业数据"}
+            </Button>
+            <Button
+              onClick={onSubmit}
+              disabled={uploading || !selectedFile}
+              className="w-full flex items-center gap-2 transition-colors hover:bg-black/80"
+            >
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {uploading ? "导入中..." : "开始覆盖导入"}
             </Button>
@@ -154,11 +214,12 @@ export default function DomesticBonusUpdatePage() {
             <CardTitle>格式要求（请严格遵守）</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-1">
-            <p>1) 文件必须是单 sheet 的 Excel（.xlsx/.xls）。</p>
-            <p>2) 列名必须包含且仅用于导入以下字段：</p>
+            <p>1) 首先选择专业。 </p>
+            <p>2) 文件必须是单 sheet 的 Excel（.xlsx/.xls）。</p>
+            <p>3) 列名必须包含且仅用于导入以下字段：</p>
             <p className="font-medium text-foreground">year, subclass, subclass_number, average_bonus, total_number</p>
-            <p>3) 导入策略为覆盖：会先清空目标专业表，再写入新数据。</p>
-            <p>4) 目标表名规则：专业代码 + `_domestic_bonus`（如 tewm_domestic_bonus）。</p>
+            <p>4) 导入策略为覆盖：会先清空目标专业表，再写入新数据。</p>
+            <p>5) 目标表名规则：专业代码 + `_domestic_bonus`（如 tewm_domestic_bonus）。</p>
           </CardContent>
         </Card>
 
