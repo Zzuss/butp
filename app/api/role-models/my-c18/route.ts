@@ -53,6 +53,14 @@ export async function GET(request: NextRequest) {
   try {
     const response = NextResponse.next();
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
+
+    // 刷新页面后，CAS 认证信息可能已在 session 中，但 isLoggedIn 尚未恢复；这里做一次兜底恢复。
+    if (!session.isLoggedIn && session.isCasAuthenticated && session.userId && session.userHash) {
+      session.isLoggedIn = true;
+      session.lastActiveTime = Date.now();
+      await session.save();
+    }
+
     if (!session?.isLoggedIn || !session?.userHash) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

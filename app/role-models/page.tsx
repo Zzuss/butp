@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/language-context";
 import { GraduationCap, Globe, Briefcase, RefreshCcw, X } from "lucide-react";
 import { getStudentInfo } from "@/lib/dashboard-data";
 
@@ -68,24 +69,43 @@ const OVERVIEW_MAJOR_OPTIONS: Array<{ value: DomesticMajorCode; label: string }>
   { value: "tewm", label: "电信工程及管理" },
 ];
 
-const destinationMeta: Record<
-  Destination,
-  { label: string; description: string; icon: React.ComponentType<{ className?: string }> }
+const destinationMetaByLanguage: Record<
+  "zh" | "en",
+  Record<Destination, { label: string; description: string; icon: React.ComponentType<{ className?: string }> }>
 > = {
-  domestic: {
-    label: "国内升学",
-    description: "展示国内升学各小类的 C1~C18 能力值中心向量（z-score 后）",
-    icon: GraduationCap,
+  zh: {
+    domestic: {
+      label: "国内升学",
+      description: "展示国内升学各小类的 C1~C18 能力值中心向量（z-score 后）",
+      icon: GraduationCap,
+    },
+    abroad: {
+      label: "出国留学",
+      description: "展示出国留学各小类的 C1~C18 能力值中心向量（z-score 后）",
+      icon: Globe,
+    },
+    employment: {
+      label: "本科就业",
+      description: "展示本科就业各小类的 C1~C18 能力值中心向量（z-score 后）",
+      icon: Briefcase,
+    },
   },
-  abroad: {
-    label: "出国留学",
-    description: "展示出国留学各小类的 C1~C18 能力值中心向量（z-score 后）",
-    icon: Globe,
-  },
-  employment: {
-    label: "本科就业",
-    description: "展示本科就业各小类的 C1~C18 能力值中心向量（z-score 后）",
-    icon: Briefcase,
+  en: {
+    domestic: {
+      label: "Domestic Graduate",
+      description: "Compare C1~C18 subclass centroids for domestic graduate direction (z-score).",
+      icon: GraduationCap,
+    },
+    abroad: {
+      label: "Study Abroad",
+      description: "Compare C1~C18 subclass centroids for study abroad direction (z-score).",
+      icon: Globe,
+    },
+    employment: {
+      label: "Undergraduate Employment",
+      description: "Compare C1~C18 subclass centroids for undergraduate employment direction (z-score).",
+      icon: Briefcase,
+    },
   },
 };
 
@@ -199,6 +219,7 @@ function mapMajorLabelToCode(major: string): DomesticMajorCode | null {
 
 export default function RoleModelsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { language } = useLanguage();
   const router = useRouter();
   const [destination, setDestination] = useState<Destination>("domestic");
   const [data, setData] = useState<CentroidResponse | null>(null);
@@ -233,7 +254,99 @@ export default function RoleModelsPage() {
   const [showZScoreInfo, setShowZScoreInfo] = useState(false);
   const requestAbortRef = useRef<AbortController | null>(null);
 
-  const meta = destinationMeta[destination];
+  const isEn = language === "en";
+  const text = isEn
+    ? {
+        authRequiredTitle: "Login Required",
+        authRequiredDesc: "Please log in to view the career analysis radar chart.",
+        goLogin: "Go to Login",
+        pageTitle: "Career Analysis",
+        loadingStudentInfo: "Loading student info...",
+        studentInfoLoadFailed: "Failed to load student info",
+        whatIsZScore: "What is z-score?",
+        tabDomestic: "Domestic Graduate",
+        tabAbroad: "Study Abroad",
+        tabEmployment: "Undergraduate Employment",
+        dataVersion: "Data Version",
+        computationTime: "Computation Time",
+        refresh: "Refresh",
+        loadingRadar: "Loading radar data...",
+        noData: "No data to display",
+        myProfile: "My Profile",
+        hideMyProfile: "Hide My Profile",
+        generateMyProfile: "Generate My Profile",
+        overviewTitle: "Past Bonus Overview",
+        grade: "Year",
+        major: "Major",
+        overviewHintSuffix: "means: students with competition bonus / total students recommended for postgraduate.",
+        loadingOverview: "Loading overview data...",
+        avgBonus: "Avg Bonus",
+        myBonusTitle: "My Bonus",
+        myBonusHint: "*Competition bonus is cumulative and may not match school cap rules.",
+        loadingMyBonus: "Loading my bonus...",
+        competition: "Competition",
+        paper: "Paper",
+        patent: "Patent",
+        closePromptAria: "Close prompt",
+        promptText: "Filling in more personal info (papers, competition awards, etc.) helps generate a better profile.",
+        generating: "Generating...",
+        generateDirectly: "Generate Now",
+        goFill: "Go Fill",
+        closeZScoreAria: "Close z-score description",
+        zScoreDesc:
+          "z-score means how far you are from the average of students in the same destination.\nz-score > 0 means above average, < 0 means below average.",
+        loginExpiredView: "Session expired. Please log in again.",
+        loginExpiredGenerate: "Session expired. Please log in again before generating profile.",
+        requestFailed: "Request failed",
+        loadFailed: "Load failed",
+        generateFailed: "Generate failed",
+      }
+    : {
+        authRequiredTitle: "需要先登录",
+        authRequiredDesc: "请先登录后查看职业分析雷达图。",
+        goLogin: "去登录",
+        pageTitle: "职业分析",
+        loadingStudentInfo: "正在加载学生信息",
+        studentInfoLoadFailed: "学生信息加载失败",
+        whatIsZScore: "什么是z-score？",
+        tabDomestic: "国内升学",
+        tabAbroad: "出国留学",
+        tabEmployment: "本科就业",
+        dataVersion: "数据版本",
+        computationTime: "计算时间",
+        refresh: "刷新",
+        loadingRadar: "正在加载雷达图数据...",
+        noData: "暂无可展示数据",
+        myProfile: "我的画像",
+        hideMyProfile: "隐藏我的画像",
+        generateMyProfile: "生成我的画像",
+        overviewTitle: "往届加分总览",
+        grade: "年级",
+        major: "专业",
+        overviewHintSuffix: "表示：获竞赛加分的人数/总保研人数",
+        loadingOverview: "往届数据加载中...",
+        avgBonus: "加分均分",
+        myBonusTitle: "我的加分",
+        myBonusHint: "*竞赛加分只做累加，不一定符合学校上限要求",
+        loadingMyBonus: "我的加分加载中...",
+        competition: "竞赛",
+        paper: "论文",
+        patent: "专利",
+        closePromptAria: "关闭提示卡片",
+        promptText: "填写更多个人信息（如论文发表、竞赛获奖等）有利于画像生成",
+        generating: "生成中...",
+        generateDirectly: "直接生成",
+        goFill: "去填写",
+        closeZScoreAria: "关闭z-score说明",
+        zScoreDesc:
+          "z-score 的值可以理解为：和同去向同学平均水平相比，你高了多少或低了多少\nz-score > 0 说明高于平均， < 0 说明低于平均",
+        loginExpiredView: "登录状态失效，请重新登录后查看职业分析。",
+        loginExpiredGenerate: "登录状态失效，请重新登录后生成画像。",
+        requestFailed: "请求失败",
+        loadFailed: "加载失败",
+        generateFailed: "生成失败",
+      };
+  const meta = destinationMetaByLanguage[isEn ? "en" : "zh"][destination];
   const hasCurrentDestinationProfile = Boolean(userProfilesByDestination[destination]);
   const isCurrentDestinationProfileVisible =
     Boolean(userProfileVisibilityByDestination[destination]) && hasCurrentDestinationProfile;
@@ -261,13 +374,13 @@ export default function RoleModelsPage() {
       if (controller.signal.aborted) return;
 
       if (res.status === 401) {
-        setError("登录状态失效，请重新登录后查看职业分析。");
+        setError(text.loginExpiredView);
         return;
       }
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `请求失败 (${res.status})`);
+        throw new Error(body?.error || `${text.requestFailed} (${res.status})`);
       }
 
       const body = (await res.json()) as CentroidResponse;
@@ -275,7 +388,7 @@ export default function RoleModelsPage() {
       setData(body);
     } catch (e) {
       if ((e as Error)?.name === "AbortError") return;
-      const message = e instanceof Error ? e.message : "加载失败";
+      const message = e instanceof Error ? e.message : text.loadFailed;
       setError(message);
     } finally {
       // 仅由当前请求关闭 loading，避免被旧请求 finally 干扰
@@ -287,9 +400,10 @@ export default function RoleModelsPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user?.isLoggedIn) return;
+    // 刷新页面时，登录态字段可能分步就绪；等到 userHash 可用再请求，避免首屏误判为空数据
+    if (!user?.isLoggedIn || !user?.userHash) return;
     fetchCentroids(destination);
-  }, [destination, authLoading, user?.isLoggedIn]);
+  }, [destination, authLoading, user?.isLoggedIn, user?.userHash]);
 
   useEffect(() => {
     return () => {
@@ -300,10 +414,9 @@ export default function RoleModelsPage() {
   }, []);
 
   const fetchDomesticBonus = async () => {
-    if (!user?.userId) return;
     setMyBonusLoading(true);
     try {
-      const res = await fetch(`/api/competition-records?userId=${encodeURIComponent(user.userId)}`, {
+      const res = await fetch("/api/role-models/my-domestic-bonus", {
         method: "GET",
         credentials: "include",
         cache: "no-store",
@@ -315,17 +428,21 @@ export default function RoleModelsPage() {
         return;
       }
 
-      const body = (await res.json()) as { success?: boolean; data?: Array<{ score?: number | string }> };
-      const rows = body?.success && Array.isArray(body.data) ? body.data : [];
-      const competition = rows.reduce((sum, item) => sum + Number(item?.score ?? 0), 0);
-      const paper = 0; // 按需求：论文加分先写死为0
-      const patent = 0; // 按需求：专利加分先写死为0
+      const body = (await res.json()) as {
+        competition?: number;
+        paper?: number;
+        patent?: number;
+        total?: number;
+      };
+      const competition = Number(body.competition ?? 0);
+      const paper = Number(body.paper ?? 0);
+      const patent = Number(body.patent ?? 0);
       const total = competition + paper + patent;
 
       setDomesticBonus({
         competition: Number(competition.toFixed(1)),
-        paper: Number(paper.toFixed(1)),
-        patent: Number(patent.toFixed(1)),
+        paper: Math.trunc(paper),
+        patent: Math.trunc(patent),
         total: Number(total.toFixed(1)),
       });
     } catch {
@@ -345,7 +462,7 @@ export default function RoleModelsPage() {
       });
 
       if (res.status === 401) {
-        setError("登录状态失效，请重新登录后查看职业分析。");
+        setError(text.loginExpiredView);
         return;
       }
 
@@ -433,12 +550,12 @@ export default function RoleModelsPage() {
         if (yearText && majorText && userId) {
           setStudentInfoText(`${yearText}${majorText}-${userId}`);
         } else if (userId) {
-          setStudentInfoText(`--${majorText || "未知专业"}-${userId}`);
+          setStudentInfoText(`--${majorText || (isEn ? "Unknown Major" : "未知专业")}-${userId}`);
         } else {
-          setStudentInfoText("学生信息加载失败");
+          setStudentInfoText(text.studentInfoLoadFailed);
         }
       } catch {
-        setStudentInfoText("学生信息加载失败");
+        setStudentInfoText(text.studentInfoLoadFailed);
       } finally {
         setLoadingStudentInfo(false);
       }
@@ -458,13 +575,13 @@ export default function RoleModelsPage() {
       });
 
       if (res.status === 401) {
-        setError("登录状态失效，请重新登录后生成画像。");
+        setError(text.loginExpiredGenerate);
         return;
       }
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `生成失败 (${res.status})`);
+        throw new Error(body?.error || `${text.generateFailed} (${res.status})`);
       }
 
       const body = (await res.json()) as MyC18Response;
@@ -473,7 +590,7 @@ export default function RoleModelsPage() {
       setUserProfileVisibilityByDestination((prev) => ({ ...prev, [target]: true }));
       setShowGeneratePrompt(false);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "生成失败";
+      const message = e instanceof Error ? e.message : text.generateFailed;
       setError(message);
     } finally {
       setGeneratingProfile(false);
@@ -484,9 +601,9 @@ export default function RoleModelsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
         <GraduationCap className="h-16 w-16 text-muted-foreground mb-4" />
-        <h2 className="text-2xl font-bold mb-2">需要先登录</h2>
-        <p className="text-muted-foreground mb-4">请先登录后查看职业分析雷达图。</p>
-        <Button onClick={() => router.push("/login")}>去登录</Button>
+        <h2 className="text-2xl font-bold mb-2">{text.authRequiredTitle}</h2>
+        <p className="text-muted-foreground mb-4">{text.authRequiredDesc}</p>
+        <Button onClick={() => router.push("/login")}>{text.goLogin}</Button>
       </div>
     );
   }
@@ -494,8 +611,8 @@ export default function RoleModelsPage() {
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">职业分析</h1>
-        <p className="text-muted-foreground mt-1">{loadingStudentInfo ? "正在加载学生信息" : studentInfoText || "学生信息加载失败"}</p>
+        <h1 className="text-3xl font-bold">{text.pageTitle}</h1>
+        <p className="text-muted-foreground mt-1">{loadingStudentInfo ? text.loadingStudentInfo : studentInfoText || text.studentInfoLoadFailed}</p>
       </div>
 
       <Card>
@@ -511,26 +628,26 @@ export default function RoleModelsPage() {
               className="inline-block rounded-sm px-1 text-base font-bold underline underline-offset-4 transition-colors hover:text-foreground"
               onClick={() => setShowZScoreInfo(true)}
             >
-              什么是z-score？
+              {text.whatIsZScore}
             </button>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs value={destination} onValueChange={(v) => setDestination(v as Destination)}>
             <TabsList>
-              <TabsTrigger value="domestic">国内升学</TabsTrigger>
-              <TabsTrigger value="abroad">出国留学</TabsTrigger>
-              <TabsTrigger value="employment">本科就业</TabsTrigger>
+              <TabsTrigger value="domestic">{text.tabDomestic}</TabsTrigger>
+              <TabsTrigger value="abroad">{text.tabAbroad}</TabsTrigger>
+              <TabsTrigger value="employment">{text.tabEmployment}</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div>
-              数据版本：{data?.statsVersion ?? "-"} | 计算时间：{data?.computationTime ?? "-"}
+              {text.dataVersion}：{data?.statsVersion ?? "-"} | {text.computationTime}：{data?.computationTime ?? "-"}
             </div>
             <Button variant="outline" size="sm" className="gap-2" onClick={() => fetchCentroids(destination)} disabled={loading}>
               <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              刷新
+              {text.refresh}
             </Button>
           </div>
 
@@ -541,9 +658,9 @@ export default function RoleModelsPage() {
           )}
 
           {loading ? (
-            <div className="h-[520px] flex items-center justify-center text-muted-foreground">正在加载雷达图数据...</div>
+            <div className="h-[520px] flex items-center justify-center text-muted-foreground">{text.loadingRadar}</div>
           ) : chartData.length === 0 ? (
-            <div className="h-[520px] flex items-center justify-center text-muted-foreground">暂无可展示数据</div>
+            <div className="h-[520px] flex items-center justify-center text-muted-foreground">{text.noData}</div>
           ) : (
             <div className={destination === "domestic" ? "flex w-full flex-col gap-4 lg:h-[680px] lg:flex-row" : "relative h-[680px] w-full"}>
               {/* 移动端优先展示雷达图，随后是往届加分总览与我的加分 */}
@@ -563,7 +680,7 @@ export default function RoleModelsPage() {
                     {currentUserProfile && (
                       <div className="flex items-center gap-2 text-sm lg:text-base">
                         <span className="inline-block h-2.5 w-2.5 rounded-full bg-black" />
-                        <span className="text-black">我的画像</span>
+                        <span className="text-black">{text.myProfile}</span>
                       </div>
                     )}
                   </div>
@@ -627,7 +744,7 @@ export default function RoleModelsPage() {
                     setShowGeneratePrompt(true);
                   }}
                 >
-                  {isCurrentDestinationProfileVisible ? "隐藏我的画像" : "生成我的画像"}
+                  {isCurrentDestinationProfileVisible ? text.hideMyProfile : text.generateMyProfile}
                 </Button>
               </div>
 
@@ -635,11 +752,11 @@ export default function RoleModelsPage() {
                 <div className="order-2 w-full space-y-4 lg:order-1 lg:w-[340px] lg:shrink-0">
                   <div className="rounded-lg border bg-slate-100/90 p-4 shadow-sm">
                     <div className="mb-3">
-                      <h3 className="text-base font-semibold text-slate-900">往届加分总览</h3>
+                      <h3 className="text-base font-semibold text-slate-900">{text.overviewTitle}</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="mb-1 block text-xs text-slate-600">年级</label>
+                        <label className="mb-1 block text-xs text-slate-600">{text.grade}</label>
                         <select
                           className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
                           value={overviewYear}
@@ -653,7 +770,7 @@ export default function RoleModelsPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-xs text-slate-600">专业</label>
+                        <label className="mb-1 block text-xs text-slate-600">{text.major}</label>
                         <select
                           className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
                           value={overviewMajor}
@@ -667,9 +784,9 @@ export default function RoleModelsPage() {
                         </select>
                       </div>
                     </div>
-                    <p className="mt-2 text-xs text-slate-600">{overviewData.competition}/{overviewData.totalNumber} 表示：获竞赛加分的人数/总保研人数</p>
+                    <p className="mt-2 text-xs text-slate-600">{overviewData.competition}/{overviewData.totalNumber} {text.overviewHintSuffix}</p>
                     {overviewLoading ? (
-                      <div className="flex h-[190px] items-center justify-center text-sm text-slate-500">往届数据加载中...</div>
+                      <div className="flex h-[190px] items-center justify-center text-sm text-slate-500">{text.loadingOverview}</div>
                     ) : (
                       <div className="mt-3 flex h-[210px] items-end justify-between gap-3">
                         {[
@@ -684,7 +801,7 @@ export default function RoleModelsPage() {
                               {item.key === "competition" ? (
                                 <div className="mb-1 text-center text-xs font-semibold leading-tight text-slate-700">
                                   <div>{item.value}/{overviewData.totalNumber}</div>
-                                  <div>加分均分：{overviewData.competitionAverageBonus.toFixed(1)}</div>
+                                  <div>{text.avgBonus}：{overviewData.competitionAverageBonus.toFixed(1)}</div>
                                 </div>
                               ) : (
                                 <div className="mb-1 text-xs font-semibold text-slate-700">
@@ -705,22 +822,23 @@ export default function RoleModelsPage() {
 
                   <div className="rounded-lg border bg-slate-100/90 p-4 shadow-sm">
                     <div className="mb-3">
-                      <h3 className="text-base font-semibold text-slate-900">我的加分</h3>
-                      <p className="mt-1 text-xs text-slate-600">*竞赛加分只做累加，不一定符合学校上限要求</p>
+                      <h3 className="text-base font-semibold text-slate-900">{text.myBonusTitle}</h3>
+                      <p className="mt-1 text-xs text-slate-600">{text.myBonusHint}</p>
                     </div>
                     {myBonusLoading ? (
-                      <div className="flex h-[180px] items-center justify-center text-sm text-slate-500">我的加分加载中...</div>
+                      <div className="flex h-[180px] items-center justify-center text-sm text-slate-500">{text.loadingMyBonus}</div>
                     ) : (
                       <div className="mt-2 flex h-[190px] items-end justify-between gap-3">
                         {[
-                          { key: "competition", label: "竞赛", value: domesticBonus.competition, unit: "分", color: "bg-emerald-600" },
-                          { key: "paper", label: "论文", value: 1, unit: "条", color: "bg-blue-600" },
-                          { key: "patent", label: "专利", value: 0, unit: "条", color: "bg-violet-600" },
+                          { key: "competition", label: text.competition, value: domesticBonus.competition, unit: isEn ? " pt" : "分", color: "bg-emerald-600" },
+                          { key: "paper", label: text.paper, value: domesticBonus.paper, unit: isEn ? "" : "条", color: "bg-blue-600" },
+                          { key: "patent", label: text.patent, value: domesticBonus.patent, unit: isEn ? "" : "条", color: "bg-violet-600" },
                         ].map((item) => {
-                          const maxVal = Math.max(domesticBonus.competition, 1, 0);
+                          const maxCompetition = Math.max(domesticBonus.competition, 1);
+                          const maxCountBetweenPaperAndPatent = Math.max(domesticBonus.paper, domesticBonus.patent, 1);
                           const barHeight = item.key === "competition"
-                            ? Math.max(12, (item.value / maxVal) * 120)
-                            : Math.max(12, item.value > 0 ? 70 : 12);
+                            ? Math.max(12, (item.value / maxCompetition) * 120)
+                            : Math.max(12, (item.value / maxCountBetweenPaperAndPatent) * 120);
                           return (
                             <div key={item.key} className="flex flex-1 flex-col items-center">
                               <div className="mb-1 text-xs font-semibold text-slate-700">
@@ -750,12 +868,16 @@ export default function RoleModelsPage() {
               size="icon"
               className="absolute right-1 top-1 h-8 w-8 text-muted-foreground hover:bg-muted"
               onClick={() => setShowGeneratePrompt(false)}
-              aria-label="关闭提示卡片"
+              aria-label={text.closePromptAria}
             >
               <X className="h-4 w-4" />
             </Button>
             <p className="mt-1 text-center text-xl text-muted-foreground">
-              填写更多个人信息（如论文发表、竞赛<br/>获奖等）有利于画像生成
+              {isEn ? (
+                <>Filling in more personal info (papers, competition awards, etc.)<br />helps generate a better profile.</>
+              ) : (
+                <>填写更多个人信息（如论文发表、竞赛<br/>获奖等）有利于画像生成</>
+              )}
             </p>
             <div className="mt-6 flex justify-center gap-3">
               <Button
@@ -764,7 +886,7 @@ export default function RoleModelsPage() {
                 onClick={() => generateMyProfile(destination)}
                 disabled={generatingProfile}
               >
-                {generatingProfile ? "生成中..." : "直接生成"}
+                {generatingProfile ? text.generating : text.generateDirectly}
               </Button>
               <Button
                 className="mt-1 h-11 min-w-[112px] justify-center text-center text-base text-white bg-black hover:bg-black/75"
@@ -773,7 +895,7 @@ export default function RoleModelsPage() {
                   router.push("/profile");
                 }}
               >
-                去填写
+                {text.goFill}
               </Button>
             </div>
           </div>
@@ -788,14 +910,26 @@ export default function RoleModelsPage() {
               size="icon"
               className="absolute right-1 top-1 h-8 w-8 text-muted-foreground hover:bg-muted"
               onClick={() => setShowZScoreInfo(false)}
-              aria-label="关闭z-score说明"
+              aria-label={text.closeZScoreAria}
             >
               <X className="h-4 w-4" />
             </Button>
             <p className="mt-1 text-xl leading-7 text-muted-foreground">
-              <b>z-score 的值可以理解为：和同去向同学平均水平相比，你高了多少或低了多少
-              <br />
-              z-score &gt; 0 说明高于平均， &lt; 0 说明低于平均</b>
+              <b>
+                {isEn ? (
+                  <>
+                    z-score means how far you are from the average of students in the same destination.
+                    <br />
+                    z-score &gt; 0 means above average, &lt; 0 means below average.
+                  </>
+                ) : (
+                  <>
+                    z-score 的值可以理解为：和同去向同学平均水平相比，你高了多少或低了多少
+                    <br />
+                    z-score &gt; 0 说明高于平均， &lt; 0 说明低于平均
+                  </>
+                )}
+              </b>
               <br />
             </p>
           </div>
