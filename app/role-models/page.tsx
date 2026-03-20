@@ -278,7 +278,7 @@ export default function RoleModelsPage() {
         overviewTitle: "Past Bonus Overview",
         grade: "Year",
         major: "Major",
-        overviewHintSuffix: "means: students with competition bonus / total students recommended for postgraduate.",
+        overviewHintSuffix: "means: students with competition bonus / total number of students who received bonus.",
         loadingOverview: "Loading overview data...",
         avgBonus: "Avg Bonus",
         myBonusTitle: "My Bonus",
@@ -323,7 +323,7 @@ export default function RoleModelsPage() {
         overviewTitle: "往届加分总览",
         grade: "年级",
         major: "专业",
-        overviewHintSuffix: "表示：获竞赛加分的人数/总保研人数",
+        overviewHintSuffix: "表示：有竞赛加分的人数/有加分项的学生总人数",
         loadingOverview: "往届数据加载中...",
         avgBonus: "加分均分",
         myBonusTitle: "我的加分",
@@ -784,7 +784,7 @@ export default function RoleModelsPage() {
                         </select>
                       </div>
                     </div>
-                    <p className="mt-2 text-xs text-slate-600">{overviewData.competition}/{overviewData.totalNumber} {text.overviewHintSuffix}</p>
+                    <p className="mt-2 text-xs text-slate-600">*{overviewData.competition}/{overviewData.totalNumber} {text.overviewHintSuffix}</p>
                     {overviewLoading ? (
                       <div className="flex h-[190px] items-center justify-center text-sm text-slate-500">{text.loadingOverview}</div>
                     ) : (

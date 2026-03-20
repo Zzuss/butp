@@ -217,7 +217,7 @@ export default function DomesticBonusUpdatePage() {
             <p>1) 首先选择专业。 </p>
             <p>2) 文件必须是单 sheet 的 Excel（.xlsx/.xls）。</p>
             <p>3) 列名必须包含且仅用于导入以下字段：</p>
-            <p className="font-medium text-foreground">year, subclass, subclass_number, average_bonus, total_number</p>
+            <p className="font-medium text-foreground">year, subclass, subclass_number, average_bonus, total_number（获加分的总人数）</p>
             <p>4) 导入策略为覆盖：会先清空目标专业表，再写入新数据。</p>
             <p>5) 目标表名规则：专业代码 + `_domestic_bonus`（如 tewm_domestic_bonus）。</p>
           </CardContent>
