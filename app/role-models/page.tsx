@@ -801,7 +801,7 @@ export default function RoleModelsPage() {
                               {item.key === "competition" ? (
                                 <div className="mb-1 text-center text-xs font-semibold leading-tight text-slate-700">
                                   <div>{item.value}/{overviewData.totalNumber}</div>
-                                  <div>{text.avgBonus}：{overviewData.competitionAverageBonus.toFixed(1)}</div>
+                                  <div>{text.avgBonus}：{overviewData.competitionAverageBonus.toFixed(2)}</div>
                                 </div>
                               ) : (
                                 <div className="mb-1 text-xs font-semibold text-slate-700">
