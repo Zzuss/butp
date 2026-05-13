@@ -501,7 +501,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2 text-2xl font-bold text-gray-800">
             <User className="h-6 w-6" />
-            {t('login.title')} 登录
+            {t('login.title.line2')} 登录
             {isDevMode && (
               <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full">
                 开发模式
