@@ -42,7 +42,7 @@ export default function AdminHeader({ adminInfo, showBackButton = false }: Admin
             <div className="flex items-center">
               <Shield className="h-6 w-6 text-purple-600 mr-2" />
               <h1 className="text-lg font-semibold text-gray-900">
-                {showBackButton ? 'BuTP 管理后台' : 'BuTP 管理员控制台'}
+                {showBackButton ? 'VAEP 管理后台' : 'VAEP 管理员控制台'}
               </h1>
             </div>
           </div>

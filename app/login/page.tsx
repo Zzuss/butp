@@ -9,13 +9,14 @@ import { AlertCircle, User, Hash, Copy, Code, LogOut, Shield } from "lucide-reac
 import { useAuth } from "@/contexts/AuthContext"
 import { trackUserAction } from "@/lib/analytics"
 import Link from "next/link"
-
+import { useLanguage } from "@/contexts/language-context"
 
 export default function LoginPage() {
   const router = useRouter()
   const { refreshUser } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const { t } = useLanguage()
   const [hashValue, setHashValue] = useState("")
   const [hashValidating, setHashValidating] = useState(false)
   const [isDevMode, setIsDevMode] = useState(false)
@@ -500,7 +501,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2 text-2xl font-bold text-gray-800">
             <User className="h-6 w-6" />
-            BuTP 登录
+            {t('login.title')} 登录
             {isDevMode && (
               <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full">
                 开发模式
