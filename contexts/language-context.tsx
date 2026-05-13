@@ -18,9 +18,12 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 // 翻译对象 - 目前只包含登录页面
 const translations: Record<Language, Record<string, string>> = {
   zh: {
+
+    // 项目名称
+    'project.name': '见路 / 成己',
     // 登录页面
-    'login.title.line1': 'Build Your Toolbox',
-    'login.title.line2': 'BuTP', 
+    'login.title.line1': 'Values Affirmation & Evaluation Platform',
+    'login.title.line2': '见路 / 成己', 
     'login.description': '请输入您的学号哈希值登录',
     'login.select.label': '选择学生账号',
     'login.select.placeholder': '请选择学生...',
@@ -29,7 +32,7 @@ const translations: Record<Language, Record<string, string>> = {
     'login.alert.input': '请输入学号哈希值',
     'login.alert.invalid': '请输入有效的学号哈希值',
     'login.alert.failed': '登录失败，请重试',
-    'login.button.login': '登录BuTP',
+    'login.button.login': '登录见路 / 成己',
     'login.button.loading': '登录中...',
     'login.demo.text': '演示版本 • 仅供学习使用',
     'login.language.switch': 'Change to English',
@@ -437,7 +440,7 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.edit.modal.description': '让你人生拥有更多的可能性',
     
     // About页面
-    'about.title': '关于BuTP',
+    'about.title': '关于见路 / 成己',
     'about.version': '当前版本 {version}',
     
     // 雷达图相关
@@ -1097,9 +1100,11 @@ const translations: Record<Language, Record<string, string>> = {
     'city.wuxi': '无锡'
   },
   en: {
+    // 项目名称
+    'project.name': 'VAEP',
     // 登录页面
-    'login.title.line1': 'Build Your Toolbox',
-    'login.title.line2': 'BuTP',
+    'login.title.line1': 'Values Affirmation & Evaluation Platform',
+    'login.title.line2': 'VAEP',
     'login.description': 'Please enter your student ID hash to login',
     'login.select.label': 'Select Student Account',
     'login.select.placeholder': 'Please select a student...',
@@ -1108,7 +1113,7 @@ const translations: Record<Language, Record<string, string>> = {
     'login.alert.input': 'Please enter your student ID hash',
     'login.alert.invalid': 'Please enter a valid student ID hash',
     'login.alert.failed': 'Login failed, please try again',
-    'login.button.login': 'Login System',
+    'login.button.login': 'Login VAEP System',
     'login.button.loading': 'Logging in...',
     'login.demo.text': 'Demo System • For Learning Purpose Only',
     'login.language.switch': '切换为中文',
@@ -1516,7 +1521,7 @@ const translations: Record<Language, Record<string, string>> = {
     'analysis.edit.modal.description': 'Give your life more possibilities',
     
     // About页面
-    'about.title': 'About BuTP',
+    'about.title': 'About VAEP',
     'about.version': 'Version {version}',
     
     // 雷达图相关

@@ -15,9 +15,11 @@ import {
   voteForOption, 
   revokeVote
 } from "@/lib/voting-data"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function VotingPoll() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [options, setOptions] = useState<VotingOption[]>([])
   const [userVoteHistory, setUserVoteHistory] = useState<UserVoteHistory | null>(null)
   const [loading, setLoading] = useState(true)
@@ -109,7 +111,7 @@ export default function VotingPoll() {
       <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <CardTitle className="flex items-center gap-2">
           <Vote className="h-6 w-6" />
-          最希望BuTP未来添加的功能
+          最希望{t('project.name')}未来添加的功能
         </CardTitle>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-1">

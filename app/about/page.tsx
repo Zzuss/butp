@@ -55,7 +55,7 @@ const students = [
   },
   {
     name: "苑博淳", 
-    note: "前端开发工程师兼UI/UX设计师，负责界面设计与实现"
+    note: "前端开发工程师兼UI/UX设计师，负责界面设计与实现，后端API开发与数据库调用。"
   },
   {
     name: "吕梓豪",
@@ -110,9 +110,9 @@ export default function AboutPage() {
       <div className="max-w-6xl mx-auto">
         {/* 页面标题 */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-blue-900 mb-4">关于 BuTP</h1>
-          <p className="text-xl text-blue-700 mb-2">Build Your Toolbox Platform</p>
-          <p className="text-blue-600 mb-4">构建属于你的工具箱</p>
+          <h1 className="text-4xl font-bold text-blue-900 mb-4">关于 {t('project.name')}</h1>
+          <p className="text-xl text-blue-700 mb-2">{t('login.title.line1')}</p>
+          <p className="text-blue-600 mb-4">价值认定与评估平台</p>
           
           {/* 版本号显示 */}
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -133,7 +133,7 @@ export default function AboutPage() {
           </CardHeader>
           <CardContent className="p-6">
             <p className="text-gray-700 text-lg leading-relaxed">
-              BuTP（Build Your Toolbox Platform）是一个现代化的学生培养系统，
+              见路 / 成己（VAEP, Values Affirmation & Evaluation Platform）是一个现代化的学生培养系统，
               旨在帮助学生更好地管理学习进度、分析学习数据、制定学习计划。
               系统采用 Next.js + React + Supabase 技术栈构建，
               提供直观友好的用户界面和丰富的功能模块。
@@ -151,7 +151,7 @@ export default function AboutPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <p className="text-blue-700 mb-4">欢迎为 BuTP 评分，并留下你的建议与反馈。</p>
+              <p className="text-blue-700 mb-4">欢迎为 {t('project.name')} 评分，并留下你的建议与反馈。</p>
               <button
                 onClick={() => setShowRatingModal(true)}
                 className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"

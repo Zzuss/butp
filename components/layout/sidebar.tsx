@@ -55,7 +55,7 @@ const sidebarItems = [
     icon: Users,
   },
   {
-    title: "关于BuTP",
+    title: "project.name",
     titleKey: "about.title",
     href: "/about",
     icon: Info,
@@ -155,7 +155,7 @@ export function AppSidebar() {
         <SidebarHeader className="relative">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'}`}>
           <GraduationCap className="h-6 w-6" />
-            {!isCollapsed && <span className="font-semibold text-lg">BuTP</span>}
+            {!isCollapsed && <span className="font-semibold text-lg">{t('project.name')}</span>}
         </div>
           
           {/* 收起/展开按钮 - 仅在非移动设备上显示 */}
