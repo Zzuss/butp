@@ -261,13 +261,8 @@ export default function AboutPage() {
                 <h3 className="text-2xl font-bold text-blue-900">联系我们</h3>
               </div>
               <p className="text-blue-700 text-lg">
-                如有任何问题或建议，欢迎通过以下邮箱联系我们：
+                如有任何问题或建议，欢迎通过上端的打分板块留下你的建议与反馈：
               </p>
-              <div className="mt-4">
-                <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 px-4 py-2 text-lg font-medium">
-                  developer@butp.tech
-                </Badge>
-              </div>
             </CardContent>
           </Card>
         </div>
