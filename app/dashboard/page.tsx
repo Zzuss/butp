@@ -9,26 +9,8 @@ import { NotificationStack } from '@/components/ui/notification-modal'
 
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
+import { useDashboard } from '@/contexts/dashboard-context'
 import { useLanguage } from '@/contexts/language-context'
-
-// 导入数据处理函数
-import { 
-  getStudentResults,
-  calculateDashboardStats, 
-  getRecentSubjectGrades, 
-  getLatestSemesterTopCreditCourses,
-  getCourseTypeStats, 
-  getSemesterTrends,
-  getStudentInfo,
-  getStudentGPA,
-  type DashboardStats,
-  type SubjectGrade,
-  type CourseTypeStats,
-  type SemesterTrend
-} from '@/lib/dashboard-data'
-// 导入统一数据源查询函数，用于预加载
-import { queryAcademicResults } from '@/lib/academic__data'
-import { supabase } from '@/lib/supabase'
 
 // 导入图表组件
 import { CourseStatsChart } from '@/components/ui/chart'
@@ -46,16 +28,18 @@ interface SystemNotification {
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
-  const { t, language } = useLanguage()
+  const {
+    stats,
+    subjectGrades,
+    courseTypeStats,
+    semesterTrends,
+    studentInfo,
+    isLoading,
+    cachedUserHash,
+    loadDashboardIfNeeded,
+  } = useDashboard()
+  const { t } = useLanguage()
   const router = useRouter()
-  
-  const [isLoading, setIsLoading] = useState(true)
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [subjectGrades, setSubjectGrades] = useState<SubjectGrade[]>([])
-  const [courseTypeStats, setCourseTypeStats] = useState<CourseTypeStats[]>([])
-  const [semesterTrends, setSemesterTrends] = useState<SemesterTrend[]>([])
-  const [studentInfo, setStudentInfo] = useState<{ year: string; major: string } | null>(null)
-  // const [courseResults, setCourseResults] = useState<CourseResult[]>([])
   
   // 通知相关状态
   const [notifications, setNotifications] = useState<SystemNotification[]>([])
@@ -103,133 +87,21 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    // 如果未登录，不加载数据
     if (authLoading) return
-    
-    if (!user?.isLoggedIn) {
-      setIsLoading(false)
-      return
-    }
-    
-    async function loadDashboardData() {
-      setIsLoading(true)
-      try {
-        // 预加载学术成绩数据到统一缓存（方案A：统一数据源）
-        // 这样后续的 getStudentResults 调用可以直接从缓存获取
-        await queryAcademicResults(user!.userHash)
-        console.log('[DEBUG] 预加载学术成绩数据完成')
-        
-        // 获取学生成绩数据（现在会优先从统一缓存获取）
-        const results = await getStudentResults(user!.userHash)
-        console.log('[DEBUG] getStudentResults -> count:', Array.isArray(results) ? results.length : 'N/A')
-        console.log('[DEBUG] getStudentResults -> data sample:', Array.isArray(results) && results.length > 0 ? results[0] : results)
-        // setCourseResults(results)
-        
-        // 获取学生信息（年级和专业）
-        const info = await getStudentInfo(user!.userHash)
-        console.log('[DEBUG] getStudentInfo ->', info)
-        setStudentInfo(info)
-        
-        // 从GPA_Student表查询GPA
-        const studentGPA = await getStudentGPA(user!.userHash)
-        console.log('[DEBUG] getStudentGPA ->', studentGPA)
-        
-        // 计算统计数据（传入从数据库查询的GPA）
-        const dashboardStats = calculateDashboardStats(results, studentGPA)
-        console.log('[DEBUG] calculateDashboardStats ->', dashboardStats)
-        setStats(dashboardStats)
-        
-        // 获取最新学期中学分最高的5门课程（用于数据总览显示）
-        const topCreditCourses = getLatestSemesterTopCreditCourses(results, 5)
-        console.log('[DEBUG] getLatestSemesterTopCreditCourses ->', topCreditCourses)
-        setSubjectGrades(topCreditCourses)
+    if (!user?.isLoggedIn) return
+    loadDashboardIfNeeded(user)
+  }, [user, authLoading, loadDashboardIfNeeded])
 
-        // 从 Subject_Average 表查询各科平均分，替换默认平均值
-        try {
-          const studentNumber =
-            typeof (user as any)?.studentNumber === 'string'
-              ? (user as any).studentNumber
-              : (user?.userId || '').toString()
-          const trimmedStudentNumber = studentNumber.toString().trim()
-          const yearPart = trimmedStudentNumber.substring(0, 4)
-
-          const majorFromInfo = info?.major
-
-          if (yearPart && majorFromInfo) {
-            const courseIds = Array.from(
-              new Set(
-                topCreditCourses
-                  .map(course => course.courseId)
-                  .filter((id): id is string => !!id)
-              )
-            )
-
-            if (courseIds.length > 0) {
-              const { data: avgRows, error: avgError } = await supabase
-                .from('Subject_Average')
-                .select('"Course_ID", "Major", "Year", "Score"')
-                .eq('"Major"', majorFromInfo)
-                .eq('"Year"', yearPart)
-                .in('"Course_ID"', courseIds)
-
-              if (avgError) {
-                console.error('查询 Subject_Average 失败:', avgError)
-              } else if (avgRows && avgRows.length > 0) {
-                const scoreMap = new Map<string, number>()
-                for (const row of avgRows as any[]) {
-                  const cid = row.Course_ID as string
-                  const score =
-                    typeof row.Score === 'number'
-                      ? row.Score
-                      : parseFloat(String(row.Score)) || 0
-                  if (cid) {
-                    scoreMap.set(cid, score)
-                  }
-                }
-
-                const merged = topCreditCourses.map(subject => {
-                  const cid = subject.courseId
-                  const dbAverage = cid ? scoreMap.get(cid) : undefined
-                  return {
-                    ...subject,
-                    average:
-                      dbAverage !== undefined
-                        ? Math.round(dbAverage * 10) / 10
-                        : subject.average,
-                  }
-                })
-
-                setSubjectGrades(merged)
-              }
-            }
-          }
-        } catch (avgError) {
-          console.error('加载各科平均分失败:', avgError)
-        }
-        
-        // 获取课程类型统计
-        const typeStats = getCourseTypeStats(results)
-        console.log('[DEBUG] getCourseTypeStats ->', typeStats)
-        setCourseTypeStats(typeStats)
-        
-        // 获取学期成绩趋势
-        const trends = getSemesterTrends(results)
-        console.log('[DEBUG] getSemesterTrends ->', trends)
-        setSemesterTrends(trends)
-        
-        // 获取未读通知
-        await fetchUnreadNotifications(user!.userId)
-      } catch (error) {
-        console.error('Error loading dashboard data:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    loadDashboardData()
+  useEffect(() => {
+    if (authLoading) return
+    if (!user?.isLoggedIn) return
+    fetchUnreadNotifications(user.userId)
   }, [user, authLoading])
   
-  const isDataLoading = isLoading || authLoading
+  const isDataLoading =
+    authLoading ||
+    isLoading ||
+    (!!user?.isLoggedIn && cachedUserHash !== user.userHash)
   const loadingLabel = t('dashboard.data.loading')
 
   // 如果未登录，显示登录提示

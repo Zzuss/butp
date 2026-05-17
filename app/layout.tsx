@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/contexts/language-context";
 import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
 import { PageViewTracker } from "@/components/analytics/PageViewTracker";
 import { SidebarProvider } from "@/contexts/sidebar-context";
+import { DashboardProvider } from "@/contexts/dashboard-context";
 
 export const metadata: Metadata = {
   title: "学生管理系统",
@@ -28,6 +29,7 @@ export default function RootLayout({
       <body className="antialiased">
         <LanguageProvider>
           <AuthProvider>
+            <DashboardProvider>
             <SidebarProvider>
               <div className="flex h-screen flex-col md:flex-row">
                 <AppSidebar />
@@ -38,6 +40,7 @@ export default function RootLayout({
                 {/* 右下角旧版PDF导出按钮已移除，保留侧边栏标准导出 */}
               </div>
             </SidebarProvider>
+            </DashboardProvider>
             <PageViewTracker />
           </AuthProvider>
         </LanguageProvider>
