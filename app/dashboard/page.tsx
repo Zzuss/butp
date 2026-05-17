@@ -229,6 +229,9 @@ export default function DashboardPage() {
     loadDashboardData()
   }, [user, authLoading])
   
+  const isDataLoading = isLoading || authLoading
+  const loadingLabel = t('dashboard.data.loading')
+
   // 如果未登录，显示登录提示
   if (!authLoading && !user?.isLoggedIn) {
     return (
@@ -242,19 +245,6 @@ export default function DashboardPage() {
     )
   }
   
-  // 加载状态
-  if (isLoading || authLoading) {
-    const studentName = user?.name || ''
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
-        <h2 className="text-xl font-medium mb-2">
-          {user?.isLoggedIn ? t('dashboard.loading', { name: studentName }) : t('dashboard.loading.message')}
-        </h2>
-      </div>
-    )
-  }
-  
   return (
     <>
     <div className="container mx-auto p-4 space-y-6">
@@ -262,18 +252,20 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
           <p className="text-muted-foreground">
-            {(() => {
-              const studentNumber = typeof (user as any)?.studentNumber === 'string' 
-                ? (user as any).studentNumber 
-                : (user?.userId || '').toString();
-              const trimmedStudentNumber = studentNumber.toString().trim();
-              const year = parseInt(trimmedStudentNumber.substring(0, 4));
-              const displayYear = !isNaN(year) && year >= 2018 && year <= 2050 ? year : null;
-              
-              return studentInfo 
-                ? `${displayYear || studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
-                : t('dashboard.description', { name: user?.name || '' });
-            })()}
+            {isDataLoading && !studentInfo
+              ? loadingLabel
+              : (() => {
+                  const studentNumber = typeof (user as any)?.studentNumber === 'string' 
+                    ? (user as any).studentNumber 
+                    : (user?.userId || '').toString();
+                  const trimmedStudentNumber = studentNumber.toString().trim();
+                  const year = parseInt(trimmedStudentNumber.substring(0, 4));
+                  const displayYear = !isNaN(year) && year >= 2018 && year <= 2050 ? year : null;
+                  
+                  return studentInfo 
+                    ? `${displayYear || studentInfo.year}${studentInfo.major}-${user?.userId || ''}`
+                    : t('dashboard.description', { name: user?.name || '' });
+                })()}
           </p>
         </div>
         
@@ -294,7 +286,7 @@ export default function DashboardPage() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.averageScore || 0}</div>
+            <div className="text-2xl font-bold">{isDataLoading && !stats ? loadingLabel : (stats?.averageScore ?? 0)}</div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.average.desc')}
             </p>
@@ -309,7 +301,7 @@ export default function DashboardPage() {
             <PercentCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round((stats?.passRate || 0) * 100)}%</div>
+            <div className="text-2xl font-bold">{isDataLoading && !stats ? loadingLabel : `${Math.round((stats?.passRate || 0) * 100)}%`}</div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.pass.rate.desc')}
             </p>
@@ -324,7 +316,7 @@ export default function DashboardPage() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.courseCount || 0}</div>
+            <div className="text-2xl font-bold">{isDataLoading && !stats ? loadingLabel : (stats?.courseCount ?? 0)}</div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.courses.desc')}
             </p>
@@ -340,7 +332,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats?.gpa !== undefined ? stats.gpa.toFixed(2) : '0.00'}
+              {isDataLoading && !stats
+                ? loadingLabel
+                : stats?.gpa !== undefined
+                  ? stats.gpa.toFixed(2)
+                  : '0.00'}
             </div>
             <p className="text-xs text-muted-foreground">
               {t('dashboard.stats.gpa.desc')}
@@ -401,6 +397,10 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          ) : isDataLoading ? (
+            <div className="py-8 text-center text-muted-foreground">
+              {loadingLabel}
+            </div>
           ) : (
             <div className="py-8 text-center text-muted-foreground">
               {t('dashboard.subjects.no.data')}
@@ -420,7 +420,11 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            {stats && (
+            {isDataLoading && !stats ? (
+              <div className="py-8 text-center text-muted-foreground">
+                {loadingLabel}
+              </div>
+            ) : stats ? (
               <>
                 <CourseStatsChart 
                   passed={Math.round((stats.passRate || 0) * stats.courseCount)}
@@ -440,7 +444,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </>
-            )}
+            ) : null}
           </CardContent>
         </Card>
         
@@ -476,6 +480,10 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : isDataLoading ? (
+              <div className="py-8 text-center text-muted-foreground">
+                {loadingLabel}
               </div>
             ) : (
               <div className="py-8 text-center text-muted-foreground">
@@ -522,6 +530,10 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : isDataLoading ? (
+            <div className="py-8 text-center text-muted-foreground">
+              {loadingLabel}
             </div>
           ) : (
             <div className="py-8 text-center text-muted-foreground">

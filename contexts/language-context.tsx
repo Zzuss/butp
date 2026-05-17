@@ -244,6 +244,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.login.required': '请先登录查看学习数据',
     'dashboard.loading': '正在加载 {name} 的数据...',
     'dashboard.loading.message': '数据加载中...',
+    'dashboard.data.loading': '加载中...',
     
     // 课程统计卡片
     'dashboard.stats.average': '平均分数',
@@ -1325,6 +1326,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.login.required': 'Please log in to view learning data',
     'dashboard.loading': 'Loading {name}\'s data...',
     'dashboard.loading.message': 'Loading data...',
+    'dashboard.data.loading': 'Loading...',
     
     // 课程统计卡片
     'dashboard.stats.average': 'Average Score',
