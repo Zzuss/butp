@@ -2182,7 +2182,7 @@ export default function Analysis() {
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  `国内读研新百分比为${predictionResult.domesticPercentage.toFixed(2)}%`
+                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
                                 ) : '国内读研百分比计算中...'}
                               </p>
                             </>
@@ -2650,7 +2650,7 @@ export default function Analysis() {
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
+                                  `国内读研新百分比为${predictionResult.domesticPercentage.toFixed(2)}%`
                                 ) : '国内读研百分比计算中...'}
                               </p>
                             </>
