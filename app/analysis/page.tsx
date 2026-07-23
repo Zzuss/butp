@@ -20,6 +20,15 @@ const abilityLabels = {
   en: ['Math & Science Foundation', 'Professional Core Technology', 'Humanities & Social Literacy', 'Engineering Practice & Innovation', 'Career Development & Teamwork']
 }
 
+const formatPercentageWithTwoDecimals = (value: number) => {
+  const roundedValue = Math.round((value + Number.EPSILON) * 100) / 100
+  return roundedValue.toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: false
+  })
+}
+
 export default function Analysis() {
   const { t, language } = useLanguage()
   const { user, loading: authLoading } = useAuth()
@@ -2173,16 +2182,16 @@ export default function Analysis() {
                           return (
                             <>
                               <p className="text-blue-800 font-medium">
-                                根据新的目标成绩，计算新百分比如下：testword
+                                根据新的目标成绩，计算新百分比如下：
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  `海外读研新百分比为${((predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0)).toFixed(2)}%`
+                                  `海外读研新百分比为${formatPercentageWithTwoDecimals((predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0))}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
+                                  `国内读研新百分比为${formatPercentageWithTwoDecimals(predictionResult.domesticPercentage)}%`
                                 ) : '国内读研百分比计算中...'}
                               </p>
                             </>
@@ -2641,16 +2650,16 @@ export default function Analysis() {
                           return (
                             <>
                               <p className="text-blue-800 font-medium">
-                                根据新的目标成绩，计算新百分比如下：testword
+                                根据新的目标成绩，计算新百分比如下：
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  `海外读研新百分比为${(predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0)}%`
+                                  `海外读研新百分比为${formatPercentageWithTwoDecimals((predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0))}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  `国内读研新百分比为${predictionResult.domesticPercentage.toFixed(2)}%`
+                                  `国内读研新百分比为${formatPercentageWithTwoDecimals(predictionResult.domesticPercentage)}%`
                                 ) : '国内读研百分比计算中...'}
                               </p>
                             </>
