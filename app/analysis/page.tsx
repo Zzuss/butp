@@ -2173,16 +2173,16 @@ export default function Analysis() {
                           return (
                             <>
                               <p className="text-blue-800 font-medium">
-                                根据新的目标成绩，计算新百分比如下：
+                                根据新的目标成绩，计算新百分比如下：testword
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  `海外读研新百分比为${((predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0)).toFixed(1)}%`
+                                  `海外读研新百分比为${(predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0)}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  `国内读研新百分比为${predictionResult.domesticPercentage.toFixed(1)}%`
+                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
                                 ) : '国内读研百分比计算中...'}
                               </p>
                             </>
@@ -2641,16 +2641,16 @@ export default function Analysis() {
                           return (
                             <>
                               <p className="text-blue-800 font-medium">
-                                根据新的目标成绩，计算新百分比如下：
+                                根据新的目标成绩，计算新百分比如下：testword
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {overseasImprovement !== null ? (
-                                  `海外读研新百分比为${((predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0)).toFixed(1)}%`
+                                  `海外读研新百分比为${(predictionResult?.overseasPercentage || 0) + (predictionResult?.domesticPercentage || 0)}%`
                                 ) : '海外读研百分比计算中...'}
                               </p>
                               <p className="text-blue-800 font-medium">
                                 {domesticImprovement !== null ? (
-                                  `国内读研新百分比为${predictionResult.domesticPercentage.toFixed(1)}%`
+                                  `国内读研新百分比为${predictionResult.domesticPercentage}%`
                                 ) : '国内读研百分比计算中...'}
                               </p>
                             </>
