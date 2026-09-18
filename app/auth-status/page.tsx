@@ -57,7 +57,7 @@ export default function AuthStatusPage() {
   };
 
   const testCasLogin = () => {
-    window.location.href = '/api/auth/cas/login?returnUrl=/auth-status';
+    window.location.href = '/login?returnUrl=/auth-status';
   };
 
   const testLogout = () => {
@@ -211,12 +211,10 @@ export default function AuthStatusPage() {
           <CardContent>
             <ol className="list-decimal list-inside space-y-2 text-sm">
               <li>用户访问受保护的网址时，middleware检查认证状态</li>
-              <li>未认证用户被重定向到CAS登录: <code>/api/auth/cas/login</code></li>
-              <li>CAS认证成功后回调: <code>/api/auth/cas/callback</code></li>
-              <li>验证ticket并存储session: <code>/api/auth/cas/verify</code></li>
-              <li>将学号转换为哈希值并存储在session中</li>
-              <li>重定向到登录页面: <code>/login</code></li>
-              <li>登录页面检查CAS认证状态并自动完成登录</li>
+              <li>未认证用户被重定向到登录页: <code>/login</code></li>
+              <li>校内中转验证 CAS 票据并返回签名结果</li>
+              <li>本站验证签名并存储会话: <code>/api/auth/cas/verify-assertion</code></li>
+              <li>将学号转换为哈希值并存储在会话中</li>
               <li>登录成功后跳转到dashboard或原始目标页面</li>
             </ol>
           </CardContent>
@@ -224,4 +222,4 @@ export default function AuthStatusPage() {
       </div>
     </div>
   )
-} 
+}

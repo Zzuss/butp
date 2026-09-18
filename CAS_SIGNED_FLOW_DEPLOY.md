@@ -20,6 +20,6 @@ require('./cas-signed-router')(app);
 
 ## 试运行
 
-网站部署后，在校园网或 VPN 中访问 `https://butp.tech/login?casMode=signed`。网站请求 `/api/auth/cas/start-signed`，弹窗访问中转机 `/api/auth/cas/proxy-login?app=butp&flow=signed`。校方回调中转机的 `callback?app=butp`，中转机校验 ticket 并签名，再由浏览器把签名结果交给网站 `/api/auth/cas/verify-assertion`。Vercel 不联系校方或中转机。
+网站部署后，在校园网或 VPN 中访问 `https://butp.tech/login`。网站请求 `/api/auth/cas/start-signed`，弹窗访问中转机 `/api/auth/cas/proxy-login?app=butp&flow=signed`。校方回调中转机的 `callback?app=butp`，中转机校验 ticket 并签名，再由浏览器把签名结果交给网站 `/api/auth/cas/verify-assertion`。Vercel 不联系校方或中转机。
 
-普通 `/login` 仍使用原来的 `/api/auth/cas/verify-ticket` 流程。校内服务器当前时钟比正常 UTC 时间慢约 28 分钟，因此网站不再用校内服务器的绝对 `iat`/`exp` 判断过期；网站把随机状态及开始时间保存在自身加密会话中，最多允许从发起登录起 5 分钟完成认证，同时验证校内服务器的 HMAC 签名。校内服务器自身仍检查其签发的流程 cookie。当前代理仍沿用 HTTP，正式长期使用建议给该地址配置 HTTPS。
+普通 `/login` 默认使用新的签名认证流程，网站上的旧票据验证接口已删除；校内中转仍保留 `app=butp` 签名回调和其他服务使用的原回调。校内服务器当前时钟比正常 UTC 时间慢约 28 分钟，因此网站不再用校内服务器的绝对 `iat`/`exp` 判断过期；网站把随机状态及开始时间保存在自身加密会话中，最多允许从发起登录起 5 分钟完成认证，同时验证校内服务器的 HMAC 签名。校内服务器自身仍检查其签发的流程 cookie。当前代理仍沿用 HTTP，正式长期使用建议给该地址配置 HTTPS。

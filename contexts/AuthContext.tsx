@@ -93,8 +93,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // 登录
   const login = (returnUrl?: string) => {
     const loginUrl = returnUrl 
-      ? `/api/auth/cas/login?returnUrl=${encodeURIComponent(returnUrl)}`
-      : '/api/auth/cas/login';
+      ? `/login?returnUrl=${encodeURIComponent(returnUrl)}`
+      : '/login';
     window.location.href = loginUrl;
   };
 
@@ -241,4 +241,4 @@ export function useAuth(): AuthContextType {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}

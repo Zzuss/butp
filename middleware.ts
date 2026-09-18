@@ -314,7 +314,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
       } else {
         console.log('🚪 Middleware: production - no valid authentication, redirecting to CAS login for path:', pathname);
-        const loginUrl = new URL('/api/auth/cas/login', request.url);
+        const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('returnUrl', pathname);
         return NextResponse.redirect(loginUrl);
       }
@@ -328,7 +328,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
       } else {
         console.log('❌ Middleware error in production, redirecting to CAS login');
-        const loginUrl = new URL('/api/auth/cas/login', request.url);
+        const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('returnUrl', pathname);
         return NextResponse.redirect(loginUrl);
       }

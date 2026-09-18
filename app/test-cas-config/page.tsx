@@ -35,7 +35,7 @@ export default function TestCasConfigPage() {
     console.log('🧪 测试CAS登录...')
     
     try {
-      window.location.href = '/api/auth/cas/login?returnUrl=/test-cas-config'
+      window.location.href = '/login?returnUrl=/test-cas-config'
     } catch (error) {
       console.error('测试失败:', error)
       setError('测试失败: ' + error)
@@ -129,4 +129,4 @@ export default function TestCasConfigPage() {
       </Card>
     </div>
   )
-} 
+}

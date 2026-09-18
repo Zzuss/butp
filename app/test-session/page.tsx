@@ -82,7 +82,7 @@ export default function TestSessionPage() {
 
           <div className="space-y-2">
             <Button 
-              onClick={() => window.location.href = '/api/auth/cas/login'}
+              onClick={() => window.location.href = '/login'}
               className="w-full"
             >
               重新进行CAS登录
@@ -99,4 +99,4 @@ export default function TestSessionPage() {
       </Card>
     </div>
   );
-} 
+}
