@@ -15,27 +15,32 @@ interface CasAssertion {
   jti: string;
 }
 
-function verifyAssertion(value: unknown): CasAssertion | null {
+type AssertionCheck = { assertion: CasAssertion; error?: never } | { assertion?: never; error: string };
+
+function verifyAssertion(value: unknown): AssertionCheck {
   const secret = process.env.CAS_ASSERTION_SECRET || '';
-  if (!/^[a-fA-F0-9]{64}$/.test(secret) || typeof value !== 'string' || value.length > 4096) return null;
+  if (!/^[a-fA-F0-9]{64}$/.test(secret)) return { error: 'assertion_secret_missing' };
+  if (typeof value !== 'string' || value.length > 4096) return { error: 'assertion_malformed' };
   const [body, signature, extra] = value.split('.');
-  if (!body || !signature || extra) return null;
+  if (!body || !signature || extra) return { error: 'assertion_malformed' };
   const expected = createHmac('sha256', Buffer.from(secret, 'hex')).update(body).digest();
   let received: Buffer;
-  try { received = Buffer.from(signature, 'base64url'); } catch { return null; }
-  if (received.length !== expected.length || !timingSafeEqual(expected, received)) return null;
+  try { received = Buffer.from(signature, 'base64url'); } catch { return { error: 'assertion_malformed' }; }
+  if (received.length !== expected.length || !timingSafeEqual(expected, received)) return { error: 'assertion_signature_invalid' };
 
   try {
     const assertion = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as CasAssertion;
     const now = Date.now();
+    if (!Number.isFinite(assertion.iat) || !Number.isFinite(assertion.exp) || assertion.exp < now) {
+      return { error: 'assertion_expired' };
+    }
     if (assertion.iss !== 'butp-cas-proxy' || assertion.aud !== 'butp.tech' ||
         typeof assertion.sub !== 'string' || !/^\d{6,20}$/.test(assertion.sub) ||
         typeof assertion.name !== 'string' || typeof assertion.state !== 'string' ||
         typeof assertion.jti !== 'string' || !assertion.jti ||
-        !Number.isFinite(assertion.iat) || !Number.isFinite(assertion.exp) ||
-        assertion.iat > now + 30000 || assertion.exp < now || assertion.exp - assertion.iat > 60000) return null;
-    return assertion;
-  } catch { return null; }
+        assertion.iat > now + 30000 || assertion.exp - assertion.iat > 60000) return { error: 'assertion_claims_invalid' };
+    return { assertion };
+  } catch { return { error: 'assertion_malformed' }; }
 }
 
 export async function POST(request: NextRequest) {
@@ -45,11 +50,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
     }
     const { assertion: value } = await request.json();
-    const assertion = verifyAssertion(value);
+    const checked = verifyAssertion(value);
     const state = request.cookies.get('cas-signed-state')?.value;
-    if (!assertion || !state || assertion.state !== state) {
-      return NextResponse.json({ success: false, error: 'invalid_assertion' }, { status: 401 });
-    }
+    const reject = (reason: string) => {
+      console.warn('verify-assertion: rejected', { reason, hasStateCookie: !!state });
+      return NextResponse.json({ success: false, error: reason }, { status: 401 });
+    };
+    if (checked.error) return reject(checked.error);
+    const assertion = checked.assertion;
+    if (!assertion) return reject('assertion_malformed');
+    if (!state) return reject('assertion_state_missing');
+    if (assertion.state !== state) return reject('assertion_state_mismatch');
 
     const userHash = await getHashByStudentNumber(assertion.sub);
     if (!userHash) {
