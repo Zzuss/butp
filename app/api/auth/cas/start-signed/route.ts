@@ -1,5 +1,7 @@
 import { randomBytes } from 'crypto';
+import { getIronSession } from 'iron-session';
 import { NextRequest, NextResponse } from 'next/server';
+import { SessionData, sessionOptions } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   if (!/^[a-fA-F0-9]{64}$/.test(process.env.CAS_ASSERTION_SECRET || '')) {
@@ -20,12 +22,9 @@ export async function POST(request: NextRequest) {
   loginUrl.searchParams.set('origin', origin);
 
   const response = NextResponse.json({ url: loginUrl.toString() });
-  response.cookies.set('cas-signed-state', state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/api/auth/cas',
-    maxAge: 300,
-  });
+  const session = await getIronSession<SessionData>(request, response, sessionOptions);
+  session.casSignedState = state;
+  session.casSignedStartedAt = Date.now();
+  await session.save();
   return response;
 }

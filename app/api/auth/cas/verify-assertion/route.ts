@@ -30,15 +30,12 @@ function verifyAssertion(value: unknown): AssertionCheck {
 
   try {
     const assertion = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as CasAssertion;
-    const now = Date.now();
-    if (!Number.isFinite(assertion.iat) || !Number.isFinite(assertion.exp) || assertion.exp < now) {
-      return { error: 'assertion_expired' };
-    }
     if (assertion.iss !== 'butp-cas-proxy' || assertion.aud !== 'butp.tech' ||
         typeof assertion.sub !== 'string' || !/^\d{6,20}$/.test(assertion.sub) ||
         typeof assertion.name !== 'string' || typeof assertion.state !== 'string' ||
         typeof assertion.jti !== 'string' || !assertion.jti ||
-        assertion.iat > now + 30000 || assertion.exp - assertion.iat > 60000) return { error: 'assertion_claims_invalid' };
+        !Number.isFinite(assertion.iat) || !Number.isFinite(assertion.exp) ||
+        assertion.exp <= assertion.iat || assertion.exp - assertion.iat > 60000) return { error: 'assertion_claims_invalid' };
     return { assertion };
   } catch { return { error: 'assertion_malformed' }; }
 }
@@ -51,15 +48,20 @@ export async function POST(request: NextRequest) {
     }
     const { assertion: value } = await request.json();
     const checked = verifyAssertion(value);
-    const state = request.cookies.get('cas-signed-state')?.value;
+    const response = NextResponse.json({ success: true });
+    const session = await getIronSession<SessionData>(request, response, sessionOptions);
+    const state = session.casSignedState;
+    const startedAt = session.casSignedStartedAt;
     const reject = (reason: string) => {
-      console.warn('verify-assertion: rejected', { reason, hasStateCookie: !!state });
+      console.warn('verify-assertion: rejected', { reason, hasFlowState: !!state });
       return NextResponse.json({ success: false, error: reason }, { status: 401 });
     };
     if (checked.error) return reject(checked.error);
     const assertion = checked.assertion;
     if (!assertion) return reject('assertion_malformed');
     if (!state) return reject('assertion_state_missing');
+    const now = Date.now();
+    if (!startedAt || startedAt > now + 30000 || now - startedAt > 300000) return reject('assertion_expired');
     if (assertion.state !== state) return reject('assertion_state_mismatch');
 
     const userHash = await getHashByStudentNumber(assertion.sub);
@@ -70,9 +72,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'invalid_student_hash' }, { status: 403 });
     }
 
-    const response = NextResponse.json({ success: true });
-    const session = await getIronSession<SessionData>(request, response, sessionOptions);
-    const now = Date.now();
     session.userId = assertion.sub;
     session.userHash = userHash;
     session.name = assertion.name || `学生${assertion.sub}`;
@@ -80,14 +79,9 @@ export async function POST(request: NextRequest) {
     session.isLoggedIn = true;
     session.loginTime = now;
     session.lastActiveTime = now;
+    delete session.casSignedState;
+    delete session.casSignedStartedAt;
     await session.save();
-    response.cookies.set('cas-signed-state', '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/api/auth/cas',
-      maxAge: 0,
-    });
     return response;
   } catch (error) {
     console.error('verify-assertion: unexpected error:', error);

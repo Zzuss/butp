@@ -8,6 +8,8 @@ export interface SessionData {
   isCasAuthenticated: boolean; // 是否通过CAS认证
   loginTime: number;        // 登录时间
   lastActiveTime: number;   // 最后活跃时间
+  casSignedState?: string;  // 由本站签发的CAS登录状态
+  casSignedStartedAt?: number; // 本站签发状态的时间
 }
 
 // 会话超时配置 (30分钟 = 30 * 60 * 1000 毫秒)
@@ -104,4 +106,4 @@ export function getSessionRemainingTime(session: SessionData): number {
   const remainingTime = SESSION_TIMEOUT_MS - timeSinceLastActive;
   
   return Math.max(0, remainingTime);
-} 
+}
