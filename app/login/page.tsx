@@ -297,6 +297,7 @@ export default function LoginPage() {
               console.error('❌ Ticket验证失败:', verifyData.error)
               const errorMessages: Record<string, string> = {
                 'ticket_validation_failed': 'CAS票据验证失败，请重新登录',
+                'cas_service_timeout': '校方认证服务响应超时，请稍后重新登录',
                 'no_student_mapping': '您的学号未在系统中注册，请联系管理员',
                 'invalid_student_hash': '您的学号映射信息无效，请联系管理员',
                 'internal_error': '服务器内部错误，请稍后重试',

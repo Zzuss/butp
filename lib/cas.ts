@@ -57,11 +57,19 @@ export interface CasUser {
   name: string;    // 姓名
 }
 
+export class CasValidationTimeoutError extends Error {
+  constructor() {
+    super('CAS ticket validation timed out');
+    this.name = 'CasValidationTimeoutError';
+  }
+}
+
+const CAS_VALIDATION_TIMEOUT_MS = 45_000;
+
 // 验证CAS ticket
 export async function validateCasTicket(ticket: string, username?: string | null): Promise<CasUser | null> {
   try {
     console.log('validateCasTicket: starting validation', { 
-      ticket, 
       username, 
       useMockCAS: CAS_CONFIG.useMockCAS,
       serverUrl: CAS_CONFIG.serverUrl,
@@ -81,10 +89,10 @@ export async function validateCasTicket(ticket: string, username?: string | null
     }
 
     const finalUrl = `${validateUrl}?${params.toString()}`;
-    console.log('validateCasTicket: requesting URL:', finalUrl);
+    console.log('validateCasTicket: requesting CAS serviceValidate');
 
     const response = await axios.get(finalUrl, {
-      timeout: 15000, // 增加超时时间到15秒
+      timeout: CAS_VALIDATION_TIMEOUT_MS,
       headers: {
         'Accept': 'application/xml',
         'User-Agent': 'BUTP-CAS-Client/1.0',
@@ -152,17 +160,18 @@ export async function validateCasTicket(ticket: string, username?: string | null
     console.error('Error validating CAS ticket:', {
       error: error?.message || 'Unknown error',
       stack: error?.stack,
-      ticket: ticket,
       serviceUrl: CAS_CONFIG.serviceUrl
     });
+
+    if (axios.isAxiosError(error) && (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT')) {
+      throw new CasValidationTimeoutError();
+    }
     
     // 如果是网络错误，提供更详细的信息
     if (error?.code === 'ECONNREFUSED') {
       console.error('validateCasTicket: Connection refused - CAS server may be unreachable');
-    } else if (error?.code === 'ETIMEDOUT') {
-      console.error('validateCasTicket: Request timeout - CAS server response too slow');
     }
     
     return null;
   }
-} 
+}

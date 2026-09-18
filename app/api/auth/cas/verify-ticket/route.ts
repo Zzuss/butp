@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
-import { validateCasTicket } from '@/lib/cas';
+import { CasValidationTimeoutError, validateCasTicket } from '@/lib/cas';
 import { SessionData, sessionOptions } from '@/lib/session';
 import { getHashByStudentNumber, isValidStudentHashInDatabase } from '@/lib/student-data';
+
+export const maxDuration = 60;
 
 /**
  * CAS Ticket Verification API
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('verify-ticket: starting ticket validation', { ticket });
+    console.log('verify-ticket: starting ticket validation');
 
     // Validate CAS ticket
     const casUser = await validateCasTicket(ticket);
@@ -99,6 +101,13 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
+    if (error instanceof CasValidationTimeoutError) {
+      console.error('verify-ticket: CAS serviceValidate timed out');
+      return NextResponse.json(
+        { success: false, error: 'cas_service_timeout' },
+        { status: 504 }
+      );
+    }
     console.error('verify-ticket: unexpected error:', error);
     return NextResponse.json(
       { success: false, error: 'internal_error' },
