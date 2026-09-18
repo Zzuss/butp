@@ -218,12 +218,13 @@ export default function LoginPage() {
   }
 
   // CAS登录 - 直接访问CAS服务器方式（适配代理服务器v2.0.0）
-  const handleCasLogin = () => {
+  const handleCasLogin = async () => {
     console.log('🚀 CAS登录按钮被点击 - 直接访问CAS服务器')
     setLoading(true)
     setError("")
 
     try {
+      const signedFlow = new URLSearchParams(window.location.search).get('casMode') === 'signed'
       // 标志：是否已经收到认证成功的消息
       let authCompleted = false
       let checkClosed: NodeJS.Timeout | null = null
@@ -243,12 +244,23 @@ export default function LoginPage() {
           // URL解析失败，继续处理
         }
 
-          if (event.data.type === 'CAS_SUCCESS') {
+        if (signedFlow && event.data?.type === 'CAS_ERROR') {
+          authCompleted = true
+          if (checkClosed) clearInterval(checkClosed)
+          if (timeoutId) clearTimeout(timeoutId)
+          window.removeEventListener('message', handleMessage)
+          messageListenerRef.current = null
+          setError('校方票据验证失败，请重新登录')
+          setLoading(false)
+          return
+        }
+
+          if (event.data?.type === (signedFlow ? 'CAS_ASSERTION' : 'CAS_SUCCESS')) {
           authCompleted = true  // 标记认证已完成，避免窗口关闭时重置状态
           if (checkClosed) clearInterval(checkClosed)
           if (timeoutId) clearTimeout(timeoutId)
-          console.log('📥 收到CAS认证消息:', event.data)
-          const { ticket, returnUrl } = event.data
+          console.log('📥 收到CAS认证消息')
+          const { ticket, assertion, returnUrl } = event.data
 
           // 清理监听器
           if (messageListenerRef.current) {
@@ -258,12 +270,12 @@ export default function LoginPage() {
 
           // 发送ticket到后端验证
           try {
-            console.log('🔍 正在验证ticket...')
-            const verifyResponse = await fetch('/api/auth/cas/verify-ticket', {
+            console.log('🔍 正在验证CAS认证结果...')
+            const verifyResponse = await fetch(signedFlow ? '/api/auth/cas/verify-assertion' : '/api/auth/cas/verify-ticket', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({ ticket })
+              body: JSON.stringify(signedFlow ? { assertion } : { ticket })
             })
 
             const verifyData = await verifyResponse.json()
@@ -298,6 +310,7 @@ export default function LoginPage() {
               const errorMessages: Record<string, string> = {
                 'ticket_validation_failed': 'CAS票据验证失败，请重新登录',
                 'cas_service_timeout': '校方认证服务响应超时，请稍后重新登录',
+                'invalid_assertion': '认证结果无效或已过期，请重新登录',
                 'no_student_mapping': '您的学号未在系统中注册，请联系管理员',
                 'invalid_student_hash': '您的学号映射信息无效，请联系管理员',
                 'internal_error': '服务器内部错误，请稍后重试',
@@ -325,7 +338,7 @@ export default function LoginPage() {
       console.log('🪟 打开CAS登录页面:', casLoginUrl)
 
       const newWindow = window.open(
-        casLoginUrl,
+        signedFlow ? 'about:blank' : casLoginUrl,
         'CAS Login',
         'width=600,height=700,scrollbars=yes,resizable=yes'
       )
@@ -338,6 +351,16 @@ export default function LoginPage() {
       }
 
       casWindowRef.current = newWindow
+
+      if (signedFlow) {
+        const startResponse = await fetch('/api/auth/cas/start-signed', {
+          method: 'POST',
+          credentials: 'include'
+        })
+        if (!startResponse.ok) throw new Error('Signed CAS flow unavailable')
+        const { url } = await startResponse.json()
+        newWindow.location.href = url
+      }
 
       // 设置超时检测（5分钟）
       timeoutId = setTimeout(() => {
@@ -363,7 +386,12 @@ export default function LoginPage() {
 
     } catch (error) {
       console.error('❌ CAS登录失败:', error)
-      setError('登录失败，请重试')
+      casWindowRef.current?.close()
+      if (messageListenerRef.current) {
+        window.removeEventListener('message', messageListenerRef.current)
+        messageListenerRef.current = null
+      }
+      setError('认证服务未配置或暂时不可用，请稍后重试')
       setLoading(false)
     }
   }
