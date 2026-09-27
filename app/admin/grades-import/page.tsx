@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,37 +10,16 @@ import { Progress } from '@/components/ui/progress'
 import { Upload, FileSpreadsheet, Trash2, Database, CheckCircle, XCircle, Loader2, RefreshCw } from 'lucide-react'
 import AdminLayout from '@/components/admin/AdminLayout'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-
-interface FileInfo {
-  id: string
-  name: string
-  originalName?: string
-  size: number
-  uploadTime: string
-  isDuplicate?: boolean
-}
-
-interface ImportTask {
-  id: string
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled'
-  totalFiles: number
-  processedFiles: number
-  totalRecords: number
-  importedRecords: number
-  progress: number
-  errorMessage?: string
-  createdAt: string
-  completedAt?: string
-  files: Array<{
-    id: string
-    fileName: string
-    status: 'pending' | 'processing' | 'completed' | 'failed'
-    recordsCount: number
-    importedCount: number
-    errorMessage?: string
-    processedAt?: string
-  }>
-}
+import {
+  createGradeImportEventSource,
+  deleteGradeImportFile,
+  getGradeImportTask,
+  listGradeImportFiles,
+  startGradeImport,
+  uploadGradeImportFile,
+  type GradeImportFile as FileInfo,
+  type GradeImportTask as ImportTask
+} from '@/lib/grades-import-ecs-client'
 
 interface ImportResult {
   success: boolean
@@ -54,100 +33,152 @@ interface ImportResult {
 export default function GradesImportPage() {
   const [files, setFiles] = useState<FileInfo[]>([])
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [importing, setImporting] = useState(false)
   const [currentTask, setCurrentTask] = useState<ImportTask | null>(null)
-  const [taskPollingInterval, setTaskPollingInterval] = useState<NodeJS.Timeout | null>(null)
+  const [streamConnected, setStreamConnected] = useState(false)
   const [showResultDialog, setShowResultDialog] = useState(false)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeTaskIdRef = useRef<string | null>(null)
 
-  // 检测同名文件
-  const detectDuplicateFiles = (fileList: FileInfo[]) => {
+  const terminalTaskRef = useRef<string | null>(null)
+
+  const detectDuplicateFiles = useCallback((fileList: FileInfo[]) => {
     const nameCount: { [key: string]: number } = {}
-    
-    // 统计每个文件名出现的次数
     fileList.forEach(file => {
       const fileName = file.originalName || file.name
       nameCount[fileName] = (nameCount[fileName] || 0) + 1
     })
-    
-    // 标记重复的文件
+
     return fileList.map(file => ({
       ...file,
       isDuplicate: nameCount[file.originalName || file.name] > 1
     }))
-  }
+  }, [])
 
-  // 加载文件列表
-  const loadFileList = async () => {
+  const loadFileList = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/grades-import/files')
-      if (response.ok) {
-        const data = await response.json()
-        const fileList = data.files || []
-        console.log('加载文件列表:', fileList.length, '个文件', fileList)
-        
-        // 检测并标记同名文件
-        const filesWithDuplicateCheck = detectDuplicateFiles(fileList)
-        const duplicateCount = filesWithDuplicateCheck.filter(f => f.isDuplicate).length
-        
-        if (duplicateCount > 0) {
-          console.warn(`⚠️ 检测到 ${duplicateCount} 个同名文件`)
-        }
-        
-        setFiles(filesWithDuplicateCheck)
-      } else {
-        console.error('加载文件列表失败:', response.status, await response.text())
-      }
+      const fileList = await listGradeImportFiles()
+      setFiles(detectDuplicateFiles(fileList))
     } catch (error) {
       console.error('加载文件列表失败:', error)
     }
-  }
+  }, [detectDuplicateFiles])
 
-  // 刷新文件列表
   const refreshFileList = async () => {
     try {
-      console.log('刷新文件列表...')
-      const response = await fetch('/api/admin/grades-import/refresh-files', {
-        method: 'POST'
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        const fileList = data.files || []
-        console.log('刷新完成:', fileList.length, '个文件')
-        
-        // 检测并标记同名文件
-        const filesWithDuplicateCheck = detectDuplicateFiles(fileList)
-        const duplicateCount = filesWithDuplicateCheck.filter(f => f.isDuplicate).length
-        
-        if (duplicateCount > 0) {
-          console.warn(`⚠️ 检测到 ${duplicateCount} 个同名文件`)
-        }
-        
-        setFiles(filesWithDuplicateCheck)
-        
-        if (fileList.length > 0) {
-          const duplicateWarning = duplicateCount > 0 ? `\n⚠️ 其中有 ${duplicateCount} 个同名文件，请注意检查` : ''
-          alert(`发现 ${fileList.length} 个可导入的文件${duplicateWarning}`)
-        } else {
-          alert('没有找到可导入的文件，请先上传Excel文件')
-        }
+      const fileList = await listGradeImportFiles()
+      const checkedFiles = detectDuplicateFiles(fileList)
+      setFiles(checkedFiles)
+      const duplicateCount = checkedFiles.filter(file => file.isDuplicate).length
+      if (fileList.length > 0) {
+        const warning = duplicateCount > 0 ? `\n⚠️ 其中有 ${duplicateCount} 个同名文件` : ''
+        alert(`发现 ${fileList.length} 个可导入的文件${warning}`)
       } else {
-        console.error('刷新文件列表失败:', response.status)
-        alert('刷新失败，请重试')
+        alert('没有找到可导入的文件，请先上传 Excel 文件')
       }
     } catch (error) {
       console.error('刷新文件列表失败:', error)
-      alert('刷新失败，请重试')
+      alert(error instanceof Error ? error.message : '刷新失败')
     }
   }
 
-  useEffect(() => {
-    loadFileList()
+  const applyTaskUpdate = useCallback((task: ImportTask) => {
+    setCurrentTask(task)
+    const terminal = task.status === 'completed' || task.status === 'failed'
+    setImporting(!terminal)
+
+    if (!terminal) return
+
+    activeTaskIdRef.current = null
+    localStorage.removeItem('gradeImportTaskId')
+    eventSourceRef.current?.close()
+    eventSourceRef.current = null
+    setStreamConnected(false)
+
+    if (terminalTaskRef.current === task.id) return
+    terminalTaskRef.current = task.id
+    setImportResult({
+      success: task.status === 'completed',
+      totalFiles: task.totalFiles,
+      totalRecords: task.totalRecords,
+      importedRecords: task.importedRecords,
+      errorMessage: task.errorMessage,
+      completedAt: task.completedAt
+    })
+    setShowResultDialog(true)
   }, [])
 
-  // 处理文件选择
+  const openTaskStream = useCallback(async function connect(taskId: string, forceRefresh = false) {
+    if (activeTaskIdRef.current !== taskId) return
+
+    eventSourceRef.current?.close()
+    const source = await createGradeImportEventSource(taskId, forceRefresh)
+    eventSourceRef.current = source
+
+    source.onopen = () => setStreamConnected(true)
+    const receiveTask = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.task) applyTaskUpdate(data.task)
+      } catch (error) {
+        console.error('无法解析导入进度:', error)
+      }
+    }
+
+    ;['snapshot', 'progress', 'completed', 'failed'].forEach(eventName => {
+      source.addEventListener(eventName, receiveTask as EventListener)
+    })
+
+    source.onerror = () => {
+      setStreamConnected(false)
+      source.close()
+      if (activeTaskIdRef.current !== taskId) return
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
+      reconnectTimerRef.current = setTimeout(async () => {
+        try {
+          const task = await getGradeImportTask(taskId)
+          applyTaskUpdate(task)
+          if (task.status !== 'completed' && task.status !== 'failed') {
+            void connect(taskId, true)
+          }
+        } catch (error) {
+          console.error('SSE 重连失败:', error)
+          void connect(taskId, true)
+        }
+      }, 3000)
+    }
+  }, [applyTaskUpdate])
+
+  useEffect(() => {
+    void loadFileList()
+    const savedTaskId = localStorage.getItem('gradeImportTaskId')
+    if (!savedTaskId) return
+
+    activeTaskIdRef.current = savedTaskId
+    setImporting(true)
+    void getGradeImportTask(savedTaskId)
+      .then(task => {
+        applyTaskUpdate(task)
+        if (task.status !== 'completed' && task.status !== 'failed') {
+          void openTaskStream(savedTaskId)
+        }
+      })
+      .catch(error => {
+        console.error('恢复导入任务失败:', error)
+        setImporting(false)
+      })
+
+    return () => {
+      activeTaskIdRef.current = null
+      eventSourceRef.current?.close()
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
+    }
+  }, [applyTaskUpdate, loadFileList, openTaskStream])
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || [])
     if (selectedFiles.length === 0) return
@@ -165,30 +196,21 @@ export default function GradesImportPage() {
     }
 
     setUploading(true)
+    setUploadProgress(0)
     setCurrentTask(null)
 
     try {
-      for (const file of selectedFiles) {
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const response = await fetch('/api/admin/grades-import/upload-to-ecs', {
-          method: 'POST',
-          body: formData,
+      for (let index = 0; index < selectedFiles.length; index++) {
+        await uploadGradeImportFile(selectedFiles[index], percent => {
+          setUploadProgress(Math.round(((index + percent / 100) / selectedFiles.length) * 100))
         })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || '上传失败')
-        }
       }
-
-      // 重新加载文件列表
-      await refreshFileList()
+      await loadFileList()
     } catch (error) {
       alert(error instanceof Error ? error.message : '上传失败')
     } finally {
       setUploading(false)
+      setUploadProgress(0)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -199,84 +221,15 @@ export default function GradesImportPage() {
   const handleDeleteFile = async (fileId: string) => {
     if (!confirm('确定要删除这个文件吗？')) return
 
-    console.log('开始删除文件:', fileId)
     try {
-      const response = await fetch(`/api/admin/grades-import/files/${fileId}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        console.log('文件删除成功，刷新列表')
-        await loadFileList()
-      } else {
-        const error = await response.json()
-        console.error('删除文件失败:', error)
-        alert(error.error || '删除失败')
-      }
+      await deleteGradeImportFile(fileId)
+      await loadFileList()
     } catch (error) {
       console.error('删除文件异常:', error)
-      alert('删除失败')
+      alert(error instanceof Error ? error.message : '删除失败')
     }
   }
 
-  // 智能轮询任务状态
-  const pollTaskStatus = async (taskId: string) => {
-    try {
-      const response = await fetch(`/api/admin/grades-import/task-status/${taskId}`)
-      const data = await response.json()
-      
-      if (data.success) {
-        const task = data.task
-        setCurrentTask(task)
-        
-        // 如果任务完成或失败，停止轮询
-        if (task.status === 'completed' || task.status === 'failed') {
-          console.log('🎯 任务状态检测到:', task.status, task)
-          
-          if (taskPollingInterval) {
-            clearInterval(taskPollingInterval)
-            setTaskPollingInterval(null)
-          }
-          setImporting(false)
-          
-          // 显示结果弹窗
-          const result: ImportResult = {
-            success: task.status === 'completed',
-            totalFiles: task.totalFiles,
-            totalRecords: task.totalRecords,
-            importedRecords: task.importedRecords,
-            errorMessage: task.errorMessage,
-            completedAt: task.completedAt
-          }
-          
-          setImportResult(result)
-          setShowResultDialog(true)
-          
-          if (task.status === 'completed') {
-            console.log('✅ 导入成功完成！', result)
-          } else {
-            console.log('❌ 导入失败:', task.errorMessage)
-          }
-          
-          return true // 表示轮询已完成
-        }
-        
-        // 根据任务状态调整轮询间隔
-        if (task.status === 'processing' && task.progress > 0) {
-          // 处理中且有进度，使用较短间隔
-          return false
-        } else if (task.status === 'pending') {
-          // 等待中，使用较长间隔
-          return false
-        }
-      }
-    } catch (error) {
-      console.error('轮询任务状态失败:', error)
-    }
-    return false
-  }
-
-  // 开始导入
   const handleImport = async () => {
     if (files.length === 0) {
       alert('请先上传文件')
@@ -289,131 +242,30 @@ export default function GradesImportPage() {
 
     setImporting(true)
     setCurrentTask(null)
+    terminalTaskRef.current = null
 
     try {
-      // 创建导入任务
-      const response = await fetch('/api/admin/grades-import/create-task', {
-        method: 'POST',
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        const taskId = data.taskId
-        
-        // 触发队列处理
-        await fetch('/api/admin/grades-import/trigger-process', {
-          method: 'POST',
-        })
-
-        // 开始智能轮询任务状态
-        let pollCount = 0
-        const maxPolls = 150 // 最多轮询150次（约12-25分钟），给ECS更多处理时间
-        
-        const smartPoll = async () => {
-          pollCount++
-          const isCompleted = await pollTaskStatus(taskId)
-          
-          if (isCompleted || pollCount >= maxPolls) {
-            if (taskPollingInterval) {
-              clearInterval(taskPollingInterval)
-              setTaskPollingInterval(null)
-            }
-            if (pollCount >= maxPolls && !isCompleted) {
-              console.log('轮询超时，进行最后一次状态检查...')
-              
-              // 超时前最后一次检查任务状态
-              try {
-                const finalCheck = await pollTaskStatus(taskId)
-                if (finalCheck) {
-                  console.log('✅ 最后检查发现任务已完成！')
-                  return // 任务实际已完成，退出轮询
-                }
-              } catch (error) {
-                console.error('最后状态检查失败:', error)
-              }
-              
-              setImporting(false)
-              
-              // 显示超时提示弹窗，但提供刷新按钮
-              const timeoutResult: ImportResult = {
-                success: false,
-                totalFiles: currentTask?.totalFiles || 0,
-                totalRecords: currentTask?.totalRecords || 0,
-                importedRecords: currentTask?.importedRecords || 0,
-                errorMessage: '轮询超时，但导入可能已在后台完成。请点击"刷新文件列表"查看最新状态，或稍后重新检查。'
-              }
-              
-              setImportResult(timeoutResult)
-              setShowResultDialog(true)
-            }
-            return
-          }
-          
-          // 动态调整轮询间隔，考虑ECS异步处理特点
-          let nextInterval = 12000 // 默认12秒（进一步延长间隔）
-          
-          if (currentTask?.status === 'processing' && currentTask.progress > 0) {
-            nextInterval = 8000 // 处理中且有进度：8秒
-          } else if (currentTask?.status === 'pending') {
-            nextInterval = pollCount < 5 ? 8000 : 15000 // 等待中：前5次8秒，之后15秒
-          } else if (currentTask?.status === 'processing' && currentTask.progress === 0) {
-            nextInterval = 12000 // 处理中但无进度：12秒
-          }
-          
-          // 重新设置定时器
-          if (taskPollingInterval) {
-            clearInterval(taskPollingInterval)
-          }
-          const newInterval = setTimeout(smartPoll, nextInterval)
-          setTaskPollingInterval(newInterval as any)
-        }
-        
-        // 立即开始轮询
-        await smartPoll()
-      } else {
-        throw new Error(data.message || '创建导入任务失败')
-      }
+      const { taskId } = await startGradeImport(files.map(file => file.id))
+      activeTaskIdRef.current = taskId
+      localStorage.setItem('gradeImportTaskId', taskId)
+      const task = await getGradeImportTask(taskId)
+      applyTaskUpdate(task)
+      void openTaskStream(taskId)
     } catch (error) {
       setImporting(false)
       alert(error instanceof Error ? error.message : '导入失败')
     }
   }
 
-  // 手动检查最后任务状态（用于超时后的手动检查）
   const checkLastTaskStatus = async () => {
     if (!currentTask?.id) return
-    
+
     try {
-      console.log('🔍 手动检查任务状态:', currentTask.id)
-      const response = await fetch(`/api/admin/grades-import/task-status/${currentTask.id}`)
-      const data = await response.json()
-      
-      if (data.success && data.task) {
-        const task = data.task
-        console.log('📊 最新任务状态:', task)
-        
-        if (task.status === 'completed') {
-          console.log('🎉 发现任务已完成！')
-          setCurrentTask(task)
-          
-          const result: ImportResult = {
-            success: true,
-            totalFiles: task.totalFiles,
-            totalRecords: task.totalRecords,
-            importedRecords: task.importedRecords,
-            completedAt: task.completedAt
-          }
-          
-          setImportResult(result)
-          setShowResultDialog(true)
-          setImporting(false)
-        } else {
-          console.log('⏳ 任务仍在处理中:', task.status)
-        }
-      }
+      const task = await getGradeImportTask(currentTask.id)
+      applyTaskUpdate(task)
     } catch (error) {
       console.error('检查任务状态失败:', error)
+      alert(error instanceof Error ? error.message : '检查任务状态失败')
     }
   }
 
@@ -421,18 +273,8 @@ export default function GradesImportPage() {
   const handleResultDialogClose = async () => {
     setShowResultDialog(false)
     setImportResult(null)
-    // 刷新文件列表
     await loadFileList()
   }
-
-  // 清理轮询
-  useEffect(() => {
-    return () => {
-      if (taskPollingInterval) {
-        clearInterval(taskPollingInterval)
-      }
-    }
-  }, [taskPollingInterval])
 
   // 格式化文件大小
   const formatFileSize = (bytes: number) => {
@@ -484,9 +326,12 @@ export default function GradesImportPage() {
             </div>
 
             {uploading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                正在上传文件...
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  正在直接上传到成绩导入服务器… {uploadProgress}%
+                </div>
+                <Progress value={uploadProgress} className="w-full" />
               </div>
             )}
           </CardContent>
@@ -631,6 +476,11 @@ export default function GradesImportPage() {
                     {currentTask.status === 'completed' && '导入完成'}
                     {currentTask.status === 'failed' && '导入失败'}
                   </span>
+                  {importing && (
+                    <span className={`text-xs ${streamConnected ? 'text-green-600' : 'text-amber-600'}`}>
+                      {streamConnected ? '实时进度已连接' : '正在连接实时进度…'}
+                    </span>
+                  )}
                 </div>
                 
                 <div className="text-sm text-muted-foreground space-y-1">
