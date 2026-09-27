@@ -16,6 +16,7 @@ import {
   getGradeImportTask,
   listGradeImportFiles,
   startGradeImport,
+  updateGradeImportFileYear,
   uploadGradeImportFile,
   type GradeImportFile as FileInfo,
   type GradeImportTask as ImportTask
@@ -39,6 +40,7 @@ export default function GradesImportPage() {
   const [streamConnected, setStreamConnected] = useState(false)
   const [showResultDialog, setShowResultDialog] = useState(false)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [savingYearFileId, setSavingYearFileId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -230,9 +232,42 @@ export default function GradesImportPage() {
     }
   }
 
+  const handleYearInput = (fileId: string, value: string) => {
+    const parsed = value === '' ? null : Number(value)
+    setFiles(current => current.map(file => (
+      file.id === fileId ? { ...file, year: parsed !== null && Number.isInteger(parsed) ? parsed : null } : file
+    )))
+  }
+
+  const handleYearSave = async (fileId: string, year: number | null) => {
+    if (year === null || !Number.isInteger(year) || year < 1900 || year > 2099) {
+      alert('请填写 1900 到 2099 之间的有效年份')
+      await loadFileList()
+      return
+    }
+
+    setSavingYearFileId(fileId)
+    try {
+      await updateGradeImportFileYear(fileId, year)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '保存年份失败')
+      await loadFileList()
+    } finally {
+      setSavingYearFileId(null)
+    }
+  }
+
   const handleImport = async () => {
     if (files.length === 0) {
       alert('请先上传文件')
+      return
+    }
+
+    const invalidYearFile = files.find(file => (
+      file.year === null || !Number.isInteger(file.year) || file.year < 1900 || file.year > 2099
+    ))
+    if (invalidYearFile) {
+      alert(`请先确认文件“${invalidYearFile.originalName || invalidYearFile.name}”的年份`)
       return
     }
 
@@ -245,6 +280,7 @@ export default function GradesImportPage() {
     terminalTaskRef.current = null
 
     try {
+      await Promise.all(files.map(file => updateGradeImportFileYear(file.id, file.year as number)))
       const { taskId } = await startGradeImport(files.map(file => file.id))
       activeTaskIdRef.current = taskId
       localStorage.setItem('gradeImportTaskId', taskId)
@@ -290,6 +326,10 @@ export default function GradesImportPage() {
     return new Date(timeString).toLocaleString('zh-CN')
   }
 
+  const hasInvalidYears = files.some(file => (
+    file.year === null || !Number.isInteger(file.year) || file.year < 1900 || file.year > 2099
+  ))
+
   return (
     <AdminLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -308,7 +348,7 @@ export default function GradesImportPage() {
               上传成绩文件
             </CardTitle>
             <CardDescription>
-              支持上传 Excel 文件（.xlsx, .xls），可以上传多个文件
+              支持上传多个 Excel 文件；系统会从文件名识别年份，上传后请逐个确认
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -429,14 +469,33 @@ export default function GradesImportPage() {
                         </p>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteFile(file.id)}
-                      disabled={importing}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`year-${file.id}`} className="text-xs whitespace-nowrap">
+                        年份
+                      </Label>
+                      <Input
+                        id={`year-${file.id}`}
+                        type="number"
+                        min={1900}
+                        max={2099}
+                        step={1}
+                        value={file.year ?? ''}
+                        placeholder="必填"
+                        onChange={event => handleYearInput(file.id, event.target.value)}
+                        onBlur={() => void handleYearSave(file.id, file.year)}
+                        disabled={importing || savingYearFileId === file.id}
+                        className={`w-24 h-8 ${file.year === null ? 'border-red-500' : ''}`}
+                      />
+                      {savingYearFileId === file.id && <Loader2 className="w-4 h-4 animate-spin" />}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteFile(file.id)}
+                        disabled={importing}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -458,12 +517,15 @@ export default function GradesImportPage() {
           <CardContent className="space-y-4">
             <Button
               onClick={handleImport}
-              disabled={files.length === 0 || importing}
+              disabled={files.length === 0 || importing || hasInvalidYears || savingYearFileId !== null}
               className="w-full flex items-center gap-2"
             >
               <Database className="w-4 h-4" />
               {importing ? '导入中...' : '开始导入到数据库'}
             </Button>
+            {hasInvalidYears && (
+              <p className="text-sm text-red-600">请先为所有文件确认有效年份，再开始导入。</p>
+            )}
 
             {/* 导入进度 */}
             {currentTask && (

@@ -2,6 +2,7 @@ export interface GradeImportFile {
   id: string
   name: string
   originalName?: string
+  year: number | null
   size: number
   uploadTime: string
   isDuplicate?: boolean
@@ -105,6 +106,16 @@ export async function deleteGradeImportFile(fileId: string) {
     method: 'DELETE'
   })
   await parseResponse(response)
+}
+
+export async function updateGradeImportFileYear(fileId: string, year: number) {
+  const response = await authorizedFetch(`/api/uploads/${encodeURIComponent(fileId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ year })
+  })
+  const data = await parseResponse<{ file: Pick<GradeImportFile, 'id' | 'year'> }>(response)
+  return data.file
 }
 
 export async function uploadGradeImportFile(file: File, onProgress?: (percent: number) => void) {
