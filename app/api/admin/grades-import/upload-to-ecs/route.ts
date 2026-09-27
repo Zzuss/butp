@@ -54,52 +54,52 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.endsWith('.xlsx') ? '.xlsx' : '.xls'
     const fileName = `${fileId}${fileExtension}`
     
-    // 确保上传目录存在
-    if (!existsSync(UPLOAD_DIR)) {
-      mkdirSync(UPLOAD_DIR, { recursive: true })
-    }
-
-    const filePath = join(UPLOAD_DIR, fileName)
-
-    // 保存到本地
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
 
-    console.log(`✅ 文件已保存到本地: ${filePath}`)
-
-    // 同时上传到ECS
+    // 上传目标是ECS；只有ECS确认写入后才向客户端报告成功。
     try {
-      await uploadToECS(fileId, file.name, buffer)
+      const ecsResult = await uploadToECS(fileId, file.name, buffer, fileExtension)
       console.log(`✅ 文件已上传到ECS: ${fileId}`)
-    } catch (ecsError) {
-      console.warn(`⚠️ ECS上传失败，但本地保存成功: ${ecsError}`)
-      // ECS上传失败不影响整体流程，因为还有本地文件
-    }
 
-    // 存储文件元数据
-    const metadata = {
-      id: fileId,
-      name: fileName,
-      originalName: file.name,
-      size: file.size,
-      uploadTime: new Date().toISOString()
-    }
-
-    filesMetadata.set(fileId, metadata)
-
-    console.log(`文件上传成功: ${file.name} -> ${fileName}`)
-
-    return NextResponse.json({
-      success: true,
-      message: '文件上传成功',
-      file: {
-        id: fileId,
-        name: file.name,
-        size: file.size,
-        uploadTime: metadata.uploadTime
+      // Vercel实例的本地文件系统是临时的。这里保留本地缓存仅用于非无服务器环境。
+      if (!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION)) {
+        if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true })
+        const filePath = join(UPLOAD_DIR, fileName)
+        await writeFile(filePath, buffer)
       }
-    })
+
+      const metadata = {
+        id: fileId,
+        name: fileName,
+        originalName: file.name,
+        size: file.size,
+        uploadTime: new Date().toISOString()
+      }
+      filesMetadata.set(fileId, metadata)
+
+      return NextResponse.json({
+        success: true,
+        message: '文件上传成功',
+        file: {
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          uploadTime: metadata.uploadTime,
+          ecsFile: ecsResult.file
+        }
+      })
+    } catch (ecsError: any) {
+      console.error('❌ ECS上传失败:', ecsError.response?.data || ecsError.message)
+      return NextResponse.json(
+        {
+          success: false,
+          error: '文件未能上传到成绩导入服务器',
+          details: ecsError.response?.data?.error || ecsError.message
+        },
+        { status: 502 }
+      )
+    }
 
   } catch (error) {
     console.error('文件上传失败:', error)
@@ -115,11 +115,13 @@ export async function POST(request: NextRequest) {
 }
 
 // 上传文件到ECS
-async function uploadToECS(fileId: string, originalName: string, buffer: Buffer) {
+async function uploadToECS(fileId: string, originalName: string, buffer: Buffer, fileExtension: string) {
   const formData = new FormData()
   formData.append('file', buffer, {
-    filename: `${fileId}.xlsx`,
-    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    filename: `${fileId}${fileExtension}`,
+    contentType: fileExtension === '.xlsx'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'application/vnd.ms-excel'
   })
   formData.append('fileId', fileId)
   formData.append('originalName', originalName)
@@ -132,7 +134,7 @@ async function uploadToECS(fileId: string, originalName: string, buffer: Buffer)
       ...formData.getHeaders(),
       'User-Agent': 'Vercel-Upload/1.0'
     },
-    timeout: 30000
+    timeout: 55000
   })
 
   if (response.status !== 200) {

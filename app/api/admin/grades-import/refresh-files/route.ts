@@ -12,7 +12,7 @@ const UPLOAD_DIR = join(UPLOAD_ROOT, 'temp_imports', 'grades')
 // ECS配置
 const ECS_UPLOAD_URL = process.env.ECS_UPLOAD_URL || 'http://39.96.196.67:3001'
 
-export const maxDuration = 10
+export const maxDuration = 30
 
 export async function POST() {
   try {
@@ -25,7 +25,7 @@ export async function POST() {
       const response = await axios({
         method: 'GET',
         url: `${ECS_UPLOAD_URL}/files`,
-        timeout: 10000
+        timeout: 8000
       })
       
       if (response.data.success && response.data.files) {
@@ -50,15 +50,7 @@ export async function POST() {
       console.warn('⚠️ 从ECS获取文件列表失败，尝试本地方式:', ecsError.message)
     }
     
-    // ECS获取失败，返回空列表（不再使用本地文件）
-    console.log('📡 ECS服务器上没有文件或连接失败，返回空列表')
-    
-    return NextResponse.json({
-      success: true,
-      message: '没有找到可导入的文件',
-      files: [],
-      source: 'ECS'
-    })
+    throw new Error('成绩导入服务器暂时无法连接，未能刷新文件列表')
 
   } catch (error) {
     console.error('刷新文件列表失败:', error)
